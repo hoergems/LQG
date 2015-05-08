@@ -6,7 +6,7 @@ from scipy import linalg, signal
 from path_planner import PathPlanner
 
 class LQG:
-    def __init__(self):
+    def __init__(self):           
         self.set_params()
         self.path_planner = PathPlanner()
         self.path_planner.set_params(2, self.max_velocity, self.delta_t)
@@ -24,14 +24,14 @@ class LQG:
         """
         The process noise covariance matrix
         """
-        self.M = np.array([[0.001, 0.0],
-                           [0.0, 0.001]])
+        self.M = np.array([[0.1, 0.0],
+                           [0.0, 0.1]])
         
         """
         The observation noise covariance matrix
         """
-        self.N = np.array([[0.01, 0.0],
-                           [0.0, 0.01]])
+        self.N = np.array([[0.001, 0.0],
+                           [0.0, 0.001]])
         
         self.B = np.array([[1.0 / 30.0, 0.0],
                            [0.0, 1.0 / 30.0]])
@@ -40,18 +40,99 @@ class LQG:
         self.W = np.identity(2)
         
         #self.C = np.identity(2)
-        self.C = np.array([[200.0, 0.0],
-                           [0.0, 200.0]])
-        self.R = np.identity(2)
+        self.C = np.array([[1.0, 0.0],
+                           [0.0, 1.0]])
+        self.D = np.array([[1.0, 0.0],
+                           [0.0, 1.0]])
+        self.do2()
+        return
         self.do() 
         
     def set_params(self):
         self.max_velocity = 2.0
-        self.delta_t = 1.0 / 30.0   
+        self.delta_t = 1.0 / 30.0     
+    
+    def get_jacobian(self, links, state):
+        return np.array([[-links[0] * np.sin(state[0]) - links[1] * np.sin(state[0] + state[1]), -links[1] * np.sin(state[0] + state[1])],
+                         [links[0] * np.cos(state[0]) + links[1] * np.cos(state[0] + state[1]), links[1] * np.cos(state[0] + state[1])]])
+        
+    def do2(self):               
+        xs, us, zs = self.path_planner.plan_path()        
+        set = np.array([np.array([x[0], x[1]]) for x in xs])
+        #xs = [xs[i] for i in xrange(6)]
+        #Plot.plot_2d_n_sets([set], x_range=[-np.pi, np.pi], y_range=[-np.pi, np.pi])
+        #Ls = [self.compute_gain(self.A, self.B, self.C, self.D, len(xs)) for i in xrange(len(xs))]
+        Ls = self.compute_gain(self.A, self.B, self.C, self.D, len(xs))        
+        print Ls
+        #return
+        #print Ls
+        #return
+        P_t = np.array([[0.0, 0.0],
+                        [0.0, 0.0]])
+        P_0 = np.array([[0.0, 0.0],
+                        [0.0, 0.0]])
+        NU = np.array([[0.0, 0.0],
+                       [0.0, 0.0]])
+        Q_t = np.vstack((np.hstack((self.M, NU)), 
+                         np.hstack((NU, self.N))))
+        R_t = np.vstack((np.hstack((P_0, NU)),
+                         np.hstack((NU, NU))))
+        for i in xrange(1, len(xs)):
+            P_hat_t = self.compute_p_hat_t(self.A, P_t, self.V, self.M)
+            print "P_hat_t "
+            print str(P_hat_t)
+            K_t = self.compute_kalman_gain(self.H, P_hat_t, self.W, self.N)            
+            print " "
+            print "K_t "
+            print str(K_t)
+            P_t = self.compute_P_t(K_t, self.H, P_hat_t) 
+            print " "           
+            print "P_t "
+            print str(P_t)
+            print "L: " + str(Ls[i-1])
+            F_0 = np.hstack((self.A, np.dot(self.B, Ls[i - 1])))
+            F_1 = np.hstack((np.dot(np.dot(K_t, self.H), self.A), 
+                             np.add(self.A, np.subtract(np.dot(self.B, Ls[i-1]), np.dot(np.dot(K_t, self.H), self.A)))))            
+            F_t = np.vstack((F_0, F_1))
+            #print "L " + str(Ls[i - 1])
+            #print "F " + str(F_t)
+            
+            G_t = np.vstack((np.hstack((self.V, NU)), 
+                             np.hstack((np.dot(np.dot(K_t, self.H), self.V), np.dot(K_t, self.W)))))
+            #print "G_t " + str(G_t)           
+            
+            
+            """ Compute R """            
+            FRF = np.dot(np.dot(F_t, R_t), np.transpose(F_t))
+            #print "FRF " + str(FRF)            
+            GQG = np.dot(np.dot(G_t, Q_t), np.transpose(G_t))
+            #print "GQG " + str(GQG)
+            R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))            
+            
+            
+            #print "R_t " + str(R_t)
+            Gamma_t = np.vstack((np.hstack((np.identity(2), NU)), 
+                                 np.hstack((NU, Ls[i - 1]))))
+            #print "Gamma_t " + str(Gamma_t)
+            Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))
+            j = self.get_jacobian([1.0, 1.0], xs[i])
+            cov_state = np.array([[Cov[0, 0], Cov[0, 1]],
+                                  [Cov[1, 0], Cov[1, 1]]])
+            EE_covariance = np.dot(np.dot(j, cov_state), np.transpose(j))
+            print "Cov "
+            print str(Cov)
+            print "Cov state"
+            print EE_covariance
+            print "trace"
+            print np.trace(EE_covariance)
+            print i
+            #print i
+            '''if i == 11:
+                return'''
+        #print len(xs)  
         
         
     def do(self):
-        num = 100
         #xs, us, zs = self.generate_path(num, self.A, self.B)
         xs, us, zs = self.path_planner.plan_path()
         
@@ -87,7 +168,7 @@ class LQG:
             """
             Generate u_dash using LQG
             """
-            u_dash = np.dot(self.compute_gain(self.A, self.B, self.C, self.R), x_tilde)
+            u_dash = np.dot(self.compute_gain(self.A, self.B, self.C, self.D, len(xs)), x_tilde)
             data.append([xs[i], x_true, x_tilde, u_dash + us[j + 1]])
             j += 1            
         
@@ -139,20 +220,48 @@ class LQG:
         return self.kalman_update(x_hat_t, z, H, P_hat_t, W, N)
     
     def kalman_predict(self, x_hat, u, A, B, P_t, V, M):
-        x_hat_t = np.dot(A, x_hat) + np.dot(B, u)
-        P_hat_t = np.dot(np.dot(A, P_t), np.transpose(A)) + np.dot(np.dot(V, M), np.transpose(V))
+        x_hat_t = np.add(np.dot(A, x_hat), np.dot(B, u))        
+        P_hat_t = self.compute_p_hat_t(A, P_t, V, M)
         return x_hat_t, P_hat_t
     
+    def compute_p_hat_t(self, A, P_t, V, M):
+        return np.add(np.dot(np.dot(A, P_t), np.transpose(A)), np.dot(np.dot(V, M), np.transpose(V)))        
+    
     def kalman_update(self, x_t, z, H, P_hat_t, W, N):
-        K_t = np.dot(np.dot(P_hat_t, H), linalg.inv(np.dot(np.dot(H, P_hat_t), np.transpose(H)) + np.dot(np.dot(W, N), np.transpose(W))))
-        x_t += np.dot(K_t, z - np.dot(H, x_t))
-        P_t = np.dot(np.identity(2) - np.dot(K_t, H), P_hat_t)
+        K_t = self.compute_kalman_gain(H, P_hat_t, W, N)
+        x_t += self.compute_state_estimate(x_t, z, H, K_t)
+        P_t = self.compute_P_t(K_t, H, P_hat_t)
         return x_t, P_t
     
-    def compute_gain(self, A, B, Q, R): 
-              
-        S = linalg.solve_discrete_are(A, B, Q, R)
-        L = -1.0 * np.dot(np.dot(np.dot(np.linalg.inv(np.dot(np.dot(np.transpose(B), S), B) + R), np.transpose(B)), S), A)        
+    def compute_kalman_gain(self, H, P_hat_t, W, N):
+        return np.dot(np.dot(P_hat_t, np.transpose(H)), linalg.inv(np.add(np.dot(np.dot(H, P_hat_t), np.transpose(H)), np.dot(np.dot(W, N), np.transpose(W)))))
+        
+    
+    def compute_state_estimate(self, x_t, z, H, K_t):
+        return np.add(x_t, np.dot(K_t, np.subtract(z, np.dot(H, x_t))))
+    
+    def compute_P_t(self, K_t, H, P_hat_t):
+        return np.dot(np.subtract(np.identity(2), np.dot(K_t, H)), P_hat_t)        
+    
+    def compute_gain(self, A, B, C, D, l):
+        S = C
+        Ls = []
+        print l - 1
+        for i in xrange(l - 1):
+            L = -np.dot(np.dot(np.dot(linalg.inv(np.add(np.dot(np.dot(np.transpose(B), S), B), D)), np.transpose(B)), S), A)            
+            #L1 = linalg.inv(np.add(np.dot(np.dot(np.transpose(B), S), B), D))
+            #L2 = np.dot(np.dot(np.transpose(B), S), A)
+            #L = -np.dot(L1, L2)
+            Ls.append(L)
+            S = np.add(C, np.add(np.dot(np.dot(np.transpose(A), S), A), np.dot(np.dot(np.dot(np.transpose(A), S), B), L))) 
+            #S = np.add(C, np.add(np.dot(np.dot(np.transpose(A), S), A), np.dot(np.dot(np.dot(np.transpose(A), S), B), L)))
+        print Ls
+        return Ls[::-1]
+        
+                      
+        S = linalg.solve_discrete_are(A, B, C, D)
+        L = -np.dot(np.dot(np.dot(linalg.inv(np.add(np.dot(np.dot(np.transpose(B), S), B), D)), np.transpose(B)), S), A)
+        #L = -1.0 * np.dot(np.dot(np.dot(np.linalg.inv(np.dot(np.dot(np.transpose(B), S), B) + D), np.transpose(B)), S), A)        
         return L
         
 
