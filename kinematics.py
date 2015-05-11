@@ -3,7 +3,7 @@ import numpy as np
 class Kinematics:
     def __init__(self):
         #theta = [1.5, 2.7]
-        theta = [-2.0649, -2.69847]
+        theta = [-np.pi, -1.0]
         print "theta " + str(theta)
         print "cart " + str(self.get_end_effector_position(theta))
         
