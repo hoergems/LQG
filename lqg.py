@@ -29,14 +29,14 @@ class LQG:
         """
         The process noise covariance matrix
         """
-        self.M = np.array([[0.001, 0.0],
-                           [0.0, 0.001]])
+        self.M = np.array([[0.01, 0.0],
+                           [0.0, 0.01]])
         
         """
         The observation noise covariance matrix
         """
-        self.N = np.array([[0.001, 0.0],
-                           [0.0, 0.001]])
+        self.N = np.array([[0.01, 0.0],
+                           [0.0, 0.01]])
         
         self.B = np.array([[self.delta_t, 0.0],
                            [0.0, self.delta_t]])
@@ -179,11 +179,10 @@ class LQG:
             cov_state = np.array([[Cov[0, 0], Cov[0, 1]],
                                   [Cov[1, 0], Cov[1, 1]]])
             j = self.get_jacobian([1.0, 1.0], xs[i])
-            cov_state = np.array([[Cov[0, 0], Cov[0, 1]],
-                                  [Cov[1, 0], Cov[1, 1]]])
+            
             EE_covariance = np.dot(np.dot(j, cov_state), np.transpose(j))
             print "i " + str(i)
-            print "cov " + str(cov_state)
+            
             '''if i == len(xs) - 1:
                 joint_samples = np.random.multivariate_normal(xs[i], cov_state, 200)
                 ee_positions = np.random.multivariate_normal(self.kinematics.get_end_effector_position(xs[i]),
@@ -195,7 +194,8 @@ class LQG:
                 ee_distributions.append(np.array(ee_positions))
                 
                 ee_distributions.append(np.array([self.kinematics.get_end_effector_position(xs[i])]))'''
-            
+        print "cov state " + str(cov_state)
+        print "cov " + str(EE_covariance)    
         queue.put([np.trace(EE_covariance), (xs, us, zs)])
         
         '''Plot.plot_2d_n_sets([distr for distr in ee_distributions], 
@@ -216,8 +216,7 @@ class LQG:
             P_t = np.array([[0.0, 0.0],
                             [0.0, 0.0]])
             Ls = self.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)
-            ee_cov = np.array([[0.0, 0.0],
-                               [0.0, 0.0]])
+            
             data = []
             for i in xrange(0, len(xs) - 1):                
                 """
@@ -229,6 +228,7 @@ class LQG:
                 Generate a true state
                 """
                 x_true = self.apply_control(x_true, u_dash + us[i], self.A, self.B, self.V, self.M)                
+                
                 
                 """
                 Obtain an observation
@@ -242,6 +242,7 @@ class LQG:
                 x_tilde_dash_t, P_dash = self.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
                 x_tilde, P_t = self.kalman_update(x_tilde_dash_t, z_dash_t, self.H, P_dash, self.W, self.N)
                 data.append([xs[i + 1], x_true, z_t, u_dash + us[i]])
+            print "P_t " + str(P_t)
             ee_position = self.kinematics.get_end_effector_position(x_true)
             cartesian_coords.append(np.array([ee_position[l] for l in xrange(len(ee_position))]))            
             '''lin = np.linspace(0.0, len(xs) - 1, len(xs) - 1)        
@@ -250,11 +251,20 @@ class LQG:
             set3 = np.array([np.array([lin[i], data[i][2][0]]) for i in xrange(len(lin))])
             set4 = np.array([np.array([lin[i], data[i][3][0]]) for i in xrange(len(lin))])
             Plot.plot_2d_n_sets([set1, set2, set3, set4], ['x_s', 'x_true', 'z', 'u_dash'], x_range=[0.0, len(xs)], y_range=[-np.pi, np.pi])'''
+            
         Plot.plot_2d_n_sets([np.array(cartesian_coords)], 
                             ['c'], 
                             x_range=[-3.0, 3.0],
                             y_range=[-3.0, 3.0],
                             plot_type='points')
+        set = np.random.multivariate_normal(x_true, P_t, 500)
+        set = np.array([np.array(set[i]) for i in xrange(len(set))])
+        Plot.plot_2d_n_sets([set],
+                            ['P_t'],
+                            x_range=[-2.0 *np.pi, 2.0 * np.pi],
+                            y_range=[-2.0 * np.pi, 2.0 * np.pi],
+                            plot_type='points')
+        
             
     def generate_path(self, length, A, B):
         us = [np.array([1.8, 0.9]) for i in xrange(length + 1)]
@@ -313,7 +323,8 @@ class LQG:
         return np.add(x_tilde_dash_t, np.dot(K_t, np.subtract(z_dash_t, np.dot(H, x_tilde_dash_t))))
     
     def compute_P_t(self, K_t, H, P_hat_t):
-        return np.dot(np.subtract(np.identity(2), np.dot(K_t, H)), P_hat_t)        
+        return np.dot(np.subtract(np.array([[1.0, 0.0],
+                                            [0.0, 1.0]]), np.dot(K_t, H)), P_hat_t)        
     
     def compute_gain(self, A, B, C, D, l):
         S = np.copy(C)
