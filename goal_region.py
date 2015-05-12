@@ -7,7 +7,7 @@ class GoalRegion(ob.GoalSampleableRegion):
     def __init__(self, si):
         super(GoalRegion, self).__init__(si)
         self.si = si
-        self.kinematics = Kinematics()
+        self.kinematics = Kinematics(self.si.getStateSpace().getDimension())
         
     def set_goal_radius(self, radius):
         self.goal_radius = radius
@@ -17,25 +17,37 @@ class GoalRegion(ob.GoalSampleableRegion):
         The goal position of the end effector
         """
         self.goal_position = cartesian_coords
+        print "goal position " + str(self.goal_position)
         
     def set_bounds(self, bounds):
         self.bounds = bounds
         
     def sampleGoal(self, state):
         while True:
+            """
+            ==================
+            """
+            state[0] = -np.pi / 2.0
+            state[1] = 0.0
+            state[2] = 0.0
+            return state
+            """
+            ==================
+            """
             sampled_state = self._sample_joint_state()            
-            end_effector_position = self.kinematics.get_end_effector_position(sampled_state)
+            end_effector_position = self.kinematics.get_end_effector_position(sampled_state)            
             vec = end_effector_position - self.goal_position
             vec_norm = vec / np.linalg.norm(vec)
             vec_radius = vec_norm * self.goal_radius            
             if np.linalg.norm(vec) <= np.linalg.norm(vec_radius):                          
                 for i in xrange(self.si.getStateSpace().getDimension()):
-                    state[i] = sampled_state[i]                
+                    state[i] = sampled_state[i] 
+                print "sampled goal " + str(sampled_state)               
                 return sampled_state        
         
     def _sample_joint_state(self):        
-        while True:
-            state = ob.State(self.si.getStateSpace())
+        while True:            
+            state = ob.State(self.si.getStateSpace())            
             for i in xrange(self.si.getStateSpace().getDimension()):
                 state[i] = np.random.uniform(-np.pi, np.pi)
             if self._satisfies_bounds(state):
@@ -49,6 +61,7 @@ class GoalRegion(ob.GoalSampleableRegion):
         
         
     def maxSampleCount(self):
+        print "WHAT"
         return 1000
     
     def canSample(self):
