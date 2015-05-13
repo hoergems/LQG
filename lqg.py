@@ -2,29 +2,26 @@ import numpy as np
 import plot as Plot
 import time
 import copy
+import os
+import glob
 from scipy.linalg import solve_discrete_are
 from scipy.stats import norm, vonmises
 from scipy import linalg, signal
 from path_planner import PathPlanner
 from kinematics import Kinematics
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, cpu_count
+from EMD import EMD, histEMD
+from configreader import ConfigReader
 import collections
 
 class LQG:
-    def __init__(self):               
-        self.set_params()
-        '''self.path_planner = PathPlanner()
-        self.path_planner.set_params(2, self.max_velocity, self.delta_t)
-        self.path_planner.setup_ompl()'''
+    def __init__(self):
+        reader = ConfigReader("config.yaml")
+        config = reader.read_config()        
+        self.set_params(config)        
         
-        self.theta_0 = np.array([0.0 for i in xrange(self.num_links)])
-        self.goal_position = [0.0, -3.0]
-        self.goal_radius = 0.001
-        '''self.path_planner.set_start_state(theta_0)
-        self.path_planner.set_goal_region(goal_position, goal_radius)'''
         self.A = np.identity(self.num_links)
         self.H = np.identity(self.num_links)
-        
         
         """
         The process noise covariance matrix
@@ -46,9 +43,13 @@ class LQG:
         self.D = 2.0 * np.identity(self.num_links)        
         
         if self.check_positive_definite([self.C, self.D]):
-            xs, us, zs = self.plan_paths(self.goal_position, self.num_paths)
+            if len(glob.glob("path.txt")) == 1:
+                xs, us, zs = self.load_path("path.txt")
+            else:
+                xs, us, zs = self.plan_paths(self.goal_position, self.num_paths)
+                self.save_path(xs, us, zs)
             #return
-            self.simulate(xs, us, zs, 1000) 
+            self.simulate(xs, us, zs, self.num_simulation_runs) 
         
     def check_positive_definite(self, matrices):
         for m in matrices:
@@ -59,12 +60,17 @@ class LQG:
                 return False
         return True
         
-    def set_params(self):
-        self.num_paths = 2
-        self.num_cores = 8
-        self.num_links = 3
-        self.max_velocity = 3.0
-        self.delta_t = 1.0 / 30.0 
+    def set_params(self, config):
+        self.num_paths = config['num_generated_paths']
+        self.num_cores = cpu_count()
+        self.num_links = config['num_links']
+        self.max_velocity = config['max_velocity']
+        self.delta_t = 1.0 / config['control_rate']
+        self.theta_0 = config['init_joint_angles']
+        self.goal_position = config['goal_position']
+        self.goal_radius = config['goal_radius']
+        self.num_simulation_runs = config['num_simulation_runs']
+        self.num_bins = config['num_bins']
         self.kinematics = Kinematics(self.num_links)    
     
     def get_jacobian(self, links, state):
@@ -106,8 +112,7 @@ class LQG:
                 
         tr = 1000.0
         best_index = 0
-        for i in xrange(len(paths)):
-            print paths[i][0]
+        for i in xrange(len(paths)):            
             if paths[i][0] < tr:
                 tr = paths[i][0]
                 best_index = copy.copy(i)
@@ -119,16 +124,8 @@ class LQG:
             for j in xrange(len(paths[i][1][0])):
                 s.append(np.array(paths[i][1][0][j]))
             sets.append(np.array(s))
-        #sets = [np.array([np.array([paths[i][1][0][0], paths[i][1][0][1]])]) for i in xrange(len(paths))]
-        
-        Plot.plot_2d_n_sets(sets,
-                            x_range=[-3.0, 3.0], 
-                            y_range=[-3.0, 3.0], 
-                            plot_type='lines',
-                            idx=best_index,
-                            lw=4)
         return paths[best_index][1][0], paths[i][1][1], paths[i][1][2]
-        print len(paths)
+        
     
     def evaluate_path(self, queue): 
         path_planner = PathPlanner()
@@ -161,19 +158,13 @@ class LQG:
             F_1 = np.hstack((np.dot(np.dot(K_t, self.H), self.A), 
                              np.add(self.A, np.subtract(np.dot(self.B, Ls[i-1]), np.dot(np.dot(K_t, self.H), self.A)))))            
             F_t = np.vstack((F_0, F_1))
-            #print "L " + str(Ls[i - 1])
-            #print "F " + str(F_t)
             
             G_t = np.vstack((np.hstack((self.V, NU)), 
                              np.hstack((np.dot(np.dot(K_t, self.H), self.V), np.dot(K_t, self.W)))))
-            #print "G_t " + str(G_t)           
-            
             
             """ Compute R """            
             FRF = np.dot(np.dot(F_t, R_t), np.transpose(F_t))
-            #print "FRF " + str(FRF)            
             GQG = np.dot(np.dot(G_t, Q_t), np.transpose(G_t))
-            #print "GQG " + str(GQG)
             R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))            
             
             
@@ -185,43 +176,21 @@ class LQG:
             cov_state = np.array([[Cov[j, k] for k in xrange(self.num_links)] for j in xrange(self.num_links)])            
             j = self.get_jacobian([1.0 for k in xrange(self.num_links)], xs[i])
             
-            EE_covariance = np.dot(np.dot(j, cov_state), np.transpose(j))            
-            
-            '''if i == len(xs) - 1:
-                joint_samples = np.random.multivariate_normal(xs[i], cov_state, 200)
-                ee_positions = np.random.multivariate_normal(self.kinematics.get_end_effector_position(xs[i]),
-                                                             EE_covariance,
-                                                             200)
-                #
-                ee_distributions.append(np.array(ee_positions))
-                ee_positions = [self.kinematics.get_end_effector_position(state) for state in joint_samples]
-                ee_distributions.append(np.array(ee_positions))
-                
-                ee_distributions.append(np.array([self.kinematics.get_end_effector_position(xs[i])]))'''
+            EE_covariance = np.dot(np.dot(j, cov_state), np.transpose(j))
         print "cov state " + str(cov_state)
         print "cov end effector " + str(EE_covariance)    
         queue.put([np.trace(EE_covariance), (xs, us, zs)])
         
-        '''Plot.plot_2d_n_sets([distr for distr in ee_distributions], 
-                            ['d full approx', 'd full real', 'mean full'], 
-                            x_range=[-3.0, 3.0], 
-                            y_range=[-3.0, 3.0], 
-                            plot_type='points')'''
-        #print len(xs)  
-        
-        
     def simulate(self, xs, us, zs, num_simulations):
-        cartesian_coords = []   
+        cartesian_coords = []          
         x_trues = []     
         for k in xrange(num_simulations):
-            print "simulation run " + str(k)
-            print xs[-1]
+            print "simulation run " + str(k)            
             x_true = xs[0]
             x_tilde = xs[0]        
             u_dash = np.array([0.0 for j in xrange(self.num_links)])        
             P_t = np.array([[0.0 for k in xrange(self.num_links)] for l in xrange(self.num_links)])
             Ls = self.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)
-            
             data = []
             for i in xrange(0, len(xs) - 1):                
                 """
@@ -248,37 +217,107 @@ class LQG:
                 x_tilde, P_t = self.kalman_update(x_tilde_dash_t, z_dash_t, self.H, P_dash, self.W, self.N)
                 data.append([xs[i + 1], x_true, z_t, u_dash + us[i]])            
             x_trues.append(x_true)            
-            ee_position = self.kinematics.get_end_effector_position(x_true)
-            cartesian_coords.append(np.array([ee_position[l] for l in xrange(len(ee_position))]))            
-            '''lin = np.linspace(0.0, len(xs) - 1, len(xs) - 1)        
-            set1 = np.array([np.array([lin[i], data[i][0][0]]) for i in xrange(len(lin))])
-            set2 = np.array([np.array([lin[i], data[i][1][0]]) for i in xrange(len(lin))])
-            set3 = np.array([np.array([lin[i], data[i][2][0]]) for i in xrange(len(lin))])
-            set4 = np.array([np.array([lin[i], data[i][3][0]]) for i in xrange(len(lin))])
-            Plot.plot_2d_n_sets([set1, set2, set3, set4], ['x_s', 'x_true', 'z', 'u_dash'], x_range=[0.0, len(xs)], y_range=[-np.pi, np.pi])'''
+            ee_position = self.kinematics.get_end_effector_position(x_true)            
+            cartesian_coords.append(np.array([ee_position[l] for l in xrange(len(ee_position))]))
+        X = np.array([coords[0] for coords in cartesian_coords])
+        Y = np.array([coords[1] for coords in cartesian_coords])
+        histogram_range = [[-3.1, 3.1], [-3.1, 3.1]]
+        
+        """
+        The historgram from the resulting cartesian coordinates
+        """ 
+        print "Calculating histograms..."      
+        H, xedges, yedges = self.get_2d_histogram(X, 
+                                                  Y, 
+                                                  histogram_range,
+                                                  bins=self.num_bins)
+        """
+        The histogram from a delta distribution located at the goal position
+        """
+        H_delta, xedges_delta, yedges_delta = self.get_2d_histogram([0.0], 
+                                                                    [-3.0], 
+                                                                    histogram_range, 
+                                                                    bins=self.num_bins)
+        
+        print "Calculating EMD..."
+        edm = self.compute_earth_mover(H, H_delta)
+        print "EDM is " + str(edm)        
+    
+        Plot.plot_histogram(H, xedges, yedges)
+        #Plot.plot_histogram(H_delta, xedges_delta, yedges_delta)
+        
+        #return
         print "state covariance " + str(np.cov(np.array([[x_true[i] for i in xrange(self.num_links)] for x_true in x_trues]).T))
-        Plot.plot_3d_points(np.array(x_trues),
+        '''Plot.plot_3d_points(np.array(x_trues),
                             x_scale=[-np.pi, np.pi],
                             y_scale=[-np.pi, np.pi],
-                            z_scale=[-np.pi, np.pi])
-        Plot.plot_2d_n_sets([np.array(x_trues)],
-                            ['x_true'],
-                            x_range=[-np.pi, np.pi],
-                            y_range=[-np.pi, np.pi],
-                            plot_type='points')
-            
-        Plot.plot_2d_n_sets([np.array(cartesian_coords)], 
-                            ['c'], 
-                            x_range=[-4.0, 4.0],
-                            y_range=[-4.0, 4.0],
-                            plot_type='points')
-        '''set = np.random.multivariate_normal(x_true, P_t, 500)
-        set = np.array([np.array(set[i]) for i in xrange(len(set))])
-        Plot.plot_2d_n_sets([set],
-                            ['P_t'],
-                            x_range=[-2.0 *np.pi, 2.0 * np.pi],
-                            y_range=[-2.0 * np.pi, 2.0 * np.pi],
-                            plot_type='points')'''   
+                            z_scale=[-np.pi, np.pi])'''
+        
+    def compute_earth_mover(self, H1, H2):
+        """
+        Computes the earth mover's distance between two equally sized histograms
+        """        
+        feature1 = []
+        feature2 = []        
+        w1 = []
+        w2 = []
+        for i in xrange(len(H1)):
+            for j in xrange(len(H1[i])):
+                if H1[i, j] != 0.0:
+                    feature1.append([i, j])
+                    w1.append(H1[i, j]) 
+        for i in xrange(len(H2)):
+            for j in xrange(len(H2[i])):
+                if H2[i, j] != 0.0:
+                    feature2.append([i, j])
+                    w2.append(H2[i, j])
+        return histEMD(np.array(feature1),
+                       np.array(feature2),
+                       np.array([[w1[i]] for i in xrange(len(w1))]),
+                       np.array([[w2[i]] for i in xrange(len(w2))]))
+    
+    def get_2d_histogram(self, X, Y, range, bins=200):
+        H, xedges, yedges = np.histogram2d(X, Y, bins=bins, range=range, normed=True)
+        H = np.rot90(H)
+        H = np.flipud(H)
+        sum = 0.0
+        for i in xrange(len(H)):
+            for j in xrange(len(H[i])):
+                sum += H[i, j]        
+        for i in xrange(len(H)):
+            for j in xrange(len(H[i])):
+                H[i, j] /= sum        
+        return H, xedges, yedges
+    
+    def save_path(self, xs, us, zs):
+        for file in glob.glob("path.txt"):
+            os.remove(file)        
+        with open("path.txt", "a+") as f:
+            for i in xrange(len(xs)):
+                x = ""
+                u = ""
+                z = ""
+                for j in xrange(self.num_links):                    
+                    x += str(xs[i][j]) + " "                    
+                    u += str(us[i][j]) + " "                    
+                    z += str(zs[i][j]) + " "
+                string = x + u + z + " \n"
+                f.write(string)
+        
+    def load_path(self, file):
+        xs = []
+        us = []
+        zs = [] 
+        with open(file, 'r+') as f:
+            for line in f.readlines():
+                line = line.split(" ")
+                x = [float(line[i]) for i in xrange(self.num_links)]
+                u = [float(line[self.num_links + i]) for i in xrange(self.num_links)]
+                z = [float(line[2 * self.num_links + i]) for i in xrange(self.num_links)]                
+                xs.append(x)
+                us.append(u)
+                zs.append(z)
+        return xs, us, zs
         
     def apply_control(self, x_dash, u_dash, A, B, V, M):
         m = self.get_random_joint_angles([0.0 for i in xrange(self.num_links)], M)
@@ -290,11 +329,6 @@ class LQG:
             theta_res = np.dot(A, theta) + np.dot(B, velocity)
         else:        
             theta_res = np.dot(A, theta) + np.dot(B, velocity) + self.get_random_joint_angles([0.0 for i in xrange(self.num_links)], M)
-        '''for i in xrange(len(theta_res)):
-            if theta_res[i] < -np.pi:
-                theta_res[i] = -np.pi
-            elif theta_res[i] > np.pi:
-                theta_res[i] = np.pi'''
         return theta_res
     
     def get_observation(self, true_theta, H, N):

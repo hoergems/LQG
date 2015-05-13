@@ -40,6 +40,23 @@ def plot_2d_n_sets(sets, labels=[], axis='xy', x_range=[0.0, 1.0], y_range=[0.0,
     plt.ylim([y_range[0], y_range[1]])    
     
     plt.show()
+    
+def plot_histogram(H, xedges, yedges):
+    #Hmasked = np.ma.masked_where(H==0,H)
+    fig2 = plt.figure()
+    plt.pcolormesh(xedges,yedges,H)
+    plt.xlabel('x')
+    plt.ylabel('y')
+    cbar = plt.colorbar()
+    cbar.ax.set_ylabel('Counts')
+    plt.show()
+    #fig = plt.figure(figsize=(15, 15))
+    #ax = fig.add_subplot(132)
+    #ax.set_title('pcolormesh: exact bin edges')
+    #X, Y = np.meshgrid(xedges, yedges)
+    #ax.pcolormesh(X, Y, H)
+    #ax.set_aspect('equal')
+    #plt.show()
 
 def plot_2d_two_sets(sets, labels, axis='xy', xrange=[0.0, 1.0], yrange=[0.0, 1.0]):
     if axis == 'xy':

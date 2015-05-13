@@ -87,9 +87,9 @@ class PathPlanner:
         """    
         new_path = []
         for i in xrange(len(path) - 1):
-            u = (np.array(path[i + 1]) - np.array(path[i])) / self.delta_t
+            u = (np.array(path[i + 1]) - np.array(path[i])) / self.delta_t            
             new_path.append([path[i], [u[j] for j in xrange(len(u))], path[i]])
-        new_path.append([path[-1], 0.0, path[-1]])
+        new_path.append([path[-1], [0.0 for i in xrange(self.si.getStateSpace().getDimension())], path[-1]])
         xs = [new_path[i][0] for i in xrange(len(path))]
         us = [new_path[i][1] for i in xrange(len(path))]
         zs = [new_path[i][2] for i in xrange(len(path))]
