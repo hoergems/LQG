@@ -1,6 +1,6 @@
 __author__ = 'GongLi'
  
-from pulp import *
+#from pulp import *
 import numpy as np
 import cv
 

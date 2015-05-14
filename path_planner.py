@@ -16,10 +16,11 @@ class PathPlanner:
                
         path = self.plan_path()'''        
     
-    def set_params(self, space_dimenstion, max_velocity, delta_t):
+    def set_params(self, space_dimenstion, max_velocity, delta_t, sim_run):
         self.space_dimension = space_dimenstion
         self.max_velocity = max_velocity
         self.delta_t = delta_t 
+        self.sim_run = sim_run
         
     def set_start_state(self, start_state):
         self.start_state = ob.State(self.si.getStateSpace())
@@ -52,16 +53,17 @@ class PathPlanner:
         while not self.problem_definition.hasSolution():
             self.planner.solve(10.0)
             print "has solution " + str(self.problem_definition.hasSolution())
+            print "sim_run " + str(self.sim_run)
         print "solution found!"
         path = []
         
         if self.problem_definition.hasSolution():
             solution_path = self.problem_definition.getSolutionPath()
             states = solution_path.getStates()                
-            path = [[state[i] for i in xrange(self.space.getDimension())] for state in states] 
+            path = [np.array([state[i] for i in xrange(self.space.getDimension())]) for state in states] 
             #print "path " + str(path)
         else:
-            print "no solution"
+            print "no solution"            
         return self._augment_path(path)
         
     def setup_ompl(self):
@@ -88,8 +90,9 @@ class PathPlanner:
         new_path = []
         for i in xrange(len(path) - 1):
             u = (np.array(path[i + 1]) - np.array(path[i])) / self.delta_t            
-            new_path.append([path[i], [u[j] for j in xrange(len(u))], path[i]])
-        new_path.append([path[-1], [0.0 for i in xrange(self.si.getStateSpace().getDimension())], path[-1]])
+            #new_path.append([path[i], [u[j] for j in xrange(len(u))], path[i]])
+            new_path.append([path[i], u, path[i]])
+        new_path.append([path[-1], np.array([0.0 for i in xrange(self.si.getStateSpace().getDimension())]), path[-1]])
         xs = [new_path[i][0] for i in xrange(len(path))]
         us = [new_path[i][1] for i in xrange(len(path))]
         zs = [new_path[i][2] for i in xrange(len(path))]

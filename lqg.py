@@ -11,45 +11,51 @@ from path_planner import PathPlanner
 from kinematics import Kinematics
 from multiprocessing import Process, Queue, cpu_count
 from EMD import EMD, histEMD
-from configreader import ConfigReader
+from serializer import Serializer
 import collections
 
 class LQG:
     def __init__(self):
-        reader = ConfigReader("config.yaml")
-        config = reader.read_config()        
+        serializer = Serializer("config.yaml")
+        config = serializer.read_config()        
         self.set_params(config)        
-        
         self.A = np.identity(self.num_links)
         self.H = np.identity(self.num_links)
-        
-        """
-        The process noise covariance matrix
-        """
-        self.M = 0.001 * np.identity(self.num_links)        
-        
-        """
-        The observation noise covariance matrix
-        """
-        self.N = 0.001 * np.identity(self.num_links)        
-        
-        self.B = self.delta_t * np.identity(self.num_links)        
-        
+        self.B = self.delta_t * np.identity(self.num_links)
         self.V = np.identity(self.num_links)
         self.W = np.identity(self.num_links)
-
-        #self.C = np.identity(2)
         self.C = 2.0 * np.identity(self.num_links)
-        self.D = 2.0 * np.identity(self.num_links)        
-        
+        self.D = 2.0 * np.identity(self.num_links)
         if self.check_positive_definite([self.C, self.D]):
-            if len(glob.glob("path.txt")) == 1:
-                xs, us, zs = self.load_path("path.txt")
-            else:
-                xs, us, zs = self.plan_paths(self.goal_position, self.num_paths)
-                self.save_path(xs, us, zs)
-            #return
-            self.simulate(xs, us, zs, self.num_simulation_runs) 
+            n_cov = 0.001
+            m_covs = np.linspace(0.00001, 0.01, 100)
+            emds = []
+            paths = []
+            for j in xrange(len(m_covs)):
+                
+                """
+                The process noise covariance matrix
+                """
+                self.M = m_covs[j] * np.identity(self.num_links)
+                
+                """
+                The observation noise covariance matrix
+                """
+                self.N = n_cov * np.identity(self.num_links)
+                   
+                '''if len(glob.glob("path.txt")) == 1:
+                    xs, us, zs = self.load_path("path.txt")
+                else:'''
+                xs, us, zs = self.plan_paths(self.goal_position, self.num_paths, j)
+                paths.append([[xs[i].tolist() for i in xrange(len(xs))], 
+                              [us[i].tolist() for i in xrange(len(us))],
+                              [zs[i].tolist() for i in xrange(len(zs))]])
+                #self.save_path(xs, us, zs)
+                
+                emds.append(self.simulate(xs, us, zs, self.num_simulation_runs))
+            stats = dict(m_cov = m_covs.tolist(), emd = emds)
+            serializer.save_paths(paths)            
+            serializer.save_stats(stats)
         
     def check_positive_definite(self, matrices):
         for m in matrices:
@@ -62,7 +68,7 @@ class LQG:
         
     def set_params(self, config):
         self.num_paths = config['num_generated_paths']
-        self.num_cores = cpu_count()
+        self.num_cores = cpu_count() - 1
         self.num_links = config['num_links']
         self.max_velocity = config['max_velocity']
         self.delta_t = 1.0 / config['control_rate']
@@ -90,14 +96,14 @@ class LQG:
                              [1.0, 1.0, 1.0]])
         return None
         
-    def plan_paths(self, goal_position, num):
+    def plan_paths(self, goal_position, num, sim_run):
         jobs = collections.deque()
         ir = collections.deque()
         path_queue = Queue()
         paths = []        
         for i in xrange(num):
             print "path num " + str(i)
-            p = Process(target=self.evaluate_path, args=(path_queue,))
+            p = Process(target=self.evaluate_path, args=(path_queue, sim_run,))
             p.start()
             jobs.append(p)
             ir.append(1)
@@ -117,19 +123,13 @@ class LQG:
                 tr = paths[i][0]
                 best_index = copy.copy(i)
         print "best path: " + str(best_index)
-        print "best trace: " + str(tr)
-        sets = []
-        for i in xrange(len(paths)):
-            s = []
-            for j in xrange(len(paths[i][1][0])):
-                s.append(np.array(paths[i][1][0][j]))
-            sets.append(np.array(s))
-        return paths[best_index][1][0], paths[i][1][1], paths[i][1][2]
+        print "best trace: " + str(tr)        
+        return paths[best_index][1][0], paths[best_index][1][1], paths[best_index][1][2]
         
     
-    def evaluate_path(self, queue): 
+    def evaluate_path(self, queue, sim_run): 
         path_planner = PathPlanner()
-        path_planner.set_params(self.num_links, self.max_velocity, self.delta_t)
+        path_planner.set_params(self.num_links, self.max_velocity, self.delta_t, sim_run)
         path_planner.setup_ompl()
         path_planner.set_start_state(self.theta_0)
         path_planner.set_goal_region(self.goal_position, self.goal_radius)              
@@ -190,8 +190,7 @@ class LQG:
             x_tilde = xs[0]        
             u_dash = np.array([0.0 for j in xrange(self.num_links)])        
             P_t = np.array([[0.0 for k in xrange(self.num_links)] for l in xrange(self.num_links)])
-            Ls = self.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)
-            data = []
+            Ls = self.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)            
             for i in xrange(0, len(xs) - 1):                
                 """
                 Generate u_dash using LQG
@@ -214,8 +213,7 @@ class LQG:
                 Kalman prediction and update
                 """
                 x_tilde_dash_t, P_dash = self.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
-                x_tilde, P_t = self.kalman_update(x_tilde_dash_t, z_dash_t, self.H, P_dash, self.W, self.N)
-                data.append([xs[i + 1], x_true, z_t, u_dash + us[i]])            
+                x_tilde, P_t = self.kalman_update(x_tilde_dash_t, z_dash_t, self.H, P_dash, self.W, self.N)                      
             x_trues.append(x_true)            
             ee_position = self.kinematics.get_end_effector_position(x_true)            
             cartesian_coords.append(np.array([ee_position[l] for l in xrange(len(ee_position))]))
@@ -240,18 +238,10 @@ class LQG:
                                                                     bins=self.num_bins)
         
         print "Calculating EMD..."
-        edm = self.compute_earth_mover(H, H_delta)
-        print "EDM is " + str(edm)        
-    
-        Plot.plot_histogram(H, xedges, yedges)
-        #Plot.plot_histogram(H_delta, xedges_delta, yedges_delta)
-        
-        #return
-        print "state covariance " + str(np.cov(np.array([[x_true[i] for i in xrange(self.num_links)] for x_true in x_trues]).T))
-        '''Plot.plot_3d_points(np.array(x_trues),
-                            x_scale=[-np.pi, np.pi],
-                            y_scale=[-np.pi, np.pi],
-                            z_scale=[-np.pi, np.pi])'''
+        emd = self.compute_earth_mover(H, H_delta)
+        print "EMD is " + str(emd)
+        #Plot.plot_histogram(H, xedges, yedges)
+        return emd    
         
     def compute_earth_mover(self, H1, H2):
         """
@@ -322,24 +312,18 @@ class LQG:
     def apply_control(self, x_dash, u_dash, A, B, V, M):
         m = self.get_random_joint_angles([0.0 for i in xrange(self.num_links)], M)
         return np.add(np.add(np.dot(A, x_dash), np.dot(B, u_dash)), np.dot(V, m))
-        return np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, m)
-        
-    def apply_velocity(self, theta, A, B, velocity, M=0):
-        if M == 0:
-            theta_res = np.dot(A, theta) + np.dot(B, velocity)
-        else:        
-            theta_res = np.dot(A, theta) + np.dot(B, velocity) + self.get_random_joint_angles([0.0 for i in xrange(self.num_links)], M)
-        return theta_res
     
     def get_observation(self, true_theta, H, N):
         return np.dot(H, true_theta) + self.get_random_joint_angles([0.0 for i in xrange(self.num_links)], N)        
         
     def get_random_joint_angles(self, mu, cov):
         return np.random.multivariate_normal(mu, cov)
-    
-    def kalman_estimation(self, x_hat, u, z, A, B, H, P_t, V, W, M, N):
-        x_hat_t, P_hat_t = self.kalman_predict(x_hat, u, A, B, P_t, V, M)
-        return self.kalman_update(x_hat_t, z, H, P_hat_t, W, N)
+        for i in xrange(len(samp)):
+            if samp[i] < -np.pi:
+                samp[i] = -np.pi
+            elif samp[i] > np.pi:
+                samp[i] = np.pi 
+        return samp
     
     def kalman_predict(self, x_tilde, u, A, B, P_t, V, M):
         x_tilde_dash_t = np.add(np.dot(A, x_tilde), np.dot(B, u))               
@@ -359,7 +343,7 @@ class LQG:
         return np.dot(np.dot(P_dash_t, np.transpose(H)), linalg.inv(np.add(np.dot(np.dot(H, P_dash_t), np.transpose(H)), np.dot(np.dot(W, N), np.transpose(W)))))
         
     
-    def compute_state_estimate(self, x_tilde_dash_t, z_dash_t, H, K_t):
+    def compute_state_estimate(self, x_tilde_dash_t, z_dash_t, H, K_t):        
         return np.add(x_tilde_dash_t, np.dot(K_t, np.subtract(z_dash_t, np.dot(H, x_tilde_dash_t))))
     
     def compute_P_t(self, K_t, H, P_hat_t):
@@ -380,6 +364,18 @@ class LQG:
         L = -np.dot(np.dot(np.dot(linalg.inv(np.add(np.dot(np.dot(np.transpose(B), S), B), D)), np.transpose(B)), S), A)
         #L = -1.0 * np.dot(np.dot(np.dot(np.linalg.inv(np.dot(np.dot(np.transpose(B), S), B) + D), np.transpose(B)), S), A)        
         return L
+    
+    def _enforce_limits(self, state):
+        """
+        Not used at the moment
+        """
+        for i in xrange(len(state)):
+            if state[i] < -np.pi:
+                state[i] = -np.pi
+            elif state[i] > np.pi:
+                state[i] = np.pi 
+        return state
+            
         
 
 if __name__ == "__main__":
