@@ -15,7 +15,7 @@ def plot_2d_three_sets(sets, axis='xy', xrange=[0.0, 1.0], yrange=[0.0, 1.0]):
     plt.ylim([yrange[0], yrange[1]])
     plt.show()
     
-def plot_2d_n_sets(sets, labels=[], axis='xy', x_range=[0.0, 1.0], y_range=[0.0, 1.0], plot_type='lines', idx=None, lw=5):
+def plot_2d_n_sets(sets, labels=[], xlabel='x', ylabel='y', axis='xy', x_range=[0.0, 1.0], y_range=[0.0, 1.0], plot_type='lines', idx=None, lw=5):
     ps = []    
     if len(labels) != len(sets):         
         labels=['default' for i in xrange(len(sets))]   
@@ -34,8 +34,8 @@ def plot_2d_n_sets(sets, labels=[], axis='xy', x_range=[0.0, 1.0], y_range=[0.0,
             ax.scatter(sets[i][:,0], sets[i][:,1], c=np.random.rand(3,1), label=labels[i], s=13)
         
         plt.legend(loc='upper left')
-    plt.xlabel('x')
-    plt.ylabel('y')
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
     plt.xlim([x_range[0], x_range[1]])
     plt.ylim([y_range[0], y_range[1]])    
     

@@ -25,12 +25,16 @@ class LQG:
         self.V = np.identity(self.num_links)
         self.W = np.identity(self.num_links)
         self.C = 2.0 * np.identity(self.num_links)
-        self.D = 2.0 * np.identity(self.num_links)
+        self.D = 2.0 * np.identity(self.num_links)        
         if self.check_positive_definite([self.C, self.D]):
             n_cov = 0.001
-            m_covs = np.linspace(0.00001, 0.01, 100)
+            print "min " + str(self.min_covariance)
+            print "max " + str(self.max_covariance)
+            print "steps " + str(self.covariance_steps)
+            m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
             emds = []
             paths = []
+            cart_coords = []
             for j in xrange(len(m_covs)):
                 
                 """
@@ -51,10 +55,12 @@ class LQG:
                               [us[i].tolist() for i in xrange(len(us))],
                               [zs[i].tolist() for i in xrange(len(zs))]])
                 #self.save_path(xs, us, zs)
-                
-                emds.append(self.simulate(xs, us, zs, self.num_simulation_runs))
+                cartesian_coords = self.simulate(xs, us, zs, self.num_simulation_runs)
+                cart_coords.append([cartesian_coords[i].tolist() for i in xrange(len(cartesian_coords))])
+                emds.append(self.calc_EMD(cartesian_coords))
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
-            serializer.save_paths(paths)            
+            serializer.save_paths(paths)
+            serializer.save_cartesian_coords(cart_coords)            
             serializer.save_stats(stats)
         
     def check_positive_definite(self, matrices):
@@ -68,7 +74,7 @@ class LQG:
         
     def set_params(self, config):
         self.num_paths = config['num_generated_paths']
-        self.num_cores = cpu_count() - 1
+        self.num_cores = cpu_count()
         self.num_links = config['num_links']
         self.max_velocity = config['max_velocity']
         self.delta_t = 1.0 / config['control_rate']
@@ -77,6 +83,9 @@ class LQG:
         self.goal_radius = config['goal_radius']
         self.num_simulation_runs = config['num_simulation_runs']
         self.num_bins = config['num_bins']
+        self.min_covariance = config['min_covariance']
+        self.max_covariance = config['max_covariance']
+        self.covariance_steps = config['covariance_steps']
         self.kinematics = Kinematics(self.num_links)    
     
     def get_jacobian(self, links, state):
@@ -181,6 +190,34 @@ class LQG:
         print "cov end effector " + str(EE_covariance)    
         queue.put([np.trace(EE_covariance), (xs, us, zs)])
         
+    def calc_EMD(self, cartesian_coords):
+        X = np.array([coords[0] for coords in cartesian_coords])
+        Y = np.array([coords[1] for coords in cartesian_coords])
+        histogram_range = [[-3.1, 3.1], [-3.1, 3.1]]
+        
+        """
+        The historgram from the resulting cartesian coordinates
+        """ 
+        print "Calculating histograms..."      
+        H, xedges, yedges = self.get_2d_histogram(X, 
+                                                  Y, 
+                                                  histogram_range,
+                                                  bins=self.num_bins)
+        """
+        The histogram from a delta distribution located at the goal position
+        """
+        H_delta, xedges_delta, yedges_delta = self.get_2d_histogram([0.0], 
+                                                                    [-3.0], 
+                                                                    histogram_range, 
+                                                                    bins=self.num_bins)
+        
+        print "Calculating EMD..."
+        emd = self.compute_earth_mover(H, H_delta)
+        print "EMD is " + str(emd)
+        #Plot.plot_histogram(H, xedges, yedges)
+        return emd
+        
+        
     def simulate(self, xs, us, zs, num_simulations):
         cartesian_coords = []          
         x_trues = []     
@@ -217,31 +254,8 @@ class LQG:
             x_trues.append(x_true)            
             ee_position = self.kinematics.get_end_effector_position(x_true)            
             cartesian_coords.append(np.array([ee_position[l] for l in xrange(len(ee_position))]))
-        X = np.array([coords[0] for coords in cartesian_coords])
-        Y = np.array([coords[1] for coords in cartesian_coords])
-        histogram_range = [[-3.1, 3.1], [-3.1, 3.1]]
-        
-        """
-        The historgram from the resulting cartesian coordinates
-        """ 
-        print "Calculating histograms..."      
-        H, xedges, yedges = self.get_2d_histogram(X, 
-                                                  Y, 
-                                                  histogram_range,
-                                                  bins=self.num_bins)
-        """
-        The histogram from a delta distribution located at the goal position
-        """
-        H_delta, xedges_delta, yedges_delta = self.get_2d_histogram([0.0], 
-                                                                    [-3.0], 
-                                                                    histogram_range, 
-                                                                    bins=self.num_bins)
-        
-        print "Calculating EMD..."
-        emd = self.compute_earth_mover(H, H_delta)
-        print "EMD is " + str(emd)
-        #Plot.plot_histogram(H, xedges, yedges)
-        return emd    
+        return cartesian_coords
+            
         
     def compute_earth_mover(self, H1, H2):
         """
