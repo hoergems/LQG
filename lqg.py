@@ -10,54 +10,63 @@ from scipy import linalg, signal
 from path_planner import PathPlanner
 from kinematics import Kinematics
 from multiprocessing import Process, Queue, cpu_count
-from EMD import EMD, histEMD
+from EMD import *
 from serializer import Serializer
 import collections
 
 class LQG:
-    def __init__(self):
-        serializer = Serializer("config.yaml")
-        config = serializer.read_config()        
+    def __init__(self):        
+        serializer = Serializer()
+        config = serializer.read_config("config.yaml")        
         self.set_params(config)        
-        self.A = np.identity(self.num_links)
-        self.H = np.identity(self.num_links)
-        self.B = self.delta_t * np.identity(self.num_links)
-        self.V = np.identity(self.num_links)
-        self.W = np.identity(self.num_links)
-        self.C = 2.0 * np.identity(self.num_links)
-        self.D = 2.0 * np.identity(self.num_links)        
-        if self.check_positive_definite([self.C, self.D]):
+        A = np.identity(self.num_links)
+        H = np.identity(self.num_links)
+        B = self.delta_t * np.identity(self.num_links)
+        V = np.identity(self.num_links)
+        W = np.identity(self.num_links)
+        C = 2.0 * np.identity(self.num_links)
+        D = 2.0 * np.identity(self.num_links)        
+        if self.check_positive_definite([C, D]):
             n_cov = 0.001
             print "min " + str(self.min_covariance)
             print "max " + str(self.max_covariance)
             print "steps " + str(self.covariance_steps)
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
             emds = []
+            
             paths = []
-            cart_coords = []
+            use_paths_from_file = False            
+            if len(glob.glob("paths.yaml")) == 1:
+                print "Loading paths from file"
+                paths = serializer.load_paths('paths.yaml')
+                use_paths_from_file = True            
+            print "len paths " + str(len(paths))
+            cart_coords = []            
             for j in xrange(len(m_covs)):
-                
+                print "Evaluating covariance " + str(m_covs[j])
                 """
                 The process noise covariance matrix
                 """
-                self.M = m_covs[j] * np.identity(self.num_links)
+                M = m_covs[j] * np.identity(self.num_links)
                 
                 """
                 The observation noise covariance matrix
                 """
-                self.N = n_cov * np.identity(self.num_links)
-                   
-                '''if len(glob.glob("path.txt")) == 1:
-                    xs, us, zs = self.load_path("path.txt")
-                else:'''
-                xs, us, zs = self.plan_paths(self.goal_position, self.num_paths, j)
-                paths.append([[xs[i].tolist() for i in xrange(len(xs))], 
-                              [us[i].tolist() for i in xrange(len(us))],
-                              [zs[i].tolist() for i in xrange(len(zs))]])
-                #self.save_path(xs, us, zs)
-                cartesian_coords = self.simulate(xs, us, zs, self.num_simulation_runs)
-                cart_coords.append([cartesian_coords[i].tolist() for i in xrange(len(cartesian_coords))])
-                emds.append(self.calc_EMD(cartesian_coords))
+                N = n_cov * np.identity(self.num_links)
+                
+                if use_paths_from_file:
+                    xs = paths[j][0]
+                    us = paths[j][1]
+                    zs = paths[j][2]
+                else:
+                    xs, us, zs = self.plan_paths(A, B, C, D, H, M, N, V, W, self.goal_position, self.num_paths, j)
+                    paths.append([[xs[i].tolist() for i in xrange(len(xs))], 
+                                  [us[i].tolist() for i in xrange(len(us))],
+                                  [zs[i].tolist() for i in xrange(len(zs))]])
+                #self.save_path(xs, us, zs)                
+                cartesian_coords = self.simulate(xs, us, zs, A, B, C, D, H, V, W, M, N, self.num_simulation_runs, j)                
+                cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])                
+                emds.append(calc_EMD(cartesian_coords, self.num_bins))            
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
             serializer.save_paths(paths)
             serializer.save_cartesian_coords(cart_coords)            
@@ -105,14 +114,14 @@ class LQG:
                              [1.0, 1.0, 1.0]])
         return None
         
-    def plan_paths(self, goal_position, num, sim_run):
+    def plan_paths(self, A, B, C, D, H, M, N, V, W, goal_position, num, sim_run):        
         jobs = collections.deque()
         ir = collections.deque()
         path_queue = Queue()
         paths = []        
         for i in xrange(num):
             print "path num " + str(i)
-            p = Process(target=self.evaluate_path, args=(path_queue, sim_run,))
+            p = Process(target=self.evaluate_path, args=(A, B, C, D, H, M, N, V, W, path_queue, sim_run,))
             p.start()
             jobs.append(p)
             ir.append(1)
@@ -132,11 +141,11 @@ class LQG:
                 tr = paths[i][0]
                 best_index = copy.copy(i)
         print "best path: " + str(best_index)
-        print "best trace: " + str(tr)        
+        print "best trace: " + str(tr)              
         return paths[best_index][1][0], paths[best_index][1][1], paths[best_index][1][2]
         
     
-    def evaluate_path(self, queue, sim_run): 
+    def evaluate_path(self, A, B, C, D, H, M, N, V, W, queue, sim_run):
         path_planner = PathPlanner()
         path_planner.set_params(self.num_links, self.max_velocity, self.delta_t, sim_run)
         path_planner.setup_ompl()
@@ -144,32 +153,32 @@ class LQG:
         path_planner.set_goal_region(self.goal_position, self.goal_radius)              
         xs, us, zs = path_planner.plan_path()
         
-        Ls = self.compute_gain(self.A, self.B, self.C, self.D, len(xs))
+        Ls = self.compute_gain(A, B, C, D, len(xs))
         P_t = np.array([[0.0 for i in xrange(self.num_links)] for i in xrange(self.num_links)])
         P_0 = np.copy(P_t)
         NU = np.copy(P_t)
         
-        Q_t = np.vstack((np.hstack((self.M, NU)), 
-                         np.hstack((NU, self.N))))
+        Q_t = np.vstack((np.hstack((M, NU)), 
+                         np.hstack((NU, N))))
         R_t = np.vstack((np.hstack((P_0, NU)),
                          np.hstack((NU, NU))))
         ee_distributions = []
         ee_approx_distr = []
         for i in xrange(1, len(xs)):
-            P_hat_t = self.compute_p_hat_t(self.A, P_t, self.V, self.M)
+            P_hat_t = self.compute_p_hat_t(A, P_t, V, M)
             
             
-            K_t = self.compute_kalman_gain(self.H, P_hat_t, self.W, self.N)            
+            K_t = self.compute_kalman_gain(H, P_hat_t, W, N)            
             
-            P_t = self.compute_P_t(K_t, self.H, P_hat_t) 
+            P_t = self.compute_P_t(K_t, H, P_hat_t) 
             
-            F_0 = np.hstack((self.A, np.dot(self.B, Ls[i - 1])))
-            F_1 = np.hstack((np.dot(np.dot(K_t, self.H), self.A), 
-                             np.add(self.A, np.subtract(np.dot(self.B, Ls[i-1]), np.dot(np.dot(K_t, self.H), self.A)))))            
+            F_0 = np.hstack((A, np.dot(B, Ls[i - 1])))
+            F_1 = np.hstack((np.dot(np.dot(K_t, H), A), 
+                             np.add(A, np.subtract(np.dot(B, Ls[i-1]), np.dot(np.dot(K_t, H), A)))))            
             F_t = np.vstack((F_0, F_1))
             
-            G_t = np.vstack((np.hstack((self.V, NU)), 
-                             np.hstack((np.dot(np.dot(K_t, self.H), self.V), np.dot(K_t, self.W)))))
+            G_t = np.vstack((np.hstack((V, NU)), 
+                             np.hstack((np.dot(np.dot(K_t, H), V), np.dot(K_t, W)))))
             
             """ Compute R """            
             FRF = np.dot(np.dot(F_t, R_t), np.transpose(F_t))
@@ -190,110 +199,58 @@ class LQG:
         print "cov end effector " + str(EE_covariance)    
         queue.put([np.trace(EE_covariance), (xs, us, zs)])
         
-    def calc_EMD(self, cartesian_coords):
-        X = np.array([coords[0] for coords in cartesian_coords])
-        Y = np.array([coords[1] for coords in cartesian_coords])
-        histogram_range = [[-3.1, 3.1], [-3.1, 3.1]]
-        
-        """
-        The historgram from the resulting cartesian coordinates
-        """ 
-        print "Calculating histograms..."      
-        H, xedges, yedges = self.get_2d_histogram(X, 
-                                                  Y, 
-                                                  histogram_range,
-                                                  bins=self.num_bins)
-        """
-        The histogram from a delta distribution located at the goal position
-        """
-        H_delta, xedges_delta, yedges_delta = self.get_2d_histogram([0.0], 
-                                                                    [-3.0], 
-                                                                    histogram_range, 
-                                                                    bins=self.num_bins)
-        
-        print "Calculating EMD..."
-        emd = self.compute_earth_mover(H, H_delta)
-        print "EMD is " + str(emd)
-        #Plot.plot_histogram(H, xedges, yedges)
-        return emd
-        
-        
-    def simulate(self, xs, us, zs, num_simulations):
-        cartesian_coords = []          
-        x_trues = []     
-        for k in xrange(num_simulations):
-            print "simulation run " + str(k)            
+    def simulate(self, 
+                 xs, 
+                 us, 
+                 zs,
+                 A,
+                 B,
+                 C,
+                 D,
+                 H,
+                 V,
+                 W,
+                 M,
+                 N,
+                 num_simulation_runs,
+                 run):
+        Ls = self.compute_gain(A, B, C, D, len(xs) - 1)
+        cart_coords = [] 
+        for j in xrange(num_simulation_runs):
+            print "simulation run " + str(j) + " for run " + str(run) 
             x_true = xs[0]
             x_tilde = xs[0]        
             u_dash = np.array([0.0 for j in xrange(self.num_links)])        
-            P_t = np.array([[0.0 for k in xrange(self.num_links)] for l in xrange(self.num_links)])
-            Ls = self.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)            
+            P_t = np.array([[0.0 for k in xrange(self.num_links)] for l in xrange(self.num_links)])          
             for i in xrange(0, len(xs) - 1):                
                 """
                 Generate u_dash using LQG
                 """                
                 u_dash = np.dot(Ls[i], x_tilde)
-                
+                    
                 """
                 Generate a true state
-                """
-                x_true = self.apply_control(x_true, u_dash + us[i], self.A, self.B, self.V, self.M)                
-                
-                
+                """            
+                x_true = self.apply_control(x_true, u_dash + us[i], A, B, V, M)                     
+                    
                 """
                 Obtain an observation
                 """
-                z_t = self.get_observation(x_true, self.H, self.N)
+                z_t = self.get_observation(x_true, H, N)
                 z_dash_t = z_t - zs[i]
-                
+                    
                 """
                 Kalman prediction and update
                 """
-                x_tilde_dash_t, P_dash = self.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
-                x_tilde, P_t = self.kalman_update(x_tilde_dash_t, z_dash_t, self.H, P_dash, self.W, self.N)                      
-            x_trues.append(x_true)            
-            ee_position = self.kinematics.get_end_effector_position(x_true)            
-            cartesian_coords.append(np.array([ee_position[l] for l in xrange(len(ee_position))]))
-        return cartesian_coords
-            
-        
-    def compute_earth_mover(self, H1, H2):
-        """
-        Computes the earth mover's distance between two equally sized histograms
-        """        
-        feature1 = []
-        feature2 = []        
-        w1 = []
-        w2 = []
-        for i in xrange(len(H1)):
-            for j in xrange(len(H1[i])):
-                if H1[i, j] != 0.0:
-                    feature1.append([i, j])
-                    w1.append(H1[i, j]) 
-        for i in xrange(len(H2)):
-            for j in xrange(len(H2[i])):
-                if H2[i, j] != 0.0:
-                    feature2.append([i, j])
-                    w2.append(H2[i, j])
-        return histEMD(np.array(feature1),
-                       np.array(feature2),
-                       np.array([[w1[i]] for i in xrange(len(w1))]),
-                       np.array([[w2[i]] for i in xrange(len(w2))]))
-    
-    def get_2d_histogram(self, X, Y, range, bins=200):
-        H, xedges, yedges = np.histogram2d(X, Y, bins=bins, range=range, normed=True)
-        H = np.rot90(H)
-        H = np.flipud(H)
-        sum = 0.0
-        for i in xrange(len(H)):
-            for j in xrange(len(H[i])):
-                sum += H[i, j]        
-        for i in xrange(len(H)):
-            for j in xrange(len(H[i])):
-                H[i, j] /= sum        
-        return H, xedges, yedges
+                x_tilde_dash_t, P_dash = self.kalman_predict(x_tilde, u_dash, A, B, P_t, V, M)
+                x_tilde, P_t = self.kalman_update(x_tilde_dash_t, z_dash_t, H, P_dash, W, N)
+                        
+            ee_position = self.kinematics.get_end_effector_position(x_true)
+            cart_coords.append(ee_position.tolist())            
+        return cart_coords
     
     def save_path(self, xs, us, zs):
+        print "Saving path"
         for file in glob.glob("path.txt"):
             os.remove(file)        
         with open("path.txt", "a+") as f:
@@ -309,6 +266,7 @@ class LQG:
                 f.write(string)
         
     def load_path(self, file):
+        print "loading path"
         xs = []
         us = []
         zs = [] 
@@ -330,14 +288,14 @@ class LQG:
     def get_observation(self, true_theta, H, N):
         return np.dot(H, true_theta) + self.get_random_joint_angles([0.0 for i in xrange(self.num_links)], N)        
         
-    def get_random_joint_angles(self, mu, cov):
+    def get_random_joint_angles(self, mu, cov):        
+        #with self.lock:
+        """
+        Random numbers need to be generated by using a lock and creating a new random seed in order to avoid
+        correlations between different processes
+        """
+        #np.random.seed()
         return np.random.multivariate_normal(mu, cov)
-        for i in xrange(len(samp)):
-            if samp[i] < -np.pi:
-                samp[i] = -np.pi
-            elif samp[i] > np.pi:
-                samp[i] = np.pi 
-        return samp
     
     def kalman_predict(self, x_tilde, u, A, B, P_t, V, M):
         x_tilde_dash_t = np.add(np.dot(A, x_tilde), np.dot(B, u))               

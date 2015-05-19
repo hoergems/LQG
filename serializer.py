@@ -4,14 +4,14 @@ import glob
 import os
 
 class Serializer:
-    def __init__(self, filename):
-        self.filename = filename
+    def __init__(self):
+        pass
         
-    def read_config(self):
+    def read_config(self, filename):
         try:            
-            return yaml.load(open(self.filename, 'r'))
+            return yaml.load(open(filename, 'r'))
         except:
-            print "Can't read " + self.filename + ". No such file" 
+            print "Can't read " + filename + ". No such file" 
             return None
         
     def save_stats(self, stats):
@@ -36,9 +36,13 @@ class Serializer:
             os.remove(file)
         with open('cartesian_coords.yaml', 'w') as f:
             f.write(yaml.dump(cartesian_coords, default_flow_style=False))
+            
+    def load_cartesian_coords(self):
+        with open("cartesian_coords.yaml", 'r') as f:
+            return yaml.load(f)
     
     def load_paths(self, file):        
-        paths = yaml.load(open(file, 'r'))
+        paths = yaml.load(open(file, 'r'))        
         return paths['paths']
                 
         

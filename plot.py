@@ -3,6 +3,8 @@ from mpl_toolkits.mplot3d import Axes3D
 import pylab as p
 import numpy as np
 from scipy import stats
+import glob
+import os
 
 def plot_2d_three_sets(sets, axis='xy', xrange=[0.0, 1.0], yrange=[0.0, 1.0]):
     if axis == 'xy':
@@ -15,7 +17,18 @@ def plot_2d_three_sets(sets, axis='xy', xrange=[0.0, 1.0], yrange=[0.0, 1.0]):
     plt.ylim([yrange[0], yrange[1]])
     plt.show()
     
-def plot_2d_n_sets(sets, labels=[], xlabel='x', ylabel='y', axis='xy', x_range=[0.0, 1.0], y_range=[0.0, 1.0], plot_type='lines', idx=None, lw=5):
+def plot_2d_n_sets(sets, 
+                   labels=[], 
+                   xlabel='x', 
+                   ylabel='y', 
+                   axis='xy', 
+                   x_range=[0.0, 1.0], 
+                   y_range=[0.0, 1.0], 
+                   plot_type='lines', 
+                   idx=None, 
+                   lw=5,
+                   save=False,
+                   filename="emd.png"):
     ps = []    
     if len(labels) != len(sets):         
         labels=['default' for i in xrange(len(sets))]   
@@ -39,9 +52,14 @@ def plot_2d_n_sets(sets, labels=[], xlabel='x', ylabel='y', axis='xy', x_range=[
     plt.xlim([x_range[0], x_range[1]])
     plt.ylim([y_range[0], y_range[1]])    
     
+    if save:
+        for file in glob.glob(filename):
+            os.remove(file)
+        plt.savefig(filename)
+        return
     plt.show()
     
-def plot_histogram(H, xedges, yedges):
+def plot_histogram(H, xedges, yedges, save=False, filename="hist1.png"):
     #Hmasked = np.ma.masked_where(H==0,H)
     fig2 = plt.figure()
     plt.pcolormesh(xedges,yedges,H)
@@ -49,7 +67,13 @@ def plot_histogram(H, xedges, yedges):
     plt.ylabel('y')
     cbar = plt.colorbar()
     cbar.ax.set_ylabel('Counts')
-    plt.show()
+    if save:
+        for file in glob.glob(filename):
+            os.remove(file)
+        fig2.savefig(filename)
+    else:
+        plt.show()
+    
     #fig = plt.figure(figsize=(15, 15))
     #ax = fig.add_subplot(132)
     #ax.set_title('pcolormesh: exact bin edges')
