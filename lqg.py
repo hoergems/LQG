@@ -32,16 +32,27 @@ class LQG:
             print "max " + str(self.max_covariance)
             print "steps " + str(self.covariance_steps)
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
-            emds = []
-            
-            paths = []
-            use_paths_from_file = False            
-            if len(glob.glob("paths.yaml")) == 1:
+            emds = []          
+            if self.use_paths_from_file and len(glob.glob("paths.yaml")) == 1:
                 print "Loading paths from file"
-                paths = serializer.load_paths('paths.yaml')
-                use_paths_from_file = True            
-            print "len paths " + str(len(paths))
-            cart_coords = []            
+                in_paths = serializer.load_paths('paths.yaml') 
+                paths = []               
+                for path in in_paths:
+                    xs = []
+                    us = []
+                    zs = []
+                    for j in xrange(len(path)):
+                        xs.append([path[j][i] for i in xrange(self.num_links)])
+                        us.append([path[j][self.num_links + i] for i in xrange(self.num_links)])
+                        zs.append([path[j][2 * self.num_links + i] for i in xrange(self.num_links)])
+                    paths.append([xs, us, zs])
+            else:
+                paths = self.plan_paths(self.num_paths, 0)
+                #print paths
+                serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file)
+            print "len paths " + str(len(paths))            
+            cart_coords = []  
+            best_paths = []          
             for j in xrange(len(m_covs)):
                 print "Evaluating covariance " + str(m_covs[j])
                 """
@@ -54,21 +65,23 @@ class LQG:
                 """
                 N = n_cov * np.identity(self.num_links)
                 
-                if use_paths_from_file:
+                '''if use_paths_from_file:
                     xs = paths[j][0]
                     us = paths[j][1]
                     zs = paths[j][2]
-                else:
-                    xs, us, zs = self.plan_paths(A, B, C, D, H, M, N, V, W, self.goal_position, self.num_paths, j)
-                    paths.append([[xs[i].tolist() for i in xrange(len(xs))], 
-                                  [us[i].tolist() for i in xrange(len(us))],
-                                  [zs[i].tolist() for i in xrange(len(zs))]])
+                else:'''                
+                xs, us, zs = self.evaluate_paths(A, B, C, D, H, M, N, V, W, paths)
+                                
+                best_paths.append([[xs[i] for i in xrange(len(xs))], 
+                                   [us[i] for i in xrange(len(us))],
+                                   [zs[i] for i in xrange(len(zs))]])
+                
                 #self.save_path(xs, us, zs)                
                 cartesian_coords = self.simulate(xs, us, zs, A, B, C, D, H, V, W, M, N, self.num_simulation_runs, j)                
                 cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])                
                 emds.append(calc_EMD(cartesian_coords, self.num_bins))            
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
-            serializer.save_paths(paths)
+            serializer.save_paths(best_paths, 'best_paths.yaml', True)
             serializer.save_cartesian_coords(cart_coords)            
             serializer.save_stats(stats)
         
@@ -83,6 +96,7 @@ class LQG:
         
     def set_params(self, config):
         self.num_paths = config['num_generated_paths']
+        self.use_linear_path = config['use_linear_path']
         self.num_cores = cpu_count()
         self.num_links = config['num_links']
         self.max_velocity = config['max_velocity']
@@ -95,6 +109,8 @@ class LQG:
         self.min_covariance = config['min_covariance']
         self.max_covariance = config['max_covariance']
         self.covariance_steps = config['covariance_steps']
+        self.use_paths_from_file = config['use_paths_from_file']
+        self.overwrite_paths_file = config['overwrite_paths_file']
         self.kinematics = Kinematics(self.num_links)    
     
     def get_jacobian(self, links, state):
@@ -114,14 +130,14 @@ class LQG:
                              [1.0, 1.0, 1.0]])
         return None
         
-    def plan_paths(self, A, B, C, D, H, M, N, V, W, goal_position, num, sim_run):        
+    def plan_paths(self, num, sim_run):        
         jobs = collections.deque()
         ir = collections.deque()
         path_queue = Queue()
         paths = []        
         for i in xrange(num):
             print "path num " + str(i)
-            p = Process(target=self.evaluate_path, args=(A, B, C, D, H, M, N, V, W, path_queue, sim_run,))
+            p = Process(target=self.construct_path, args=(path_queue, sim_run,))
             p.start()
             jobs.append(p)
             ir.append(1)
@@ -132,8 +148,16 @@ class LQG:
                 ir.clear()
                 q_size = path_queue.qsize()
                 for j in xrange(q_size):
-                    paths.append(path_queue.get())                    
-                
+                    p = path_queue.get()                    
+                    paths.append([[p[0][i].tolist() for i in xrange(len(p[0]))], 
+                                  [p[1][i].tolist() for i in xrange(len(p[0]))], 
+                                  [p[2][i].tolist() for i in xrange(len(p[0]))]])                    
+        """
+        Save the paths here
+        """
+        return paths
+        
+        return self.evaluate_paths(A, B, C, D, H, M, N, V, W, path_queue, sim_run)        
         tr = 1000.0
         best_index = 0
         for i in xrange(len(paths)):            
@@ -144,60 +168,79 @@ class LQG:
         print "best trace: " + str(tr)              
         return paths[best_index][1][0], paths[best_index][1][1], paths[best_index][1][2]
         
-    
-    def evaluate_path(self, A, B, C, D, H, M, N, V, W, queue, sim_run):
+    def construct_path(self, queue, sim_run):
         path_planner = PathPlanner()
-        path_planner.set_params(self.num_links, self.max_velocity, self.delta_t, sim_run)
+        path_planner.set_params(self.num_links, 
+                                self.max_velocity, 
+                                self.delta_t, self.use_linear_path,
+                                sim_run)
         path_planner.setup_ompl()
         path_planner.set_start_state(self.theta_0)
         path_planner.set_goal_region(self.goal_position, self.goal_radius)              
         xs, us, zs = path_planner.plan_path()
-        
-        Ls = self.compute_gain(A, B, C, D, len(xs))
-        P_t = np.array([[0.0 for i in xrange(self.num_links)] for i in xrange(self.num_links)])
-        P_0 = np.copy(P_t)
-        NU = np.copy(P_t)
-        
-        Q_t = np.vstack((np.hstack((M, NU)), 
-                         np.hstack((NU, N))))
-        R_t = np.vstack((np.hstack((P_0, NU)),
-                         np.hstack((NU, NU))))
-        ee_distributions = []
-        ee_approx_distr = []
-        for i in xrange(1, len(xs)):
-            P_hat_t = self.compute_p_hat_t(A, P_t, V, M)
+        queue.put((xs, us, zs))
+    
+    def evaluate_paths(self, A, B, C, D, H, M, N, V, W, paths):
+        '''path_planner = PathPlanner()
+        path_planner.set_params(self.num_links, self.max_velocity, self.delta_t, sim_run)
+        path_planner.setup_ompl()
+        path_planner.set_start_state(self.theta_0)
+        path_planner.set_goal_region(self.goal_position, self.goal_radius)              
+        xs, us, zs = path_planner.plan_path()'''
+        min_trace = 1000.0       
+        for l in xrange(len(paths)): 
+            xs = paths[l][0]
+            us = paths[l][1]
+            zs = paths[l][2]
+            Ls = self.compute_gain(A, B, C, D, len(xs))
+            P_t = np.array([[0.0 for i in xrange(self.num_links)] for i in xrange(self.num_links)])
+            P_0 = np.copy(P_t)
+            NU = np.copy(P_t)
             
-            
-            K_t = self.compute_kalman_gain(H, P_hat_t, W, N)            
-            
-            P_t = self.compute_P_t(K_t, H, P_hat_t) 
-            
-            F_0 = np.hstack((A, np.dot(B, Ls[i - 1])))
-            F_1 = np.hstack((np.dot(np.dot(K_t, H), A), 
-                             np.add(A, np.subtract(np.dot(B, Ls[i-1]), np.dot(np.dot(K_t, H), A)))))            
-            F_t = np.vstack((F_0, F_1))
-            
-            G_t = np.vstack((np.hstack((V, NU)), 
-                             np.hstack((np.dot(np.dot(K_t, H), V), np.dot(K_t, W)))))
-            
-            """ Compute R """            
-            FRF = np.dot(np.dot(F_t, R_t), np.transpose(F_t))
-            GQG = np.dot(np.dot(G_t, Q_t), np.transpose(G_t))
-            R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))            
-            
-            
-            #print "R_t " + str(R_t)
-            Gamma_t = np.vstack((np.hstack((np.identity(self.num_links), NU)), 
-                                 np.hstack((NU, Ls[i - 1]))))
-            #print "Gamma_t " + str(Gamma_t)
-            Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))
-            cov_state = np.array([[Cov[j, k] for k in xrange(self.num_links)] for j in xrange(self.num_links)])            
-            j = self.get_jacobian([1.0 for k in xrange(self.num_links)], xs[i])
-            
-            EE_covariance = np.dot(np.dot(j, cov_state), np.transpose(j))
-        print "cov state " + str(cov_state)
-        print "cov end effector " + str(EE_covariance)    
-        queue.put([np.trace(EE_covariance), (xs, us, zs)])
+            Q_t = np.vstack((np.hstack((M, NU)), 
+                             np.hstack((NU, N))))
+            R_t = np.vstack((np.hstack((P_0, NU)),
+                             np.hstack((NU, NU))))
+            ee_distributions = []
+            ee_approx_distr = []
+            for i in xrange(1, len(xs)):
+                P_hat_t = self.compute_p_hat_t(A, P_t, V, M)
+                
+                
+                K_t = self.compute_kalman_gain(H, P_hat_t, W, N)            
+                
+                P_t = self.compute_P_t(K_t, H, P_hat_t) 
+                
+                F_0 = np.hstack((A, np.dot(B, Ls[i - 1])))
+                F_1 = np.hstack((np.dot(np.dot(K_t, H), A), 
+                                 np.add(A, np.subtract(np.dot(B, Ls[i-1]), np.dot(np.dot(K_t, H), A)))))            
+                F_t = np.vstack((F_0, F_1))
+                
+                G_t = np.vstack((np.hstack((V, NU)), 
+                                 np.hstack((np.dot(np.dot(K_t, H), V), np.dot(K_t, W)))))
+                
+                """ Compute R """            
+                FRF = np.dot(np.dot(F_t, R_t), np.transpose(F_t))
+                GQG = np.dot(np.dot(G_t, Q_t), np.transpose(G_t))
+                R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))            
+                
+                
+                #print "R_t " + str(R_t)
+                Gamma_t = np.vstack((np.hstack((np.identity(self.num_links), NU)), 
+                                     np.hstack((NU, Ls[i - 1]))))
+                #print "Gamma_t " + str(Gamma_t)
+                Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))
+                cov_state = np.array([[Cov[j, k] for k in xrange(self.num_links)] for j in xrange(self.num_links)])            
+                j = self.get_jacobian([1.0 for k in xrange(self.num_links)], xs[i])
+                
+                EE_covariance = np.dot(np.dot(j, cov_state), np.transpose(j))
+            tr = np.trace(EE_covariance)
+            if tr < min_trace:
+                min_trace = tr
+                best_path = (paths[l][0], paths[l][1], paths[l][2])
+            #print "cov state " + str(cov_state)
+            #print "cov end effector " + str(EE_covariance)    
+        return best_path
         
     def simulate(self, 
                  xs, 

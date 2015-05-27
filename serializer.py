@@ -9,7 +9,7 @@ class Serializer:
         
     def read_config(self, filename):
         try:            
-            return yaml.load(open(filename, 'r'))
+            return yaml.load(open(filename, 'r'), yaml.CLoader)
         except:
             print "Can't read " + filename + ". No such file" 
             return None
@@ -22,13 +22,31 @@ class Serializer:
             
     def load_stats(self, filename):
         with open(filename, 'r') as f:
-            return yaml.load(f)
+            return yaml.load(f, yaml.CLoader)
             
-    def save_paths(self, paths):
-        for file in glob.glob('paths.yaml'):
-            os.remove(file)
-        d = dict(paths = paths)        
-        with open('paths.yaml', 'w') as f:
+    def save_paths(self, paths, filename, overwrite):
+        path_arrays = []
+        if overwrite:
+            for file in glob.glob(filename):
+                os.remove(file)            
+        else:
+            try:
+                path_arrays = self.load_paths(filename)
+                for file in glob.glob(filename):
+                    os.remove(file)
+            except:
+                print "Couldn't load paths.yaml"        
+        for i in xrange(len(paths)):                       
+            path_arr = []           
+            for j in xrange(len(paths[i][0])):
+                el = []
+                el.extend(paths[i][0][j])
+                el.extend(paths[i][1][j])
+                el.extend(paths[i][2][j])
+                path_arr.append(el)
+            path_arrays.append(path_arr)  
+        d = dict(paths = path_arrays)        
+        with open(filename, 'a+') as f:
             f.write(yaml.dump(d, default_flow_style=False))
             
     def save_cartesian_coords(self, cartesian_coords):
@@ -39,10 +57,10 @@ class Serializer:
             
     def load_cartesian_coords(self):
         with open("cartesian_coords.yaml", 'r') as f:
-            return yaml.load(f)
+            return yaml.load(f, yaml.CLoader)
     
     def load_paths(self, file):        
-        paths = yaml.load(open(file, 'r'))        
+        paths = yaml.load(open(file, 'r'), yaml.CLoader)        
         return paths['paths']
                 
         

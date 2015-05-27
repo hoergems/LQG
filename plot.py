@@ -25,6 +25,7 @@ def plot_2d_n_sets(sets,
                    x_range=[0.0, 1.0], 
                    y_range=[0.0, 1.0], 
                    plot_type='lines', 
+                   show_legend=True,
                    idx=None, 
                    lw=5,
                    save=False,
@@ -39,14 +40,15 @@ def plot_2d_n_sets(sets,
             else:
                 p, = plt.plot(sets[i][:,0], sets[i][:,1], label=labels[i])
             ps.append(p)
-        plt.legend(ps)
+        if show_legend:
+            plt.legend(ps)
     else:
         fig = plt.figure()
         ax = fig.add_subplot(111)
         for i in xrange(len(sets)):
             ax.scatter(sets[i][:,0], sets[i][:,1], c=np.random.rand(3,1), label=labels[i], s=13)
-        
-        plt.legend(loc='upper left')
+        if show_legend:
+            plt.legend(loc='upper left')
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.xlim([x_range[0], x_range[1]])
@@ -56,23 +58,26 @@ def plot_2d_n_sets(sets,
         for file in glob.glob(filename):
             os.remove(file)
         plt.savefig(filename)
+        plt.clf()
         return
     plt.show()
+    plt.clf()
     
-def plot_histogram(H, xedges, yedges, save=False, filename="hist1.png"):
+def plot_histogram(H, xedges, yedges, save=False, barlabel="Probability", filename="hist1.png"):
     #Hmasked = np.ma.masked_where(H==0,H)
     fig2 = plt.figure()
     plt.pcolormesh(xedges,yedges,H)
     plt.xlabel('x')
     plt.ylabel('y')
     cbar = plt.colorbar()
-    cbar.ax.set_ylabel('Counts')
+    cbar.ax.set_ylabel(barlabel)
     if save:
         for file in glob.glob(filename):
             os.remove(file)
         fig2.savefig(filename)
     else:
         plt.show()
+    plt.clf()
     
     #fig = plt.figure(figsize=(15, 15))
     #ax = fig.add_subplot(132)
@@ -143,3 +148,4 @@ def plot_3d_points(points, x_scale=[-4.0, 4.0], y_scale=[-4.0, 4.0], z_scale=[-4
     ax.scatter(x, y, z, c='r')
     ax.auto_scale_xyz(x_scale, y_scale, z_scale)
     plt.show()
+    plt.clf()

@@ -1,5 +1,6 @@
 import numpy as np
 import plot as Plot
+import copy
 from ompl import base as ob
 from ompl import geometric as og
 from motion_validator import MotionValidator
@@ -16,10 +17,11 @@ class PathPlanner:
                
         path = self.plan_path()'''        
     
-    def set_params(self, space_dimenstion, max_velocity, delta_t, sim_run):
+    def set_params(self, space_dimenstion, max_velocity, delta_t, use_linear_path, sim_run):
         self.space_dimension = space_dimenstion
         self.max_velocity = max_velocity
         self.delta_t = delta_t 
+        self.use_linear_path = use_linear_path
         self.sim_run = sim_run
         
     def set_start_state(self, start_state):
@@ -34,37 +36,65 @@ class PathPlanner:
         self.goal_region.set_bounds([[-np.pi, np.pi] for i in xrange(self.si.getStateSpace().getDimension())])        
             
     def plan_path(self):
-        self.problem_definition.clearSolutionPaths() 
+        self.problem_definition.clearSolutionPaths()
         goal = self.goal_region.sampleGoal(ob.State(self.si.getStateSpace()))
         goal_state = ob.State(self.si.getStateSpace())
         for i in xrange(self.si.getStateSpace().getDimension()):
-            goal_state[i] = goal[i]        
-        
-        self.problem_definition.addStartState(self.start_state)
-        #problem_definition.setGoal(goal_region)
-        self.problem_definition.setStartAndGoalStates(self.start_state, goal_state)
-        
-        
-        self.planner = og.RRTConnect(self.si)        
-        self.planner.setProblemDefinition(self.problem_definition)
-        
-        self.planner.setup()
-        
-        while not self.problem_definition.hasSolution():
-            self.planner.solve(10.0)
-            print "has solution " + str(self.problem_definition.hasSolution())
-            print "sim_run " + str(self.sim_run)
-        print "solution found!"
-        path = []
-        
-        if self.problem_definition.hasSolution():
-            solution_path = self.problem_definition.getSolutionPath()
-            states = solution_path.getStates()                
-            path = [np.array([state[i] for i in xrange(self.space.getDimension())]) for state in states] 
-            #print "path " + str(path)
+            goal_state[i] = goal[i] 
+        if not self.use_linear_path:
+            self.problem_definition.addStartState(self.start_state)
+            #problem_definition.setGoal(goal_region)
+            self.problem_definition.setStartAndGoalStates(self.start_state, goal_state)
+            
+            
+            self.planner = og.RRTConnect(self.si)        
+            self.planner.setProblemDefinition(self.problem_definition)
+            
+            self.planner.setup()
+            
+            while not self.problem_definition.hasSolution():
+                self.planner.solve(10.0)
+                print "has solution " + str(self.problem_definition.hasSolution())
+                print "sim_run " + str(self.sim_run)
+            print "solution found!"
+            path = []
+            
+            if self.problem_definition.hasSolution():
+                solution_path = self.problem_definition.getSolutionPath()
+                states = solution_path.getStates()                
+                path = [np.array([state[i] for i in xrange(self.space.getDimension())]) for state in states] 
+                #print "path " + str(path)
+            else:
+                print "no solution" 
         else:
-            print "no solution"            
+            path = self.linear_path(self.start_state, goal_state)          
         return self._augment_path(path)
+    
+    def linear_path(self, start, goal):
+        path = []
+        print "LINEAR PATH"
+        max_dist = self.delta_t * self.max_velocity
+        print "max dist " + str(max_dist)
+        s = []
+        g = []
+        for i in xrange(self.space.getDimension()):
+            s.append(start[i])
+            g.append(goal[i])        
+        start = np.array(s)
+        goal = np.array(g)
+        vec = goal - start
+        vec_length = np.linalg.norm(vec)
+        vec_norm = vec / vec_length
+        steps = vec_length / max_dist
+        steps_full = np.floor(steps)
+        v = start
+        for i in xrange(int(steps_full)):
+            v += max_dist * vec_norm            
+            path.append(copy.copy(v))            
+        path.append(goal)
+        return path
+        
+        
         
     def setup_ompl(self):
         self.space = ob.RealVectorStateSpace(dim=self.space_dimension)
