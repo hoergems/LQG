@@ -7,11 +7,13 @@ from serializer import Serializer
 from EMD import *
 
 class PlotStats:
-    def __init__(self, save):            
+    def __init__(self, save):
+        if not os.path.isdir("stats"):
+            os.makedirs("stats")      
         self.save = save
         print "Loading cartesian coordinates..."  
         serializer = Serializer()
-        cart_coords = serializer.load_cartesian_coords(path="stats")        
+        cart_coords = serializer.load_cartesian_coords(path="stats")
         print "plotting average distance to goal"
         self.plot_average_dist_to_goal(serializer, cart_coords)
         print "plotting EMD graph..."

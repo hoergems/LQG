@@ -5,7 +5,7 @@ num_generated_paths: 1
 use_linear_path: True
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 10000
+num_simulation_runs: 100
 
 # Number of links the manipulator consists of
 num_links: 3
