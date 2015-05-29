@@ -29,6 +29,7 @@ def plot_2d_n_sets(sets,
                    idx=None, 
                    lw=5,
                    save=False,
+                   path="",
                    filename="emd.png"):
     ps = []    
     if len(labels) != len(sets):         
@@ -55,15 +56,15 @@ def plot_2d_n_sets(sets,
     plt.ylim([y_range[0], y_range[1]])    
     
     if save:
-        for file in glob.glob(filename):
+        for file in glob.glob(os.path.join(path, filename)):
             os.remove(file)
-        plt.savefig(filename)
+        plt.savefig(os.path.join(path, filename))
         plt.clf()
         return
     plt.show()
     plt.clf()
     
-def plot_histogram(H, xedges, yedges, save=False, barlabel="Probability", filename="hist1.png"):
+def plot_histogram(H, xedges, yedges, save=False, barlabel="Probability", path="", filename="hist1.png"):
     #Hmasked = np.ma.masked_where(H==0,H)
     fig2 = plt.figure()
     plt.pcolormesh(xedges,yedges,H)
@@ -72,9 +73,9 @@ def plot_histogram(H, xedges, yedges, save=False, barlabel="Probability", filena
     cbar = plt.colorbar()
     cbar.ax.set_ylabel(barlabel)
     if save:
-        for file in glob.glob(filename):
+        for file in glob.glob(os.path.join(path, filename)):
             os.remove(file)
-        fig2.savefig(filename)
+        fig2.savefig(os.path.join(path, filename))
     else:
         plt.show()
     plt.clf()

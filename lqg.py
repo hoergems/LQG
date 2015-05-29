@@ -35,7 +35,7 @@ class LQG:
             emds = []          
             if self.use_paths_from_file and len(glob.glob("paths.yaml")) == 1:
                 print "Loading paths from file"
-                in_paths = serializer.load_paths('paths.yaml') 
+                in_paths = serializer.load_paths("paths.yaml", path="stats") 
                 paths = []               
                 for path in in_paths:
                     xs = []
@@ -49,7 +49,7 @@ class LQG:
             else:
                 paths = self.plan_paths(self.num_paths, 0)
                 #print paths
-                serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file)
+                serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path="stats")
             print "len paths " + str(len(paths))            
             cart_coords = []  
             best_paths = []          
@@ -81,9 +81,11 @@ class LQG:
                 cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])                
                 emds.append(calc_EMD(cartesian_coords, self.num_bins))            
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
-            serializer.save_paths(best_paths, 'best_paths.yaml', True)
-            serializer.save_cartesian_coords(cart_coords)            
-            serializer.save_stats(stats)
+            serializer.save_paths(best_paths, 'best_paths.yaml', True, path="stats")
+            serializer.save_cartesian_coords(cart_coords, path="stats")            
+            serializer.save_stats(stats, path="stats")
+            cmd = "cp config.yaml stats/"
+            os.system(cmd)
         
     def check_positive_definite(self, matrices):
         for m in matrices:

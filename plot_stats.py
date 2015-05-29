@@ -7,31 +7,11 @@ from serializer import Serializer
 from EMD import *
 
 class PlotStats:
-    def __init__(self, save):
-        if not os.path.isdir("stats"):
-            os.makedirs("stats")
-            
-        self.clear_stats()  
-            
-        cmd = "cp stats.yaml stats/" 
-        os.system(cmd)
-        
-        cmd = "cp cartesian_coords.yaml stats/"
-        os.system(cmd)
-        
-        cmd = "cp paths.yaml stats/"   
-        os.system(cmd)
-        
-        cmd = "cp best_paths.yaml stats/"   
-        os.system(cmd)
-        
-        cmd = "cp config.yaml stats/"   
-        os.system(cmd)        
-              
+    def __init__(self, save):            
         self.save = save
         print "Loading cartesian coordinates..."  
         serializer = Serializer()
-        cart_coords = serializer.load_cartesian_coords()
+        cart_coords = serializer.load_cartesian_coords(path="stats")        
         print "plotting average distance to goal"
         self.plot_average_dist_to_goal(serializer, cart_coords)
         print "plotting EMD graph..."
@@ -44,8 +24,8 @@ class PlotStats:
             os.remove(file)        
         
     def plot_average_dist_to_goal(self, serializer, cart_coords):
-        config = serializer.read_config("config.yaml")
-        stats = serializer.load_stats('stats.yaml')
+        config = serializer.read_config("config.yaml", path="stats")
+        stats = serializer.load_stats('stats.yaml', path="stats")
         m_cov = stats['m_cov']
         data = []
         max_avg_distance = 0.0
@@ -73,8 +53,8 @@ class PlotStats:
                             filename="stats/avg_distance.png")
         
     def plot_emd_graph(self, serializer, cartesian_coords):
-        stats = serializer.load_stats('stats.yaml') 
-        config = serializer.read_config('config.yaml')       
+        stats = serializer.load_stats('stats.yaml', path="stats") 
+        config = serializer.read_config('config.yaml', path="stats")       
         #emd = stats['emd']
         m_cov = stats['m_cov']
         
@@ -91,17 +71,18 @@ class PlotStats:
                             y_range=[0, max(emds)],
                             show_legend=False,
                             save=self.save,
-                            filename="stats/emd.png")        
+                            path="stats",
+                            filename="emd.png")        
         
     def save_histogram_plots(self, serializer, cart_coords):
-        config = serializer.read_config("config.yaml")
+        config = serializer.read_config("config.yaml", path="stats")
         
         for k in xrange(len(cart_coords)):                    
             X = np.array([cart_coords[k][i][0] for i in xrange(len(cart_coords[0]))])
             Y = np.array([cart_coords[k][i][1] for i in xrange(len(cart_coords[0]))])
             histogram_range = [[-3.1, 3.1], [-3.1, 3.1]]
             H, xedges, yedges = get_2d_histogram(X, Y, histogram_range, bins=config['num_bins'])        
-            Plot.plot_histogram(H, xedges, yedges, save=self.save, filename="stats/hist"+ str(k) + ".png")
+            Plot.plot_histogram(H, xedges, yedges, save=self.save, path="stats", filename="hist"+ str(k) + ".png")
     
         
 if __name__ == "__main__":

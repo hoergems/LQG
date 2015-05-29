@@ -2,37 +2,38 @@
 import yaml
 import glob
 import os
+import numpy as np
 
 class Serializer:
     def __init__(self):
         pass
         
-    def read_config(self, filename):
+    def read_config(self, filename, path=""):
         try:            
-            return yaml.load(open(filename, 'r'), yaml.CLoader)
+            return yaml.load(open(os.path.join(path, filename), 'r'), yaml.CLoader)
         except:
-            print "Can't read " + filename + ". No such file" 
+            print "Can't read " + path + "/" + filename + ". No such file" 
             return None
         
-    def save_stats(self, stats):
-        for file in glob.glob("stats.yaml"):
+    def save_stats(self, stats, path=""):
+        for file in glob.glob(os.path.join(path, "stats.yaml")):
             os.remove(file)
-        with open('stats.yaml', 'w') as f:
+        with open(os.path.join(path, "stats.yaml"), 'w') as f:
             f.write(yaml.dump(stats, default_flow_style=False))
             
-    def load_stats(self, filename):
-        with open(filename, 'r') as f:
+    def load_stats(self, filename, path=""):
+        with open(os.path.join(path, filename), 'r') as f:
             return yaml.load(f, yaml.CLoader)
             
-    def save_paths(self, paths, filename, overwrite):
+    def save_paths(self, paths, filename, overwrite, path=""):
         path_arrays = []
         if overwrite:
-            for file in glob.glob(filename):
+            for file in glob.glob(os.path.join(path, filename)):
                 os.remove(file)            
         else:
             try:
-                path_arrays = self.load_paths(filename)
-                for file in glob.glob(filename):
+                path_arrays = self.load_paths(filename, path)
+                for file in glob.glob(os.path.join(path, filename)):
                     os.remove(file)
             except:
                 print "Couldn't load paths.yaml"        
@@ -46,21 +47,22 @@ class Serializer:
                 path_arr.append(el)
             path_arrays.append(path_arr)  
         d = dict(paths = path_arrays)        
-        with open(filename, 'a+') as f:
+        with open(os.path.join(path, filename), 'a+') as f:
             f.write(yaml.dump(d, default_flow_style=False))
             
-    def save_cartesian_coords(self, cartesian_coords):
-        for file in glob.glob('cartesian_coords.yaml'):
+    def save_cartesian_coords(self, cartesian_coords, path=""):
+        for file in glob.glob(os.path.join(path, "cartesian_coords.yaml")):
             os.remove(file)
-        with open('cartesian_coords.yaml', 'w') as f:
+        with open(os.path.join(path, "cartesian_coords.yaml"), 'w') as f:                
             f.write(yaml.dump(cartesian_coords, default_flow_style=False))
             
-    def load_cartesian_coords(self):
-        with open("cartesian_coords.yaml", 'r') as f:
+            
+    def load_cartesian_coords(self, path=""):        
+        with open(os.path.join(path, "cartesian_coords.yaml"), 'r') as f:
             return yaml.load(f, yaml.CLoader)
     
-    def load_paths(self, file):        
-        paths = yaml.load(open(file, 'r'), yaml.CLoader)        
+    def load_paths(self, file, path=""):        
+        paths = yaml.load(open(os.path.join(path, file), 'r'), yaml.CLoader)        
         return paths['paths']
                 
         
