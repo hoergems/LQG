@@ -64,6 +64,9 @@ class Serializer:
     def load_paths(self, file, path=""):        
         paths = yaml.load(open(os.path.join(path, file), 'r'), yaml.CLoader)        
         return paths['paths']
+    
+    def load_obstacles(self, file, path=""):
+        return yaml.load(open(os.path.join(path, file), 'r'), yaml.CLoader)
                 
         
         

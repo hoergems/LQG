@@ -17,7 +17,8 @@ import collections
 class LQG:
     def __init__(self):        
         serializer = Serializer()
-        config = serializer.read_config("config.yaml")        
+        config = serializer.read_config("config.yaml") 
+        self.obstacles = serializer.load_obstacles("obstacles.yaml", path="obstacles")                      
         self.set_params(config)        
         A = np.identity(self.num_links)
         H = np.identity(self.num_links)
@@ -144,11 +145,21 @@ class LQG:
             jobs.append(p)
             ir.append(1)
             if len(ir) >= self.num_cores - 1 or i == num - 1:
-                for job in jobs:                         
-                    job.join()                                        
+                '''for job in jobs:                    
+                    if job.is_alive():
+                        print "is alive " + str(job.is_alive())
+                        print "joining"                                            
+                        job.join()
+                        print "JOINED"'''
+                if i == num - 1:
+                    while not path_queue.qsize() == num % (self.num_cores - 1):
+                        time.sleep(0.0001)
+                else:
+                    while not path_queue.qsize() == self.num_cores - 1:
+                        time.sleep(0.0001)                                        
                 jobs.clear()
                 ir.clear()
-                q_size = path_queue.qsize()
+                q_size = path_queue.qsize()                
                 for j in xrange(q_size):
                     p = path_queue.get()                    
                     paths.append([[p[0][i].tolist() for i in xrange(len(p[0]))], 
@@ -178,9 +189,12 @@ class LQG:
                                 sim_run)
         path_planner.setup_ompl()
         path_planner.set_start_state(self.theta_0)
-        path_planner.set_goal_region(self.goal_position, self.goal_radius)              
+        path_planner.set_goal_region(self.goal_position, self.goal_radius) 
+        path_planner.set_obstacles(self.obstacles)             
         xs, us, zs = path_planner.plan_path()
+        print "putting in queue"
         queue.put((xs, us, zs))
+        return
     
     def evaluate_paths(self, A, B, C, D, H, M, N, V, W, paths):
         '''path_planner = PathPlanner()
@@ -231,8 +245,13 @@ class LQG:
                 Gamma_t = np.vstack((np.hstack((np.identity(self.num_links), NU)), 
                                      np.hstack((NU, Ls[i - 1]))))
                 #print "Gamma_t " + str(Gamma_t)
+                
                 Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))
-                cov_state = np.array([[Cov[j, k] for k in xrange(self.num_links)] for j in xrange(self.num_links)])            
+                cov_state = np.array([[Cov[j, k] for k in xrange(self.num_links)] for j in xrange(self.num_links)])
+                '''if i == 30:
+                    print "M = " + str(M)
+                    print "cov_state = " + str(cov_state)
+                    time.sleep(1.0)'''          
                 j = self.get_jacobian([1.0 for k in xrange(self.num_links)], xs[i])
                 
                 EE_covariance = np.dot(np.dot(j, cov_state), np.transpose(j))

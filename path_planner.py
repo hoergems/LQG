@@ -47,7 +47,9 @@ class PathPlanner:
             self.problem_definition.setStartAndGoalStates(self.start_state, goal_state)
             
             
-            self.planner = og.RRTConnect(self.si)        
+            self.planner = og.RRTConnect(self.si)
+            #self.planner = og.RRT(self.si)
+            self.planner.setRange(self.delta_t * self.max_velocity)        
             self.planner.setProblemDefinition(self.problem_definition)
             
             self.planner.setup()
@@ -109,6 +111,9 @@ class PathPlanner:
         self.si.setMotionValidator(self.motion_validator)
         self.si.setup()
         self.problem_definition = ob.ProblemDefinition(self.si)
+        
+    def set_obstacles(self, obstacles):        
+        self.motion_validator.set_obstacles(obstacles)
         
         
         #Plot.plot_2d_n_sets([np.array(path)], ['x_s'], x_range=[-np.pi, np.pi], y_range=[-np.pi, np.pi]) 
