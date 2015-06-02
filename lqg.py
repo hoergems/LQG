@@ -5,20 +5,22 @@ import copy
 import os
 import glob
 from scipy.linalg import solve_discrete_are
-from scipy.stats import norm, vonmises
+from scipy.stats import norm, vonmises, multivariate_normal
 from scipy import linalg, signal
 from path_planner import PathPlanner
 from kinematics import Kinematics
 from multiprocessing import Process, Queue, cpu_count
 from EMD import *
 from serializer import Serializer
+from obstacle import Obstacle
 import collections
 
 class LQG:
     def __init__(self):        
         serializer = Serializer()
         config = serializer.read_config("config.yaml") 
-        self.obstacles = serializer.load_obstacles("obstacles.yaml", path="obstacles")                      
+        obstacle_params = serializer.load_obstacles("obstacles.yaml", path="obstacles")
+        self.obstacles = self.construct_obstacles(obstacle_params)                      
         self.set_params(config)        
         A = np.identity(self.num_links)
         H = np.identity(self.num_links)
@@ -49,9 +51,9 @@ class LQG:
                     paths.append([xs, us, zs])
             else:
                 paths = self.plan_paths(self.num_paths, 0)
-                #print paths
+                #print paths            
                 serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path="stats")
-            print "len paths " + str(len(paths))            
+            print "len paths " + str(len(paths))                       
             cart_coords = []  
             best_paths = []          
             for j in xrange(len(m_covs)):
@@ -87,6 +89,13 @@ class LQG:
             serializer.save_stats(stats, path="stats")
             cmd = "cp config.yaml stats/"
             os.system(cmd)
+            
+    def construct_obstacles(self, obstacle_params):
+        obstacle_list = []
+        if not obstacle_params == None:
+            for o in obstacle_params:
+                obstacle_list.append(Obstacle(o[0], o[1], o[2], o[3]))
+        return obstacle_list        
         
     def check_positive_definite(self, matrices):
         for m in matrices:
@@ -112,7 +121,7 @@ class LQG:
         self.min_covariance = config['min_covariance']
         self.max_covariance = config['max_covariance']
         self.covariance_steps = config['covariance_steps']
-        self.use_paths_from_file = config['use_paths_from_file']
+        self.use_paths_from_file = config['use_paths_from_file']        
         self.overwrite_paths_file = config['overwrite_paths_file']
         self.kinematics = Kinematics(self.num_links)    
     
@@ -203,7 +212,9 @@ class LQG:
         path_planner.set_start_state(self.theta_0)
         path_planner.set_goal_region(self.goal_position, self.goal_radius)              
         xs, us, zs = path_planner.plan_path()'''
-        min_trace = 1000.0       
+        min_trace = 1000.0
+        min_collision_sum = 10000.0
+        best_paths = []       
         for l in xrange(len(paths)): 
             xs = paths[l][0]
             us = paths[l][1]
@@ -219,6 +230,7 @@ class LQG:
                              np.hstack((NU, NU))))
             ee_distributions = []
             ee_approx_distr = []
+            collision_probs = []
             for i in xrange(1, len(xs)):
                 P_hat_t = self.compute_p_hat_t(A, P_t, V, M)
                 
@@ -248,20 +260,47 @@ class LQG:
                 
                 Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))
                 cov_state = np.array([[Cov[j, k] for k in xrange(self.num_links)] for j in xrange(self.num_links)])
-                '''if i == 30:
-                    print "M = " + str(M)
-                    print "cov_state = " + str(cov_state)
-                    time.sleep(1.0)'''          
                 j = self.get_jacobian([1.0 for k in xrange(self.num_links)], xs[i])
-                
                 EE_covariance = np.dot(np.dot(j, cov_state), np.transpose(j))
-            tr = np.trace(EE_covariance)
+                EE_covariance = np.array([[EE_covariance[j, k] for k in xrange(2)] for j in xrange(2)])
+                probs = 0.0 
+                if len(self.obstacles) > 0:
+                    #print "get collision probs"
+                    p = self.kinematics.get_end_effector_position(xs[i])
+                    probs = self.get_probability_of_collision(p, EE_covariance)
+                    collision_probs.append(probs)                    
+                #prob_collision = self.get_probability_of_collision               
+            if len(collision_probs) > 0:
+                collision_sum = sum(collision_probs) / len(collision_probs)
+                print "collision_sum " + str(collision_sum)
+                if collision_sum == 0.0:
+                    best_paths.append([(paths[l][0], paths[l][1], paths[l][2]), EE_covariance])
+                elif collision_sum < min_collision_sum:
+                    min_collision_sum = collision_sum
+                    best_paths.append([(paths[l][0], paths[l][1], paths[l][2]), EE_covariance])
+                    #best_path = (paths[l][0], paths[l][1], paths[l][2])
+            else:
+                best_paths.append([(paths[l][0], paths[l][1], paths[l][2]), EE_covariance])
+        
+        for path in best_paths:
+            #print "paths[1] " + str(path[1])
+            tr = np.trace(path[1])
+            #print "trace " + str()
             if tr < min_trace:
                 min_trace = tr
-                best_path = (paths[l][0], paths[l][1], paths[l][2])
-            #print "cov state " + str(cov_state)
-            #print "cov end effector " + str(EE_covariance)    
+                best_path = path[0]                   
         return best_path
+        
+    def get_probability_of_collision(self, p, cov):        
+        samples = multivariate_normal.rvs(p, cov, 10)        
+        ps = multivariate_normal.pdf(samples, p, cov, allow_singular=True)
+        ps /= sum(ps)
+        prob = 0.0
+        for i in xrange(len(samples)):
+            for o in self.obstacles:
+                if o.collides(samples[i]):
+                    prob += ps[i]
+        return prob    
         
     def simulate(self, 
                  xs, 

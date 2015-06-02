@@ -18,12 +18,13 @@ class MotionValidator(ob.MotionValidator):
         self.max_dist = delta_t *  max_velocity
         
     def set_obstacles(self, obstacles):
-        obstacle_list = []
+        '''obstacle_list = []
         if not obstacles == None:
             for o in obstacles:
                 obstacle_list.append(Obstacle(o[0], o[1], o[2], o[3]))
         
-        self.obstacles = obstacle_list                
+        self.obstacles = obstacle_list'''
+        self.obstacles = obstacles                
             
     def checkMotion(self, s1, s2):
         """
