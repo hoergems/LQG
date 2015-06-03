@@ -47,8 +47,9 @@ class PathPlanner:
             self.problem_definition.setStartAndGoalStates(self.start_state, goal_state)
             
             
-            self.planner = og.RRTConnect(self.si)
-            #self.planner = og.RRT(self.si)
+            #self.planner = og.RRTConnect(self.si)
+            self.planner = og.RRT(self.si)   
+            #self.planner.setGoalBias(0.0)         
             self.planner.setRange(self.delta_t * self.max_velocity)        
             self.planner.setProblemDefinition(self.problem_definition)
             

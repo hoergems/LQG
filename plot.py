@@ -62,7 +62,7 @@ def plot_2d_n_sets(sets,
         plt.clf()
         return
     plt.show()
-    plt.clf()
+    plt.close('all')
     
 def plot_histogram(H, xedges, yedges, save=False, barlabel="Probability", path="", filename="hist1.png"):
     #Hmasked = np.ma.masked_where(H==0,H)
@@ -78,7 +78,7 @@ def plot_histogram(H, xedges, yedges, save=False, barlabel="Probability", path="
         fig2.savefig(os.path.join(path, filename))
     else:
         plt.show()
-    plt.clf()
+    plt.close('all')
     
     #fig = plt.figure(figsize=(15, 15))
     #ax = fig.add_subplot(132)
@@ -149,4 +149,4 @@ def plot_3d_points(points, x_scale=[-4.0, 4.0], y_scale=[-4.0, 4.0], z_scale=[-4
     ax.scatter(x, y, z, c='r')
     ax.auto_scale_xyz(x_scale, y_scale, z_scale)
     plt.show()
-    plt.clf()
+    plt.close('all')

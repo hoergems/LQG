@@ -29,14 +29,14 @@ class LQG:
         W = np.identity(self.num_links)
         C = 2.0 * np.identity(self.num_links)
         D = 2.0 * np.identity(self.num_links)        
-        if self.check_positive_definite([C, D]):
-            n_cov = 0.001
+        if self.check_positive_definite([C, D]):            
             print "min " + str(self.min_covariance)
             print "max " + str(self.max_covariance)
             print "steps " + str(self.covariance_steps)
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
-            emds = []          
-            if self.use_paths_from_file and len(glob.glob("paths.yaml")) == 1:
+            emds = []   
+                   
+            if self.use_paths_from_file and len(glob.glob(os.path.join("stats", "paths.yaml"))) == 1:
                 print "Loading paths from file"
                 in_paths = serializer.load_paths("paths.yaml", path="stats") 
                 paths = []               
@@ -50,12 +50,18 @@ class LQG:
                         zs.append([path[j][2 * self.num_links + i] for i in xrange(self.num_links)])
                     paths.append([xs, us, zs])
             else:
-                paths = self.plan_paths(self.num_paths, 0)
-                #print paths            
+                paths = self.plan_paths(self.num_paths, 0)                   
                 serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path="stats")
-            print "len paths " + str(len(paths))                       
+                #paths = serializer.load_paths("paths.yaml", path="stats")
+            print "len paths " + str(len(paths))
+            
+            """ Determine average path length """
+            avg_path_length = self.get_avg_path_length(paths)            
+            serializer.save_avg_path_lengths(avg_path_length, path="stats")
+                                       
             cart_coords = []  
-            best_paths = []          
+            best_paths = []
+            mean_rewards = []          
             for j in xrange(len(m_covs)):
                 print "Evaluating covariance " + str(m_covs[j])
                 """
@@ -66,7 +72,7 @@ class LQG:
                 """
                 The observation noise covariance matrix
                 """
-                N = n_cov * np.identity(self.num_links)
+                N = self.observation_covariance * np.identity(self.num_links)
                 
                 '''if use_paths_from_file:
                     xs = paths[j][0]
@@ -80,15 +86,24 @@ class LQG:
                                    [zs[i] for i in xrange(len(zs))]])
                 
                 #self.save_path(xs, us, zs)                
-                cartesian_coords = self.simulate(xs, us, zs, A, B, C, D, H, V, W, M, N, self.num_simulation_runs, j)                
+                cartesian_coords, mean_reward = self.simulate(xs, us, zs, A, B, C, D, H, V, W, M, N, self.num_simulation_runs, j)                
                 cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])                
-                emds.append(calc_EMD(cartesian_coords, self.num_bins))            
+                emds.append(calc_EMD(cartesian_coords, self.num_bins))
+                mean_rewards.append(mean_reward)            
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
             serializer.save_paths(best_paths, 'best_paths.yaml', True, path="stats")
             serializer.save_cartesian_coords(cart_coords, path="stats")            
             serializer.save_stats(stats, path="stats")
+            print mean_rewards
+            serializer.save_rewards(mean_rewards, path="stats")
             cmd = "cp config.yaml stats/"
             os.system(cmd)
+            
+    def get_avg_path_length(self, paths):
+        avg_length = 0.0
+        for path in paths:            
+            avg_length += len(path[0])
+        return avg_length / len(paths)            
             
     def construct_obstacles(self, obstacle_params):
         obstacle_list = []
@@ -121,8 +136,13 @@ class LQG:
         self.min_covariance = config['min_covariance']
         self.max_covariance = config['max_covariance']
         self.covariance_steps = config['covariance_steps']
+        self.observation_covariance = config['observation_covariance']
         self.use_paths_from_file = config['use_paths_from_file']        
         self.overwrite_paths_file = config['overwrite_paths_file']
+        self.discount_factor = config['discount_factor']
+        self.illegal_move_penalty = config['illegal_move_penalty']
+        self.step_penalty = config['step_penalty']
+        self.exit_reward = config['exit_reward']
         self.kinematics = Kinematics(self.num_links)    
     
     def get_jacobian(self, links, state):
@@ -318,13 +338,16 @@ class LQG:
                  num_simulation_runs,
                  run):
         Ls = self.compute_gain(A, B, C, D, len(xs) - 1)
-        cart_coords = [] 
+        cart_coords = []
+        mean_reward = 0.0
         for j in xrange(num_simulation_runs):
             print "simulation run " + str(j) + " for run " + str(run) 
             x_true = xs[0]
             x_tilde = xs[0]        
             u_dash = np.array([0.0 for j in xrange(self.num_links)])        
-            P_t = np.array([[0.0 for k in xrange(self.num_links)] for l in xrange(self.num_links)])          
+            P_t = np.array([[0.0 for k in xrange(self.num_links)] for l in xrange(self.num_links)])
+            reward = 0.0
+            terminal_state_reached = False          
             for i in xrange(0, len(xs) - 1):                
                 """
                 Generate u_dash using LQG
@@ -332,9 +355,20 @@ class LQG:
                 u_dash = np.dot(Ls[i], x_tilde)
                     
                 """
-                Generate a true state
+                Generate a true state and check for collision and terminal state
                 """            
-                x_true = self.apply_control(x_true, u_dash + us[i], A, B, V, M)                     
+                x_true = self.apply_control(x_true, u_dash + us[i], A, B, V, M)
+                
+                ee_position = self.kinematics.get_end_effector_position(x_true)
+                discount = np.power(self.discount_factor, i)
+                if self.check_collision(ee_position):
+                    reward += discount * (-1.0 * self.illegal_move_penalty)
+                else:
+                    reward += discount * (-1.0 * self.step_penalty)
+                if not terminal_state_reached and self.is_terminal(ee_position):                    
+                    reward += discount * self.exit_reward
+                    print "terminal reached " + str(reward)
+                    terminal_state_reached = True
                     
                 """
                 Obtain an observation
@@ -349,8 +383,24 @@ class LQG:
                 x_tilde, P_t = self.kalman_update(x_tilde_dash_t, z_dash_t, H, P_dash, W, N)
                         
             ee_position = self.kinematics.get_end_effector_position(x_true)
-            cart_coords.append(ee_position.tolist())            
-        return cart_coords
+            cart_coords.append(ee_position.tolist())
+            mean_reward += reward
+        mean_reward /= num_simulation_runs                        
+        return cart_coords, np.asscalar(mean_reward)
+    
+    def is_terminal(self, ee_position):        
+        if np.linalg.norm(ee_position - self.goal_position) < self.goal_radius:            
+            return True
+        return False
+    
+    def check_collision(self, ee_position):
+        """
+        Is the given end effector position in collision with an obstacle?
+        """              
+        for obstacle in self.obstacles:
+            if obstacle.collides(ee_position):
+                return True
+        return False            
     
     def save_path(self, xs, us, zs):
         print "Saving path"

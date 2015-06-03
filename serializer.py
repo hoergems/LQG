@@ -16,16 +16,36 @@ class Serializer:
             return None
         
     def save_stats(self, stats, path=""):
+        if not os.path.exists(path):
+            os.makedirs(path)
         for file in glob.glob(os.path.join(path, "stats.yaml")):
             os.remove(file)
         with open(os.path.join(path, "stats.yaml"), 'w') as f:
             f.write(yaml.dump(stats, default_flow_style=False))
+            
+    def save_rewards(self, rewards, path=""):
+        if not os.path.exists(path):
+            os.makedirs(path)
+        for file in glob.glob(os.path.join(path, "rewards.yaml")):
+            os.remove(file)
+        with open(os.path.join(path, "rewards.yaml"), 'w') as f:
+            f.write(yaml.dump(rewards, default_flow_style=False))
+            
+    def save_avg_path_lengths(self, lengths, path=""):
+        if not os.path.exists(path):
+            os.makedirs(path)
+        for file in glob.glob(os.path.join(path, "avg_path_lengths.yaml")):
+            os.remove(file)
+        with open(os.path.join(path, "avg_path_lengths.yaml"), 'w') as f:
+            f.write(yaml.dump(lengths, default_flow_style=False))
             
     def load_stats(self, filename, path=""):
         with open(os.path.join(path, filename), 'r') as f:
             return yaml.load(f, yaml.CLoader)
             
     def save_paths(self, paths, filename, overwrite, path=""):
+        if not os.path.exists(path):
+            os.makedirs(path)
         path_arrays = []
         if overwrite:
             for file in glob.glob(os.path.join(path, filename)):
@@ -51,6 +71,8 @@ class Serializer:
             f.write(yaml.dump(d, default_flow_style=False))
             
     def save_cartesian_coords(self, cartesian_coords, path=""):
+        if not os.path.exists(path):
+            os.makedirs(path)
         for file in glob.glob(os.path.join(path, "cartesian_coords.yaml")):
             os.remove(file)
         with open(os.path.join(path, "cartesian_coords.yaml"), 'w') as f:                
@@ -67,6 +89,3 @@ class Serializer:
     
     def load_obstacles(self, file, path=""):
         return yaml.load(open(os.path.join(path, file), 'r'), yaml.CLoader)
-                
-        
-        

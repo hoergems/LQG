@@ -14,10 +14,14 @@ class PlotStats:
         self.save = save
         print "Loading cartesian coordinates..."  
         serializer = Serializer()
+        print "plotting paths"    
         self.plot_paths(serializer)
+        self.plot_paths(serializer, best_paths=True)
         cart_coords = serializer.load_cartesian_coords(path="stats")
         print "plotting average distance to goal"
         self.plot_average_dist_to_goal(serializer, cart_coords)
+        print "plotting mean rewards"
+        self.plot_mean_rewards(serializer)
         print "plotting EMD graph..."
         self.plot_emd_graph(serializer, cart_coords) 
         print "plotting histograms..." 
@@ -25,7 +29,24 @@ class PlotStats:
         
     def clear_stats(self):
         for file in glob.glob("stats/*"):
-            os.remove(file)        
+            os.remove(file)
+            
+    def plot_mean_rewards(self, serializer):        
+        stats = serializer.load_stats('stats.yaml', path="stats")
+        m_cov = stats['m_cov']
+        mean_rewards = serializer.load_stats('rewards.yaml', path="stats")
+        print "mean_rewards " + str(mean_rewards)
+        data = []
+        for k in xrange(len(m_cov)):
+            data.append(np.array([m_cov[k], mean_rewards[k]]))
+        Plot.plot_2d_n_sets([np.array(data)],
+                            xlabel="joint covariance",
+                            ylabel="mean reward",
+                            x_range=[m_cov[0], m_cov[-1]],
+                            y_range=[min(mean_rewards), max(mean_rewards)],
+                            show_legend=False,
+                            save=self.save,
+                            filename="stats/mean_rewards.png")       
         
     def plot_average_dist_to_goal(self, serializer, cart_coords):
         config = serializer.read_config("config.yaml", path="stats")
@@ -88,18 +109,23 @@ class PlotStats:
             H, xedges, yedges = get_2d_histogram(X, Y, histogram_range, bins=config['num_bins'])        
             Plot.plot_histogram(H, xedges, yedges, save=self.save, path="stats", filename="hist"+ str(k) + ".png")
             
-    def plot_paths(self, serializer):
+    def plot_paths(self, serializer, best_paths=False):
         config = serializer.read_config('config.yaml', path="stats")
         dim = config['num_links']
         kinematics = Kinematics(dim)
-        paths = serializer.load_paths("paths.yaml", path="stats")
+        if best_paths:
+            paths = serializer.load_paths("best_paths.yaml", path="stats")
+            filename = "best_paths.png"
+        else:
+            paths = serializer.load_paths("paths.yaml", path="stats")            
+            filename = "paths.png"
         sets = []
         for path in paths:
             path_coords = []
             for elem in path:
                 state = [elem[i] for i in xrange(dim)]
                 path_coords.append(kinematics.get_end_effector_position(state))
-            sets.append(np.array(path_coords))
+            sets.append(np.array(path_coords))               
         Plot.plot_2d_n_sets(sets, 
                             xlabel='x', 
                             ylabel='y', 
@@ -109,7 +135,7 @@ class PlotStats:
                             show_legend=False,
                             save=self.save,
                             path="stats",
-                            filename="paths.png")    
+                            filename=filename)    
     
         
 if __name__ == "__main__":
