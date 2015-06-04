@@ -1,6 +1,7 @@
 import numpy as np
 import plot as Plot
 import copy
+import time
 from ompl import base as ob
 from ompl import geometric as og
 from motion_validator import MotionValidator
@@ -46,13 +47,13 @@ class PathPlanner:
             #problem_definition.setGoal(goal_region)
             self.problem_definition.setStartAndGoalStates(self.start_state, goal_state)
             
+            #self.planner = og.RRTstar(self.si)
+            self.planner = og.RRTConnect(self.si)
+            #self.planner = og.RRT(self.si)   
+            #self.planner.setGoalBias(0.0) 
             
-            #self.planner = og.RRTConnect(self.si)
-            self.planner = og.RRT(self.si)   
-            #self.planner.setGoalBias(0.0)         
             self.planner.setRange(self.delta_t * self.max_velocity)        
-            self.planner.setProblemDefinition(self.problem_definition)
-            
+            self.planner.setProblemDefinition(self.problem_definition)            
             self.planner.setup()
             
             while not self.problem_definition.hasSolution():

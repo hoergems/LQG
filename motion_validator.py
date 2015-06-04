@@ -31,10 +31,7 @@ class MotionValidator(ob.MotionValidator):
         Checks if a motion is valid
         """        
         if not self._is_valid(s2):
-            return False
-        '''dist = self._dist(s1, s2)
-        if  dist > self.max_dist:
-            return False'''
+            return False        
         if self._in_collision(s2):
             return False        
         return True

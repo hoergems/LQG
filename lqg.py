@@ -136,13 +136,14 @@ class LQG:
         self.min_covariance = config['min_covariance']
         self.max_covariance = config['max_covariance']
         self.covariance_steps = config['covariance_steps']
-        self.observation_covariance = config['observation_covariance']
+        self.observation_covariance = config['observation_covariance']        
         self.use_paths_from_file = config['use_paths_from_file']        
         self.overwrite_paths_file = config['overwrite_paths_file']
         self.discount_factor = config['discount_factor']
         self.illegal_move_penalty = config['illegal_move_penalty']
         self.step_penalty = config['step_penalty']
         self.exit_reward = config['exit_reward']
+        self.stop_when_terminal = config['stop_when_terminal']
         self.kinematics = Kinematics(self.num_links)    
     
     def get_jacobian(self, links, state):
@@ -239,7 +240,7 @@ class LQG:
             xs = paths[l][0]
             us = paths[l][1]
             zs = paths[l][2]
-            Ls = self.compute_gain(A, B, C, D, len(xs))
+            Ls = self.compute_gain(A, B, C, D, len(xs) - 1)
             P_t = np.array([[0.0 for i in xrange(self.num_links)] for i in xrange(self.num_links)])
             P_0 = np.copy(P_t)
             NU = np.copy(P_t)
@@ -251,7 +252,7 @@ class LQG:
             ee_distributions = []
             ee_approx_distr = []
             collision_probs = []
-            for i in xrange(1, len(xs)):
+            for i in xrange(0, len(xs) - 1):
                 P_hat_t = self.compute_p_hat_t(A, P_t, V, M)
                 
                 
@@ -259,9 +260,9 @@ class LQG:
                 
                 P_t = self.compute_P_t(K_t, H, P_hat_t) 
                 
-                F_0 = np.hstack((A, np.dot(B, Ls[i - 1])))
+                F_0 = np.hstack((A, np.dot(B, Ls[i])))
                 F_1 = np.hstack((np.dot(np.dot(K_t, H), A), 
-                                 np.add(A, np.subtract(np.dot(B, Ls[i-1]), np.dot(np.dot(K_t, H), A)))))            
+                                 np.add(A, np.subtract(np.dot(B, Ls[i]), np.dot(np.dot(K_t, H), A)))))            
                 F_t = np.vstack((F_0, F_1))
                 
                 G_t = np.vstack((np.hstack((V, NU)), 
@@ -270,12 +271,11 @@ class LQG:
                 """ Compute R """            
                 FRF = np.dot(np.dot(F_t, R_t), np.transpose(F_t))
                 GQG = np.dot(np.dot(G_t, Q_t), np.transpose(G_t))
-                R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))            
-                
+                R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))
                 
                 #print "R_t " + str(R_t)
                 Gamma_t = np.vstack((np.hstack((np.identity(self.num_links), NU)), 
-                                     np.hstack((NU, Ls[i - 1]))))
+                                     np.hstack((NU, Ls[i]))))
                 #print "Gamma_t " + str(Gamma_t)
                 
                 Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))
@@ -348,52 +348,54 @@ class LQG:
             P_t = np.array([[0.0 for k in xrange(self.num_links)] for l in xrange(self.num_links)])
             reward = 0.0
             terminal_state_reached = False          
-            for i in xrange(0, len(xs) - 1):                
-                """
-                Generate u_dash using LQG
-                """                
-                u_dash = np.dot(Ls[i], x_tilde)
-                    
-                """
-                Generate a true state and check for collision and terminal state
-                """            
-                x_true = self.apply_control(x_true, u_dash + us[i], A, B, V, M)
-                
-                ee_position = self.kinematics.get_end_effector_position(x_true)
-                discount = np.power(self.discount_factor, i)
-                if not terminal_state_reached:
+            for i in xrange(0, len(xs) - 1):
+                if not (terminal_state_reached and self.stop_when_terminal):                                
+                    """
+                    Generate u_dash using LQG
+                    """                
+                    u_dash = np.dot(Ls[i], x_tilde)
+                            
+                    """
+                    Generate a true state and check for collision and terminal state
+                    """                            
+                    x_true = self.apply_control(x_true, np.add(u_dash, us[i]), A, B, V, M)
+                        
+                    ee_position = self.kinematics.get_end_effector_position(x_true)                
+                    discount = np.power(self.discount_factor, i)               
+                      
                     if self.is_terminal(ee_position):
-                        terminal_state_reached = True
-                        reward += discount * self.exit_reward
-                        print "Terminal state reached: reward = " + str(reward)
+                        terminal_state_reached = True                        
+                        reward += discount * self.exit_reward                        
+                        print "Terminal state reached: reward = " + str(reward)                        
                     else:                        
-                        if self.check_collision(ee_position):
+                        if self.check_collision(ee_position):                            
                             reward += discount * (-1.0 * self.illegal_move_penalty)
+                            #reward -= np.array([self.illegal_move_penalty])
                         else:
                             reward += discount * (-1.0 * self.step_penalty)
-                                
-                """
-                Obtain an observation
-                """
-                z_t = self.get_observation(x_true, H, N)
-                z_dash_t = z_t - zs[i]
-                    
-                """
-                Kalman prediction and update
-                """
-                x_tilde_dash_t, P_dash = self.kalman_predict(x_tilde, u_dash, A, B, P_t, V, M)
-                x_tilde, P_t = self.kalman_update(x_tilde_dash_t, z_dash_t, H, P_dash, W, N)
-                        
+                            #reward -= np.array([self.step_penalty])                            
+                                        
+                    """
+                    Obtain an observation
+                    """
+                    z_t = self.get_observation(x_true, H, N, W)
+                    z_dash_t = z_t - zs[i]
+                            
+                    """
+                    Kalman prediction and update
+                    """
+                    x_tilde_dash_t, P_dash = self.kalman_predict(x_tilde, u_dash, A, B, P_t, V, M)
+                    x_tilde, P_t = self.kalman_update(x_tilde_dash_t, z_dash_t, H, P_dash, W, N)                   
             ee_position = self.kinematics.get_end_effector_position(x_true)
             cart_coords.append(ee_position.tolist())
-            mean_reward += reward
+            mean_reward += reward            
         mean_reward /= num_simulation_runs                        
         return cart_coords, np.asscalar(mean_reward)
     
     def is_terminal(self, ee_position):        
         if np.linalg.norm(ee_position - self.goal_position) < self.goal_radius:            
             return True
-        return False
+        return False        
     
     def check_collision(self, ee_position):
         """
@@ -436,12 +438,14 @@ class LQG:
                 zs.append(z)
         return xs, us, zs
         
-    def apply_control(self, x_dash, u_dash, A, B, V, M):
-        m = self.get_random_joint_angles([0.0 for i in xrange(self.num_links)], M)
-        return np.add(np.add(np.dot(A, x_dash), np.dot(B, u_dash)), np.dot(V, m))
+    def apply_control(self, x_dash, u_dash, A, B, V, M):        
+        m = self.get_random_joint_angles([0.0 for i in xrange(self.num_links)], M)        
+        x_new = np.add(np.add(np.dot(A, x_dash), np.dot(B, u_dash)), np.dot(V, m))        
+        return x_new
     
-    def get_observation(self, true_theta, H, N):
-        return np.dot(H, true_theta) + self.get_random_joint_angles([0.0 for i in xrange(self.num_links)], N)        
+    def get_observation(self, true_theta, H, N, W):
+        return np.add(np.dot(H, true_theta), np.dot(W, self.get_random_joint_angles([0.0 for i in xrange(self.num_links)], N)))
+        
         
     def get_random_joint_angles(self, mu, cov):        
         #with self.lock:
