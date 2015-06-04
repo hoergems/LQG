@@ -361,15 +361,17 @@ class LQG:
                 
                 ee_position = self.kinematics.get_end_effector_position(x_true)
                 discount = np.power(self.discount_factor, i)
-                if self.check_collision(ee_position):
-                    reward += discount * (-1.0 * self.illegal_move_penalty)
-                else:
-                    reward += discount * (-1.0 * self.step_penalty)
-                if not terminal_state_reached and self.is_terminal(ee_position):                    
-                    reward += discount * self.exit_reward
-                    print "terminal reached " + str(reward)
-                    terminal_state_reached = True
-                    
+                if not terminal_state_reached:
+                    if self.is_terminal(ee_position):
+                        terminal_state_reached = True
+                        reward += discount * self.exit_reward
+                        print "Terminal state reached: reward = " + str(reward)
+                    else:                        
+                        if self.check_collision(ee_position):
+                            reward += discount * (-1.0 * self.illegal_move_penalty)
+                        else:
+                            reward += discount * (-1.0 * self.step_penalty)
+                                
                 """
                 Obtain an observation
                 """

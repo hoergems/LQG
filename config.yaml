@@ -23,19 +23,19 @@ init_joint_angles: [0.0, 0.0, 0.0]
 goal_position: [0.0, -3.0]
 
 # The radius around the goal position to define the end effector's goal area
-goal_radius: 0.01
+goal_radius: 0.1
 
 #Number of bins for the histograms
 num_bins: 201
 
 # The minimum joint state covariance
-min_covariance: 0.000001
+min_covariance: 0.00001
 
 # The maximum joint state covariance
-max_covariance: 0.002
+max_covariance: 0.02
 
 # The number of covariance steps
-covariance_steps: 50
+covariance_steps: 20
 
 # The observation covariance
 observation_covariance: 0.0001
