@@ -38,7 +38,7 @@ max_covariance: 0.002
 covariance_steps: 20
 
 # The observation covariance
-observation_covariance: 0.1
+observation_covariance: 0.0001
 
 use_paths_from_file: False
 
