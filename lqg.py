@@ -215,7 +215,8 @@ class LQG:
         path_planner = PathPlanner()
         path_planner.set_params(self.num_links, 
                                 self.max_velocity, 
-                                self.delta_t, self.use_linear_path,
+                                self.delta_t, 
+                                self.use_linear_path,
                                 sim_run)
         path_planner.setup_ompl()
         path_planner.set_start_state(self.theta_0)

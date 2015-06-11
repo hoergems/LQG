@@ -52,7 +52,7 @@ class PathPlanner:
             #self.planner = og.RRT(self.si)   
             #self.planner.setGoalBias(0.0) 
             
-            self.planner.setRange(self.delta_t * self.max_velocity)        
+            self.planner.setRange(np.sqrt(self.si.getStateSpace().getDimension() * np.square(self.delta_t * self.max_velocity)))        
             self.planner.setProblemDefinition(self.problem_definition)            
             self.planner.setup()
             
