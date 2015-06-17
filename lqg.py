@@ -182,8 +182,12 @@ class LQG:
                         job.join()
                         print "JOINED"'''
                 if i == num - 1:
-                    while not path_queue.qsize() == num % (self.num_cores - 1):
-                        time.sleep(0.0001)
+                    if num == self.num_cores - 1:
+                        while not path_queue.qsize() == num:
+                            time.sleep(0.0001)
+                    else:
+                        while not path_queue.qsize() == num % (self.num_cores - 1):
+                            time.sleep(0.0001)
                 else:
                     while not path_queue.qsize() == self.num_cores - 1:
                         time.sleep(0.0001)                                        
@@ -194,22 +198,8 @@ class LQG:
                     p = path_queue.get()                    
                     paths.append([[p[0][i].tolist() for i in xrange(len(p[0]))], 
                                   [p[1][i].tolist() for i in xrange(len(p[0]))], 
-                                  [p[2][i].tolist() for i in xrange(len(p[0]))]])                    
-        """
-        Save the paths here
-        """
+                                  [p[2][i].tolist() for i in xrange(len(p[0]))]])        
         return paths
-        
-        return self.evaluate_paths(A, B, C, D, H, M, N, V, W, path_queue, sim_run)        
-        tr = 1000.0
-        best_index = 0
-        for i in xrange(len(paths)):            
-            if paths[i][0] < tr:
-                tr = paths[i][0]
-                best_index = copy.copy(i)
-        print "best path: " + str(best_index)
-        print "best trace: " + str(tr)              
-        return paths[best_index][1][0], paths[best_index][1][1], paths[best_index][1][2]
         
     def construct_path(self, queue, sim_run):
         path_planner = PathPlanner()
@@ -227,13 +217,7 @@ class LQG:
         queue.put((xs, us, zs))
         return
     
-    def evaluate_paths(self, A, B, C, D, H, M, N, V, W, paths):
-        '''path_planner = PathPlanner()
-        path_planner.set_params(self.num_links, self.max_velocity, self.delta_t, sim_run)
-        path_planner.setup_ompl()
-        path_planner.set_start_state(self.theta_0)
-        path_planner.set_goal_region(self.goal_position, self.goal_radius)              
-        xs, us, zs = path_planner.plan_path()'''
+    def evaluate_paths(self, A, B, C, D, H, M, N, V, W, paths):        
         min_trace = 1000.0
         min_collision_sum = 10000.0
         best_paths = []       

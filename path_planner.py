@@ -48,9 +48,9 @@ class PathPlanner:
             self.problem_definition.setStartAndGoalStates(self.start_state, goal_state)
             
             #self.planner = og.RRTstar(self.si)
-            self.planner = og.RRTConnect(self.si)
-            #self.planner = og.RRT(self.si)   
-            #self.planner.setGoalBias(0.0) 
+            #self.planner = og.RRTConnect(self.si)
+            self.planner = og.RRT(self.si)   
+            self.planner.setGoalBias(0.05) 
             
             self.planner.setRange(np.sqrt(self.si.getStateSpace().getDimension() * np.square(self.delta_t * self.max_velocity)))        
             self.planner.setProblemDefinition(self.problem_definition)            
@@ -77,7 +77,7 @@ class PathPlanner:
     def linear_path(self, start, goal):
         path = []
         print "LINEAR PATH"
-        max_dist = self.delta_t * self.max_velocity
+        max_dist = np.sqrt(self.si.getStateSpace().getDimension() * np.square(self.delta_t * self.max_velocity))
         print "max dist " + str(max_dist)
         s = []
         g = []

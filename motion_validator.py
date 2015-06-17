@@ -15,7 +15,7 @@ class MotionValidator(ob.MotionValidator):
             super(MotionValidator, self).__init__(si)
             
     def set_max_distance(self, max_velocity, delta_t):
-        self.max_dist = delta_t *  max_velocity
+        self.max_dist = np.sqrt(self.si.getStateSpace().getDimension() * np.square(delta_t * max_velocity))
         
     def set_obstacles(self, obstacles):
         '''obstacle_list = []
@@ -30,9 +30,9 @@ class MotionValidator(ob.MotionValidator):
         """
         Checks if a motion is valid
         """        
-        if not self._is_valid(s2):
+        if not self._is_valid(s1) or not self._is_valid(s2):
             return False        
-        if self._in_collision(s2):
+        if self._in_collision(s1, s2):
             return False        
         return True
     
@@ -48,14 +48,15 @@ class MotionValidator(ob.MotionValidator):
         """
         return self.si.distance(s1, s2)
     
-    def _in_collision(self, state):
+    def _in_collision(self, state1, state2):
         """
         Checks if a state collides with the obstacles
         """
         collides = False
-        point = self.kinematics.get_end_effector_position(state)        
+        point1 = self.kinematics.get_end_effector_position(state1) 
+        point2 = self.kinematics.get_end_effector_position(state2)        
         for obstacle in self.obstacles:            
-            if obstacle.collides(point):
+            if obstacle.in_collision(point1, point2):
                 return True
         return False
         
