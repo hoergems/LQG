@@ -8,6 +8,15 @@ class Kinematics:
         print "theta " + str(theta)
         print "cart " + str(self.get_end_effector_position(theta))
         
+    def get_link_n_position(self, state, n):
+        '''if n > len(state):
+            return False'''
+        SE2s = [self.SE2(1.0, 0.0, state[i]) for i in xrange(n)]
+        SE2 = np.identity(3)
+        for i in xrange(len(SE2s)):
+            SE2 = np.dot(SE2, SE2s[i])
+        return np.array([SE2[i][2] for i in xrange(2)])
+        
         
     def get_end_effector_position(self, state):
         """

@@ -32,10 +32,10 @@ num_bins: 201
 min_covariance: 0.0
 
 # The maximum joint state covariance
-max_covariance: 0.002
+max_covariance: 0.02
 
 # The number of covariance steps
-covariance_steps: 7
+covariance_steps: 10
 
 # The observation covariance
 observation_covariance: 0.0001
@@ -48,13 +48,13 @@ overwrite_paths_file: True
 discount_factor: 1.0
 
 # Penalty for crashing into an obstacle
-illegal_move_penalty: 100.0
+illegal_move_penalty: 1000.0
 
 # Penalty for taking a step
 step_penalty: 10.0
 
 # Reward for reaching a terminal state
-exit_reward: 1000.0
+exit_reward: 10000.0
 
 stop_when_terminal: True
 

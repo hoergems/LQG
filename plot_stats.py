@@ -34,12 +34,18 @@ class PlotStats:
     def plot_mean_rewards(self, serializer):        
         stats = serializer.load_stats('stats.yaml', path="stats")
         m_cov = stats['m_cov']
-        mean_rewards = serializer.load_stats('rewards.yaml', path="stats")
-        print "mean_rewards " + str(mean_rewards)
-        data = []
-        for k in xrange(len(m_cov)):
-            data.append(np.array([m_cov[k], mean_rewards[k]]))
-        Plot.plot_2d_n_sets([np.array(data)],
+        sets = []
+        for file in glob.glob(os.path.join(os.path.join("stats", "rewards*"))):
+            print file        
+            #mean_rewards = serializer.load_stats('rewards.yaml', path="stats")
+            mean_rewards = serializer.load_stats(file)
+            print "mean_rewards " + str(mean_rewards)
+            data = []
+            for k in xrange(len(m_cov)):
+                data.append(np.array([m_cov[k], mean_rewards[k]]))
+            sets.append(np.array(data))
+            print "APPENDED"
+        Plot.plot_2d_n_sets(sets,
                             xlabel="joint covariance",
                             ylabel="mean reward",
                             x_range=[m_cov[0], m_cov[-1]],
@@ -125,7 +131,20 @@ class PlotStats:
             for elem in path:
                 state = [elem[i] for i in xrange(dim)]
                 path_coords.append(kinematics.get_end_effector_position(state))
-            sets.append(np.array(path_coords))               
+            sets.append(np.array(path_coords)) 
+        obstacles = serializer.load_obstacles("obstacles.yaml", path="stats")
+        print "obstacles " + str(obstacles)
+        if not obstacles == None:
+            for obstacle in obstacles:
+                point1 = [obstacle[0] - obstacle[2] / 2.0, obstacle[1] - obstacle[3] / 2.0]
+                point2 = [obstacle[0] - obstacle[2] / 2.0, obstacle[1] + obstacle[3] / 2.0]
+                point3 = [obstacle[0] + obstacle[2] / 2.0, obstacle[1] + obstacle[3] / 2.0]
+                point4 = [obstacle[0] + obstacle[2] / 2.0, obstacle[1] - obstacle[3] / 2.0]
+                sets.append(np.array([point1, point2]))
+                sets.append(np.array([point2, point3]))
+                sets.append(np.array([point3, point4]))
+                sets.append(np.array([point4, point1]))
+                print "WOW"              
         Plot.plot_2d_n_sets(sets, 
                             xlabel='x', 
                             ylabel='y', 

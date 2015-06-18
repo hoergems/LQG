@@ -4,11 +4,13 @@ from ompl import base as ob
 from ompl import geometric as og
 from kinematics import Kinematics
 from obstacle import Obstacle
+from threading import Lock
 
 
 class MotionValidator(ob.MotionValidator):
     def __init__(self, si=None): 
-        #self.max_dist = 2.0 / 30.0        
+        #self.max_dist = 2.0 / 30.0   
+        self.mutex = Lock()     
         self.kinematics = Kinematics(si.getStateSpace().getDimension())       
         if not si == None:   
             self.si = si         
@@ -30,11 +32,10 @@ class MotionValidator(ob.MotionValidator):
         """
         Checks if a motion is valid
         """        
-        if not self._is_valid(s1) or not self._is_valid(s2):
-            return False        
-        if self._in_collision(s1, s2):
-            return False        
-        return True
+        with self.mutex:
+            if not self._is_valid(s1) or not self._is_valid(s2):
+                return False        
+            return not self._in_collision(s1, s2)        
     
     def _is_valid(self, state):
         """
@@ -51,7 +52,19 @@ class MotionValidator(ob.MotionValidator):
     def _in_collision(self, state1, state2):
         """
         Checks if a state collides with the obstacles
-        """
+        """ 
+        #state1 = [0.0, 0.0, 0.0]
+        #state2 = [0.009645623885753837, -0.13843772823710768, -0.10163138662043647]       
+        for state in [state2]:
+            p1 = self.kinematics.get_link_n_position(state, 1)            
+            p2 = self.kinematics.get_link_n_position(state, 2)            
+            p3 = self.kinematics.get_link_n_position(state, 3)                     
+            for obstacle in self.obstacles:
+                if obstacle.manipulator_collides([[np.array([0, 0]), p1], [p1, p2], [p2, p3]]):                                    
+                    return True
+        return False
+        
+        
         collides = False
         point1 = self.kinematics.get_end_effector_position(state1) 
         point2 = self.kinematics.get_end_effector_position(state2)        

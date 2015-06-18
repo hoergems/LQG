@@ -96,7 +96,9 @@ class LQG:
             serializer.save_stats(stats, path="stats")
             print mean_rewards
             serializer.save_rewards(mean_rewards, path="stats")
-            cmd = "cp config.yaml stats/"
+            cmd = "cp config.yaml stats/"            
+            os.system(cmd)
+            cmd = "cp obstacles/obstacles.yaml stats/"
             os.system(cmd)
             
     def get_avg_path_length(self, paths):
@@ -125,6 +127,7 @@ class LQG:
         self.num_paths = config['num_generated_paths']
         self.use_linear_path = config['use_linear_path']
         self.num_cores = cpu_count()
+        #self.num_cores = 2
         self.num_links = config['num_links']
         self.max_velocity = config['max_velocity']
         self.delta_t = 1.0 / config['control_rate']
