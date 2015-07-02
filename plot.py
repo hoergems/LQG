@@ -34,15 +34,16 @@ def plot_2d_n_sets(sets,
     ps = []    
     if len(labels) != len(sets):         
         labels=['default' for i in xrange(len(sets))]   
-    if plot_type == 'lines':
+    if plot_type == 'lines':        
         for i in xrange(len(sets)):
             if i == idx:
                 p, = plt.plot(sets[i][:,0], sets[i][:,1], label=labels[i], linewidth=lw)
             else:
                 p, = plt.plot(sets[i][:,0], sets[i][:,1], label=labels[i])
+            
             ps.append(p)
         if show_legend:
-            plt.legend(ps)
+            plt.legend()
     else:
         fig = plt.figure()
         ax = fig.add_subplot(111)

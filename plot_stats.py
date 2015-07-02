@@ -35,22 +35,35 @@ class PlotStats:
         stats = serializer.load_stats('stats.yaml', path="stats")
         m_cov = stats['m_cov']
         sets = []
+        labels = []
+        mean_rewards = []
         for file in glob.glob(os.path.join(os.path.join("stats", "rewards*"))):
-            print file        
+            file_str = file
+            try:
+                file_str = file.split("/")[1].split(".")[0].split("_")[1]
+            except:
+                pass
+                   
             #mean_rewards = serializer.load_stats('rewards.yaml', path="stats")
-            mean_rewards = serializer.load_stats(file)
-            print "mean_rewards " + str(mean_rewards)
+            mean_rewards.append(serializer.load_stats(file))            
             data = []
             for k in xrange(len(m_cov)):
-                data.append(np.array([m_cov[k], mean_rewards[k]]))
+                data.append(np.array([m_cov[k], mean_rewards[-1][k]]))
             sets.append(np.array(data))
-            print "APPENDED"
+            labels.append(file_str)
+        print mean_rewards
+        min_m = [min(m) for m in mean_rewards]
+        max_m = [max(m) for m in mean_rewards]
+        print "min_m " + str(min_m)
+        print "max_m " + str(max_m)
+        
         Plot.plot_2d_n_sets(sets,
+                            labels=labels,
                             xlabel="joint covariance",
                             ylabel="mean reward",
                             x_range=[m_cov[0], m_cov[-1]],
-                            y_range=[min(mean_rewards), max(mean_rewards)],
-                            show_legend=False,
+                            y_range=[min(min_m), max(max_m)],
+                            show_legend=True,
                             save=self.save,
                             filename="stats/mean_rewards.png")       
         

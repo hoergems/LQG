@@ -33,11 +33,7 @@ class Obstacle:
                 Collistion
                 """                
                 return True
-        return False
-    
-    
-
-   
+        return False   
     
     def manipulator_collides(self, links):
         for link in links:
@@ -56,57 +52,6 @@ class Obstacle:
                 return True
             inter = line_m.intersection(self.line4)
             if not inter.is_empty:                
-                return True
-                    
-                       
-            ''''i = self.seg_intersect(link[0], link[1], p1, p2)            
-            if len(i) > 0:
-                if (i[1] <= p2[1] and i[1] >= p1[1]):
-                    print "i " + str(i)
-                    return True
-            i = self.seg_intersect(link[0], link[1], p2, p3)            
-            if len(i) > 0:
-                if (i[0] <= p3[0] and i[0] >= p2[0]):
-                    print "i " + str(i)
-                    return True
-            i = self.seg_intersect(link[0], link[1], p3, p4)            
-            if len(i) > 0:
-                if (i[1] >= p4[1] and i[1] <= p3[1]):
-                    print "i " + str(i)
-                    return True
-            i = self.seg_intersect(link[0], link[1], p4, p1)            
-            if len(i) > 0:
-                if (i[0] >= p1[0] and i[1] <= p4[1]):
-                    print "i " + str(i)
-                    return True'''
-            
+                return True 
         return False
-            
-            
     
-    def in_collision(self, point1, point2): 
-        if self.collides(point1) or self.collides(point2):        
-            return True
-            
-        p1 = [self.x - self.x_size / 2.0, self.y - self.y_size / 2.0] 
-        p2 = [self.x - self.x_size / 2.0, self.y + self.y_size / 2.0]   
-        p3 = [self.x + self.x_size / 2.0, self.y + self.y_size / 2.0]
-        p4 = [self.x + self.x_size / 2.0, self.y - self.y_size / 2.0]
-        
-        coll = self.intersection_(point1, point2, p1, p2)
-        if len(coll) > 0:            
-            return True
-            
-        coll = self.intersection_(point1, point2, p2, p3)
-        if len(coll) > 0:            
-            return True
-        
-        coll = self.intersection_(point1, point2, p3, p4);
-        if len(coll) > 0:            
-            return True
-        
-        coll = self.intersection_(point1, point2, p1, p4);
-        if len(coll) > 0:            
-            return True
-        
-        return False
