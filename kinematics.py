@@ -4,13 +4,9 @@ class Kinematics:
     def __init__(self, num_links):
         #theta = [1.5, 2.7]
         self.num_links = num_links
-        theta = [0.0, 0.0, np.pi / 2.0]
-        print "theta " + str(theta)
-        print "cart " + str(self.get_end_effector_position(theta))
+        theta = [0.0, 0.0, np.pi / 2.0]        
         
-    def get_link_n_position(self, state, n):
-        '''if n > len(state):
-            return False'''
+    def get_link_n_position(self, state, n):        
         SE2s = [self.SE2(1.0, 0.0, state[i]) for i in xrange(n)]
         SE2 = np.identity(3)
         for i in xrange(len(SE2s)):

@@ -54,14 +54,15 @@ class MotionValidator(ob.MotionValidator):
         Checks if a state collides with the obstacles
         """ 
         #state1 = [0.0, 0.0, 0.0]
-        #state2 = [0.009645623885753837, -0.13843772823710768, -0.10163138662043647]       
+        #state2 = [0.009645623885753837, -0.13843772823710768, -0.10163138662043647]
+        
         for state in [state2]:
             p1 = self.kinematics.get_link_n_position(state, 1)            
             p2 = self.kinematics.get_link_n_position(state, 2)            
             p3 = self.kinematics.get_link_n_position(state, 3)                     
             for obstacle in self.obstacles:
-                if obstacle.manipulator_collides([[np.array([0, 0]), p1], [p1, p2], [p2, p3]]):                                    
-                    return True
+                if obstacle.manipulator_collides([[np.array([0, 0]), p1], [p1, p2], [p2, p3]]):
+                    return True        
         return False
         
         

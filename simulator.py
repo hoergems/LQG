@@ -45,7 +45,40 @@ class Simulator:
         self.kinematics = Kinematics(self.num_links)
         self.num_simulation_runs = num_simulation_runs        
         self.stop_when_terminal = stop_when_terminal
-
+        
+    def simulate_step(self, 
+                      xs, us, zs, 
+                      x_true,
+                      x_tilde,
+                      P_t,
+                      total_reward,
+                      current_step):        
+        terminal_state_reached = False
+        Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)
+        u_dash = np.dot(Ls[0], x_tilde)
+        x_true = self.apply_control(x_true, np.add(u_dash, us[0]), self.A, self.B, self.V, self.M)
+        
+        ee_position = self.kinematics.get_end_effector_position(x_true) 
+        print "ee_position " + str(ee_position)               
+        discount = np.power(self.discount_factor, current_step)
+        if self.is_terminal(ee_position):
+            terminal_state_reached = True                        
+            total_reward += discount * self.exit_reward                        
+            print "Terminal state reached: reward = " + str(total_reward)                        
+        else:                        
+            if self.check_collision(x_true, self.obstacles, self.kinematics): 
+                print "COLLISION"                           
+                total_reward += discount * (-1.0 * self.illegal_move_penalty)                            
+            else:
+                total_reward += discount * (-1.0 * self.step_penalty)
+        
+        z_t = self.get_observation(x_true, self.H, self.N, self.W)
+        z_dash_t = z_t - zs[0]
+        x_tilde_dash_t, P_dash = kalman.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
+        x_tilde, P_t = kalman.kalman_update(x_tilde_dash_t, z_dash_t, self.H, P_dash, self.W, self.N, self.num_links)
+        return x_true, x_tilde, P_t, total_reward, terminal_state_reached
+        
+        
     def simulate(self, xs, us, zs, run):
         Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)
         cart_coords = []

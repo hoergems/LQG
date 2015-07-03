@@ -3,6 +3,7 @@ import plot as Plot
 import copy
 import time
 from ompl import base as ob
+from ompl.util import noOutputHandler
 from ompl import geometric as og
 from motion_validator import MotionValidator
 from goal_region import GoalRegion
@@ -24,6 +25,7 @@ class PathPlanner:
         self.delta_t = delta_t 
         self.use_linear_path = use_linear_path
         self.sim_run = sim_run
+        noOutputHandler()
         
     def set_start_state(self, start_state):
         self.start_state = ob.State(self.si.getStateSpace())
@@ -41,61 +43,69 @@ class PathPlanner:
         goal = self.goal_region.sampleGoal(ob.State(self.si.getStateSpace()))
         goal_state = ob.State(self.si.getStateSpace())
         for i in xrange(self.si.getStateSpace().getDimension()):
-            goal_state[i] = goal[i] 
-        if not self.use_linear_path:
-            self.problem_definition.addStartState(self.start_state)
-            #problem_definition.setGoal(goal_region)
-            self.problem_definition.setStartAndGoalStates(self.start_state, goal_state)
-            
-            #self.planner = og.RRTstar(self.si)
-            self.planner = og.RRTConnect(self.si)
-            #self.planner = og.RRT(self.si)   
-            #self.planner.setGoalBias(0.05) 
-            
-            self.planner.setRange(np.sqrt(self.si.getStateSpace().getDimension() * np.square(self.delta_t * self.max_velocity)))        
-            self.planner.setProblemDefinition(self.problem_definition)            
-            self.planner.setup()
-            
-            while not self.problem_definition.hasSolution():
-                self.planner.solve(10.0)
-                print "has solution " + str(self.problem_definition.hasSolution())
-                print "sim_run " + str(self.sim_run)
-            print "solution found!"
-            path = []
-            
-            if self.problem_definition.hasSolution():
-                solution_path = self.problem_definition.getSolutionPath()
-                states = solution_path.getStates()                
-                path = [np.array([state[i] for i in xrange(self.space.getDimension())]) for state in states] 
-                #print "path " + str(path)
-            else:
-                print "no solution" 
-        else:
-            path = self.linear_path(self.start_state, goal_state)          
+            goal_state[i] = goal[i]        
+        path = self.linear_path(self.start_state, goal_state)
+                
+        if self.path_collides(path):
+            print "path collides" 
+            if not self.use_linear_path:
+                self.problem_definition.addStartState(self.start_state)
+                #problem_definition.setGoal(goal_region)
+                self.problem_definition.setStartAndGoalStates(self.start_state, goal_state)
+                
+                #self.planner = og.RRTstar(self.si)
+                self.planner = og.RRTConnect(self.si)
+                #self.planner = og.RRT(self.si)   
+                #self.planner.setGoalBias(0.05) 
+                
+                self.planner.setRange(np.sqrt(self.si.getStateSpace().getDimension() * np.square(self.delta_t * self.max_velocity)))        
+                self.planner.setProblemDefinition(self.problem_definition)            
+                self.planner.setup()
+                
+                while not self.problem_definition.hasSolution():
+                    self.planner.solve(10.0)                
+                path = []
+                
+                if self.problem_definition.hasSolution():
+                    solution_path = self.problem_definition.getSolutionPath()
+                    states = solution_path.getStates()                
+                    path = [np.array([state[i] for i in xrange(self.space.getDimension())]) for state in states] 
+                    #print "path " + str(path)
+                else:
+                    print "no solution" 
+            else:                
+                path = self.linear_path(self.start_state, goal_state)          
         return self._augment_path(path)
     
+    def path_collides(self, path):
+        for i in xrange(1, len(path)):
+            if self.motion_validator._in_collision(path[i-1], path[i]):
+                return True
+        return False
+    
     def linear_path(self, start, goal):
-        path = []
-        print "LINEAR PATH"
-        max_dist = np.sqrt(self.si.getStateSpace().getDimension() * np.square(self.delta_t * self.max_velocity))
-        print "max dist " + str(max_dist)
+        path = []        
+        max_dist = np.sqrt(self.si.getStateSpace().getDimension() * np.square(self.delta_t * self.max_velocity))           
         s = []
         g = []
         for i in xrange(self.space.getDimension()):
             s.append(start[i])
             g.append(goal[i])        
         start = np.array(s)
+        path.append(start)
         goal = np.array(g)
         vec = goal - start
         vec_length = np.linalg.norm(vec)
         vec_norm = vec / vec_length
         steps = vec_length / max_dist
         steps_full = np.floor(steps)
-        v = start
+        steps_half = steps - steps_full        
+        
         for i in xrange(int(steps_full)):
-            v += max_dist * vec_norm            
-            path.append(copy.copy(v))            
-        path.append(goal)
+            new_state = path[-1] + max_dist * vec_norm
+            path.append(new_state)
+        if steps_half > 1.0e-10:           
+            path.append(goal)
         return path
         
         
@@ -124,10 +134,10 @@ class PathPlanner:
         """
         Augments the path with controls and observations
         """    
-        new_path = []
+        new_path = []             
         for i in xrange(len(path) - 1):
             u = (np.array(path[i + 1]) - np.array(path[i])) / self.delta_t            
-            #new_path.append([path[i], [u[j] for j in xrange(len(u))], path[i]])
+            #new_path.append([path[i], [u[j] for j in xrange(len(u))], path[i]])            
             new_path.append([path[i], u, path[i]])
         new_path.append([path[-1], np.array([0.0 for i in xrange(self.si.getStateSpace().getDimension())]), path[-1]])
         xs = [new_path[i][0] for i in xrange(len(path))]

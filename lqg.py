@@ -1,18 +1,14 @@
 import numpy as np
 import plot as Plot
-import copy
 import os
 import glob
-from scipy.linalg import solve_discrete_are
-from scipy import linalg, signal
-from kinematics import Kinematics
-from EMD import *
 from serializer import Serializer
 from obstacle import Obstacle
 import kalman as kalman
 from path_evaluator import PathEvaluator
 from simulator import Simulator
 from path_planning_interface import PathPlanningInterface
+from EMD import *
 
 class LQG:
     def __init__(self):
@@ -32,7 +28,7 @@ class LQG:
         """ Setup operations """
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
         path_planner.setup(obstacles, self.num_links, self.max_velocity, self.delta_t, self.use_linear_path)
-        path_planner.set_start_and_goal_state(self.theta_0, self.goal_position, self.goal_radius)      
+        path_planner.set_start_and_goal_state(self.theta_0, self.goal_state, self.goal_radius)      
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
         
         if self.check_positive_definite([C, D]):            
@@ -133,13 +129,13 @@ class LQG:
         
     def set_params(self, config):
         self.num_paths = config['num_generated_paths']
-        self.use_linear_path = config['use_linear_path']        
-        #self.num_cores = 2
+        self.use_linear_path = config['use_linear_path']
         self.num_links = config['num_links']
         self.max_velocity = config['max_velocity']
         self.delta_t = 1.0 / config['control_rate']
         self.theta_0 = config['init_joint_angles']
         self.goal_position = config['goal_position']
+        self.goal_state = np.array([-np.pi / 2.0, 0.0, 0.0])
         self.goal_radius = config['goal_radius']
         self.num_simulation_runs = config['num_simulation_runs']
         self.num_bins = config['num_bins']
@@ -153,8 +149,7 @@ class LQG:
         self.illegal_move_penalty = config['illegal_move_penalty']
         self.step_penalty = config['step_penalty']
         self.exit_reward = config['exit_reward']
-        self.stop_when_terminal = config['stop_when_terminal']
-        self.kinematics = Kinematics(self.num_links) 
+        self.stop_when_terminal = config['stop_when_terminal']        
 
 if __name__ == "__main__":
     LQG()

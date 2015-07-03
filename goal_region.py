@@ -17,7 +17,6 @@ class GoalRegion(ob.GoalSampleableRegion):
         The goal position of the end effector
         """
         self.goal_position = cartesian_coords
-        print "goal position " + str(self.goal_position)
         
     def set_bounds(self, bounds):
         self.bounds = bounds

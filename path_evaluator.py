@@ -37,7 +37,7 @@ class PathEvaluator:
                         break
             the_sum = 0.0
             if len(pdfs) > 0:
-                the_sum = sum(pdfs)        
+                the_sum = sum(pdfs)                  
             return the_sum
     
     def get_jacobian(self, links, state):
@@ -57,13 +57,17 @@ class PathEvaluator:
                              [1.0, 1.0, 1.0]])
         return None
     
-    def evaluate_paths(self, paths):
-        min_objective = 1000000.0
-        for l in xrange(len(paths)): 
+    def evaluate_paths(self, paths, horizon=-1):
+        min_objective = 1000000.0        
+        for l in xrange(len(paths)):
             xs = paths[l][0]
             us = paths[l][1]
             zs = paths[l][2]
-            Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)
+            
+            horizon_L = horizon 
+            if horizon == -1 or len(xs) - 1 < horizon:
+                horizon_L = len(xs) - 1            
+            Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, horizon_L)
             P_t = np.array([[0.0 for i in xrange(self.num_links)] for i in xrange(self.num_links)])
             P_0 = np.copy(P_t)
             NU = np.copy(P_t)
@@ -75,7 +79,8 @@ class PathEvaluator:
             ee_distributions = []
             ee_approx_distr = []
             collision_probs = []            
-            for i in xrange(0, len(xs) - 1):
+                             
+            for i in xrange(0, horizon_L):                
                 P_hat_t = kalman.compute_p_hat_t(self.A, P_t, self.V, self.M)
                 K_t = kalman.compute_kalman_gain(self.H, P_hat_t, self.W, self.N)
                 P_t = kalman.compute_P_t(K_t, self.H, P_hat_t, self.num_links)
@@ -106,8 +111,10 @@ class PathEvaluator:
                     collision_probs.append(probs)
                 else:
                     collision_probs.append(0.0)
-            collision_sum = sum(collision_probs) / len(xs)
-            print "collision_sum " + str(collision_sum)
+            if float(horizon_L) == 0.0:
+                collsion_sum = 0.0
+            else:
+                collision_sum = sum(collision_probs) / float(horizon_L)            
             tr = np.trace(EE_covariance)
             objective_p = collision_sum + tr
             if objective_p < min_objective:
