@@ -1,0 +1,74 @@
+from path_planner import PathPlanner
+from multiprocessing import Process, Queue, cpu_count
+import time
+import collections
+
+
+class PathPlanningInterface:
+    def __init__(self):
+        pass
+    
+    def setup(self, obstacles, num_links, max_velocity, delta_t, use_linear_path):
+        self.num_cores = cpu_count()
+        self.obstacles = obstacles
+        self.num_links = num_links
+        self.max_velocity = max_velocity
+        self.delta_t = delta_t
+        self.use_linear_path = use_linear_path
+        
+    def set_start_and_goal_state(self, start_state, goal_state, goal_radius):
+        self.start_state = start_state
+        self.goal_state = goal_state
+        self.goal_radius = goal_radius
+        
+        
+    def plan_paths(self, num, sim_run):        
+        jobs = collections.deque()
+        ir = collections.deque()
+        path_queue = Queue()
+        paths = []        
+        for i in xrange(num):
+            print "path num " + str(i)
+            p = Process(target=self.construct_path, args=(self.obstacles, path_queue, sim_run,))
+            p.start()
+            jobs.append(p)
+            ir.append(1)
+            if len(ir) >= self.num_cores - 1 or i == num - 1:
+                if i == num - 1:
+                    if num == self.num_cores - 1:
+                        while not path_queue.qsize() == num:
+                            time.sleep(0.0001)
+                    else:
+                        while not path_queue.qsize() == num % (self.num_cores - 1):
+                            time.sleep(0.0001)
+                else:
+                    while not path_queue.qsize() == self.num_cores - 1:
+                        time.sleep(0.0001)                                        
+                jobs.clear()
+                ir.clear()
+                q_size = path_queue.qsize()                
+                for j in xrange(q_size):
+                    p = path_queue.get()                    
+                    paths.append([[p[0][i].tolist() for i in xrange(len(p[0]))], 
+                                  [p[1][i].tolist() for i in xrange(len(p[0]))], 
+                                  [p[2][i].tolist() for i in xrange(len(p[0]))]])        
+        return paths
+    
+    def construct_path(self, obstacles, queue, sim_run):
+        path_planner = PathPlanner()
+        path_planner.set_params(self.num_links, 
+                                self.max_velocity, 
+                                self.delta_t, 
+                                self.use_linear_path,
+                                sim_run)
+        path_planner.setup_ompl()
+        path_planner.set_start_state(self.start_state)
+        path_planner.set_goal_region(self.goal_state, self.goal_radius) 
+        path_planner.set_obstacles(obstacles)             
+        xs, us, zs = path_planner.plan_path()
+        print "putting in queue"
+        queue.put((xs, us, zs))
+        return   
+    
+if __name__ == "__main__":
+    PathPlanningInterface()
