@@ -46,8 +46,7 @@ class PathPlanner:
             goal_state[i] = goal[i]        
         path = self.linear_path(self.start_state, goal_state)
                 
-        if self.path_collides(path):
-            print "path collides2" 
+        if self.path_collides(path):             
             if not self.use_linear_path:
                 self.problem_definition.addStartState(self.start_state)
                 #problem_definition.setGoal(goal_region)

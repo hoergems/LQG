@@ -27,7 +27,8 @@ class PathPlanningInterface:
         jobs = collections.deque()        
         path_queue = Queue()
         paths = []        
-        for i in xrange(num):            
+        for i in xrange(num):  
+            print "Generating path " + str(i)          
             p = Process(target=self.construct_path, args=(self.obstacles, path_queue, sim_run,))
             p.start()
             jobs.append(p)           

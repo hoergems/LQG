@@ -84,10 +84,11 @@ class PathEvaluator:
         print len(evaluated_paths)
         min_objective = 1000000.0
         best_path = evaluated_paths[0][1]
+        min_objective = evaluated_paths[0][0]        
         for p in evaluated_paths:
             if p[0] < min_objective:
                 min_objective = p[0]
-                bext_path = p[1]
+                best_path = p[1]                
         return best_path
     
     def evaluate(self, index, eval_queue, path, horizon):
@@ -149,6 +150,8 @@ class PathEvaluator:
         else:
             collision_sum = sum(collision_probs) / float(horizon_L)            
         tr = np.trace(EE_covariance)
+        print "collision sum: " + str(collision_sum)
+        print "trace: " + str(tr)
         objective_p = collision_sum + tr
         eval_queue.put((objective_p, path))
         '''if objective_p < min_objective:
