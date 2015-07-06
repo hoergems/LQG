@@ -149,7 +149,15 @@ class Simulator:
     
     def apply_control(self, x_dash, u_dash, A, B, V, M):        
         m = self.get_random_joint_angles([0.0 for i in xrange(self.num_links)], M)        
-        x_new = np.add(np.add(np.dot(A, x_dash), np.dot(B, u_dash)), np.dot(V, m))        
+        x_new = np.add(np.add(np.dot(A, x_dash), np.dot(B, u_dash)), np.dot(V, m))
+        p1 = self.kinematics.get_link_n_position(x_new, 1)            
+        p2 = self.kinematics.get_link_n_position(x_new, 2)            
+        p3 = self.kinematics.get_link_n_position(x_new, 3)
+        for obstacle in self.obstacles:
+            if obstacle.manipulator_collides([[np.array([0, 0]), p1], [p1, p2], [p2, p3]]):
+                print "COLLISION DETECTED"
+                return x_dash
+                    
         return x_new
     
     def get_random_joint_angles(self, mu, cov):        

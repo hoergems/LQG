@@ -3,7 +3,10 @@ from simulator import Simulator
 from path_planning_interface import PathPlanningInterface
 from serializer import Serializer
 from obstacle import Obstacle
+from kinematics import Kinematics
+from EMD import *
 import numpy as np
+import os
 
 class MPC:
     def __init__(self):
@@ -29,13 +32,22 @@ class MPC:
         if self.check_positive_definite([C, D]):            
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
             emds = []
-            self.mpc(self.theta_0, m_covs, self.horizon, obstacles)
+            cartesian_coords, mean_rewards, emds = self.mpc(self.theta_0, m_covs, self.horizon, obstacles)
+            stats = dict(m_cov = m_covs.tolist(), emd = emds)
+            #serializer.save_paths(best_paths, 'best_paths.yaml', True, path="stats")
+            serializer.save_cartesian_coords(cartesian_coords, path="stats")            
+            serializer.save_stats(stats, path="stats")            
+            serializer.save_rewards(mean_rewards, path="stats")
+            cmd = "cp config.yaml stats/"            
+            os.system(cmd)
+            cmd = "cp obstacles/obstacles.yaml stats/"
+            os.system(cmd)
             
     def mpc(self, initial_belief, m_covs, horizon, obstacles):
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
-        x_tilde = initial_belief
-        x_true = initial_belief
-        total_reward = 0.0
+        cart_coords = []
+        mean_rewards = []
+        emds = []
         for j in xrange(len(m_covs)):            
             
             print "Evaluating covariance " + str(m_covs[j])
@@ -54,26 +66,47 @@ class MPC:
             self.sim.setup_problem(A, B, C, D, H, V, W, M, N, obstacles, self.goal_position, self.goal_radius, self.num_links)            
             self.sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
             
-            current_step = 0
-            terminal = False
-            
-            while current_step < self.max_num_steps and not terminal:
-                self.path_planner.set_start_and_goal_state(x_true, self.goal_state, self.goal_radius)
-                paths = self.path_planner.plan_paths(self.num_paths, 0)
-                print "evaluate paths..."
-                xs, us, zs = self.path_evaluator.evaluate_paths(paths, horizon=horizon)
-                print "evaluation done"
+            mean_reward = 0.0
+            cartesian_coords = []
+            for k in xrange(self.num_simulation_runs):
+                x_tilde = initial_belief
+                x_true = initial_belief
+                total_reward = 0.0
                 
-                x_true, x_tilde, P_t, total_reward, terminal = self.sim.simulate_step(xs, us, zs, 
-                                                                                      x_true, 
-                                                                                      x_tilde,
-                                                                                      P_t,
-                                                                                      total_reward,
-                                                                                      current_step)                
-                current_step += 1
-            print "total_reward " + str(total_reward)
+                current_step = 0
+                terminal = False
+                
+                while current_step < self.max_num_steps and not terminal:
+                    self.path_planner.set_start_and_goal_state(x_true, self.goal_state, self.goal_radius)
+                    paths = self.path_planner.plan_paths(self.num_paths, 0)
+                    print "evaluate paths..."
+                    xs, us, zs = self.path_evaluator.evaluate_paths(paths, horizon=horizon)
+                    print "evaluation done"
+                    
+                    x_true, x_tilde, P_t, total_reward, terminal = self.sim.simulate_step(xs, us, zs, 
+                                                                                          x_true, 
+                                                                                          x_tilde,
+                                                                                          P_t,
+                                                                                          total_reward,
+                                                                                          current_step)                
+                    current_step += 1
+                    print "m_cov: " + str(m_covs[j])
+                    print "run: " + str(k)
+                    print "step: " + str(current_step)
+                mean_reward += total_reward
+                ee_position = self.kinematics.get_end_effector_position(x_true)
+                cartesian_coords.append(ee_position.tolist())
+                print "total_reward " + str(total_reward)
+            print "mean_reward " + str(mean_reward)
+            mean_reward /= self.num_simulation_runs            
+            mean_rewards.append(np.asscalar(mean_reward))
+            emds.append(calc_EMD(cartesian_coords, self.num_bins))
+            cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])
+        print "mean_rewards " + str(mean_rewards)
+        return cart_coords, mean_rewards, emds
             
     def problem_setup(self, delta_t, num_links):
+        self.kinematics = Kinematics(num_links)
         A = np.identity(num_links)
         H = np.identity(num_links)
         B = delta_t * np.identity(num_links)

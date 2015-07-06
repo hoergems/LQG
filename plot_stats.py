@@ -73,10 +73,9 @@ class PlotStats:
         m_cov = stats['m_cov']
         data = []
         max_avg_distance = 0.0
-        for k in xrange(len(m_cov)):
-            print "cov " + str(m_cov[k])
-            dists = []            
-            for coords in cart_coords[k]:
+        for k in xrange(len(m_cov)):            
+            dists = []
+            for coords in cart_coords[k]:                
                 dists.append(np.linalg.norm(np.array(coords) - np.array(config['goal_position'])))            
             avg_distance = 0.0
             for d in dists:
