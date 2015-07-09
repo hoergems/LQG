@@ -54,8 +54,8 @@ class Simulator:
                       total_reward,
                       current_step):        
         terminal_state_reached = False
-        Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)
-        u_dash = np.dot(Ls[0], x_tilde)
+        Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs))
+        u_dash = np.dot(Ls[1], x_tilde)        
         x_true = self.apply_control(x_true, np.add(u_dash, us[0]), self.A, self.B, self.V, self.M)
         
         ee_position = self.kinematics.get_end_effector_position(x_true) 
@@ -86,7 +86,8 @@ class Simulator:
         for j in xrange(self.num_simulation_runs):
             print "simulation run " + str(j) + " for run " + str(run) 
             x_true = xs[0]
-            x_tilde = xs[0]        
+            #x_tilde = xs[0]
+            x_tilde = np.array([0.0 for i in xrange(self.num_links)])        
             u_dash = np.array([0.0 for j in xrange(self.num_links)])        
             P_t = np.array([[0.0 for k in xrange(self.num_links)] for l in xrange(self.num_links)])
             reward = 0.0

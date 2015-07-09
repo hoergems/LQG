@@ -69,7 +69,9 @@ class MPC:
             mean_reward = 0.0
             cartesian_coords = []
             for k in xrange(self.num_simulation_runs):
-                x_tilde = initial_belief
+                #x_tilde = initial_belief
+                x_tilde = np.array([0.0 for i in xrange(self.num_links)])
+                
                 x_true = initial_belief
                 total_reward = 0.0
                 
@@ -77,7 +79,7 @@ class MPC:
                 terminal = False
                 
                 while current_step < self.max_num_steps and not terminal:
-                    self.path_planner.set_start_and_goal_state(x_true, self.goal_state, self.goal_radius)
+                    self.path_planner.set_start_and_goal_state(x_tilde, self.goal_state, self.goal_radius)
                     paths = self.path_planner.plan_paths(self.num_paths, 0)
                     print "evaluate paths..."
                     xs, us, zs = self.path_evaluator.evaluate_paths(paths, horizon=horizon)

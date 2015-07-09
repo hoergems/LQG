@@ -5,7 +5,7 @@ num_generated_paths: 5
 use_linear_path: False
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 2
+num_simulation_runs: 25
 
 # Number of links the manipulator consists of
 num_links: 3
@@ -29,13 +29,13 @@ goal_radius: 0.1
 num_bins: 201
 
 # The minimum joint state covariance
-min_covariance: 0.0
+min_covariance: 0.005
 
 # The maximum joint state covariance
 max_covariance: 0.005
 
 # The number of covariance steps
-covariance_steps: 3
+covariance_steps: 10
 
 # The observation covariance
 observation_covariance: 0.0001
@@ -59,8 +59,8 @@ exit_reward: 10000.0
 stop_when_terminal: True
 
 # MPC parameters
-#horizon: -1
-horizon: 10
+horizon: -1
+#horizon: 10
 
 max_num_steps: 10000
 
