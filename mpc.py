@@ -73,28 +73,32 @@ class MPC:
                 x_tilde = np.array([0.0 for i in xrange(self.num_links)])
                 
                 x_true = initial_belief
+                x_estimate = initial_belief
                 total_reward = 0.0
                 
                 current_step = 0
                 terminal = False
                 
                 while current_step < self.max_num_steps and not terminal:
-                    self.path_planner.set_start_and_goal_state(x_tilde, self.goal_state, self.goal_radius)
+                    self.path_planner.set_start_and_goal_state(x_estimate, self.goal_state, self.goal_radius)
                     paths = self.path_planner.plan_paths(self.num_paths, 0)
                     print "evaluate paths..."
                     xs, us, zs = self.path_evaluator.evaluate_paths(paths, horizon=horizon)
                     print "evaluation done"
-                    
+                    x_tilde = np.array([0.0 for i in xrange(self.num_links)])
                     x_true, x_tilde, P_t, total_reward, terminal = self.sim.simulate_step(xs, us, zs, 
                                                                                           x_true, 
                                                                                           x_tilde,
                                                                                           P_t,
                                                                                           total_reward,
-                                                                                          current_step)                
+                                                                                          current_step) 
+                    x_estimate = x_tilde + xs[1]               
                     current_step += 1
                     print "m_cov: " + str(m_covs[j])
                     print "run: " + str(k)
                     print "step: " + str(current_step)
+                    print "x_true " + str(x_true)
+                    print "x_estimate " + str(x_estimate)
                 mean_reward += total_reward
                 ee_position = self.kinematics.get_end_effector_position(x_true)
                 cartesian_coords.append(ee_position.tolist())

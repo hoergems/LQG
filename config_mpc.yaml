@@ -29,7 +29,7 @@ goal_radius: 0.1
 num_bins: 201
 
 # The minimum joint state covariance
-min_covariance: 0.005
+min_covariance: 0.0
 
 # The maximum joint state covariance
 max_covariance: 0.005
