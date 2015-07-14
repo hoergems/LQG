@@ -41,10 +41,11 @@ class Simulator:
         self.illegal_move_penalty = illegal_move_penalty
         self.exit_reward = exit_reward
     
-    def setup_simulator(self, num_simulation_runs, stop_when_terminal): 
+    def setup_simulator(self, num_simulation_runs, stop_when_terminal, verbose): 
         self.kinematics = Kinematics(self.num_links)
         self.num_simulation_runs = num_simulation_runs        
         self.stop_when_terminal = stop_when_terminal
+        self.verbose = verbose
         
     def simulate_step(self, 
                       xs, us, zs, 

@@ -39,6 +39,14 @@ class Serializer:
         with open(os.path.join(path, "avg_path_lengths.yaml"), 'w') as f:
             f.write(yaml.dump(lengths, default_flow_style=False))
             
+    def save_mean_planning_times(self, planning_times, path=""):
+        if not os.path.exists(path):
+            os.makedirs(path)
+        for file in glob.glob(os.path.join(path, "mean_planning_times.yaml")):
+            os.remove(file)
+        with open(os.path.join(path, "mean_planning_times.yaml"), 'w') as f:
+            f.write(yaml.dump(planning_times, default_flow_style=False))
+            
     def load_stats(self, filename, path=""):
         with open(os.path.join(path, filename), 'r') as f:
             return yaml.load(f, yaml.CLoader)
@@ -83,8 +91,12 @@ class Serializer:
         with open(os.path.join(path, "cartesian_coords.yaml"), 'r') as f:
             return yaml.load(f, yaml.CLoader)
     
-    def load_paths(self, file, path=""):        
-        paths = yaml.load(open(os.path.join(path, file), 'r'), yaml.CLoader)        
+    def load_paths(self, file, path=""):
+        try:        
+            paths = yaml.load(open(os.path.join(path, file), 'r'), yaml.CLoader) 
+        except IOError:
+            print "No such file or directory: " + str(os.path.join(path, file))
+            return []       
         return paths['paths']
     
     def load_obstacles(self, file, path=""):

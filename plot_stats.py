@@ -8,36 +8,39 @@ from kinematics import Kinematics
 from EMD import *
 
 class PlotStats:
-    def __init__(self, save):
-        if not os.path.isdir("stats"):
-            os.makedirs("stats")      
+    def __init__(self, save, algorithm):
+        dir = "stats/" + str(algorithm)
+        if not os.path.isdir(dir):
+            os.makedirs(dir)      
         self.save = save
         print "Loading cartesian coordinates..."  
         serializer = Serializer()
         print "plotting paths"    
-        self.plot_paths(serializer)
-        self.plot_paths(serializer, best_paths=True)
-        cart_coords = serializer.load_cartesian_coords(path="stats")
+        self.plot_paths(serializer, dir=dir)
+        self.plot_paths(serializer, best_paths=True, dir=dir)
+        cart_coords = serializer.load_cartesian_coords(path=dir)
         print "plotting average distance to goal"
-        self.plot_average_dist_to_goal(serializer, cart_coords)
+        self.plot_average_dist_to_goal(serializer, cart_coords, dir=dir)
         print "plotting mean rewards"
-        self.plot_mean_rewards(serializer)
+        self.plot_mean_rewards(serializer, dir=dir)
         print "plotting EMD graph..."
-        self.plot_emd_graph(serializer, cart_coords) 
+        self.plot_emd_graph(serializer, cart_coords, dir=dir) 
         print "plotting histograms..." 
-        self.save_histogram_plots(serializer, cart_coords)        
+        self.save_histogram_plots(serializer, cart_coords, dir=dir)
+        print "plotting mean planning times"
+        self.plot_mean_planning_times(serializer, dir=dir)        
         
     def clear_stats(self):
         for file in glob.glob("stats/*"):
             os.remove(file)
             
-    def plot_mean_rewards(self, serializer):        
-        stats = serializer.load_stats('stats.yaml', path="stats")
+    def plot_mean_rewards(self, serializer, dir="stats"):        
+        stats = serializer.load_stats('stats.yaml', path=dir)
         m_cov = stats['m_cov']
         sets = []
         labels = []
         mean_rewards = []
-        for file in glob.glob(os.path.join(os.path.join("stats", "rewards*"))):
+        for file in glob.glob(os.path.join(os.path.join(dir, "rewards*"))):
             file_str = file
             try:
                 file_str = file.split("/")[1].split(".")[0].split("_")[1]
@@ -65,11 +68,48 @@ class PlotStats:
                             y_range=[min(min_m), max(max_m)],
                             show_legend=True,
                             save=self.save,
-                            filename="stats/mean_rewards.png")       
+                            filename=dir + "/mean_rewards.png")
         
-    def plot_average_dist_to_goal(self, serializer, cart_coords):
-        config = serializer.read_config("config.yaml", path="stats")
-        stats = serializer.load_stats('stats.yaml', path="stats")
+    def plot_mean_planning_times(self, serializer, dir="stats"):        
+        stats = serializer.load_stats('stats.yaml', path=dir)
+        m_cov = stats['m_cov']
+        sets = []
+        labels = []
+        mean_planning_times = []
+        for file in glob.glob(os.path.join(os.path.join(dir, "mean_planning_times.yaml"))):
+            file_str = file
+            try:
+                file_str = file.split("/")[1].split(".")[0].split("_")[1]
+            except:
+                pass
+                   
+            #mean_rewards = serializer.load_stats('rewards.yaml', path="stats")
+            mean_planning_times.append(serializer.load_stats(file))            
+            data = []
+            for k in xrange(len(m_cov)):
+                data.append(np.array([m_cov[k], mean_planning_times[-1][k]]))
+            sets.append(np.array(data))
+            labels.append(file_str)
+        print mean_planning_times
+        if not len(mean_planning_times) == 0:
+            min_m = [min(m) for m in mean_planning_times]
+            max_m = [max(m) for m in mean_planning_times]
+            print "min_m " + str(min_m)
+            print "max_m " + str(max_m)
+            
+            Plot.plot_2d_n_sets(sets,
+                                labels=labels,
+                                xlabel="joint covariance",
+                                ylabel="mean planning times (seconds)",
+                                x_range=[m_cov[0], m_cov[-1]],
+                                y_range=[min(min_m), max(max_m)],
+                                show_legend=True,
+                                save=self.save,
+                                filename=dir + "/mean_planning_times.png")        
+        
+    def plot_average_dist_to_goal(self, serializer, cart_coords, dir="stats"):
+        config = serializer.read_config("config.yaml", path=dir)
+        stats = serializer.load_stats('stats.yaml', path=dir)
         m_cov = stats['m_cov']
         data = []
         max_avg_distance = 0.0
@@ -93,11 +133,12 @@ class PlotStats:
                             y_range=[0, max_avg_distance],
                             show_legend=False,
                             save=self.save,
-                            filename="stats/avg_distance.png")
+                            filename=dir + "/avg_distance.png")
+    
         
-    def plot_emd_graph(self, serializer, cartesian_coords):
-        stats = serializer.load_stats('stats.yaml', path="stats") 
-        config = serializer.read_config('config.yaml', path="stats")       
+    def plot_emd_graph(self, serializer, cartesian_coords, dir="stats"):
+        stats = serializer.load_stats('stats.yaml', path=dir) 
+        config = serializer.read_config('config.yaml', path=dir)       
         #emd = stats['emd']
         m_cov = stats['m_cov']
         
@@ -114,28 +155,28 @@ class PlotStats:
                             y_range=[0, max(emds)],
                             show_legend=False,
                             save=self.save,
-                            path="stats",
+                            path=dir,
                             filename="emd.png")        
         
-    def save_histogram_plots(self, serializer, cart_coords):
-        config = serializer.read_config("config.yaml", path="stats")
+    def save_histogram_plots(self, serializer, cart_coords, dir="stats"):
+        config = serializer.read_config("config.yaml", path=dir)
         
         for k in xrange(len(cart_coords)):                    
             X = np.array([cart_coords[k][i][0] for i in xrange(len(cart_coords[0]))])
             Y = np.array([cart_coords[k][i][1] for i in xrange(len(cart_coords[0]))])
             histogram_range = [[-3.1, 3.1], [-3.1, 3.1]]
             H, xedges, yedges = get_2d_histogram(X, Y, histogram_range, bins=config['num_bins'])        
-            Plot.plot_histogram(H, xedges, yedges, save=self.save, path="stats", filename="hist"+ str(k) + ".png")
+            Plot.plot_histogram(H, xedges, yedges, save=self.save, path=dir, filename="hist"+ str(k) + ".png")
             
-    def plot_paths(self, serializer, best_paths=False):
-        config = serializer.read_config('config.yaml', path="stats")
+    def plot_paths(self, serializer, best_paths=False, dir="stats"):
+        config = serializer.read_config('config.yaml', path=dir)
         dim = config['num_links']
         kinematics = Kinematics(dim)
         if best_paths:
-            paths = serializer.load_paths("best_paths.yaml", path="stats")
+            paths = serializer.load_paths("best_paths.yaml", path=dir)
             filename = "best_paths.png"
         else:
-            paths = serializer.load_paths("paths.yaml", path="stats")            
+            paths = serializer.load_paths("paths.yaml", path=dir)            
             filename = "paths.png"
         sets = []
         for path in paths:
@@ -144,7 +185,7 @@ class PlotStats:
                 state = [elem[i] for i in xrange(dim)]
                 path_coords.append(kinematics.get_end_effector_position(state))
             sets.append(np.array(path_coords)) 
-        obstacles = serializer.load_obstacles("obstacles.yaml", path="stats")
+        obstacles = serializer.load_obstacles("obstacles.yaml", path=dir)
         print "obstacles " + str(obstacles)
         if not obstacles == None:
             for obstacle in obstacles:
@@ -165,14 +206,15 @@ class PlotStats:
                             plot_type="lines",
                             show_legend=False,
                             save=self.save,
-                            path="stats",
+                            path=dir,
                             filename=filename)    
     
         
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        if "save" in sys.argv[1]:
-            PlotStats(True)
+        algorithm = sys.argv[1]
+        if "save" in sys.argv[2]:
+            PlotStats(True, algorithm)
             sys.exit()       
         PlotStats(False)
         sys.exit()   

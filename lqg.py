@@ -2,6 +2,7 @@ import numpy as np
 import plot as Plot
 import os
 import glob
+import sys
 from serializer import Serializer
 from obstacle import Obstacle
 import kalman as kalman
@@ -9,13 +10,15 @@ from path_evaluator import PathEvaluator
 from simulator import Simulator
 from path_planning_interface import PathPlanningInterface
 from EMD import *
+from plot_stats import PlotStats
 
 class LQG:
-    def __init__(self):
+    def __init__(self, plot):
+        dir = "stats/LQG"
         sim = Simulator()
         path_evaluator = PathEvaluator()
         path_planner = PathPlanningInterface()    
-        serializer = Serializer()
+        serializer = Serializer()        
         
         """ Reading the config """
         config = serializer.read_config("config.yaml")
@@ -27,7 +30,7 @@ class LQG:
         
         """ Setup operations """
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
-        path_planner.setup(obstacles, self.num_links, self.max_velocity, self.delta_t, self.use_linear_path)
+        path_planner.setup(obstacles, self.num_links, self.max_velocity, self.delta_t, self.use_linear_path, config['verbose'])
         path_planner.set_start_and_goal_state(self.theta_0, self.goal_state, self.goal_radius)      
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
         
@@ -36,7 +39,7 @@ class LQG:
             emds = []
             if self.use_paths_from_file and len(glob.glob(os.path.join("stats", "paths.yaml"))) == 1:
                 print "Loading paths from file"
-                in_paths = serializer.load_paths("paths.yaml", path="stats") 
+                in_paths = serializer.load_paths("paths.yaml", path=dir) 
                 paths = []               
                 for path in in_paths:
                     xs = []
@@ -49,12 +52,12 @@ class LQG:
                     paths.append([xs, us, zs])
             else:
                 paths = path_planner.plan_paths(self.num_paths, 0)                   
-                serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path="stats")               
+                serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path=dir)               
             
             
             """ Determine average path length """
             avg_path_length = self.get_avg_path_length(paths)            
-            serializer.save_avg_path_lengths(avg_path_length, path="stats")
+            serializer.save_avg_path_lengths(avg_path_length, path=dir)
                                        
             cart_coords = []  
             best_paths = []
@@ -71,7 +74,7 @@ class LQG:
                 """
                 N = self.observation_covariance * np.identity(self.num_links)
                 
-                path_evaluator.setup(A, B, C, D, H, M, N, V, W, self.num_links, obstacles)  
+                path_evaluator.setup(A, B, C, D, H, M, N, V, W, self.num_links, obstacles, config['verbose'])  
                 xs, us, zs = path_evaluator.evaluate_paths(paths)
                                 
                 best_paths.append([[xs[i] for i in xrange(len(xs))], 
@@ -79,21 +82,23 @@ class LQG:
                                    [zs[i] for i in xrange(len(zs))]])
                 
                 sim.setup_problem(A, B, C, D, H, V, W, M, N, obstacles, self.goal_position, self.goal_radius, self.num_links)
-                sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)           
+                sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal, config['verbose'])           
                 cartesian_coords, mean_reward = sim.simulate(xs, us, zs, j)
                                 
                 cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])                
                 emds.append(calc_EMD(cartesian_coords, self.num_bins))
                 mean_rewards.append(mean_reward)            
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
-            serializer.save_paths(best_paths, 'best_paths.yaml', True, path="stats")
-            serializer.save_cartesian_coords(cart_coords, path="stats")            
-            serializer.save_stats(stats, path="stats")            
-            serializer.save_rewards(mean_rewards, path="stats")
-            cmd = "cp config.yaml stats/"            
+            serializer.save_paths(best_paths, 'best_paths.yaml', True, path=dir)
+            serializer.save_cartesian_coords(cart_coords, path=dir)            
+            serializer.save_stats(stats, path=dir)            
+            serializer.save_rewards(mean_rewards, path=dir)
+            cmd = "cp config.yaml " + dir           
             os.system(cmd)
-            cmd = "cp obstacles/obstacles.yaml stats/"
+            cmd = "cp obstacles/obstacles.yaml " + dir
             os.system(cmd)
+            
+            PlotStats(True, "LQG")
             
     def problem_setup(self, delta_t, num_links):
         A = np.identity(num_links)
@@ -127,7 +132,7 @@ class LQG:
                 return False
         return True
         
-    def set_params(self, config):
+    def set_params(self, config):        
         self.num_paths = config['num_generated_paths']
         self.use_linear_path = config['use_linear_path']
         self.num_links = config['num_links']
@@ -152,5 +157,11 @@ class LQG:
         self.stop_when_terminal = config['stop_when_terminal']        
 
 if __name__ == "__main__":
-    LQG()
+    if len(sys.argv) > 1:
+        if "plot" in sys.argv[1]:
+            LQG(True)
+            sys.exit()
+        print "Unrecognized command line argument: " + str(sys.argv[1]) 
+        sys.exit()   
+    LQG(False)
     

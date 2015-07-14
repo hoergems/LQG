@@ -10,7 +10,7 @@ class PathEvaluator:
     def __init__(self):
         pass
     
-    def setup(self, A, B, C, D, H, M, N, V, W, num_links, obstacles):
+    def setup(self, A, B, C, D, H, M, N, V, W, num_links, obstacles, verbose):
         self.kinematics = Kinematics(num_links)
         self.A = A
         self.B = B
@@ -24,6 +24,7 @@ class PathEvaluator:
         self.num_links = num_links
         self.obstacles = obstacles
         self.num_cores = cpu_count() - 1
+        self.verbose = verbose
 
     def get_probability_of_collision(self, mean, cov):
             samples = multivariate_normal.rvs(mean, cov, 10)
@@ -66,6 +67,8 @@ class PathEvaluator:
         eval_queue = Queue()
         evaluated_paths = []
         for i in xrange(len(paths)):
+            if self.verbose:
+                print "Evaluate path " + str(i)
             p = Process(target=self.evaluate, args=(i, eval_queue, paths[i], horizon,))
             p.start()
             jobs.append(p)           
@@ -80,8 +83,7 @@ class PathEvaluator:
                 jobs.clear()
                 q_size = eval_queue.qsize()
                 for j in xrange(q_size):                     
-                    evaluated_paths.append(eval_queue.get())
-        print len(evaluated_paths)
+                    evaluated_paths.append(eval_queue.get())        
         min_objective = 1000000.0
         best_path = evaluated_paths[0][1]
         min_objective = evaluated_paths[0][0]        
@@ -150,8 +152,9 @@ class PathEvaluator:
         else:
             collision_sum = sum(collision_probs) / float(horizon_L)            
         tr = np.trace(EE_covariance)
-        print "collision sum: " + str(collision_sum)
-        print "trace: " + str(tr)
+        if self.verbose:
+            print "collision sum: " + str(collision_sum)
+            print "trace: " + str(tr)
         objective_p = collision_sum + tr
         eval_queue.put((objective_p, path))
         '''if objective_p < min_objective:

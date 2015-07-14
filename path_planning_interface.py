@@ -8,7 +8,7 @@ class PathPlanningInterface:
     def __init__(self):
         pass
     
-    def setup(self, obstacles, num_links, max_velocity, delta_t, use_linear_path):
+    def setup(self, obstacles, num_links, max_velocity, delta_t, use_linear_path, verbose):
         self.num_cores = cpu_count()
         #self.num_cores = 2
         self.obstacles = obstacles
@@ -16,6 +16,7 @@ class PathPlanningInterface:
         self.max_velocity = max_velocity
         self.delta_t = delta_t
         self.use_linear_path = use_linear_path
+        self.verbose = verbose
         
     def set_start_and_goal_state(self, start_state, goal_state, goal_radius):        
         self.start_state = start_state
@@ -28,8 +29,9 @@ class PathPlanningInterface:
         path_queue = Queue()
         paths = [] 
         print "Generating paths..."       
-        for i in xrange(num):  
-                      
+        for i in xrange(num): 
+            if self.verbose: 
+                print "generating path " + str(i)
             p = Process(target=self.construct_path, args=(self.obstacles, path_queue, sim_run,))
             p.start()
             jobs.append(p)           
