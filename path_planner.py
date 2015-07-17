@@ -48,7 +48,7 @@ class PathPlanner:
         if self.use_linear_path:       
             path = self.linear_path(self.start_state, goal_state)
             path_collides = self.path_collides(path)
-        if path_collides:            
+        if path_collides:                         
             self.problem_definition.addStartState(self.start_state)
             #problem_definition.setGoal(goal_region)
             self.problem_definition.setStartAndGoalStates(self.start_state, goal_state)
@@ -61,9 +61,14 @@ class PathPlanner:
             self.planner.setRange(np.sqrt(self.si.getStateSpace().getDimension() * np.square(self.delta_t * self.max_velocity)))        
             self.planner.setProblemDefinition(self.problem_definition)            
             self.planner.setup()
-                
+            
+            start_time = time.time()    
             while not self.problem_definition.hasSolution():
-                self.planner.solve(10.0)                
+                self.planner.solve(10.0)
+                delta = time.time() - start_time
+                if delta > 5.0:
+                    print "returning NONE"
+                    return []          
             path = []
                 
             if self.problem_definition.hasSolution():

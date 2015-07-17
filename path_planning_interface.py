@@ -2,6 +2,7 @@ from path_planner import PathPlanner
 from multiprocessing import Process, Queue, cpu_count
 import time
 import collections
+import numpy as np
 
 
 class PathPlanningInterface:
@@ -46,10 +47,11 @@ class PathPlanningInterface:
                 jobs.clear()
                 q_size = path_queue.qsize()
                 for j in xrange(q_size):
-                    p = path_queue.get()                    
-                    paths.append([[p[0][i].tolist() for i in xrange(len(p[0]))], 
-                                  [p[1][i].tolist() for i in xrange(len(p[0]))], 
-                                  [p[2][i].tolist() for i in xrange(len(p[0]))]])      
+                    p = path_queue.get()
+                    if not len(p) == 0:                    
+                        paths.append([[p[0][i].tolist() for i in xrange(len(p[0]))], 
+                                      [p[1][i].tolist() for i in xrange(len(p[0]))], 
+                                      [p[2][i].tolist() for i in xrange(len(p[0]))]])      
         return paths
     
     def construct_path(self, obstacles, queue, sim_run):        

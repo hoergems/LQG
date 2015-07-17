@@ -37,6 +37,7 @@ class MPC:
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
             emds = []
             cartesian_coords, mean_rewards, emds, mean_planning_times = self.mpc(self.theta_0, m_covs, self.horizon, obstacles, config['verbose'])
+                       
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
             #serializer.save_paths(best_paths, 'best_paths.yaml', True, path="stats")
             serializer.save_cartesian_coords(cartesian_coords, path=dir)            
@@ -48,7 +49,7 @@ class MPC:
             cmd = "cp obstacles/obstacles.yaml " + dir
             os.system(cmd)
             if plot:
-                PlotStats(True, "mpc")         
+                PlotStats(True, "mpc")                    
             
     def mpc(self, initial_belief, m_covs, horizon, obstacles, verbose):
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
@@ -87,11 +88,17 @@ class MPC:
                 
                 current_step = 0
                 terminal = False
-                planning_time = 0.0
+                planning_time = 0.0                
                 while current_step < self.max_num_steps and not terminal:
                     t0 = time.time()
                     self.path_planner.set_start_and_goal_state(x_estimate, self.goal_state, self.goal_radius)
                     paths = self.path_planner.plan_paths(self.num_paths, 0)
+                    if len(paths) == 0:
+                        print "unsolvable situation"
+                        total_reward = np.array([-self.illegal_move_penalty])[0]
+                        current_step += 1
+                        print "break"                       
+                        break
                     print "evaluate paths..."
                     xs, us, zs = self.path_evaluator.evaluate_paths(paths, horizon=horizon)
                     planning_time += time.time() - t0
@@ -129,7 +136,7 @@ class MPC:
             mean_planning_times.append(mean_planning_time)
             emds.append(calc_EMD(cartesian_coords, self.num_bins))
             cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])
-        print "mean_rewards " + str(mean_rewards)
+        print "mean_rewards " + str(mean_rewards)        
         return cart_coords, mean_rewards, emds, mean_planning_times
             
     def problem_setup(self, delta_t, num_links):
