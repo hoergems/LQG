@@ -16,8 +16,8 @@ class PlotStats:
         print "Loading cartesian coordinates..."  
         serializer = Serializer()
         print "plotting paths"    
-        self.plot_paths(serializer, dir=dir)
-        self.plot_paths(serializer, best_paths=True, dir=dir)
+        #self.plot_paths(serializer, dir=dir)
+        #self.plot_paths(serializer, best_paths=True, dir=dir)
         cart_coords = serializer.load_cartesian_coords(path=dir)
         print "plotting average distance to goal"
         self.plot_average_dist_to_goal(serializer, cart_coords, dir=dir)
@@ -66,7 +66,7 @@ class PlotStats:
                             ylabel="mean reward",
                             x_range=[m_cov[0], m_cov[-1]],
                             y_range=[min(min_m), max(max_m)],
-                            show_legend=True,
+                            show_legend=False,
                             save=self.save,
                             filename=dir + "/mean_rewards.png")
         

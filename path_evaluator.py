@@ -101,8 +101,8 @@ class PathEvaluator:
         zs = path[2]
             
         horizon_L = horizon 
-        if horizon == -1 or len(xs) - 1 < horizon:
-            horizon_L = len(xs) - 1            
+        if horizon == -1 or len(xs) - 1 < horizon:            
+            horizon_L = len(xs) - 1
         Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, horizon_L)
         P_t = np.array([[0.0 for i in xrange(self.num_links)] for i in xrange(self.num_links)])
         P_0 = np.copy(P_t)
@@ -150,7 +150,7 @@ class PathEvaluator:
         if float(horizon_L) == 0.0:
             collsion_sum = 0.0
         else:
-            collision_sum = sum(collision_probs) / float(horizon_L)            
+            collision_sum = sum(collision_probs) / float(horizon_L)
         tr = np.trace(EE_covariance)
         if self.verbose:
             print "collision sum: " + str(collision_sum)

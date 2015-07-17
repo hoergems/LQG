@@ -79,8 +79,7 @@ class MPC:
             cartesian_coords = []
             mean_planning_time = 0.0
             for k in xrange(self.num_simulation_runs):
-                #x_tilde = initial_belief
-                x_tilde = np.array([0.0 for i in xrange(self.num_links)])
+                #x_tilde = initial_belief               
                 
                 x_true = initial_belief
                 x_estimate = initial_belief
@@ -99,14 +98,19 @@ class MPC:
                     print "planning time: " + str(time.time() - t0)
                     print "evaluation done. Average planning time: " + str(planning_time / (current_step + 1.0))
                     x_tilde = np.array([0.0 for i in xrange(self.num_links)])
-                    x_true, x_tilde, P_t, total_reward, terminal = self.sim.simulate_step(xs, us, zs, 
-                                                                                          x_true, 
-                                                                                          x_tilde,
-                                                                                          P_t,
-                                                                                          total_reward,
-                                                                                          current_step) 
-                    x_estimate = x_tilde + xs[1]               
-                    current_step += 1
+                    
+                    n_steps = self.num_execution_steps
+                    if n_steps > len(xs) - 1:
+                       n_steps = len(xs) - 1                    
+                    x_true, x_tilde, x_estimate, P_t, current_step, total_reward, terminal = self.sim.simulate_n_steps(xs, us, zs, 
+                                                                                                                       x_true, 
+                                                                                                                       x_tilde,
+                                                                                                                       x_estimate,
+                                                                                                                       P_t,
+                                                                                                                       total_reward,
+                                                                                                                       current_step,
+                                                                                                                       n_steps) 
+                    #x_estimate = x_tilde + xs[n_steps]
                     print "m_cov: " + str(m_covs[j])
                     print "run: " + str(k)
                     print "step: " + str(current_step)
@@ -180,7 +184,12 @@ class MPC:
         self.exit_reward = config['exit_reward']
         self.stop_when_terminal = config['stop_when_terminal']
         self.horizon = config['horizon']
-        self.max_num_steps = config['max_num_steps'] 
+        self.max_num_steps = config['max_num_steps']
+        
+        """
+        The number of steps a path is being executed before a new path gets calculated
+        """
+        self.num_execution_steps = config['num_execution_steps']
     
 if __name__ == "__main__":
     if len(sys.argv) > 1:

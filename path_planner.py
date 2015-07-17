@@ -43,37 +43,37 @@ class PathPlanner:
         goal = self.goal_region.sampleGoal(ob.State(self.si.getStateSpace()))
         goal_state = ob.State(self.si.getStateSpace())
         for i in xrange(self.si.getStateSpace().getDimension()):
-            goal_state[i] = goal[i]        
-        path = self.linear_path(self.start_state, goal_state)
+            goal_state[i] = goal[i]
+        path_collides = True 
+        if self.use_linear_path:       
+            path = self.linear_path(self.start_state, goal_state)
+            path_collides = self.path_collides(path)
+        if path_collides:            
+            self.problem_definition.addStartState(self.start_state)
+            #problem_definition.setGoal(goal_region)
+            self.problem_definition.setStartAndGoalStates(self.start_state, goal_state)
                 
-        if self.path_collides(path):             
-            if not self.use_linear_path:
-                self.problem_definition.addStartState(self.start_state)
-                #problem_definition.setGoal(goal_region)
-                self.problem_definition.setStartAndGoalStates(self.start_state, goal_state)
+            #self.planner = og.RRTstar(self.si)
+            self.planner = og.RRTConnect(self.si)
+            #self.planner = og.RRT(self.si)   
+            #self.planner.setGoalBias(0.05) 
                 
-                #self.planner = og.RRTstar(self.si)
-                self.planner = og.RRTConnect(self.si)
-                #self.planner = og.RRT(self.si)   
-                #self.planner.setGoalBias(0.05) 
+            self.planner.setRange(np.sqrt(self.si.getStateSpace().getDimension() * np.square(self.delta_t * self.max_velocity)))        
+            self.planner.setProblemDefinition(self.problem_definition)            
+            self.planner.setup()
                 
-                self.planner.setRange(np.sqrt(self.si.getStateSpace().getDimension() * np.square(self.delta_t * self.max_velocity)))        
-                self.planner.setProblemDefinition(self.problem_definition)            
-                self.planner.setup()
+            while not self.problem_definition.hasSolution():
+                self.planner.solve(10.0)                
+            path = []
                 
-                while not self.problem_definition.hasSolution():
-                    self.planner.solve(10.0)                
-                path = []
-                
-                if self.problem_definition.hasSolution():
-                    solution_path = self.problem_definition.getSolutionPath()
-                    states = solution_path.getStates()                
-                    path = [np.array([state[i] for i in xrange(self.space.getDimension())]) for state in states] 
-                    #print "path " + str(path)
-                else:
-                    print "no solution" 
-            else:                
-                path = self.linear_path(self.start_state, goal_state)          
+            if self.problem_definition.hasSolution():
+                solution_path = self.problem_definition.getSolutionPath()
+                states = solution_path.getStates()                
+                path = [np.array([state[i] for i in xrange(self.space.getDimension())]) for state in states] 
+                    
+                #print "path " + str(path)
+            else:
+                print "no solution"
         return self._augment_path(path)
     
     def path_collides(self, path):
@@ -93,7 +93,7 @@ class PathPlanner:
         start = np.array(s)
         path.append(start)
         goal = np.array(g)
-        vec = goal - start
+        vec = goal - start        
         vec_length = np.linalg.norm(vec)
         vec_norm = vec / vec_length
         steps = vec_length / max_dist
@@ -142,6 +142,7 @@ class PathPlanner:
         xs = [new_path[i][0] for i in xrange(len(path))]
         us = [new_path[i][1] for i in xrange(len(path))]
         zs = [new_path[i][2] for i in xrange(len(path))]
+        #print "xs" + str(xs)
         return xs, us, zs
                
         
