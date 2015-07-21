@@ -1,0 +1,72 @@
+
+<Robot name="3DOFRobot">
+<KinBody>
+    <modelsdir>../mymodels</modelsdir>
+   <Body name="Base" type="static">
+     <Translation>0.0  0.0  0.0</Translation>
+     <Geom type="cylinder">
+       <rotationaxis>1 0 0 90</rotationaxis>
+       <radius>0.03</radius>
+       <height>0.02</height>
+       <diffuseColor>0.05 0.05 0.05</diffuseColor>
+     </Geom>
+   </Body>
+   
+   <Body name="Arm0" type="dynamic">
+     <offsetfrom>Base</offsetfrom>
+     <Translation>0 0 0.005</Translation>
+     <Geom type="box">
+       <Translation>1.0 0 0</Translation>
+       <Extents>1.0 0.01 0.005</Extents>
+     </Geom>
+   </Body>
+   <Joint circular="true" name="j0" type="hinge">
+     <Body>Base</Body>
+     <Body>Arm0</Body>     
+     <limitsdeg>-360 360</limitsdeg>
+     <axis>0 0 1</axis>
+   </Joint>
+   
+   <!--<Body name="Arm1" type="dynamic">
+     <offsetfrom>Arm0</offsetfrom>
+     <Translation>0.0 0 0.0</Translation>
+     <Geom type="box">
+       <Translation>1.0 0.0 0</Translation>
+       <Extents>1.0 0.0075 0.005</Extents>
+     </Geom>
+   </Body>
+   <Joint circular="true" name="j1" type="hinge">
+     <Body>Arm0</Body>
+     <Body>Arm1</Body>     
+     <limitsdeg>-360 360</limitsdeg>
+     <axis>0 0 1</axis>     
+   </Joint>
+
+   <Body name="Arm2" type="dynamic">
+     <offsetfrom>Arm1</offsetfrom>
+     <Translation>0.0 0 0.0</Translation>
+     <Geom type="box">
+       <Translation>1.0 0.0 0</Translation>
+       <Extents>1.0 0.0075 0.005</Extents>
+     </Geom>
+   </Body>
+   <Joint circular="true" name="j2" type="hinge">
+     <Body>Arm1</Body>
+     <Body>Arm2</Body>     
+     <limitsdeg>-360 360</limitsdeg>
+     <axis>0 0 1</axis>     
+   </Joint>-->
+   
+   
+ </KinBody>
+ 
+ <Manipulator name="arm">
+   <effector>Arm0</effector>   
+   <base>Base</base>           
+   <joints>j0</joints>      
+   <closingdirection>1</closingdirection>
+   <direction>1 0 0</direction>
+   <Translation>0.125 0 0</Translation>
+ </Manipulator>
+
+</Robot>

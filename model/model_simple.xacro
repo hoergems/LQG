@@ -1,0 +1,139 @@
+<?xml version="1.0"?>
+
+<robot name="manipulator" xmlns:xacro="http://www.ros.org/wiki/xacro">
+<xacro:include filename="link_dimensions.xacro" />
+<xacro:include filename="physics.xacro" />
+
+<link name="base">
+    <visual>
+      <origin xyz="0 0 0"/>
+	   <geometry>
+	     <box size="0.05 0.05 ${HEIGHT}" />
+	   </geometry>	
+	   <material name="blue" />
+    </visual>
+    <collision>
+      <geometry>
+        <!--<box size="0.2 0.1 0.05" />-->
+        <box size="0.0 0.0 0.0" />
+      </geometry>
+    </collision>
+    <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <mass value="1000000.0" />
+        <inertia
+            ixx="${ixx}" ixy="${ixy}" ixz="${ixz}"
+                 iyy="${iyy}" iyz="${iyz}"
+                 izz="${izz}" />
+        </inertial>
+</link>
+
+<joint name="joint1" type="revolute">
+		<axis xyz="0 0 1"/>
+		<parent link="base"/>
+		<child link="link1"/>
+		<origin rpy="0.0 0.0 0.0" xyz="0 0 0"/>
+		<limit effort="${effort}" velocity="${velocity}" lower="${lower_bound}" upper="${upper_bound}"/>
+                <dynamics damping="${damping}" />
+</joint>
+
+
+<link name="link1">
+		<visual>
+			<origin rpy="0.0 0.0 0.0" xyz="${LENGTH / 2.0} 0 0"/>
+			<geometry>
+			        <box size="${LENGTH} ${WIDTH} ${HEIGHT}" />
+			</geometry>
+			<material name="green">
+				<color rgba="0 .8 0 1"/>
+			</material>
+		</visual>
+		<collision>
+			<origin rpy="0.0 0.0 0.0" xyz="${(LENGTH / 2.0)} 0 0"/>
+			<geometry>
+				<box size="${LENGTH} ${WIDTH} ${HEIGHT}" />
+			</geometry>
+		</collision>
+                <inertial>
+                        <origin xyz="0 0 0" rpy="0 0 0"/>
+                        <mass value="${coxa_mass}" />
+                        <inertia ixx="${ixx}" ixy="${ixy}" ixz="${ixz}"
+                 iyy="${iyy}" iyz="${iyz}"
+                 izz="${izz}" />
+                </inertial>
+</link>
+
+<joint name="joint2" type="revolute">
+		<axis xyz="0 0 1"/>
+		<parent link="link1"/>
+		<child link="link2"/>
+		<origin rpy="0.0 0.0 0.0" xyz="${LENGTH} 0 0"/>
+		<limit effort="${effort}" velocity="${velocity}" lower="${lower_bound}" upper="${upper_bound}"/>
+                <dynamics damping="${damping}" />
+</joint>
+
+<link name="link2">
+		<visual>
+			<origin rpy="0.0 0.0 0.0" xyz="${LENGTH / 2.0} 0 0"/>
+			<geometry>
+			        <box size="${LENGTH} ${WIDTH} ${HEIGHT}" />
+			</geometry>
+			<material name="blue">
+				<color rgba="0 .8 0 1"/>
+			</material>
+		</visual>
+		<collision>
+			<origin rpy="0.0 0.0 0.0" xyz="${(LENGTH / 2.0)} 0 0"/>
+			<geometry>
+				<box size="${LENGTH} ${WIDTH} ${HEIGHT}" />
+			</geometry>
+		</collision>
+                <inertial>
+                        <origin xyz="0 0 0" rpy="0 0 0"/>
+                        <mass value="${coxa_mass}" />
+                        <inertia ixx="${ixx}" ixy="${ixy}" ixz="${ixz}"
+                 iyy="${iyy}" iyz="${iyz}"
+                 izz="${izz}" />
+                </inertial>
+</link>
+
+<joint name="joint3" type="revolute">
+		<axis xyz="0 0 1"/>
+		<parent link="link2"/>
+		<child link="link3"/>
+		<origin rpy="0.0 0.0 0.0" xyz="${LENGTH} 0 0"/>
+		<limit effort="${effort}" velocity="${velocity}" lower="${lower_bound}" upper="${upper_bound}"/>
+                <dynamics damping="${damping}" />
+</joint>
+
+<link name="link3">
+		<visual>
+			<origin rpy="0.0 0.0 0.0" xyz="${LENGTH / 2.0} 0 0"/>
+			<geometry>
+			        <box size="${LENGTH} ${WIDTH} ${HEIGHT}" />
+			</geometry>
+			<material name="green">
+				<color rgba="0 .8 0 1"/>
+			</material>
+		</visual>
+		<collision>
+			<origin rpy="0.0 0.0 0.0" xyz="${(LENGTH / 2.0)} 0 0"/>
+			<geometry>
+				<box size="${LENGTH} ${WIDTH} ${HEIGHT}" />
+			</geometry>
+		</collision>
+                <inertial>
+                        <origin xyz="0 0 0" rpy="0 0 0"/>
+                        <mass value="${coxa_mass}" />
+                        <inertia ixx="${ixx}" ixy="${ixy}" ixz="${ixz}"
+                 iyy="${iyy}" iyz="${iyz}"
+                 izz="${izz}" />
+                </inertial>
+</link>
+
+<!--<xacro:hokuyo_lx30_laser_v0 name="side_laser" parent="link2" ros_topic="side_scan"
+                            update_rate="20" min_angle="-1.57" max_angle="1.57" >
+                            <origin xyz="0 -.220 0.200" rpy="0 0 0" />
+</xacro:hokuyo_lx30_laser_v0>-->
+
+</robot>
