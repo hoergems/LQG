@@ -10,22 +10,30 @@ import numpy as np
 import os
 import sys
 import time
+from xml.dom import minidom
 
 class MPC:
     def __init__(self, plot):
-        dir = "stats/mpc"
+        """ Reading the config """
+        serializer = Serializer() 
+        config = serializer.read_config("config_mpc.yaml")
+        self.set_params(config)        
+        
+        dir = "stats/mpc" + str(self.num_execution_steps)
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        cmd = "cp config_mpc.yaml " + dir            
+        os.system(cmd)
+        
         self.sim = Simulator()
         self.path_evaluator = PathEvaluator()
         self.path_planning_interface = PathPlanningInterface()    
-        serializer = Serializer()
         
-        """ Reading the config """
-        config = serializer.read_config("config_mpc.yaml")
-        self.set_params(config) 
         
         """ Load the obstacles """
-        obstacle_params = serializer.load_obstacles("obstacles.yaml", path="obstacles")
-        obstacles = self.construct_obstacles(obstacle_params)
+        obstacle_params = serializer.load_obstacles("obstacles.yaml", path="obstacles")        
+        obstacles = self.load_environment()
+        
         
         """ Setup operations """
         self.sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)        
@@ -43,13 +51,29 @@ class MPC:
             serializer.save_cartesian_coords(cartesian_coords, path=dir)            
             serializer.save_stats(stats, path=dir)            
             serializer.save_rewards(mean_rewards, path=dir)
-            serializer.save_mean_planning_times(mean_planning_times, path=dir)
-            cmd = "cp config_mpc.yaml " + dir            
-            os.system(cmd)
+            serializer.save_mean_planning_times(mean_planning_times, path=dir)            
             cmd = "cp obstacles/obstacles.yaml " + dir
             os.system(cmd)
             if plot:
-                PlotStats(True, "mpc")                    
+                PlotStats(True, "mpc")
+                
+    def load_environment(self):
+        xmldoc = minidom.parse('environment/env.xml') 
+        obstacle_translations = xmldoc.getElementsByTagName('Translation')
+        obstacle_dimensions = xmldoc.getElementsByTagName('extents')
+        obstacles = []
+        for i in xrange(len(obstacle_translations)):
+            trans = [float(k) for k in obstacle_translations[i].childNodes[0].nodeValue.split(" ")]
+            dim =  [float(k) for k in obstacle_dimensions[i].childNodes[0].nodeValue.split(" ")] 
+            obstacles.append(Obstacle(trans[0], trans[1], 2.0 * dim[0], 2.0 * dim[1]))        
+        return obstacles
+    
+    def construct_obstacles(self, obstacle_params):
+        obstacle_list = []
+        if not obstacle_params == None:
+            for o in obstacle_params:
+                obstacle_list.append(Obstacle(o[0], o[1], o[2], o[3]))
+        return obstacle_list                      
             
     def mpc(self, initial_belief, m_covs, horizon, obstacles, verbose):
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
@@ -149,14 +173,7 @@ class MPC:
         W = np.identity(num_links)
         C = 2.0 * np.identity(num_links)
         D = 2.0 * np.identity(num_links)
-        return A, H, B, V, W, C, D   
-            
-    def construct_obstacles(self, obstacle_params):
-        obstacle_list = []
-        if not obstacle_params == None:
-            for o in obstacle_params:
-                obstacle_list.append(Obstacle(o[0], o[1], o[2], o[3]))
-        return obstacle_list        
+        return A, H, B, V, W, C, D
         
     def check_positive_definite(self, matrices):
         for m in matrices:
