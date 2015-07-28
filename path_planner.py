@@ -19,13 +19,15 @@ class PathPlanner:
                
         path = self.plan_path()'''        
     
-    def set_params(self, space_dimenstion, max_velocity, delta_t, use_linear_path, sim_run):
+    def set_params(self, space_dimenstion, max_velocity, delta_t, use_linear_path, sim_run, joint_constraints, verbose_rrt):
         self.space_dimension = space_dimenstion
         self.max_velocity = max_velocity
         self.delta_t = delta_t 
         self.use_linear_path = use_linear_path
         self.sim_run = sim_run
-        noOutputHandler()
+        self.joint_constraints = joint_constraints
+        if not verbose_rrt:
+            noOutputHandler()
         
     def set_start_state(self, start_state):
         self.start_state = ob.State(self.si.getStateSpace())
@@ -118,12 +120,12 @@ class PathPlanner:
         self.space = ob.RealVectorStateSpace(dim=self.space_dimension)
         bounds = ob.RealVectorBounds(self.space_dimension)
         for i in xrange(self.space_dimension):
-            bounds.setLow(i, -np.pi)
-            bounds.setHigh(i, np.pi)
+            bounds.setLow(i, self.joint_constraints[0])
+            bounds.setHigh(i, self.joint_constraints[1])
         self.space.setBounds(bounds)
         self.si = ob.SpaceInformation(self.space)
         self.motion_validator = MotionValidator(self.si) 
-        self.motion_validator.set_max_distance(self.max_velocity, self.delta_t)
+        self.motion_validator.set_max_distance(self.max_velocity, self.delta_t)       
         self.si.setMotionValidator(self.motion_validator)
         self.si.setup()
         self.problem_definition = ob.ProblemDefinition(self.si)

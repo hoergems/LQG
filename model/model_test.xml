@@ -28,7 +28,7 @@
      <Body>Arm0</Body>
      <offsetfrom>Arm0</offsetfrom>
      <!--<weight>4</weight>-->
-     <limitsdeg>-180 180</limitsdeg>
+     <!--<limitsdeg>-180 180</limitsdeg>-->
      <axis>0 0 1</axis>
      <maxvel>0.5</maxvel>
      <resolution>0.0</resolution>
@@ -47,7 +47,7 @@
      <Body>Arm1</Body>
      <offsetfrom>Arm1</offsetfrom>
      <!--<weight>3</weight>-->
-     <limitsdeg>-180 180</limitsdeg>
+     <!--<limitsdeg>-180 180</limitsdeg>-->
      <axis>0 0 1</axis>
      <maxvel>0.5</maxvel>
      <resolution>0.0</resolution>

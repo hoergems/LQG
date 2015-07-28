@@ -108,7 +108,7 @@ class PlotStats:
                                 filename=dir + "/mean_planning_times.png")        
         
     def plot_average_dist_to_goal(self, serializer, cart_coords, dir="stats"):
-        config = serializer.read_config("config.yaml", path=dir)
+        config = serializer.read_config(path=dir)
         stats = serializer.load_stats('stats.yaml', path=dir)
         m_cov = stats['m_cov']
         data = []
@@ -138,7 +138,7 @@ class PlotStats:
         
     def plot_emd_graph(self, serializer, cartesian_coords, dir="stats"):
         stats = serializer.load_stats('stats.yaml', path=dir) 
-        config = serializer.read_config('config.yaml', path=dir)       
+        config = serializer.read_config(path=dir)       
         #emd = stats['emd']
         m_cov = stats['m_cov']
         
@@ -159,7 +159,7 @@ class PlotStats:
                             filename="emd.png")        
         
     def save_histogram_plots(self, serializer, cart_coords, dir="stats"):
-        config = serializer.read_config("config.yaml", path=dir)
+        config = serializer.read_config(path=dir)
         
         for k in xrange(len(cart_coords)):                    
             X = np.array([cart_coords[k][i][0] for i in xrange(len(cart_coords[0]))])
@@ -169,7 +169,7 @@ class PlotStats:
             Plot.plot_histogram(H, xedges, yedges, save=self.save, path=dir, filename="hist"+ str(k) + ".png")
             
     def plot_paths(self, serializer, best_paths=False, dir="stats"):
-        config = serializer.read_config('config.yaml', path=dir)
+        config = serializer.read_config(path=dir)
         dim = config['num_links']
         kinematics = Kinematics(dim)
         if best_paths:

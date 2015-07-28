@@ -19,13 +19,7 @@ class MotionValidator(ob.MotionValidator):
     def set_max_distance(self, max_velocity, delta_t):
         self.max_dist = np.sqrt(self.si.getStateSpace().getDimension() * np.square(delta_t * max_velocity))
         
-    def set_obstacles(self, obstacles):
-        '''obstacle_list = []
-        if not obstacles == None:
-            for o in obstacles:
-                obstacle_list.append(Obstacle(o[0], o[1], o[2], o[3]))
-        
-        self.obstacles = obstacle_list'''
+    def set_obstacles(self, obstacles):        
         self.obstacles = obstacles                
             
     def checkMotion(self, s1, s2):
@@ -33,14 +27,14 @@ class MotionValidator(ob.MotionValidator):
         Checks if a motion is valid
         """        
         with self.mutex:
-            if not self._is_valid(s1) or not self._is_valid(s2):
-                return False        
+            if not self._is_valid(s1) or not self._is_valid(s2):                              
+                return False                 
             return not self._in_collision(s1, s2)        
     
     def _is_valid(self, state):
         """
         Checks if a state is valid
-        """
+        """        
         return self.si.getStateSpace().satisfiesBounds(state)        
         
     def _dist(self, s1, s2):

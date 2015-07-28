@@ -16,7 +16,7 @@ class MPC:
         dir = "stats/mpc"
         self.sim = Simulator()
         self.path_evaluator = PathEvaluator()
-        self.path_planner = PathPlanningInterface()    
+        self.path_planning_interface = PathPlanningInterface()    
         serializer = Serializer()
         
         """ Reading the config """
@@ -29,7 +29,7 @@ class MPC:
         
         """ Setup operations """
         self.sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)        
-        self.path_planner.setup(obstacles, self.num_links, self.max_velocity, self.delta_t, self.use_linear_path, config['verbose'])
+        self.path_planning_interface.setup(obstacles, self.num_links, self.max_velocity, self.delta_t, self.use_linear_path, self.joint_constraints, config['verbose'])
         
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
         
@@ -44,7 +44,7 @@ class MPC:
             serializer.save_stats(stats, path=dir)            
             serializer.save_rewards(mean_rewards, path=dir)
             serializer.save_mean_planning_times(mean_planning_times, path=dir)
-            cmd = "cp config.yaml " + dir            
+            cmd = "cp config_mpc.yaml " + dir            
             os.system(cmd)
             cmd = "cp obstacles/obstacles.yaml " + dir
             os.system(cmd)
@@ -73,7 +73,7 @@ class MPC:
             P_t = np.array([[0.0 for k in xrange(self.num_links)] for l in xrange(self.num_links)])
                 
             self.path_evaluator.setup(A, B, C, D, H, M, N, V, W, self.num_links, obstacles, verbose)
-            self.sim.setup_problem(A, B, C, D, H, V, W, M, N, obstacles, self.goal_position, self.goal_radius, self.num_links)            
+            self.sim.setup_problem(A, B, C, D, H, V, W, M, N, obstacles, self.goal_position, self.goal_radius, self.num_links, self.joint_constraints)            
             self.sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal, verbose)
             
             mean_reward = 0.0
@@ -91,8 +91,8 @@ class MPC:
                 planning_time = 0.0                
                 while current_step < self.max_num_steps and not terminal:
                     t0 = time.time()
-                    self.path_planner.set_start_and_goal_state(x_estimate, self.goal_state, self.goal_radius)
-                    paths = self.path_planner.plan_paths(self.num_paths, 0)
+                    self.path_planning_interface.set_start_and_goal_state(x_estimate, self.goal_state, self.goal_radius)
+                    paths = self.path_planning_interface.plan_paths(self.num_paths, 0, self.verbose_rrt)
                     if len(paths) == 0:
                         print "unsolvable situation"
                         total_reward = np.array([-self.illegal_move_penalty])[0]
@@ -108,7 +108,8 @@ class MPC:
                     
                     n_steps = self.num_execution_steps
                     if n_steps > len(xs) - 1:
-                       n_steps = len(xs) - 1                    
+                       n_steps = len(xs) - 1
+                    print "run for " + str(n_steps) + " steps"                    
                     x_true, x_tilde, x_estimate, P_t, current_step, total_reward, terminal = self.sim.simulate_n_steps(xs, us, zs, 
                                                                                                                        x_true, 
                                                                                                                        x_tilde,
@@ -192,6 +193,8 @@ class MPC:
         self.stop_when_terminal = config['stop_when_terminal']
         self.horizon = config['horizon']
         self.max_num_steps = config['max_num_steps']
+        self.verbose_rrt = config['verbose_rrt']
+        self.joint_constraints = [-config['joint_constraint'], config['joint_constraint']]
         
         """
         The number of steps a path is being executed before a new path gets calculated

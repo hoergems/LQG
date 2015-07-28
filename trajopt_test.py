@@ -26,10 +26,14 @@ class TrajoptTest:
         robot.SetDOFValues(joint_start, robot.GetManipulator('arm').GetArmIndices())
         
         joint_target = [-np.pi / 2.0, 0.0]
+        n_steps = 100
+        control_rate = 30.0
+        delta_t = 1.0 / control_rate
+        max_velocity = 2.0
         
         request = {
           "basic_info" : {
-            "n_steps" : 300,
+            "n_steps" : n_steps,
             "manip" : "arm", # see below for valid values
             "start_fixed" : True # i.e., DOF values at first timestep are fixed based on current robot state
           },
@@ -51,6 +55,15 @@ class TrajoptTest:
           {
             "type" : "joint", # joint-space target
             "params" : {"vals" : joint_target } # length of vals = # dofs of manip
+          },
+          {
+            "type" : "joint_vel_limits",
+            "name" : "joint_vel_limits",
+            "params" : {
+              "vals" : [delta_t * max_velocity, delta_t * max_velocity],
+              "first_step" : 0,
+              "last_step" : n_steps-1, #inclusive              
+             }
           }
           ],
           "init_info" : {

@@ -8,8 +8,15 @@ class Serializer:
     def __init__(self):
         pass
         
-    def read_config(self, filename, path=""):
-        try:            
+    def read_config(self, filename=None, path=""):
+        if filename == None:
+            filename = glob.glob(os.path.join(path, "config*"))[0]
+            if "mpc" in filename:
+                filename = "config_mpc.yaml"
+            else:
+                filename = "config.yaml"
+        try:
+            print "filename " + str(filename) 
             return yaml.load(open(os.path.join(path, filename), 'r'), yaml.CLoader)
         except:
             print "Can't read " + path + "/" + filename + ". No such file" 

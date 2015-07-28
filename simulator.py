@@ -20,7 +20,8 @@ class Simulator:
                       obstacles,
                       goal_position,
                       goal_radius,
-                      num_links):
+                      num_links,
+                      joint_constraints):
         self.A = A
         self.B = B
         self.C = C
@@ -34,6 +35,7 @@ class Simulator:
         self.goal_position = goal_position
         self.goal_radius = goal_radius
         self.num_links = num_links
+        self.joint_constraints = joint_constraints
         
     def setup_reward_function(self, discount_factor, step_penalty, illegal_move_penalty, exit_reward):
         self.discount_factor = discount_factor
@@ -115,18 +117,23 @@ class Simulator:
                 z_dash_t = z_t - zs[0]
                 x_tilde_dash_t, P_dash = kalman.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
                 x_tilde, P_t = kalman.kalman_update(x_tilde_dash_t, z_dash_t, self.H, P_dash, self.W, self.N, self.num_links)
-                x_estimate_new = x_tilde + xs[i + 1]
+                x_estimate_new = self.check_constraints(x_tilde + xs[i + 1])
                 
                 if self.check_collision(x_estimate_new, self.obstacles, self.kinematics):
-                    print "ESTIMATE COLLIDES OMG!!!!!!!!!!!"
-                    #sleep()
                     x_estimate_new = x_estimate
-                else:
+                else:                    
                     x_estimate = x_estimate_new 
                 #print "x_true " + str(x_true)
                 #print "x_estimate " + str(x_estimate_new) 
         return x_true, x_tilde, x_estimate, P_t, current_step + n_steps, total_reward, terminal_state_reached
-        
+    
+    def check_constraints(self, state):        
+        for i in xrange(len(state)):                          
+            if state[i] < self.joint_constraints[0]:
+                state[i] = self.joint_constraints[0] + 0.00001
+            if state[i] > self.joint_constraints[1]:
+                state[i] = self.joint_constraints[1] - 0.00001        
+        return state
         
     def simulate(self, xs, us, zs, run):
         Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)
@@ -200,14 +207,14 @@ class Simulator:
     def apply_control(self, x_dash, u_dash, A, B, V, M):        
         m = self.get_random_joint_angles([0.0 for i in xrange(self.num_links)], M)        
         x_new = np.add(np.add(np.dot(A, x_dash), np.dot(B, u_dash)), np.dot(V, m))
+        x_new = self.check_constraints(x_new)
         p1 = self.kinematics.get_link_n_position(x_new, 1)            
         p2 = self.kinematics.get_link_n_position(x_new, 2)            
         p3 = self.kinematics.get_link_n_position(x_new, 3)
         for obstacle in self.obstacles:
             if obstacle.manipulator_collides([[np.array([0, 0]), p1], [p1, p2], [p2, p3]]):
                 print "COLLISION DETECTED"
-                return x_dash
-                    
+                return x_dash                    
         return x_new
     
     def get_random_joint_angles(self, mu, cov):        
