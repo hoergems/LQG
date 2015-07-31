@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 from mpl_toolkits.mplot3d import Axes3D
 import pylab as p
 import numpy as np
@@ -32,7 +33,9 @@ def plot_2d_n_sets(sets,
                    path="",
                    filename="emd.png"):
     ps = []    
-    if len(labels) != len(sets):         
+    if len(labels) != len(sets):
+        print "len(sets) " + str(len(sets))
+        print "len(labels) " + str(len(labels))               
         labels=['default' for i in xrange(len(sets))]   
     if plot_type == 'lines':        
         for i in xrange(len(sets)):
@@ -43,7 +46,7 @@ def plot_2d_n_sets(sets,
             
             ps.append(p)
         if show_legend:
-            plt.legend()
+            plt.legend(loc='best')
     else:
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -54,16 +57,25 @@ def plot_2d_n_sets(sets,
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.xlim([x_range[0], x_range[1]])
-    plt.ylim([y_range[0], y_range[1]])    
+    plt.ylim([y_range[0], y_range[1]])   
     
     if save:
-        for file in glob.glob(os.path.join(path, filename)):
+        for file in glob.glob(os.path.join(path, filename)):            
             os.remove(file)
-        plt.savefig(os.path.join(path, filename))
-        plt.clf()
+        if "png" in filename:
+            plt.savefig(os.path.join(path, filename)) 
+            plt.clf()
+            plt.close('all')            
+        elif "pdf" in filename:            
+            pp = PdfPages(os.path.join(path, filename))        
+            pp.savefig(plt.gcf())
+            plt.close('all')
+            pp.close()
         return
     plt.show()
     plt.close('all')
+    
+    
     
 def plot_histogram(H, xedges, yedges, save=False, barlabel="Probability", path="", filename="hist1.png"):
     #Hmasked = np.ma.masked_where(H==0,H)

@@ -16,25 +16,77 @@ class PlotStats:
         print "Loading cartesian coordinates..."  
         serializer = Serializer()
         print "plotting paths"    
-        #self.plot_paths(serializer, dir=dir)
-        #self.plot_paths(serializer, best_paths=True, dir=dir)
-        cart_coords = serializer.load_cartesian_coords(path=dir)
+        self.plot_paths(serializer, dir=dir)
+        self.plot_paths(serializer, best_paths=True, dir=dir)
+        
         print "plotting average distance to goal"
-        self.plot_average_dist_to_goal(serializer, cart_coords, dir=dir)
+        self.plot_average_dist_to_goal(serializer, dir=dir)
         print "plotting mean rewards"
-        self.plot_mean_rewards(serializer, dir=dir)
+        self.plot_mean_rewards(serializer, dir=dir, show_legend=True)        
+        print "plotting mean planning times"
+        self.plot_mean_planning_times(serializer, dir=dir) 
+        cart_coords = serializer.load_cartesian_coords(dir, "cartesian_coords_" + algorithm + ".yaml")
         print "plotting EMD graph..."
         self.plot_emd_graph(serializer, cart_coords, dir=dir) 
-        print "plotting histograms..." 
-        self.save_histogram_plots(serializer, cart_coords, dir=dir)
-        print "plotting mean planning times"
-        self.plot_mean_planning_times(serializer, dir=dir)        
+        print "plotting histograms..."        
+        self.save_histogram_plots(serializer, cart_coords, dir=dir)       
         
     def clear_stats(self):
         for file in glob.glob("stats/*"):
             os.remove(file)
             
-    def plot_mean_rewards(self, serializer, dir="stats"):        
+    def plot_average_dist_to_goal(self, serializer, dir="stats"):
+        config = serializer.read_config(path=dir)
+        stats = serializer.load_stats('stats.yaml', path=dir)
+        m_cov = stats['m_cov'] 
+        labels = []       
+        max_avg_distance = 0.0
+        sets = []
+        cart_coords = []
+        for file in glob.glob(os.path.join(os.path.join(dir, "cartesian_coords*"))):
+            file_str = file
+            try:                
+                file_str = file.split("/")[-1].split("_")[-1].split(".")[0]
+                file_str = "avg_distance_" + file_str
+                #file_str = file.split("/")[1].split(".")[0].split("_")[1] 
+                labels.append(file_str)               
+            except Exception as e:
+                print e
+            data = []
+            cart_coords = serializer.load_cartesian_coords(dir, file.split("/")[-1])
+            dists = []            
+            for k in xrange(len(m_cov)):
+                for coords in cart_coords[k]:                
+                    dists.append(np.linalg.norm(np.array(coords) - np.array(config['goal_position'])))            
+                avg_distance = 0.0
+                for d in dists:
+                    avg_distance += d
+                avg_distance /= len(dists)
+                if avg_distance > max_avg_distance:
+                    max_avg_distance = avg_distance                        
+                data.append(np.array([m_cov[k], avg_distance]))
+            sets.append(np.array(data))    
+        Plot.plot_2d_n_sets(sets,
+                            labels=labels,
+                            xlabel="joint covariance",
+                            ylabel="average distance to goal",
+                            x_range=[m_cov[0], m_cov[-1]],
+                            y_range=[0, max_avg_distance],
+                            show_legend=True,
+                            save=self.save,
+                            filename=dir + "/avg_distance.pdf")
+        return
+        
+        Plot.plot_2d_n_sets([np.array(data)],
+                            xlabel="joint covariance",
+                            ylabel="average distance to goal",
+                            x_range=[m_cov[0], m_cov[-1]],
+                            y_range=[0, max_avg_distance],
+                            show_legend=False,
+                            save=self.save,
+                            filename=dir + "/avg_distance.png")
+            
+    def plot_mean_rewards(self, serializer, dir="stats", show_legend=False):        
         stats = serializer.load_stats('stats.yaml', path=dir)
         m_cov = stats['m_cov']
         sets = []
@@ -43,9 +95,11 @@ class PlotStats:
         for file in glob.glob(os.path.join(os.path.join(dir, "rewards*"))):
             file_str = file
             try:
-                file_str = file.split("/")[1].split(".")[0].split("_")[1]
-            except:
-                pass
+                file_str = file.split("/")[-1].split(".")[0]
+                #file_str = file.split("/")[1].split(".")[0].split("_")[1]                
+            except Exception as e:
+                print e
+                
                    
             #mean_rewards = serializer.load_stats('rewards.yaml', path="stats")
             mean_rewards.append(serializer.load_stats(file))            
@@ -66,9 +120,9 @@ class PlotStats:
                             ylabel="mean reward",
                             x_range=[m_cov[0], m_cov[-1]],
                             y_range=[min(min_m), max(max_m)],
-                            show_legend=False,
+                            show_legend=show_legend,
                             save=self.save,
-                            filename=dir + "/mean_rewards.png")
+                            filename=dir + "/mean_rewards.pdf")
         
     def plot_mean_planning_times(self, serializer, dir="stats"):        
         stats = serializer.load_stats('stats.yaml', path=dir)
@@ -105,36 +159,7 @@ class PlotStats:
                                 y_range=[min(min_m), max(max_m)],
                                 show_legend=True,
                                 save=self.save,
-                                filename=dir + "/mean_planning_times.png")        
-        
-    def plot_average_dist_to_goal(self, serializer, cart_coords, dir="stats"):
-        config = serializer.read_config(path=dir)
-        stats = serializer.load_stats('stats.yaml', path=dir)
-        m_cov = stats['m_cov']
-        data = []
-        max_avg_distance = 0.0
-        for k in xrange(len(m_cov)):            
-            dists = []
-            for coords in cart_coords[k]:                
-                dists.append(np.linalg.norm(np.array(coords) - np.array(config['goal_position'])))            
-            avg_distance = 0.0
-            for d in dists:
-                avg_distance += d
-            avg_distance /= len(dists)
-            if avg_distance > max_avg_distance:
-                max_avg_distance = avg_distance
-            print "Average distance for covariacne " + str(m_cov[k]) + " calculated"            
-            data.append(np.array([m_cov[k], avg_distance]))
-        
-        Plot.plot_2d_n_sets([np.array(data)],
-                            xlabel="joint covariance",
-                            ylabel="average distance to goal",
-                            x_range=[m_cov[0], m_cov[-1]],
-                            y_range=[0, max_avg_distance],
-                            show_legend=False,
-                            save=self.save,
-                            filename=dir + "/avg_distance.png")
-    
+                                filename=dir + "/mean_planning_times.png")
         
     def plot_emd_graph(self, serializer, cartesian_coords, dir="stats"):
         stats = serializer.load_stats('stats.yaml', path=dir) 

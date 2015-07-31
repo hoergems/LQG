@@ -11,6 +11,7 @@ from simulator import Simulator
 from path_planning_interface import PathPlanningInterface
 from EMD import *
 from plot_stats import PlotStats
+from xml.dom import minidom
 
 class LQG:
     def __init__(self, plot):
@@ -25,12 +26,13 @@ class LQG:
         self.set_params(config) 
         
         """ Load the obstacles """
-        obstacle_params = serializer.load_obstacles("obstacles.yaml", path="obstacles")
-        obstacles = self.construct_obstacles(obstacle_params)                      
+        obstacle_params = serializer.load_obstacles("obstacles.yaml", path="obstacles")        
+        obstacles = self.load_environment()                  
         
         """ Setup operations """
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
-        path_planner.setup(obstacles, self.num_links, self.max_velocity, self.delta_t, self.use_linear_path, config['verbose'])
+        path_planner.setup(obstacles, self.num_links, self.max_velocity, self.delta_t, self.use_linear_path, self.joint_constraints, config['verbose'])
+        #self.path_planning_interface.setup(obstacles, self.num_links, self.max_velocity, self.delta_t, self.use_linear_path, self.joint_constraints, config['verbose'])
         path_planner.set_start_and_goal_state(self.theta_0, self.goal_state, self.goal_radius)      
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
         
@@ -51,7 +53,7 @@ class LQG:
                         zs.append([path[j][2 * self.num_links + i] for i in xrange(self.num_links)])
                     paths.append([xs, us, zs])
             else:
-                paths = path_planner.plan_paths(self.num_paths, 0)                   
+                paths = path_planner.plan_paths(self.num_paths, 0, False)                   
                 serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path=dir)               
             
             
@@ -81,7 +83,7 @@ class LQG:
                                    [us[i] for i in xrange(len(us))],
                                    [zs[i] for i in xrange(len(zs))]])
                 
-                sim.setup_problem(A, B, C, D, H, V, W, M, N, obstacles, self.goal_position, self.goal_radius, self.num_links)
+                sim.setup_problem(A, B, C, D, H, V, W, M, N, obstacles, self.goal_position, self.goal_radius, self.num_links, self.joint_constraints)
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal, config['verbose'])           
                 cartesian_coords, mean_reward = sim.simulate(xs, us, zs, j)
                                 
@@ -90,7 +92,7 @@ class LQG:
                 mean_rewards.append(mean_reward)            
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
             serializer.save_paths(best_paths, 'best_paths.yaml', True, path=dir)
-            serializer.save_cartesian_coords(cart_coords, path=dir)            
+            serializer.save_cartesian_coords(cart_coords, path=dir, filename="cartesian_coords_LQG.yaml")            
             serializer.save_stats(stats, path=dir)            
             serializer.save_rewards(mean_rewards, path=dir)
             cmd = "cp config.yaml " + dir           
@@ -116,12 +118,16 @@ class LQG:
             avg_length += len(path[0])
         return avg_length / len(paths)            
             
-    def construct_obstacles(self, obstacle_params):
-        obstacle_list = []
-        if not obstacle_params == None:
-            for o in obstacle_params:
-                obstacle_list.append(Obstacle(o[0], o[1], o[2], o[3]))
-        return obstacle_list        
+    def load_environment(self):
+        xmldoc = minidom.parse('environment/env.xml') 
+        obstacle_translations = xmldoc.getElementsByTagName('Translation')
+        obstacle_dimensions = xmldoc.getElementsByTagName('extents')
+        obstacles = []
+        for i in xrange(len(obstacle_translations)):
+            trans = [float(k) for k in obstacle_translations[i].childNodes[0].nodeValue.split(" ")]
+            dim =  [float(k) for k in obstacle_dimensions[i].childNodes[0].nodeValue.split(" ")] 
+            obstacles.append(Obstacle(trans[0], trans[1], 2.0 * dim[0], 2.0 * dim[1]))        
+        return obstacles        
         
     def check_positive_definite(self, matrices):
         for m in matrices:
@@ -154,7 +160,8 @@ class LQG:
         self.illegal_move_penalty = config['illegal_move_penalty']
         self.step_penalty = config['step_penalty']
         self.exit_reward = config['exit_reward']
-        self.stop_when_terminal = config['stop_when_terminal']        
+        self.stop_when_terminal = config['stop_when_terminal']
+        self.joint_constraints = [-config['joint_constraint'], config['joint_constraint']]        
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

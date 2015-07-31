@@ -85,17 +85,21 @@ class Serializer:
         with open(os.path.join(path, filename), 'a+') as f:
             f.write(yaml.dump(d, default_flow_style=False))
             
-    def save_cartesian_coords(self, cartesian_coords, path=""):
+    def save_cartesian_coords(self, cartesian_coords, path="", filename=None):
         if not os.path.exists(path):
             os.makedirs(path)
-        for file in glob.glob(os.path.join(path, "cartesian_coords.yaml")):
+        if filename == None:
+            filename = "cartesian_coords.yaml"
+        for file in glob.glob(os.path.join(path, filename)):
             os.remove(file)
-        with open(os.path.join(path, "cartesian_coords.yaml"), 'w') as f:                
+        with open(os.path.join(path, filename), 'w') as f:                
             f.write(yaml.dump(cartesian_coords, default_flow_style=False))
             
             
-    def load_cartesian_coords(self, path=""):        
-        with open(os.path.join(path, "cartesian_coords.yaml"), 'r') as f:
+    def load_cartesian_coords(self, path="", file=None): 
+        if file == None:
+            file = "cartesian_coords.yaml"       
+        with open(os.path.join(path, file), 'r') as f:
             return yaml.load(f, yaml.CLoader)
     
     def load_paths(self, file, path=""):

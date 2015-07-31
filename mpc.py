@@ -27,13 +27,11 @@ class MPC:
         
         self.sim = Simulator()
         self.path_evaluator = PathEvaluator()
-        self.path_planning_interface = PathPlanningInterface()    
-        
+        self.path_planning_interface = PathPlanningInterface()
         
         """ Load the obstacles """
         obstacle_params = serializer.load_obstacles("obstacles.yaml", path="obstacles")        
         obstacles = self.load_environment()
-        
         
         """ Setup operations """
         self.sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)        
@@ -51,8 +49,12 @@ class MPC:
             serializer.save_cartesian_coords(cartesian_coords, path=dir)            
             serializer.save_stats(stats, path=dir)            
             serializer.save_rewards(mean_rewards, path=dir)
-            serializer.save_mean_planning_times(mean_planning_times, path=dir)            
-            cmd = "cp obstacles/obstacles.yaml " + dir
+            serializer.save_mean_planning_times(mean_planning_times, path=dir)
+            
+            if not os.path.exists(dir + "/environment"):
+                os.makedirs(dir + "/environment") 
+                       
+            cmd = "cp environment/env.xml " + dir + "/environment"
             os.system(cmd)
             if plot:
                 PlotStats(True, "mpc")
@@ -66,14 +68,7 @@ class MPC:
             trans = [float(k) for k in obstacle_translations[i].childNodes[0].nodeValue.split(" ")]
             dim =  [float(k) for k in obstacle_dimensions[i].childNodes[0].nodeValue.split(" ")] 
             obstacles.append(Obstacle(trans[0], trans[1], 2.0 * dim[0], 2.0 * dim[1]))        
-        return obstacles
-    
-    def construct_obstacles(self, obstacle_params):
-        obstacle_list = []
-        if not obstacle_params == None:
-            for o in obstacle_params:
-                obstacle_list.append(Obstacle(o[0], o[1], o[2], o[3]))
-        return obstacle_list                      
+        return obstacles                   
             
     def mpc(self, initial_belief, m_covs, horizon, obstacles, verbose):
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
