@@ -119,7 +119,7 @@ class PlotStats:
                             xlabel="joint covariance",
                             ylabel="mean reward",
                             x_range=[m_cov[0], m_cov[-1]],
-                            y_range=[min(min_m), max(max_m)],
+                            y_range=[min(min_m), max(max_m) * 1.05],
                             show_legend=show_legend,
                             save=self.save,
                             filename=dir + "/mean_rewards.pdf")
