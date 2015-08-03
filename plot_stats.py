@@ -107,13 +107,9 @@ class PlotStats:
             for k in xrange(len(m_cov)):
                 data.append(np.array([m_cov[k], mean_rewards[-1][k]]))
             sets.append(np.array(data))
-            labels.append(file_str)
-        print mean_rewards
+            labels.append(file_str)        
         min_m = [min(m) for m in mean_rewards]
-        max_m = [max(m) for m in mean_rewards]
-        print "min_m " + str(min_m)
-        print "max_m " + str(max_m)
-        
+        max_m = [max(m) for m in mean_rewards]        
         Plot.plot_2d_n_sets(sets,
                             labels=labels,
                             xlabel="joint covariance",
@@ -143,14 +139,10 @@ class PlotStats:
             for k in xrange(len(m_cov)):
                 data.append(np.array([m_cov[k], mean_planning_times[-1][k]]))
             sets.append(np.array(data))
-            labels.append(file_str)
-        print mean_planning_times
+            labels.append(file_str)        
         if not len(mean_planning_times) == 0:
             min_m = [min(m) for m in mean_planning_times]
             max_m = [max(m) for m in mean_planning_times]
-            print "min_m " + str(min_m)
-            print "max_m " + str(max_m)
-            
             Plot.plot_2d_n_sets(sets,
                                 labels=labels,
                                 xlabel="joint covariance",
@@ -197,6 +189,7 @@ class PlotStats:
         config = serializer.read_config(path=dir)
         dim = config['num_links']
         kinematics = Kinematics(dim)
+        colors = []
         if best_paths:
             paths = serializer.load_paths("best_paths.yaml", path=dir)
             filename = "best_paths.png"
@@ -209,21 +202,22 @@ class PlotStats:
             for elem in path:
                 state = [elem[i] for i in xrange(dim)]
                 path_coords.append(kinematics.get_end_effector_position(state))
-            sets.append(np.array(path_coords)) 
-        obstacles = serializer.load_obstacles("obstacles.yaml", path=dir)
-        print "obstacles " + str(obstacles)
+            sets.append(np.array(path_coords))
+            colors.append(None)
+        obstacles = serializer.load_environment("env.xml", path=dir + "/environment")        
         if not obstacles == None:
             for obstacle in obstacles:
-                point1 = [obstacle[0] - obstacle[2] / 2.0, obstacle[1] - obstacle[3] / 2.0]
-                point2 = [obstacle[0] - obstacle[2] / 2.0, obstacle[1] + obstacle[3] / 2.0]
-                point3 = [obstacle[0] + obstacle[2] / 2.0, obstacle[1] + obstacle[3] / 2.0]
-                point4 = [obstacle[0] + obstacle[2] / 2.0, obstacle[1] - obstacle[3] / 2.0]
-                sets.append(np.array([point1, point2]))
+                point1 = [obstacle.x - obstacle.x_size / 2.0, obstacle.y - obstacle.y_size / 2.0]
+                point2 = [obstacle.x - obstacle.x_size / 2.0, obstacle.y + obstacle.y_size / 2.0]
+                point3 = [obstacle.x + obstacle.x_size / 2.0, obstacle.y + obstacle.y_size / 2.0]
+                point4 = [obstacle.x + obstacle.x_size / 2.0, obstacle.y - obstacle.y_size / 2.0]
+                sets.append(np.array([point1, point2]))                
                 sets.append(np.array([point2, point3]))
                 sets.append(np.array([point3, point4]))
-                sets.append(np.array([point4, point1]))
-                print "WOW"              
-        Plot.plot_2d_n_sets(sets, 
+                sets.append(np.array([point4, point1])) 
+                colors.extend(['k' for j in xrange(4)])                       
+        Plot.plot_2d_n_sets(sets,
+                            colors=colors, 
                             xlabel='x', 
                             ylabel='y', 
                             x_range=[-3.5, 3.5], 

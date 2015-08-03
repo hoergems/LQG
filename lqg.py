@@ -25,9 +25,8 @@ class LQG:
         config = serializer.read_config("config.yaml")
         self.set_params(config) 
         
-        """ Load the obstacles """
-        obstacle_params = serializer.load_obstacles("obstacles.yaml", path="obstacles")        
-        obstacles = self.load_environment()                  
+        """ Load the obstacles """        
+        obstacles = serializer.load_environment("env.xml", path="environment")           
         
         """ Setup operations """
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
@@ -97,7 +96,11 @@ class LQG:
             serializer.save_rewards(mean_rewards, path=dir)
             cmd = "cp config.yaml " + dir           
             os.system(cmd)
-            cmd = "cp obstacles/obstacles.yaml " + dir
+            
+            if not os.path.exists(dir + "/environment"):
+                os.makedirs(dir + "/environment") 
+                       
+            cmd = "cp environment/env.xml " + dir + "/environment"
             os.system(cmd)
             
             PlotStats(True, "LQG")
@@ -116,18 +119,7 @@ class LQG:
         avg_length = 0.0
         for path in paths:            
             avg_length += len(path[0])
-        return avg_length / len(paths)            
-            
-    def load_environment(self):
-        xmldoc = minidom.parse('environment/env.xml') 
-        obstacle_translations = xmldoc.getElementsByTagName('Translation')
-        obstacle_dimensions = xmldoc.getElementsByTagName('extents')
-        obstacles = []
-        for i in xrange(len(obstacle_translations)):
-            trans = [float(k) for k in obstacle_translations[i].childNodes[0].nodeValue.split(" ")]
-            dim =  [float(k) for k in obstacle_dimensions[i].childNodes[0].nodeValue.split(" ")] 
-            obstacles.append(Obstacle(trans[0], trans[1], 2.0 * dim[0], 2.0 * dim[1]))        
-        return obstacles        
+        return avg_length / len(paths)
         
     def check_positive_definite(self, matrices):
         for m in matrices:

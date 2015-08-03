@@ -29,9 +29,8 @@ class MPC:
         self.path_evaluator = PathEvaluator()
         self.path_planning_interface = PathPlanningInterface()
         
-        """ Load the obstacles """
-        obstacle_params = serializer.load_obstacles("obstacles.yaml", path="obstacles")        
-        obstacles = self.load_environment()
+        """ Load the environment """        
+        obstacles = serializer.load_environment("env.xml", path="environment")
         
         """ Setup operations """
         self.sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)        

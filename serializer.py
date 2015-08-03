@@ -3,6 +3,8 @@ import yaml
 import glob
 import os
 import numpy as np
+from obstacle import Obstacle
+from xml.dom import minidom
 
 class Serializer:
     def __init__(self):
@@ -93,8 +95,7 @@ class Serializer:
         for file in glob.glob(os.path.join(path, filename)):
             os.remove(file)
         with open(os.path.join(path, filename), 'w') as f:                
-            f.write(yaml.dump(cartesian_coords, default_flow_style=False))
-            
+            f.write(yaml.dump(cartesian_coords, default_flow_style=False))            
             
     def load_cartesian_coords(self, path="", file=None): 
         if file == None:
@@ -110,5 +111,17 @@ class Serializer:
             return []       
         return paths['paths']
     
-    def load_obstacles(self, file, path=""):
-        return yaml.load(open(os.path.join(path, file), 'r'), yaml.CLoader)
+    def load_environment(self, file, path=""):
+        try:
+            xmldoc = minidom.parse(os.path.join(path, file)) 
+        except Exception as e:
+            print e
+            return None            
+        obstacle_translations = xmldoc.getElementsByTagName('Translation')
+        obstacle_dimensions = xmldoc.getElementsByTagName('extents')
+        obstacles = []
+        for i in xrange(len(obstacle_translations)):
+            trans = [float(k) for k in obstacle_translations[i].childNodes[0].nodeValue.split(" ")]
+            dim =  [float(k) for k in obstacle_dimensions[i].childNodes[0].nodeValue.split(" ")] 
+            obstacles.append(Obstacle(trans[0], trans[1], 2.0 * dim[0], 2.0 * dim[1]))        
+        return obstacles 

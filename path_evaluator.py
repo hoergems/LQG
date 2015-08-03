@@ -25,6 +25,8 @@ class PathEvaluator:
         self.obstacles = obstacles
         self.num_cores = cpu_count() - 1
         self.verbose = verbose
+        self.w1 = 3.0
+        self.w2 = 0.1
 
     def get_probability_of_collision(self, mean, cov):
             samples = multivariate_normal.rvs(mean, cov, 10)
@@ -150,10 +152,10 @@ class PathEvaluator:
         if float(horizon_L) == 0.0:
             collsion_sum = 0.0
         else:
-            collision_sum = sum(collision_probs) / float(horizon_L)
-        tr = np.trace(EE_covariance)
+            collision_sum = self.w1 * sum(collision_probs) / float(horizon_L)
+        tr = self.w2 * np.trace(EE_covariance)
         if self.verbose:
-            print "collision sum: " + str(collision_sum)
+            print "collision sum: " + str(collision_sum)            
             print "trace: " + str(tr)
         objective_p = collision_sum + tr
         eval_queue.put((objective_p, path))

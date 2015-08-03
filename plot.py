@@ -18,7 +18,8 @@ def plot_2d_three_sets(sets, axis='xy', xrange=[0.0, 1.0], yrange=[0.0, 1.0]):
     plt.ylim([yrange[0], yrange[1]])
     plt.show()
     
-def plot_2d_n_sets(sets, 
+def plot_2d_n_sets(sets,
+                   colors=[], 
                    labels=[], 
                    xlabel='x', 
                    ylabel='y', 
@@ -33,17 +34,22 @@ def plot_2d_n_sets(sets,
                    path="",
                    filename="emd.png"):
     ps = []    
-    if len(labels) != len(sets):
-        print "len(sets) " + str(len(sets))
-        print "len(labels) " + str(len(labels))               
-        labels=['default' for i in xrange(len(sets))]   
+    if len(labels) != len(sets):                   
+        labels=['default' for i in xrange(len(sets))]
+    if len(colors) != len(sets):
+        colors = [None for i in xrange(len(sets))]   
     if plot_type == 'lines':        
         for i in xrange(len(sets)):
             if i == idx:
-                p, = plt.plot(sets[i][:,0], sets[i][:,1], label=labels[i], linewidth=lw)
+                if colors[i] == None:
+                    p, = plt.plot(sets[i][:,0], sets[i][:,1], label=labels[i], linewidth=lw)
+                else:
+                    p, = plt.plot(sets[i][:,0], sets[i][:,1], label=labels[i], c=colors[i], linewidth=lw)
             else:
-                p, = plt.plot(sets[i][:,0], sets[i][:,1], label=labels[i])
-            
+                if colors[i] == None:
+                    p, = plt.plot(sets[i][:,0], sets[i][:,1], label=labels[i])
+                else:
+                    p, = plt.plot(sets[i][:,0], sets[i][:,1], c=colors[i], label=labels[i])
             ps.append(p)
         if show_legend:
             plt.legend(loc='best')
