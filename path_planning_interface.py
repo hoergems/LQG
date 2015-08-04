@@ -68,7 +68,9 @@ class PathPlanningInterface:
         path_planner.set_start_state(self.start_state)
         path_planner.set_goal_region(self.goal_state, self.goal_radius) 
         path_planner.set_obstacles(obstacles)             
-        xs, us, zs = path_planner.plan_path()        
+        xs, us, zs = path_planner.plan_path()
+        if len(xs) == 0:
+            return        
         queue.put((xs, us, zs))
         return   
     
