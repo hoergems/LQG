@@ -43,13 +43,21 @@ class PlotStats:
         max_avg_distance = 0.0
         sets = []
         cart_coords = []
-        for file in glob.glob(os.path.join(os.path.join(dir, "cartesian_coords*"))):
+        files = glob.glob(os.path.join(os.path.join(dir, "cartesian_coords*")))
+        
+        for file in sorted(files):
             file_str = file
             try:                
                 file_str = file.split("/")[-1].split("_")[-1].split(".")[0]
                 file_str = "avg_distance_" + file_str
                 #file_str = file.split("/")[1].split(".")[0].split("_")[1] 
-                labels.append(file_str)               
+                label_string = ""
+                for i in xrange(len(file_str.split("_"))):
+                    if i != 0:
+                        label_string += " " + file_str.split("_")[i]
+                    else:
+                        label_string += file_str.split("_")[i]
+                labels.append(label_string)               
             except Exception as e:
                 print e
             data = []
@@ -92,7 +100,8 @@ class PlotStats:
         sets = []
         labels = []
         mean_rewards = []
-        for file in glob.glob(os.path.join(os.path.join(dir, "rewards*"))):
+        files = glob.glob(os.path.join(os.path.join(dir, "rewards*")))
+        for file in sorted(files):
             file_str = file
             try:
                 file_str = file.split("/")[-1].split(".")[0]
@@ -107,7 +116,13 @@ class PlotStats:
             for k in xrange(len(m_cov)):
                 data.append(np.array([m_cov[k], mean_rewards[-1][k]]))
             sets.append(np.array(data))
-            labels.append(file_str)        
+            label_string = ""
+            for i in xrange(len(file_str.split("_"))):
+                if i != 0:
+                    label_string += " " + file_str.split("_")[i]
+                else:
+                    label_string += file_str.split("_")[i]
+            labels.append(label_string)        
         min_m = [min(m) for m in mean_rewards]
         max_m = [max(m) for m in mean_rewards]        
         Plot.plot_2d_n_sets(sets,

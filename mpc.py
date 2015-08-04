@@ -126,7 +126,7 @@ class MPC:
                     
                     n_steps = self.num_execution_steps
                     if n_steps > len(xs) - 1:
-                       n_steps = len(xs) - 1
+                       n_steps = len(xs) - 1                    
                     print "run for " + str(n_steps) + " steps"                    
                     x_true, x_tilde, x_estimate, P_t, current_step, total_reward, terminal = self.sim.simulate_n_steps(xs, us, zs, 
                                                                                                                        x_true, 

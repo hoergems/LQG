@@ -33,7 +33,8 @@ def plot_2d_n_sets(sets,
                    save=False,
                    path="",
                    filename="emd.png"):
-    ps = []    
+    ps = []  
+    lgd = None  
     if len(labels) != len(sets):                   
         labels=['default' for i in xrange(len(sets))]
     if len(colors) != len(sets):
@@ -52,14 +53,14 @@ def plot_2d_n_sets(sets,
                     p, = plt.plot(sets[i][:,0], sets[i][:,1], c=colors[i], label=labels[i])
             ps.append(p)
         if show_legend:
-            plt.legend(loc='best')
+            lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     else:
         fig = plt.figure()
         ax = fig.add_subplot(111)
         for i in xrange(len(sets)):
             ax.scatter(sets[i][:,0], sets[i][:,1], c=np.random.rand(3,1), label=labels[i], s=13)
         if show_legend:
-            plt.legend(loc='upper left')
+            lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.xlim([x_range[0], x_range[1]])
@@ -69,12 +70,18 @@ def plot_2d_n_sets(sets,
         for file in glob.glob(os.path.join(path, filename)):            
             os.remove(file)
         if "png" in filename:
-            plt.savefig(os.path.join(path, filename)) 
+            if not lgd == None:
+                plt.savefig(os.path.join(path, filename), bbox_extra_artists=(lgd,), bbox_inches='tight') 
+            else:
+                plt.savefig(os.path.join(path, filename)) 
             plt.clf()
             plt.close('all')            
         elif "pdf" in filename:            
-            pp = PdfPages(os.path.join(path, filename))        
-            pp.savefig(plt.gcf())
+            pp = PdfPages(os.path.join(path, filename))
+            if not lgd == None:        
+                pp.savefig(plt.gcf(), bbox_extra_artists=(lgd,), bbox_inches='tight')
+            else:
+                pp.savefig(plt.gcf())
             plt.close('all')
             pp.close()
         return
