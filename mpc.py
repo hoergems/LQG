@@ -41,7 +41,7 @@ class MPC:
         if self.check_positive_definite([C, D]):            
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
             emds = []
-            cartesian_coords, mean_rewards, emds, mean_planning_times = self.mpc(self.theta_0, m_covs, self.horizon, obstacles, config['verbose'])
+            cartesian_coords, mean_rewards, total_rewards, sample_variances, emds, mean_planning_times = self.mpc(self.theta_0, m_covs, self.horizon, obstacles, config['verbose'])
                        
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
             #serializer.save_paths(best_paths, 'best_paths.yaml', True, path="stats")
@@ -49,6 +49,8 @@ class MPC:
             serializer.save_stats(stats, path=dir)            
             serializer.save_rewards(mean_rewards, path=dir)
             serializer.save_mean_planning_times(mean_planning_times, path=dir)
+            serializer.save_total_rewards(total_rewards, path=dir)
+            serializer.save_sample_variances(sample_variances, path=dir)
             
             if not os.path.exists(dir + "/environment"):
                 os.makedirs(dir + "/environment") 
@@ -73,6 +75,8 @@ class MPC:
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
         cart_coords = []
         mean_rewards = []
+        total_rewards = []
+        sample_variances = []
         mean_planning_times = []
         emds = []
         for j in xrange(len(m_covs)):            
@@ -96,6 +100,7 @@ class MPC:
             
             mean_reward = 0.0
             cartesian_coords = []
+            total_reward_cov = []
             mean_planning_time = 0.0
             for k in xrange(self.num_simulation_runs):
                 #x_tilde = initial_belief               
@@ -145,13 +150,22 @@ class MPC:
                     print "step: " + str(current_step)
                     if verbose:
                         print "x_true " + str(x_true)
-                        print "x_estimate " + str(x_estimate)
+                        print "x_estimate " + str(x_estimate)                
+                total_reward_cov.append(np.asscalar(total_reward))
                 mean_reward += total_reward
                 mean_planning_time += (planning_time / current_step)
                 ee_position = self.kinematics.get_end_effector_position(x_true)
                 cartesian_coords.append(ee_position.tolist())
                 print "total_reward " + str(total_reward)
             print "mean_reward " + str(mean_reward)
+            
+            """Calculate sample variance """
+            mean = sum(total_reward_cov) / len(total_reward_cov)
+            print "MEAN " + str(mean)
+            variance = sum([np.square(total_reward_cov[i] - mean) for i in xrange(len(total_reward_cov))]) / len(total_reward_cov)
+            print "VARIANCE " + str(variance)
+            sample_variances.append(np.asscalar(variance))
+            total_rewards.append(total_reward_cov)
             mean_reward /= self.num_simulation_runs            
             mean_rewards.append(np.asscalar(mean_reward))            
             mean_planning_time /= self.num_simulation_runs
@@ -159,7 +173,7 @@ class MPC:
             emds.append(calc_EMD(cartesian_coords, self.num_bins))
             cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])
         print "mean_rewards " + str(mean_rewards)        
-        return cart_coords, mean_rewards, emds, mean_planning_times
+        return cart_coords, mean_rewards, total_rewards, sample_variances, emds, mean_planning_times
             
     def problem_setup(self, delta_t, num_links):
         self.kinematics = Kinematics(num_links)

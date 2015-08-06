@@ -59,21 +59,19 @@ class Simulator:
         terminal_state_reached = False
         Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs))
         u_dash = np.dot(Ls[1], x_tilde)        
-        x_true = self.apply_control(x_true, np.add(u_dash, us[0]), self.A, self.B, self.V, self.M)
-        
+        x_true, collided = self.apply_control(x_true, np.add(u_dash, us[0]), self.A, self.B, self.V, self.M)
+        discount = np.power(self.discount_factor, current_step)
+        if collided:
+            total_reward += discount * (-1.0 * self.illegal_move_penalty)
+        else:
+            total_reward += discount * (-1.0 * self.step_penalty)
         ee_position = self.kinematics.get_end_effector_position(x_true) 
         print "ee_position " + str(ee_position)               
-        discount = np.power(self.discount_factor, current_step)
+        
         if self.is_terminal(ee_position):
             terminal_state_reached = True                        
             total_reward += discount * self.exit_reward                        
-            print "Terminal state reached: reward = " + str(total_reward)                        
-        else:                        
-            if self.check_collision(x_true, self.obstacles, self.kinematics): 
-                print "COLLISION"                           
-                total_reward += discount * (-1.0 * self.illegal_move_penalty)                            
-            else:
-                total_reward += discount * (-1.0 * self.step_penalty)
+            print "Terminal state reached: reward = " + str(total_reward)
         
         z_t = self.get_observation(x_true, self.H, self.N, self.W)
         z_dash_t = z_t - zs[0]
@@ -97,21 +95,19 @@ class Simulator:
         for i in xrange(n_steps):                        
             if not (terminal_state_reached and self.stop_when_terminal):
                 u_dash = np.dot(Ls[i + 1], x_tilde)        
-                x_true = self.apply_control(x_true, np.add(u_dash, us[i]), self.A, self.B, self.V, self.M)
+                x_true, collided = self.apply_control(x_true, np.add(u_dash, us[i]), self.A, self.B, self.V, self.M)
+                discount = np.power(self.discount_factor, current_step)
+                if collided:
+                    total_reward += discount * (-1.0 * self.illegal_move_penalty)
+                else:
+                    total_reward += discount * (-1.0 * self.step_penalty)                
                 
                 ee_position = self.kinematics.get_end_effector_position(x_true) 
-                print "ee_position " + str(ee_position)               
-                discount = np.power(self.discount_factor, current_step)
+                print "ee_position " + str(ee_position)
                 if self.is_terminal(ee_position):
                     terminal_state_reached = True                        
                     total_reward += discount * self.exit_reward                        
-                    print "Terminal state reached: reward = " + str(total_reward)
-                else:                        
-                    if self.check_collision(x_true, self.obstacles, self.kinematics): 
-                        print "COLLISION"                           
-                        total_reward += discount * (-1.0 * self.illegal_move_penalty)                            
-                    else:
-                        total_reward += discount * (-1.0 * self.step_penalty)                   
+                    print "Terminal state reached: reward = " + str(total_reward)                                  
                     
                 z_t = self.get_observation(x_true, self.H, self.N, self.W)
                 z_dash_t = z_t - zs[i]
@@ -158,18 +154,19 @@ class Simulator:
                     """
                     Generate a true state and check for collision and terminal state
                     """                            
-                    x_true = self.apply_control(x_true, np.add(u_dash, us[i]), self.A, self.B, self.V, self.M)
-                    ee_position = self.kinematics.get_end_effector_position(x_true)                
+                    x_true, collided = self.apply_control(x_true, np.add(u_dash, us[i]), self.A, self.B, self.V, self.M)
                     discount = np.power(self.discount_factor, i)
+                    if collided:
+                        reward += discount * (-1.0 * self.illegal_move_penalty)
+                    else:
+                        reward += discount * (-1.0 * self.step_penalty)
+                        
+                    ee_position = self.kinematics.get_end_effector_position(x_true)                
+                    
                     if self.is_terminal(ee_position):
                         terminal_state_reached = True                        
-                        reward += discount * self.exit_reward                        
-                        print "Terminal state reached: reward = " + str(reward)                        
-                    else:                        
-                        if self.check_collision(x_true, self.obstacles, self.kinematics):                            
-                            reward += discount * (-1.0 * self.illegal_move_penalty)                            
-                        else:
-                            reward += discount * (-1.0 * self.step_penalty)
+                        reward += discount * self.exit_reward                       
+                    
                     """
                     Obtain an observation
                     """
@@ -214,8 +211,8 @@ class Simulator:
         for obstacle in self.obstacles:
             if obstacle.manipulator_collides([[np.array([0, 0]), p1], [p1, p2], [p2, p3]]):
                 print "COLLISION DETECTED"
-                return x_dash                    
-        return x_new
+                return x_dash, True                   
+        return x_new, False
     
     def get_random_joint_angles(self, mu, cov):        
         #with self.lock:

@@ -95,11 +95,44 @@ class Serializer:
         for file in glob.glob(os.path.join(path, filename)):
             os.remove(file)
         with open(os.path.join(path, filename), 'w') as f:                
-            f.write(yaml.dump(cartesian_coords, default_flow_style=False))            
+            f.write(yaml.dump(cartesian_coords, default_flow_style=False))           
+                 
             
     def load_cartesian_coords(self, path="", file=None): 
         if file == None:
             file = "cartesian_coords.yaml"       
+        with open(os.path.join(path, file), 'r') as f:
+            return yaml.load(f, yaml.CLoader)
+        
+    def save_total_rewards(self, total_rewards, path="", filename=None):
+        if not os.path.exists(path):
+            os.makedirs(path)
+        if filename == None:
+            filename = "total_rewards.yaml"
+        for file in glob.glob(os.path.join(path, filename)):
+            os.remove(file)
+        with open(os.path.join(path, filename), 'w') as f:                
+            f.write(yaml.dump(total_rewards, default_flow_style=False))
+            
+    def load_total_rewards(self, path="", file=None): 
+        if file == None:
+            file = "total_rewards.yaml"       
+        with open(os.path.join(path, file), 'r') as f:
+            return yaml.load(f, yaml.CLoader)
+        
+    def save_sample_variances(self, sample_variances, path="", filename=None):
+        if not os.path.exists(path):
+            os.makedirs(path)
+        if filename == None:
+            filename = "sample_variances.yaml"
+        for file in glob.glob(os.path.join(path, filename)):
+            os.remove(file)
+        with open(os.path.join(path, filename), 'w') as f:                
+            f.write(yaml.dump(sample_variances, default_flow_style=False))
+            
+    def load_sample_variances(self, path="", file=None): 
+        if file == None:
+            file = "sample_variances.yaml"       
         with open(os.path.join(path, file), 'r') as f:
             return yaml.load(f, yaml.CLoader)
     
