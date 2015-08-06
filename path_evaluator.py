@@ -100,8 +100,8 @@ class PathEvaluator:
         else:
             traces_sums = [evaluated_paths[i][0][1] / traces_sum for i in xrange(len(evaluated_paths))]
         best_path = evaluated_paths[0][1]
-        min_objective = self.w1 * collision_sums[0] + self.w2 * traces_sums[1] 
-        for i in xrange(len(collision_sums)):
+        min_objective = self.w1 * collision_sums[0] + self.w2 * traces_sums[0] 
+        for i in xrange(1, len(collision_sums)):
             val = self.w1 * collision_sums[i] + self.w2 * traces_sums[i]
             if val < min_objective:
                 min_objective = val
