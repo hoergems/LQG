@@ -38,7 +38,9 @@ class LQG:
         if self.check_positive_definite([C, D]):            
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
             emds = []
-            if self.use_paths_from_file and len(glob.glob(os.path.join("stats", "paths.yaml"))) == 1:
+            print "use from file " + str(self.use_paths_from_file)
+            
+            if self.use_paths_from_file and len(glob.glob(os.path.join(dir, "paths.yaml"))) == 1:
                 print "Loading paths from file"
                 in_paths = serializer.load_paths("paths.yaml", path=dir) 
                 paths = []               
@@ -75,7 +77,7 @@ class LQG:
                 """
                 N = self.observation_covariance * np.identity(self.num_links)
                 
-                path_evaluator.setup(A, B, C, D, H, M, N, V, W, self.num_links, obstacles, config['verbose'])  
+                path_evaluator.setup(A, B, C, D, H, M, N, V, W, self.num_links, self.sample_size, obstacles, config['verbose'])  
                 xs, us, zs = path_evaluator.evaluate_paths(paths)
                                 
                 best_paths.append([[xs[i] for i in xrange(len(xs))], 
@@ -153,7 +155,8 @@ class LQG:
         self.step_penalty = config['step_penalty']
         self.exit_reward = config['exit_reward']
         self.stop_when_terminal = config['stop_when_terminal']
-        self.joint_constraints = [-config['joint_constraint'], config['joint_constraint']]        
+        self.joint_constraints = [-config['joint_constraint'], config['joint_constraint']]
+        self.sample_size = config['sample_size']        
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

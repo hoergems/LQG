@@ -90,7 +90,7 @@ class MPC:
             N = self.observation_covariance * np.identity(self.num_links)
             P_t = np.array([[0.0 for k in xrange(self.num_links)] for l in xrange(self.num_links)])
                 
-            self.path_evaluator.setup(A, B, C, D, H, M, N, V, W, self.num_links, obstacles, verbose)
+            self.path_evaluator.setup(A, B, C, D, H, M, N, V, W, self.num_links, self.sample_size, obstacles, verbose)
             self.sim.setup_problem(A, B, C, D, H, V, W, M, N, obstacles, self.goal_position, self.goal_radius, self.num_links, self.joint_constraints)            
             self.sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal, verbose)
             
@@ -206,6 +206,7 @@ class MPC:
         self.max_num_steps = config['max_num_steps']
         self.verbose_rrt = config['verbose_rrt']
         self.joint_constraints = [-config['joint_constraint'], config['joint_constraint']]
+        self.sample_size = config['sample_size']  
         
         """
         The number of steps a path is being executed before a new path gets calculated

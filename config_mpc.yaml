@@ -44,10 +44,6 @@ covariance_steps: 20
 # The observation covariance
 observation_covariance: 0.0001
 
-use_paths_from_file: False
-
-overwrite_paths_file: True
-
 # Reward params
 discount_factor: 1.0
 
@@ -63,6 +59,8 @@ exit_reward: 10000.0
 joint_constraint: 3.14159
 
 stop_when_terminal: True
+
+sample_size: 10
 
 ######## MPC parameters ############
 
