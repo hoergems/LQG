@@ -5,12 +5,13 @@ from kinematics import Kinematics
 from multiprocessing import Process, Queue, cpu_count
 import collections
 import time
+from threading import Lock
 
 class PathEvaluator:
     def __init__(self):
         pass
     
-    def setup(self, A, B, C, D, H, M, N, V, W, num_links, obstacles, verbose):
+    def setup(self, A, B, C, D, H, M, N, V, W, num_links, sample_size, obstacles, verbose):
         self.kinematics = Kinematics(num_links)
         self.A = A
         self.B = B
@@ -23,29 +24,31 @@ class PathEvaluator:
         self.W = W 
         self.num_links = num_links
         self.obstacles = obstacles
+        self.sample_size = sample_size
         self.num_cores = cpu_count() - 1
         self.verbose = verbose
-        self.w1 = 3.0
-        self.w2 = 0.1
+        self.w1 = 1.0
+        self.w2 = 1.0
+        self.mutex = Lock()
 
     def get_probability_of_collision(self, mean, cov):
-            samples = multivariate_normal.rvs(mean, cov, 10)
-            pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True)
-            sum_pdf = sum(pdf)
-            #pdf = [s / sum(pdf) for s in pdf]
-            pdfs = []
-            for i in xrange(len(samples)):
-                p1 = self.kinematics.get_link_n_position(samples[i], 1)            
-                p2 = self.kinematics.get_link_n_position(samples[i], 2)            
-                p3 = self.kinematics.get_link_n_position(samples[i], 3)
-                for obstacle in self.obstacles:
-                    if obstacle.manipulator_collides([[np.array([0, 0]), p1], [p1, p2], [p2, p3]]):                                    
-                        pdfs.append(pdf[i]) 
-                        break
-            the_sum = 0.0
-            if len(pdfs) > 0:
-                the_sum = sum(pdfs)                  
-            return the_sum
+        samples = multivariate_normal.rvs(mean, cov, self.sample_size)
+        pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True)
+        sum_pdf = sum(pdf)
+        #pdf = [s / sum(pdf) for s in pdf]
+        pdfs = []
+        for i in xrange(len(samples)):
+            p1 = self.kinematics.get_link_n_position(samples[i], 1)            
+            p2 = self.kinematics.get_link_n_position(samples[i], 2)            
+            p3 = self.kinematics.get_link_n_position(samples[i], 3)
+            for obstacle in self.obstacles:
+                if obstacle.manipulator_collides([[np.array([0, 0]), p1], [p1, p2], [p2, p3]]):                                    
+                    pdfs.append(pdf[i]) 
+                    break
+        the_sum = 0.0
+        if len(pdfs) > 0:
+            the_sum = sum(pdfs)                  
+        return the_sum
     
     def get_jacobian(self, links, state):
         s0 = np.sin(state[0])
@@ -85,14 +88,28 @@ class PathEvaluator:
                 jobs.clear()
                 q_size = eval_queue.qsize()
                 for j in xrange(q_size):                     
-                    evaluated_paths.append(eval_queue.get())        
-        min_objective = 1000000.0
+                    evaluated_paths.append(eval_queue.get())
+        collision_sum = sum([evaluated_paths[i][0][0] for i in xrange(len(evaluated_paths))])
+        if collision_sum == 0.0:
+            collision_sums = [0.0 for i in xrange(len(evaluated_paths))]
+        else:
+            collision_sums = [evaluated_paths[i][0][0] / collision_sum for i in xrange(len(evaluated_paths))]        
+        traces_sum = sum([evaluated_paths[i][0][1] for i in xrange(len(evaluated_paths))])
+        if traces_sum == 0.0:
+            traces_sums = [0.0 for i in xrange(len(evaluated_paths))]
+        else:
+            traces_sums = [evaluated_paths[i][0][1] / traces_sum for i in xrange(len(evaluated_paths))]
         best_path = evaluated_paths[0][1]
-        min_objective = evaluated_paths[0][0]        
-        for p in evaluated_paths:
+        min_objective = self.w1 * collision_sums[0] + self.w2 * traces_sums[1] 
+        for i in xrange(len(collision_sums)):
+            val = self.w1 * collision_sums[i] + self.w2 * traces_sums[i]
+            if val < min_objective:
+                min_objective = val
+                best_path = evaluated_paths[i][1]     
+        '''for p in evaluated_paths:
             if p[0] < min_objective:
                 min_objective = p[0]
-                best_path = p[1]                
+                best_path = p[1] '''               
         return best_path
     
     def evaluate(self, index, eval_queue, path, horizon):
@@ -152,12 +169,15 @@ class PathEvaluator:
         if float(horizon_L) == 0.0:
             collsion_sum = 0.0
         else:
-            collision_sum = self.w1 * sum(collision_probs) / float(horizon_L)
-        tr = self.w2 * np.trace(EE_covariance)
+            collision_sum = sum(collision_probs) / float(horizon_L)
+        tr = np.trace(EE_covariance)
         if self.verbose:
-            print "collision sum: " + str(collision_sum)            
-            print "trace: " + str(tr)
-        objective_p = collision_sum + tr
+            with self.mutex:
+                print "========================================"
+                print "collision sum: " + str(collision_sum)            
+                print "trace: " + str(tr)
+                print "========================================"
+        objective_p = [collision_sum, tr]
         eval_queue.put((objective_p, path))
         '''if objective_p < min_objective:
             min_objective = objective_p
