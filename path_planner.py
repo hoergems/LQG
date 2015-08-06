@@ -3,7 +3,7 @@ import plot as Plot
 import copy
 import time
 from ompl import base as ob
-from ompl.util import noOutputHandler
+from ompl.util import noOutputHandler, useOutputHandler, OutputHandlerSTD
 from ompl import geometric as og
 from motion_validator import MotionValidator
 from goal_region import GoalRegion
@@ -70,7 +70,10 @@ class PathPlanner:
                 delta = time.time() - start_time
                 if delta > 5.0:
                     print "returning NONE"
-                    return []          
+                    xs = []
+                    us = []
+                    zs = []
+                    return xs, us, zs         
             path = []
                 
             if self.problem_definition.hasSolution():
