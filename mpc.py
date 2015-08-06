@@ -126,8 +126,11 @@ class MPC:
                     
                     n_steps = self.num_execution_steps
                     if n_steps > len(xs) - 1:
-                       n_steps = len(xs) - 1                    
-                    print "run for " + str(n_steps) + " steps"                    
+                       n_steps = len(xs) - 1
+                    if current_step + n_steps > self.max_num_steps:
+                        n_steps = self.max_num_steps - current_step                  
+                    print "run for " + str(n_steps) + " steps" 
+                    print "current step " + str(current_step)                   
                     x_true, x_tilde, x_estimate, P_t, current_step, total_reward, terminal = self.sim.simulate_n_steps(xs, us, zs, 
                                                                                                                        x_true, 
                                                                                                                        x_tilde,
@@ -195,8 +198,6 @@ class MPC:
         self.max_covariance = config['max_covariance']
         self.covariance_steps = config['covariance_steps']
         self.observation_covariance = config['observation_covariance']        
-        self.use_paths_from_file = config['use_paths_from_file']        
-        self.overwrite_paths_file = config['overwrite_paths_file']
         self.discount_factor = config['discount_factor']
         self.illegal_move_penalty = config['illegal_move_penalty']
         self.step_penalty = config['step_penalty']
