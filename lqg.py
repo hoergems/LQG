@@ -3,8 +3,9 @@ import plot as Plot
 import os
 import glob
 import sys
+import util
 from serializer import Serializer
-from obstacle import Obstacle
+from obstacle import *
 import kalman as kalman
 from path_evaluator import PathEvaluator
 from simulator import Simulator
@@ -25,12 +26,24 @@ class LQG:
         config = serializer.read_config("config.yaml")
         self.set_params(config) 
         
-        """ Load the obstacles """        
-        obstacles = serializer.load_environment("env.xml", path="environment")           
+        """ Load the obstacles """ 
+        environment = serializer.load_environment(file="env.xml", path="environment")       
+        obstacles = []
+        terrain = Terrain("default", 0.0, 1.0, True)
+        for obstacle in environment:
+            print obstacle
+            obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))          
         
         """ Setup operations """
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
-        path_planner.setup(obstacles, self.num_links, self.max_velocity, self.delta_t, self.use_linear_path, self.joint_constraints, config['verbose'])
+        path_planner.setup(self.num_links,
+                           self.workspace_dimension,
+                           obstacles,  
+                           self.max_velocity, 
+                           self.delta_t, 
+                           self.use_linear_path, 
+                           self.joint_constraints, 
+                           config['verbose'])
         #self.path_planning_interface.setup(obstacles, self.num_links, self.max_velocity, self.delta_t, self.use_linear_path, self.joint_constraints, config['verbose'])
         path_planner.set_start_and_goal_state(self.theta_0, self.goal_state, self.goal_radius)      
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
@@ -156,7 +169,8 @@ class LQG:
         self.exit_reward = config['exit_reward']
         self.stop_when_terminal = config['stop_when_terminal']
         self.joint_constraints = [-config['joint_constraint'], config['joint_constraint']]
-        self.sample_size = config['sample_size']        
+        self.sample_size = config['sample_size']  
+        self.workspace_dimension = config['workspace_dimension']      
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

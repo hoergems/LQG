@@ -9,11 +9,20 @@ class PathPlanningInterface:
     def __init__(self):
         pass
     
-    def setup(self, obstacles, num_links, max_velocity, delta_t, use_linear_path, joint_constraints, verbose):
-        self.num_cores = cpu_count()
-        #self.num_cores = 2
-        self.obstacles = obstacles
+    def setup(self, 
+              num_links, 
+              workspace_dimension, 
+              obstacles, 
+              max_velocity, 
+              delta_t, 
+              use_linear_path, 
+              joint_constraints, 
+              verbose):
         self.num_links = num_links
+        self.workspace_dimension = workspace_dimension
+        self.num_cores = cpu_count()        
+        self.obstacles = obstacles
+        
         self.max_velocity = max_velocity
         self.delta_t = delta_t
         self.use_linear_path = use_linear_path
@@ -57,7 +66,8 @@ class PathPlanningInterface:
     
     def construct_path(self, obstacles, queue, sim_run, joint_constraints, verbose):        
         path_planner = PathPlanner()
-        path_planner.set_params(self.num_links, 
+        path_planner.set_params(self.num_links,
+                                self.workspace_dimension, 
                                 self.max_velocity, 
                                 self.delta_t, 
                                 self.use_linear_path,

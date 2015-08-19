@@ -144,7 +144,7 @@ class Serializer:
             return []       
         return paths['paths']
     
-    def load_environment(self, file, path=""):
+    def load_environment(self, file="env.xml", path="stats/environment"):
         try:
             xmldoc = minidom.parse(os.path.join(path, file)) 
         except Exception as e:
@@ -156,5 +156,5 @@ class Serializer:
         for i in xrange(len(obstacle_translations)):
             trans = [float(k) for k in obstacle_translations[i].childNodes[0].nodeValue.split(" ")]
             dim =  [float(k) for k in obstacle_dimensions[i].childNodes[0].nodeValue.split(" ")] 
-            obstacles.append(Obstacle(trans[0], trans[1], 2.0 * dim[0], 2.0 * dim[1]))        
+            obstacles.append([trans, dim])        
         return obstacles 
