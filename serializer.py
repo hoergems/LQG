@@ -144,6 +144,23 @@ class Serializer:
             return []       
         return paths['paths']
     
+    def save_goal_states(self, goal_states, path="", filename=None):        
+        if filename == None:
+            filename = "goal_states.yaml"
+        for file in glob.glob(os.path.join(path, filename)):
+            os.remove(file)
+        with open(os.path.join(path, filename), 'w') as f:                
+            f.write(yaml.dump(goal_states, default_flow_style=False))
+            
+    def load_goal_states(self, file, path=""):
+        try:        
+            gs = yaml.load(open(os.path.join(path, file), 'r'), yaml.CLoader)
+            return gs
+        except IOError:
+            print "No such file or directory: " + str(os.path.join(path, file))
+            return []       
+        
+    
     def load_environment(self, file="env.xml", path="stats/environment"):
         try:
             xmldoc = minidom.parse(os.path.join(path, file)) 

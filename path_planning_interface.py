@@ -20,8 +20,8 @@ class PathPlanningInterface:
               verbose):
         self.num_links = num_links
         self.workspace_dimension = workspace_dimension        
-        #self.num_cores = cpu_count()
-        self.num_cores = 2       
+        self.num_cores = cpu_count()
+        #self.num_cores = 2       
         self.obstacles = obstacles
         
         self.max_velocity = max_velocity
@@ -34,30 +34,11 @@ class PathPlanningInterface:
         self.start_state = start_state
         self.goal_states = goal_states        
         
-        
     def plan_paths(self, num, sim_run, verbose):        
         jobs = collections.deque()        
         path_queue = Queue()
         paths = [] 
         print "Generating paths..."
-        '''path_planner = PathPlanner()           
-        path_planner.set_params(self.num_links,
-                                self.workspace_dimension,                                 
-                                self.max_velocity, 
-                                self.delta_t, 
-                                self.use_linear_path,
-                                sim_run, 
-                                self.joint_constraints,                               
-                                verbose,
-                                goal_states=self.goal_states)
-        path_planner.setup_ompl()
-        path_planner.set_start_state(self.start_state)        
-        path_planner.set_obstacles(self.obstacles)
-        for i in xrange(2):
-            xs, us, zs = path_planner.plan_path()
-            print xs[5]
-        sleep(0)'''
-                     
         for i in xrange(num): 
             if self.verbose: 
                 print "generating path " + str(i)
@@ -85,15 +66,13 @@ class PathPlanningInterface:
     
     def construct_path2(self, path_planner, queue):
         xs, us, zs = path_planner.plan_path()
-        print xs[5]
         if len(xs) == 0:
             return        
         queue.put((xs, us, zs))
         return 
     
     def construct_path(self, obstacles, queue, sim_run, joint_constraints, verbose):                
-        path_planner = PathPlanner() 
-        print path_planner          
+        path_planner = PathPlanner()
         path_planner.set_params(self.num_links,
                                 self.workspace_dimension,                                 
                                 self.max_velocity, 
@@ -107,7 +86,6 @@ class PathPlanningInterface:
         path_planner.set_start_state(self.start_state)        
         path_planner.set_obstacles(obstacles)             
         xs, us, zs = path_planner.plan_path()
-        print xs[5]
         if len(xs) == 0:
             return        
         queue.put((xs, us, zs))

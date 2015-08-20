@@ -28,8 +28,7 @@ class PathPlanner:
         self.delta_t = delta_t 
         self.use_linear_path = use_linear_path
         self.sim_run = sim_run
-        self.joint_constraints = joint_constraints        
-        #sleep()
+        self.joint_constraints = joint_constraints
         self.goal_states = goal_states
         if not verbose_rrt:
             noOutputHandler()
@@ -38,8 +37,6 @@ class PathPlanner:
         self.start_state = ob.State(self.si.getStateSpace())
         for i in xrange(self.si.getStateSpace().getDimension()):
             self.start_state[i] = start_state[i]
-            
-    
             
     def plan_path(self, goal_state=None):
         self.problem_definition.clearSolutionPaths()
@@ -59,25 +56,19 @@ class PathPlanner:
             else:                
                 self.problem_definition.addStartState(self.start_state)
                 self.problem_definition.setGoal(GoalRegion(self.si, self.goal_states))
-            planner = og.RRTConnect(self.si) 
-            print planner
-            planner.setRange(np.sqrt(self.si.getStateSpace().getDimension() * np.square(self.delta_t * self.max_velocity)))        
-            planner.setProblemDefinition(self.problem_definition)  
-            print "setup"          
-            planner.setup()
+            self.planner = og.RRTConnect(self.si)
+            self.planner.setRange(np.sqrt(self.si.getStateSpace().getDimension() * np.square(self.delta_t * self.max_velocity)))        
+            self.planner.setProblemDefinition(self.problem_definition)
+            self.planner.setup()
             
             
-            start_time = time.time()
-            if (self.problem_definition.hasSolution()) :
-                print "HAS ALREADY SOLUTION"
-            else:
-                print "NO SOLUTION YET"
+            start_time = time.time()            
             while not self.problem_definition.hasSolution():                
-                print planner.solve(1.0)
+                self.planner.solve(10.0)
                 delta = time.time() - start_time
                 print "delta " + str(delta)
-                #if delta > 1.0:
-                #    restorePreviousOutputHandler()
+                if delta > 1.0:
+                    restorePreviousOutputHandler()
                 if delta > 3.0:
                     print "returning NONE"
                     xs = []
@@ -93,8 +84,7 @@ class PathPlanner:
                 path = [np.array([state[i] for i in xrange(self.space.getDimension())]) for state in states]
                 #print "path " + str(path)
             else:
-                print "no solution"
-            planner.clear()
+                print "no solution"            
         return self._augment_path(path)
     
     

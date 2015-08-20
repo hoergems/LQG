@@ -4,7 +4,7 @@ from openravepy.misc import InitOpenRAVELogging
 from kin import *
 from obstacle import *
 from serializer import Serializer
-from path_planner import *
+from path_planning_interface import *
 from gen_ik_solution import *
 import json
 import time
@@ -14,7 +14,7 @@ class IKSolutionGenerator:
     def __init__(self):
         self.serializer = Serializer()
     
-    def setup(self, num_links, workspace_dimension, max_velocity, delta_t, joint_constraints, robot_file, environment_file, verbose_rrt):
+    def setup(self, num_links, workspace_dimension, obstacles, max_velocity, delta_t, joint_constraints, robot_file, environment_file, verbose_rrt):
         """
         Generate the obstacles
         """
@@ -24,10 +24,8 @@ class IKSolutionGenerator:
         for obstacle in environment:
             print obstacle
             obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))
-        self.path_planner = PathPlanner()
-        self.path_planner.set_params(num_links, workspace_dimension, max_velocity, delta_t, False, 0, joint_constraints, verbose_rrt)
-        self.path_planner.setup_ompl()
-        self.path_planner.set_obstacles(obstacles)
+        self.path_planner = PathPlanningInterface()
+        self.path_planner.setup(num_links, workspace_dimension, obstacles, max_velocity, delta_t, False, joint_constraints, verbose_rrt)
         
         self.env = openravepy.Environment()
         self.env.StopSimulation()
@@ -35,10 +33,11 @@ class IKSolutionGenerator:
         self.env.Load(environment_file)
         
         self.robot = self.env.GetRobots()[0]
-        self.robot.SetActiveManipulator("arm")          
+        self.robot.SetActiveManipulator("arm") 
+        
+        self.verbose = verbose_rrt         
 
-    def generate(self, start_state, goal_position, workspace_dimension):
-        self.path_planner.set_start_state(start_state)
+    def generate(self, start_state, goal_position, workspace_dimension):        
         possible_ik_solutions = []        
         if workspace_dimension == 2:
             InitOpenRAVELogging()
@@ -64,14 +63,16 @@ class IKSolutionGenerator:
         solutions = []
         n = 0
         for i in xrange(len(possible_ik_solutions)):            
-            ik_solution = [possible_ik_solutions[i][k] for k in xrange(len(start_state))]            
-            path = self.path_planner.plan_path(ik_solution)
+            ik_solution = [possible_ik_solutions[i][k] for k in xrange(len(start_state))] 
+            self.path_planner.set_start_and_goal(start_state, [ik_solution])           
+            path = self.path_planner.plan_paths(1, 0, self.verbose)
             if len(path[0]) != 0:                
-                solutions.append(path[0][-1])                
+                solutions.append(path[0][0][-1])                
             n += 1
+        self.path_planner = None
         if not len(solutions) == 0:
             #print "IK solution is " + str(solution[0])
-            return solutions
+            return solutions        
         else:
             print "Couldn't find a valid IK solution. Defined problem seems to be infeasible."
             return []

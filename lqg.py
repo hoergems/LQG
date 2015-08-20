@@ -36,7 +36,7 @@ class LQG:
             obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))          
         
         """ Setup operations """
-        goal_states = self.get_goal_states()
+        goal_states = self.get_goal_states(serializer, obstacles)
         
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
         path_planner.setup(self.num_links,
@@ -134,13 +134,16 @@ class LQG:
             
             PlotStats(True, "LQG")
             
-    def get_goal_states(self):
+    def get_goal_states(self, serializer, obstacles):
+        #goal_states = [np.array(gs) for gs in serializer.load_goal_states("goal_states.yaml")]
+        #return goal_states
         ik_solution_generator = IKSolutionGenerator()
         model_file = "model/model.xml"
         if self.workspace_dimension == 3:
             model_file = "model/model3D.xml"
         ik_solution_generator.setup(self.num_links,
                                     self.workspace_dimension,
+                                    obstacles,
                                     self.max_velocity,
                                     self.delta_t,
                                     self.joint_constraints,
@@ -148,7 +151,10 @@ class LQG:
                                     "environment/env.xml",
                                     self.verbose)
         solutions = ik_solution_generator.generate(self.theta_0, self.goal_position, self.workspace_dimension)
+        print "solutions " + str(solutions)
         
+        serializer.save_goal_states([solutions[i] for i in xrange(len(solutions))])
+        ik_solution_generator = None
         return solutions
             
     def problem_setup(self, delta_t, num_links):
