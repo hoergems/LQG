@@ -138,7 +138,6 @@ class PathPlanner:
     def set_obstacles(self, obstacles):        
         self.motion_validator.set_obstacles(obstacles)
         
-        
         #Plot.plot_2d_n_sets([np.array(path)], ['x_s'], x_range=[-np.pi, np.pi], y_range=[-np.pi, np.pi]) 
         
     def _augment_path(self, path):

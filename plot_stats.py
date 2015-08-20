@@ -62,27 +62,29 @@ class PlotStats:
                 print e
             data = []
             cart_coords = serializer.load_cartesian_coords(dir, file.split("/")[-1])
-            dists = []            
-            for k in xrange(len(m_cov)):
-                for coords in cart_coords[k]:                
-                    dists.append(np.linalg.norm(np.array(coords) - np.array(config['goal_position'])))            
-                avg_distance = 0.0
-                for d in dists:
-                    avg_distance += d
-                avg_distance /= len(dists)
-                if avg_distance > max_avg_distance:
-                    max_avg_distance = avg_distance                        
-                data.append(np.array([m_cov[k], avg_distance]))
-            sets.append(np.array(data))    
-        Plot.plot_2d_n_sets(sets,
-                            labels=labels,
-                            xlabel="joint covariance",
-                            ylabel="average distance to goal",
-                            x_range=[m_cov[0], m_cov[-1]],
-                            y_range=[0, max_avg_distance],
-                            show_legend=True,
-                            save=self.save,
-                            filename=dir + "/avg_distance.pdf")
+            dists = []
+            if len(cart_coords) > 0:            
+                for k in xrange(len(m_cov)):
+                    for coords in cart_coords[k]:                
+                        dists.append(np.linalg.norm(np.array(coords) - np.array(config['goal_position'])))            
+                    avg_distance = 0.0
+                    for d in dists:
+                        avg_distance += d
+                    avg_distance /= len(dists)
+                    if avg_distance > max_avg_distance:
+                        max_avg_distance = avg_distance                        
+                    data.append(np.array([m_cov[k], avg_distance]))
+                sets.append(np.array(data))
+        if len(sets) > 0:    
+            Plot.plot_2d_n_sets(sets,
+                                labels=labels,
+                                xlabel="joint covariance",
+                                ylabel="average distance to goal",
+                                x_range=[m_cov[0], m_cov[-1]],
+                                y_range=[0, max_avg_distance],
+                                show_legend=True,
+                                save=self.save,
+                                filename=dir + "/avg_distance.pdf")
         return
         
         Plot.plot_2d_n_sets([np.array(data)],
