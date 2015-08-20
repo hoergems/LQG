@@ -21,7 +21,7 @@ class PathPlanningInterface:
         self.num_links = num_links
         self.workspace_dimension = workspace_dimension        
         #self.num_cores = cpu_count()
-        self.num_cores = 2        
+        self.num_cores = 2       
         self.obstacles = obstacles
         
         self.max_velocity = max_velocity
@@ -39,11 +39,30 @@ class PathPlanningInterface:
         jobs = collections.deque()        
         path_queue = Queue()
         paths = [] 
-        print "Generating paths..."       
+        print "Generating paths..."
+        '''path_planner = PathPlanner()           
+        path_planner.set_params(self.num_links,
+                                self.workspace_dimension,                                 
+                                self.max_velocity, 
+                                self.delta_t, 
+                                self.use_linear_path,
+                                sim_run, 
+                                self.joint_constraints,                               
+                                verbose,
+                                goal_states=self.goal_states)
+        path_planner.setup_ompl()
+        path_planner.set_start_state(self.start_state)        
+        path_planner.set_obstacles(self.obstacles)
+        for i in xrange(2):
+            xs, us, zs = path_planner.plan_path()
+            print xs[5]
+        sleep(0)'''
+                     
         for i in xrange(num): 
             if self.verbose: 
                 print "generating path " + str(i)
             p = Process(target=self.construct_path, args=(self.obstacles, path_queue, sim_run, self.joint_constraints, verbose,))
+            #p = Process(target=self.construct_path2, args=(path_planner, path_queue,))
             p.start()
             jobs.append(p)           
             
@@ -57,16 +76,24 @@ class PathPlanningInterface:
                 jobs.clear()
                 q_size = path_queue.qsize()
                 for j in xrange(q_size):
-                    p = path_queue.get()
-                    if not len(p) == 0:                    
-                        paths.append([[p[0][i].tolist() for i in xrange(len(p[0]))], 
-                                      [p[1][i].tolist() for i in xrange(len(p[0]))], 
-                                      [p[2][i].tolist() for i in xrange(len(p[0]))]])      
+                    p_e = path_queue.get()
+                    if not len(p_e) == 0:                         
+                        paths.append([[p_e[0][i].tolist() for i in xrange(len(p_e[0]))], 
+                                      [p_e[1][i].tolist() for i in xrange(len(p_e[0]))], 
+                                      [p_e[2][i].tolist() for i in xrange(len(p_e[0]))]])      
         return paths
     
+    def construct_path2(self, path_planner, queue):
+        xs, us, zs = path_planner.plan_path()
+        print xs[5]
+        if len(xs) == 0:
+            return        
+        queue.put((xs, us, zs))
+        return 
+    
     def construct_path(self, obstacles, queue, sim_run, joint_constraints, verbose):                
-        path_planner = PathPlanner()
-        print joint_constraints        
+        path_planner = PathPlanner() 
+        print path_planner          
         path_planner.set_params(self.num_links,
                                 self.workspace_dimension,                                 
                                 self.max_velocity, 
@@ -80,6 +107,7 @@ class PathPlanningInterface:
         path_planner.set_start_state(self.start_state)        
         path_planner.set_obstacles(obstacles)             
         xs, us, zs = path_planner.plan_path()
+        print xs[5]
         if len(xs) == 0:
             return        
         queue.put((xs, us, zs))

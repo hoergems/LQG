@@ -5,6 +5,7 @@ import glob
 import os
 from serializer import Serializer
 from kin import *
+from util import *
 from EMD import *
 
 class PlotStats:
@@ -15,6 +16,7 @@ class PlotStats:
         self.save = save
         print "Loading cartesian coordinates..."  
         serializer = Serializer()
+        self.setup_kinematics(serializer, dir=dir)
         print "plotting paths"    
         self.plot_paths(serializer, dir=dir)
         self.plot_paths(serializer, best_paths=True, dir=dir)
@@ -29,7 +31,30 @@ class PlotStats:
         print "plotting EMD graph..."
         self.plot_emd_graph(serializer, cart_coords, dir=dir) 
         print "plotting histograms..."        
-        self.save_histogram_plots(serializer, cart_coords, dir=dir)       
+        self.save_histogram_plots(serializer, cart_coords, dir=dir)
+        
+    def setup_kinematics(self, serializer, dir='stats'):
+        config = serializer.read_config(path=dir)
+        links = v2_double()
+        axis = v2_int()
+        
+        link = v_double()
+        ax1 = v_int()
+        ax2 = v_int()
+        link[:] = [1.0, 0.0, 0.0]
+        links[:] = [link for i in xrange(config['num_links'])]
+        
+        ax1[:] = [0, 0, 1]
+        if config['workspace_dimension'] == 2:
+            ax2[:] = [0, 0, 1]            
+        elif config['workspace_dimension'] == 3:
+            ax2[:] = [0, 1, 0]
+            
+        axis[:] = [ax1, ax2, ax1]
+        
+        self.kinematics = Kinematics()
+        self.kinematics.setLinksAndAxis(links, axis)
+               
         
     def clear_stats(self):
         for file in glob.glob("stats/*"):
@@ -204,8 +229,7 @@ class PlotStats:
             
     def plot_paths(self, serializer, best_paths=False, dir="stats"):
         config = serializer.read_config(path=dir)
-        dim = config['num_links']
-        kinematics = Kinematics(dim)
+        dim = config['num_links']        
         colors = []
         if best_paths:
             paths = serializer.load_paths("best_paths.yaml", path=dir)
@@ -218,16 +242,21 @@ class PlotStats:
             path_coords = []
             for elem in path:
                 state = [elem[i] for i in xrange(dim)]
-                path_coords.append(kinematics.get_end_effector_position(state))
+                state_v = v_double()
+                state_v[:] = state
+                path_coords_v = self.kinematics.getEndEffectorPosition(state_v)
+                path_coords_elem = [path_coords_v[i] for i in xrange(len(path_coords_v))]
+                path_coords.append(path_coords_elem)
             sets.append(np.array(path_coords))
             colors.append(None)
         obstacles = serializer.load_environment("env.xml", path=dir + "/environment")        
         if not obstacles == None:
             for obstacle in obstacles:
-                point1 = [obstacle.x - obstacle.x_size / 2.0, obstacle.y - obstacle.y_size / 2.0]
-                point2 = [obstacle.x - obstacle.x_size / 2.0, obstacle.y + obstacle.y_size / 2.0]
-                point3 = [obstacle.x + obstacle.x_size / 2.0, obstacle.y + obstacle.y_size / 2.0]
-                point4 = [obstacle.x + obstacle.x_size / 2.0, obstacle.y - obstacle.y_size / 2.0]
+                print obstacle
+                point1 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0]
+                point2 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0]
+                point3 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0]
+                point4 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0]
                 sets.append(np.array([point1, point2]))                
                 sets.append(np.array([point2, point3]))
                 sets.append(np.array([point3, point4]))

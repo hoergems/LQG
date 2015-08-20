@@ -10,14 +10,7 @@ from goal_region import GoalRegion
 
 class PathPlanner:
     def __init__(self):
-        '''self.set_params(2, 2.0, 1.0 / 30.0) 
-        self.setup_ompl(self.space_dimension)
-        
-        goal_position = [-0.41952362, 0.12591921]
-        self.set_start_state([0.0, 0.0])
-        self.set_goal_region(goal_position, 0.01)
-               
-        path = self.plan_path()'''        
+        pass     
     
     def set_params(self, 
                    space_dimension, 
@@ -35,8 +28,7 @@ class PathPlanner:
         self.delta_t = delta_t 
         self.use_linear_path = use_linear_path
         self.sim_run = sim_run
-        self.joint_constraints = joint_constraints
-        print "jcs " + str(self.joint_constraints)
+        self.joint_constraints = joint_constraints        
         #sleep()
         self.goal_states = goal_states
         if not verbose_rrt:
@@ -47,8 +39,10 @@ class PathPlanner:
         for i in xrange(self.si.getStateSpace().getDimension()):
             self.start_state[i] = start_state[i]
             
+    
+            
     def plan_path(self, goal_state=None):
-        self.problem_definition.clearSolutionPaths()        
+        self.problem_definition.clearSolutionPaths()
         path_collides = True 
         if self.use_linear_path and not goal_state == None:       
             path = self.linear_path(self.start_state, self.goal_state)
@@ -62,21 +56,28 @@ class PathPlanner:
                 for i in xrange(self.si.getStateSpace().getDimension()):
                     gs[i] = goal_state[i]
                 self.problem_definition.setStartAndGoalStates(self.start_state, gs)
-            else:
+            else:                
                 self.problem_definition.addStartState(self.start_state)
                 self.problem_definition.setGoal(GoalRegion(self.si, self.goal_states))
-            self.planner = og.RRTConnect(self.si)    
-            self.planner.setRange(np.sqrt(self.si.getStateSpace().getDimension() * np.square(self.delta_t * self.max_velocity)))        
-            self.planner.setProblemDefinition(self.problem_definition)            
-            self.planner.setup()
+            planner = og.RRTConnect(self.si) 
+            print planner
+            planner.setRange(np.sqrt(self.si.getStateSpace().getDimension() * np.square(self.delta_t * self.max_velocity)))        
+            planner.setProblemDefinition(self.problem_definition)  
+            print "setup"          
+            planner.setup()
             
-            start_time = time.time()    
+            
+            start_time = time.time()
+            if (self.problem_definition.hasSolution()) :
+                print "HAS ALREADY SOLUTION"
+            else:
+                print "NO SOLUTION YET"
             while not self.problem_definition.hasSolution():                
-                self.planner.solve(1.0)
+                print planner.solve(1.0)
                 delta = time.time() - start_time
                 print "delta " + str(delta)
-                if delta > 1.0:
-                    restorePreviousOutputHandler()
+                #if delta > 1.0:
+                #    restorePreviousOutputHandler()
                 if delta > 3.0:
                     print "returning NONE"
                     xs = []
@@ -85,16 +86,18 @@ class PathPlanner:
                     return xs, us, zs         
             path = []
                 
-            if self.problem_definition.hasSolution():
-                print "HAS SOLUTION"
+            if self.problem_definition.hasSolution():                                
                 solution_path = self.problem_definition.getSolutionPath()
-                states = solution_path.getStates()                
-                path = [np.array([state[i] for i in xrange(self.space.getDimension())]) for state in states] 
-                    
+                states = solution_path.getStates()
+                print "len solution path " + str(len(states))                
+                path = [np.array([state[i] for i in xrange(self.space.getDimension())]) for state in states]
                 #print "path " + str(path)
             else:
                 print "no solution"
+            planner.clear()
         return self._augment_path(path)
+    
+    
     
     def path_collides(self, path):
         for i in xrange(1, len(path)):
@@ -127,12 +130,9 @@ class PathPlanner:
             path.append(goal)
         return path
         
-        
-        
     def setup_ompl(self):
         self.space = ob.RealVectorStateSpace(dim=self.space_dimension)
-        bounds = ob.RealVectorBounds(self.space_dimension)
-        print "jcs2 " + str(self.joint_constraints)
+        bounds = ob.RealVectorBounds(self.space_dimension)        
         for i in xrange(self.space_dimension):
             bounds.setLow(i, self.joint_constraints[0])
             bounds.setHigh(i, self.joint_constraints[1])
