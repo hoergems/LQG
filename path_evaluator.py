@@ -1,7 +1,8 @@
 import numpy as np
 import kalman as kalman
 from scipy.stats import multivariate_normal
-from kinematics import Kinematics
+from kin import *
+from util import *
 from multiprocessing import Process, Queue, cpu_count
 import collections
 import time
@@ -11,8 +12,12 @@ class PathEvaluator:
     def __init__(self):
         pass
     
-    def setup(self, A, B, C, D, H, M, N, V, W, num_links, sample_size, obstacles, verbose):
-        self.kinematics = Kinematics(num_links)
+    def setup(self, A, B, C, D, H, M, N, V, W, 
+              num_links, 
+              workspace_dimension, 
+              sample_size, 
+              obstacles, 
+              verbose):        
         self.A = A
         self.B = B
         self.C = C
@@ -25,11 +30,33 @@ class PathEvaluator:
         self.num_links = num_links
         self.obstacles = obstacles
         self.sample_size = sample_size
-        self.num_cores = cpu_count() - 1
+        #self.num_cores = cpu_count() - 1
+        self.num_cores = 2
         self.verbose = verbose
         self.w1 = 1.0
         self.w2 = 1.0
         self.mutex = Lock()
+        
+        links = v2_double()
+        axis = v2_int()
+        
+        link = v_double()
+        ax1 = v_int()
+        ax2 = v_int()
+        link[:] = [1.0, 0.0, 0.0]
+        links[:] = [link for i in xrange(num_links)]
+        
+        ax1[:] = [0, 0, 1]
+        if workspace_dimension == 2:
+            ax2[:] = [0, 0, 1]            
+        elif workspace_dimension == 3:
+            ax2[:] = [0, 1, 0]
+            
+        axis[:] = [ax1, ax2, ax1]
+        
+        self.kinematics = Kinematics()
+        self.kinematics.setLinksAndAxis(links, axis)
+        self.utils = Utils()
 
     def get_probability_of_collision(self, mean, cov):
         samples = multivariate_normal.rvs(mean, cov, self.sample_size)
@@ -38,13 +65,14 @@ class PathEvaluator:
         #pdf = [s / sum(pdf) for s in pdf]
         pdfs = []
         for i in xrange(len(samples)):
-            p1 = self.kinematics.get_link_n_position(samples[i], 1)            
-            p2 = self.kinematics.get_link_n_position(samples[i], 2)            
-            p3 = self.kinematics.get_link_n_position(samples[i], 3)
+            joint_angles = v_double()
+            joint_angles[:] = [samples[i][j] for j in xrange(self.num_links)]
+            collision_structures = self.utils.createManipulatorCollisionStructures(joint_angles, self.kinematics)
             for obstacle in self.obstacles:
-                if obstacle.manipulator_collides([[np.array([0, 0]), p1], [p1, p2], [p2, p3]]):                                    
+                if obstacle.inCollision(collision_structures):                               
                     pdfs.append(pdf[i]) 
-                    break
+                    break            
+            
         the_sum = 0.0
         if len(pdfs) > 0:
             the_sum = sum(pdfs)                  

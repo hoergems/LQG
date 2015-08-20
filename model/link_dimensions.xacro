@@ -1,8 +1,0 @@
-<?xml version="1.0"?>
-<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-    <!-- Constants -->
-    <xacro:property name="LENGTH" value="1.0"/>    
-    <xacro:property name="WIDTH" value="0.05"/>    
-    <xacro:property name="HEIGHT" value="0.05"/>
-    <xacro:property name="RADIUS" value="0.05"/>
-</robot>

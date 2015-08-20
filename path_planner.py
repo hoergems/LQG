@@ -21,13 +21,14 @@ class PathPlanner:
     
     def set_params(self, 
                    space_dimension, 
-                   workspace_dimension, 
+                   workspace_dimension,
                    max_velocity, 
                    delta_t, 
                    use_linear_path, 
                    sim_run, 
                    joint_constraints, 
-                   verbose_rrt):
+                   verbose_rrt,
+                   goal_states=[]):        
         self.space_dimension = space_dimension
         self.workspace_dimension = workspace_dimension        
         self.max_velocity = max_velocity
@@ -35,6 +36,9 @@ class PathPlanner:
         self.use_linear_path = use_linear_path
         self.sim_run = sim_run
         self.joint_constraints = joint_constraints
+        print "jcs " + str(self.joint_constraints)
+        #sleep()
+        self.goal_states = goal_states
         if not verbose_rrt:
             noOutputHandler()
         
@@ -43,29 +47,24 @@ class PathPlanner:
         for i in xrange(self.si.getStateSpace().getDimension()):
             self.start_state[i] = start_state[i]
             
-    def set_goal_state(self, goal_state):
-        self.goal_state = ob.State(self.si.getStateSpace())        
-        for i in xrange(self.si.getStateSpace().getDimension()):
-            self.goal_state[i] = goal_state[i]
-            
-    def set_goal_region(self, goal_position, radius):
-        self.goal_region = GoalRegion(self.si)
-        self.goal_region.set_goal_radius(radius)      
-        self.goal_region.set_goal_position(goal_position)
-        self.goal_region.set_bounds([[-np.pi, np.pi] for i in xrange(self.si.getStateSpace().getDimension())])
-            
-    def plan_path(self):
+    def plan_path(self, goal_state=None):
         self.problem_definition.clearSolutionPaths()        
         path_collides = True 
-        if self.use_linear_path:       
+        if self.use_linear_path and not goal_state == None:       
             path = self.linear_path(self.start_state, self.goal_state)
             path_collides = self.path_collides(path)
         if path_collides: 
-            if not self.motion_validator.isValid(self.start_state) or not self.motion_validator.isValid(self.goal_state):
+            if not self.motion_validator.isValid(self.start_state):
                 print "Start or goal state not valid!"
-                return [], [], []                        
-            self.problem_definition.addStartState(self.start_state)
-            self.problem_definition.setStartAndGoalStates(self.start_state, self.goal_state)
+                return [], [], []            
+            if len(self.goal_states) == 0:
+                gs = ob.State(self.si.getStateSpace())
+                for i in xrange(self.si.getStateSpace().getDimension()):
+                    gs[i] = goal_state[i]
+                self.problem_definition.setStartAndGoalStates(self.start_state, gs)
+            else:
+                self.problem_definition.addStartState(self.start_state)
+                self.problem_definition.setGoal(GoalRegion(self.si, self.goal_states))
             self.planner = og.RRTConnect(self.si)    
             self.planner.setRange(np.sqrt(self.si.getStateSpace().getDimension() * np.square(self.delta_t * self.max_velocity)))        
             self.planner.setProblemDefinition(self.problem_definition)            
@@ -87,6 +86,7 @@ class PathPlanner:
             path = []
                 
             if self.problem_definition.hasSolution():
+                print "HAS SOLUTION"
                 solution_path = self.problem_definition.getSolutionPath()
                 states = solution_path.getStates()                
                 path = [np.array([state[i] for i in xrange(self.space.getDimension())]) for state in states] 
@@ -132,6 +132,7 @@ class PathPlanner:
     def setup_ompl(self):
         self.space = ob.RealVectorStateSpace(dim=self.space_dimension)
         bounds = ob.RealVectorBounds(self.space_dimension)
+        print "jcs2 " + str(self.joint_constraints)
         for i in xrange(self.space_dimension):
             bounds.setLow(i, self.joint_constraints[0])
             bounds.setHigh(i, self.joint_constraints[1])
@@ -143,7 +144,7 @@ class PathPlanner:
         #self.si.setStateValidityChecker(self.motion_validator.isValid)      
         self.si.setMotionValidator(self.motion_validator)
         self.si.setup()
-        self.problem_definition = ob.ProblemDefinition(self.si)
+        self.problem_definition = ob.ProblemDefinition(self.si)        
         
     def set_obstacles(self, obstacles):        
         self.motion_validator.set_obstacles(obstacles)        

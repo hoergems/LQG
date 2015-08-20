@@ -4,7 +4,7 @@ import plot as Plot
 import glob
 import os
 from serializer import Serializer
-from kinematics import Kinematics
+from kin import *
 from EMD import *
 
 class PlotStats:

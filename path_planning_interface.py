@@ -11,7 +11,7 @@ class PathPlanningInterface:
     
     def setup(self, 
               num_links, 
-              workspace_dimension, 
+              workspace_dimension,
               obstacles, 
               max_velocity, 
               delta_t, 
@@ -19,20 +19,20 @@ class PathPlanningInterface:
               joint_constraints, 
               verbose):
         self.num_links = num_links
-        self.workspace_dimension = workspace_dimension
-        self.num_cores = cpu_count()        
+        self.workspace_dimension = workspace_dimension        
+        #self.num_cores = cpu_count()
+        self.num_cores = 2        
         self.obstacles = obstacles
         
         self.max_velocity = max_velocity
         self.delta_t = delta_t
         self.use_linear_path = use_linear_path
-        self.joint_constraints = joint_constraints
+        self.joint_constraints = joint_constraints        
         self.verbose = verbose
         
-    def set_start_and_goal_state(self, start_state, goal_state, goal_radius):        
+    def set_start_and_goal(self, start_state, goal_states):        
         self.start_state = start_state
-        self.goal_state = goal_state
-        self.goal_radius = goal_radius
+        self.goal_states = goal_states        
         
         
     def plan_paths(self, num, sim_run, verbose):        
@@ -64,19 +64,20 @@ class PathPlanningInterface:
                                       [p[2][i].tolist() for i in xrange(len(p[0]))]])      
         return paths
     
-    def construct_path(self, obstacles, queue, sim_run, joint_constraints, verbose):        
+    def construct_path(self, obstacles, queue, sim_run, joint_constraints, verbose):                
         path_planner = PathPlanner()
+        print joint_constraints        
         path_planner.set_params(self.num_links,
-                                self.workspace_dimension, 
+                                self.workspace_dimension,                                 
                                 self.max_velocity, 
                                 self.delta_t, 
                                 self.use_linear_path,
                                 sim_run, 
                                 joint_constraints,                               
-                                verbose)
+                                verbose,
+                                goal_states=self.goal_states)
         path_planner.setup_ompl()
-        path_planner.set_start_state(self.start_state)
-        path_planner.set_goal_region(self.goal_state, self.goal_radius) 
+        path_planner.set_start_state(self.start_state)        
         path_planner.set_obstacles(obstacles)             
         xs, us, zs = path_planner.plan_path()
         if len(xs) == 0:

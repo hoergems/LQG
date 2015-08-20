@@ -13,6 +13,7 @@ from path_planning_interface import PathPlanningInterface
 from EMD import *
 from plot_stats import PlotStats
 from xml.dom import minidom
+from gen_ik_solution import *
 
 class LQG:
     def __init__(self, plot):
@@ -35,6 +36,8 @@ class LQG:
             obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))          
         
         """ Setup operations """
+        goal_states = self.get_goal_states()
+        
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
         path_planner.setup(self.num_links,
                            self.workspace_dimension,
@@ -43,9 +46,9 @@ class LQG:
                            self.delta_t, 
                            self.use_linear_path, 
                            self.joint_constraints, 
-                           config['verbose'])
+                           self.verbose)
         #self.path_planning_interface.setup(obstacles, self.num_links, self.max_velocity, self.delta_t, self.use_linear_path, self.joint_constraints, config['verbose'])
-        path_planner.set_start_and_goal_state(self.theta_0, self.goal_state, self.goal_radius)      
+        path_planner.set_start_and_goal(self.theta_0, goal_states)      
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
         
         if self.check_positive_definite([C, D]):            
@@ -90,14 +93,25 @@ class LQG:
                 """
                 N = self.observation_covariance * np.identity(self.num_links)
                 
-                path_evaluator.setup(A, B, C, D, H, M, N, V, W, self.num_links, self.sample_size, obstacles, config['verbose'])  
+                path_evaluator.setup(A, B, C, D, H, M, N, V, W, 
+                                     self.num_links,
+                                     config['workspace_dimension'], 
+                                     self.sample_size, 
+                                     obstacles, 
+                                     config['verbose'])  
                 xs, us, zs = path_evaluator.evaluate_paths(paths)
                                 
                 best_paths.append([[xs[i] for i in xrange(len(xs))], 
                                    [us[i] for i in xrange(len(us))],
                                    [zs[i] for i in xrange(len(zs))]])
                 
-                sim.setup_problem(A, B, C, D, H, V, W, M, N, obstacles, self.goal_position, self.goal_radius, self.num_links, self.joint_constraints)
+                sim.setup_problem(A, B, C, D, H, V, W, M, N, 
+                                  obstacles, 
+                                  self.goal_position, 
+                                  self.goal_radius, 
+                                  self.num_links, 
+                                  config['workspace_dimension'], 
+                                  self.joint_constraints)
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal, config['verbose'])           
                 cartesian_coords, mean_reward = sim.simulate(xs, us, zs, j)
                                 
@@ -119,6 +133,23 @@ class LQG:
             os.system(cmd)
             
             PlotStats(True, "LQG")
+            
+    def get_goal_states(self):
+        ik_solution_generator = IKSolutionGenerator()
+        model_file = "model/model.xml"
+        if self.workspace_dimension == 3:
+            model_file = "model/model3D.xml"
+        ik_solution_generator.setup(self.num_links,
+                                    self.workspace_dimension,
+                                    self.max_velocity,
+                                    self.delta_t,
+                                    self.joint_constraints,
+                                    model_file,
+                                    "environment/env.xml",
+                                    self.verbose)
+        solutions = ik_solution_generator.generate(self.theta_0, self.goal_position, self.workspace_dimension)
+        
+        return solutions
             
     def problem_setup(self, delta_t, num_links):
         A = np.identity(num_links)
@@ -170,7 +201,8 @@ class LQG:
         self.stop_when_terminal = config['stop_when_terminal']
         self.joint_constraints = [-config['joint_constraint'], config['joint_constraint']]
         self.sample_size = config['sample_size']  
-        self.workspace_dimension = config['workspace_dimension']      
+        self.workspace_dimension = config['workspace_dimension'] 
+        self.verbose = config['verbose']     
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

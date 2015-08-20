@@ -1,7 +1,8 @@
 import numpy as np
 import kalman as kalman
 from scipy.stats import multivariate_normal
-from kinematics import Kinematics
+from kin import *
+from util import *
 
 class Simulator:
     def __init__(self):
@@ -20,7 +21,8 @@ class Simulator:
                       obstacles,
                       goal_position,
                       goal_radius,
-                      num_links,
+                      num_links,                      
+                      workspace_dimension,
                       joint_constraints):
         self.A = A
         self.B = B
@@ -34,7 +36,8 @@ class Simulator:
         self.obstacles = obstacles
         self.goal_position = goal_position
         self.goal_radius = goal_radius
-        self.num_links = num_links
+        self.num_links = num_links 
+        self.workspace_dimension = workspace_dimension   
         self.joint_constraints = joint_constraints
         
     def setup_reward_function(self, discount_factor, step_penalty, illegal_move_penalty, exit_reward):
@@ -44,7 +47,28 @@ class Simulator:
         self.exit_reward = exit_reward
     
     def setup_simulator(self, num_simulation_runs, stop_when_terminal, verbose): 
-        self.kinematics = Kinematics(self.num_links)
+        links = v2_double()
+        axis = v2_int()
+        
+        link = v_double()
+        ax1 = v_int()
+        ax2 = v_int()
+        link[:] = [1.0, 0.0, 0.0]
+        links[:] = [link for i in xrange(self.num_links)]
+        
+        ax1[:] = [0, 0, 1]
+        if self.workspace_dimension == 2:
+            ax2[:] = [0, 0, 1]            
+        elif self.workspace_dimension == 3:
+            ax2[:] = [0, 1, 0]
+            
+        axis[:] = [ax1, ax2, ax1]
+        
+        self.utils = Utils()
+                
+        self.kinematics = Kinematics()
+        self.kinematics.setLinksAndAxis(links, axis)
+               
         self.num_simulation_runs = num_simulation_runs        
         self.stop_when_terminal = stop_when_terminal
         self.verbose = verbose
@@ -102,7 +126,10 @@ class Simulator:
                 else:
                     total_reward += discount * (-1.0 * self.step_penalty)                
                 
-                ee_position = self.kinematics.get_end_effector_position(x_true) 
+                state = v_double()
+                state[:] = x_true   
+                ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
+                ee_position = np.array([ee_position_arr[i] for i in xrange(len(ee_position_arr))])
                 print "ee_position " + str(ee_position)
                 if self.is_terminal(ee_position):
                     terminal_state_reached = True                        
@@ -115,10 +142,9 @@ class Simulator:
                 x_tilde, P_t = kalman.kalman_update(x_tilde_dash_t, z_dash_t, self.H, P_dash, self.W, self.N, self.num_links)
                 x_estimate_new = self.check_constraints(x_tilde + xs[i + 1])
                 
-                if self.check_collision(x_estimate_new, self.obstacles, self.kinematics):
-                    x_estimate_new = x_estimate
-                else:                    
+                if not self.is_in_collision(x_estimate_new):
                     x_estimate = x_estimate_new 
+                                    
                 #print "x_true " + str(x_true)
                 #print "x_estimate " + str(x_estimate_new)            
         return x_true, x_tilde, x_estimate, P_t, current_step + n_steps, total_reward, terminal_state_reached
@@ -160,9 +186,10 @@ class Simulator:
                         reward += discount * (-1.0 * self.illegal_move_penalty)
                     else:
                         reward += discount * (-1.0 * self.step_penalty)
-                        
-                    ee_position = self.kinematics.get_end_effector_position(x_true)                
-                    
+                    state = v_double()
+                    state[:] = x_true   
+                    ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
+                    ee_position = np.array([ee_position_arr[i] for i in xrange(len(ee_position_arr))])
                     if self.is_terminal(ee_position):
                         terminal_state_reached = True                        
                         reward += discount * self.exit_reward                       
@@ -178,21 +205,24 @@ class Simulator:
                     """
                     x_tilde_dash_t, P_dash = kalman.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
                     x_tilde, P_t = kalman.kalman_update(x_tilde_dash_t, z_dash_t, self.H, P_dash, self.W, self.N, self.num_links)                   
-            ee_position = self.kinematics.get_end_effector_position(x_true)
+            state = v_double()
+            state[:] = x_true   
+            ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
+            ee_position = np.array([ee_position_arr[i] for i in xrange(len(ee_position_arr))])
             cart_coords.append(ee_position.tolist())
             mean_reward += reward            
         mean_reward /= self.num_simulation_runs                        
         return cart_coords, np.asscalar(mean_reward)
     
-    def check_collision(self, state, obstacles, kinematics):
+    def is_in_collision(self, state):
         """
         Is the given end effector position in collision with an obstacle?
         """              
-        p1 = self.kinematics.get_link_n_position(state, 1)            
-        p2 = self.kinematics.get_link_n_position(state, 2)            
-        p3 = self.kinematics.get_link_n_position(state, 3)
+        joint_angles = v_double()
+        joint_angles[:] = state
+        collision_structures = self.utils.createManipulatorCollisionStructures(joint_angles, self.kinematics)
         for obstacle in self.obstacles:
-            if obstacle.manipulator_collides([[np.array([0, 0]), p1], [p1, p2], [p2, p3]]):                                    
+            if obstacle.inCollision(collision_structures):                               
                 return True
         return False
     
@@ -205,13 +235,9 @@ class Simulator:
         m = self.get_random_joint_angles([0.0 for i in xrange(self.num_links)], M)        
         x_new = np.add(np.add(np.dot(A, x_dash), np.dot(B, u_dash)), np.dot(V, m))
         x_new = self.check_constraints(x_new)
-        p1 = self.kinematics.get_link_n_position(x_new, 1)            
-        p2 = self.kinematics.get_link_n_position(x_new, 2)            
-        p3 = self.kinematics.get_link_n_position(x_new, 3)
-        for obstacle in self.obstacles:
-            if obstacle.manipulator_collides([[np.array([0, 0]), p1], [p1, p2], [p2, p3]]):
-                print "COLLISION DETECTED"
-                return x_dash, True                   
+        if self.is_in_collision(x_new):
+            print "COLLISION DETECTED"
+            return x_dash, True 
         return x_new, False
     
     def get_random_joint_angles(self, mu, cov):        
