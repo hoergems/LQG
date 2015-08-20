@@ -19,7 +19,7 @@ BOOSTFLAGS= -lboost_system -lboost_program_options -lboost_python
 
 all: kin.so util.so obstacle.so clean	
 
-util.so: Kinematics.o Utils.o
+util.so: Terrain.o Obstacle.o Kinematics.o Utils.o
 	$(CC) $(INCLUDEFLAGS) -Wl,-rpath,$(PYLIBPATH) -shared $^ -o $@ $(LDFLAGS) $(BOOSTFLAGS) 
 	
 kin.so: Kinematics.o
