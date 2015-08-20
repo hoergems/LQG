@@ -55,10 +55,13 @@ class IKSolutionGenerator:
             possible_ik_solutions = ikmodel.manip.FindIKSolutions(IkParameterization(target,IkParameterization.Type.TranslationXY2D), False)            
             
         elif workspace_dimension == 3:            
-            solution = self.legIK(goal_position[0], goal_position[1], goal_position[2])
+            solution, unique = self.legIK(goal_position[0], goal_position[1], goal_position[2])
             sol1 = solution
-            sol2 = [solution[0], -solution[1], -solution[2]]
-            possible_ik_solutions = [sol1, sol2]
+            #if unique:
+            possible_ik_solutions = [sol1]
+            #else:
+            #    sol2 = [solution[0], -solution[1], -solution[2]]
+            #    possible_ik_solutions = [sol1, sol2]
             
         solutions = []
         n = 0
@@ -66,7 +69,8 @@ class IKSolutionGenerator:
             ik_solution = [possible_ik_solutions[i][k] for k in xrange(len(start_state))] 
             self.path_planner.set_start_and_goal(start_state, [ik_solution])           
             path = self.path_planner.plan_paths(1, 0, self.verbose)
-            if len(path[0]) != 0:                
+            if len(path[0]) != 0:
+                print "SOLUTION FOUND"                
                 solutions.append(path[0][0][-1])                
             n += 1
         self.path_planner = None
@@ -89,21 +93,27 @@ class IKSolutionGenerator:
         b = -2.0 * links[1] * x_true        
         alpha2 = np.arccos(a / b)
         if np.isnan(alpha2):
-            rospy.logerr("a " + str(a))
-            rospy.logerr("b " + str(b))
+            print "NO SOLUTION"
+            return [], True
         alpha3 = alpha1 + alpha2 - (np.pi / 2.0)
         beta = np.arccos((np.square(x_true) - np.square(links[2]) - np.square(links[1])) / (-2.0 * links[2] * links[1]))        
         
-        angles.append(alpha3)
-        angles.append(-1.0 * (np.pi - beta))
-        '''else:
-            angles.append(-1.0 * alpha3) 
-            angles.append(np.pi - beta)'''
+        if z < 0:
+            angles.append(-alpha3)
+            angles.append(np.pi - beta)
+        else:
+            angles.append(alpha3)
+            angles.append(-(np.pi - beta))
+        
         for angle in angles:
             if np.isnan(angle):
                 print "ANGLE IS NAN"
-                return []                
-        return angles
+                return [], True
+        if ((angles[1] > 0 and angles[2] < 0) or
+            (angles[1] < 0 and angles[2] > 0)):
+            return angles, False
+                        
+        return angles, True
     
 if __name__ == "__main__":
     IKSolutionGenerator()

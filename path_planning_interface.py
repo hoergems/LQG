@@ -32,7 +32,7 @@ class PathPlanningInterface:
         
     def set_start_and_goal(self, start_state, goal_states):        
         self.start_state = start_state
-        self.goal_states = goal_states        
+        self.goal_states = goal_states
         
     def plan_paths(self, num, sim_run, verbose):        
         jobs = collections.deque()        

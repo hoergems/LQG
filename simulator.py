@@ -115,7 +115,7 @@ class Simulator:
         terminal_state_reached = False
         Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs))       
         if self.verbose:
-            print "Executing for " + str(n_steps) + " steps"
+            print "Executing for " + str(n_steps) + " steps"        
         for i in xrange(n_steps):                        
             if not (terminal_state_reached and self.stop_when_terminal):
                 u_dash = np.dot(Ls[i + 1], x_tilde)        
@@ -129,7 +129,7 @@ class Simulator:
                 state = v_double()
                 state[:] = x_true   
                 ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
-                ee_position = np.array([ee_position_arr[i] for i in xrange(len(ee_position_arr))])
+                ee_position = np.array([ee_position_arr[j] for j in xrange(len(ee_position_arr))])
                 print "ee_position " + str(ee_position)
                 if self.is_terminal(ee_position):
                     terminal_state_reached = True                        
@@ -139,7 +139,7 @@ class Simulator:
                 z_t = self.get_observation(x_true, self.H, self.N, self.W)
                 z_dash_t = z_t - zs[i]
                 x_tilde_dash_t, P_dash = kalman.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
-                x_tilde, P_t = kalman.kalman_update(x_tilde_dash_t, z_dash_t, self.H, P_dash, self.W, self.N, self.num_links)
+                x_tilde, P_t = kalman.kalman_update(x_tilde_dash_t, z_dash_t, self.H, P_dash, self.W, self.N, self.num_links)               
                 x_estimate_new = self.check_constraints(x_tilde + xs[i + 1])
                 
                 if not self.is_in_collision(x_estimate_new):
