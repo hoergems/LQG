@@ -35,11 +35,12 @@ num_bins: 201
 # The minimum joint state covariance
 min_covariance: 0.002
 
+
 # The maximum joint state covariance
 max_covariance: 0.002
 
 # The number of covariance steps
-covariance_steps: 2
+covariance_steps: 1
 
 # The observation covariance
 observation_covariance: 0.0001
