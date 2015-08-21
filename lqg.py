@@ -4,6 +4,8 @@ import os
 import glob
 import sys
 import util
+import logging
+import scipy
 from serializer import Serializer
 from obstacle import *
 import kalman as kalman
@@ -27,6 +29,11 @@ class LQG:
         config = serializer.read_config("config.yaml")
         self.set_params(config) 
         
+        logging_level = logging.WARN
+        if config['verbose']:
+            logging_level = logging.DEBUG
+        logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)
+        
         """ Load the obstacles """ 
         environment = serializer.load_environment(file="env.xml", path="environment")       
         obstacles = []
@@ -45,8 +52,7 @@ class LQG:
                            self.max_velocity, 
                            self.delta_t, 
                            self.use_linear_path, 
-                           self.joint_constraints, 
-                           self.verbose)
+                           self.joint_constraints)
         #self.path_planning_interface.setup(obstacles, self.num_links, self.max_velocity, self.delta_t, self.use_linear_path, self.joint_constraints, config['verbose'])
         path_planner.set_start_and_goal(self.theta_0, goal_states)      
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
@@ -70,7 +76,7 @@ class LQG:
                         zs.append([path[j][2 * self.num_links + i] for i in xrange(self.num_links)])
                     paths.append([xs, us, zs])
             else:
-                paths = path_planner.plan_paths(self.num_paths, 0, False)                   
+                paths = path_planner.plan_paths(self.num_paths, 0)                   
                 serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path=dir)               
             
             
@@ -80,7 +86,7 @@ class LQG:
                                        
             cart_coords = []  
             best_paths = []
-            mean_rewards = []          
+            all_rewards = []         
             for j in xrange(len(m_covs)):
                 print "Evaluating covariance " + str(m_covs[j])
                 """
@@ -97,8 +103,7 @@ class LQG:
                                      self.num_links,
                                      config['workspace_dimension'], 
                                      self.sample_size, 
-                                     obstacles, 
-                                     config['verbose'])  
+                                     obstacles)  
                 xs, us, zs = path_evaluator.evaluate_paths(paths)
                                 
                 best_paths.append([[xs[i] for i in xrange(len(xs))], 
@@ -112,17 +117,27 @@ class LQG:
                                   self.num_links, 
                                   config['workspace_dimension'], 
                                   self.joint_constraints)
-                sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal, config['verbose'])           
-                cartesian_coords, mean_reward = sim.simulate(xs, us, zs, j)
+                sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)           
+                cartesian_coords, rewards = sim.simulate(xs, us, zs, j)
                                 
                 cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])                
                 emds.append(calc_EMD(cartesian_coords, self.num_bins))
-                mean_rewards.append(mean_reward)            
+                all_rewards.append([np.asscalar(rewards[k]) for k in xrange(len(rewards))])            
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
             serializer.save_paths(best_paths, 'best_paths.yaml', True, path=dir)
             serializer.save_cartesian_coords(cart_coords, path=dir, filename="cartesian_coords_LQG.yaml")            
-            serializer.save_stats(stats, path=dir)            
-            serializer.save_rewards(mean_rewards, path=dir)
+            serializer.save_stats(stats, path=dir) 
+            
+            mean_rewards = []
+            variances = []
+            for i in xrange(len(m_covs)):
+                n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(all_rewards[i]))
+                mean_rewards.append(np.asscalar(mean))
+                variances.append(np.asscalar(var))
+                       
+            serializer.save_rewards(all_rewards, path=dir, filename="rewards_lqg.yaml")
+            serializer.save_rewards(mean_rewards, path=dir, filename="mean_rewards_lqg.yaml")
+            serializer.save_rewards(variances, path=dir, filename="sample_variances_lqg.yaml")
             cmd = "cp config.yaml " + dir           
             os.system(cmd)
             
@@ -148,8 +163,7 @@ class LQG:
                                     self.delta_t,
                                     self.joint_constraints,
                                     model_file,
-                                    "environment/env.xml",
-                                    self.verbose)
+                                    "environment/env.xml")
         solutions = ik_solution_generator.generate(self.theta_0, self.goal_position, self.workspace_dimension)
         print "solutions " + str(solutions)
         
@@ -208,7 +222,7 @@ class LQG:
         self.joint_constraints = [-config['joint_constraint'], config['joint_constraint']]
         self.sample_size = config['sample_size']  
         self.workspace_dimension = config['workspace_dimension'] 
-        self.verbose = config['verbose']     
+            
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

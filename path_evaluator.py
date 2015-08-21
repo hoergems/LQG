@@ -6,6 +6,7 @@ from util import *
 from multiprocessing import Process, Queue, cpu_count
 import collections
 import time
+import logging
 from threading import Lock
 
 class PathEvaluator:
@@ -16,8 +17,7 @@ class PathEvaluator:
               num_links, 
               workspace_dimension, 
               sample_size, 
-              obstacles, 
-              verbose):        
+              obstacles):        
         self.A = A
         self.B = B
         self.C = C
@@ -30,9 +30,7 @@ class PathEvaluator:
         self.num_links = num_links
         self.obstacles = obstacles
         self.sample_size = sample_size
-        #self.num_cores = cpu_count() - 1
-        self.num_cores = 2
-        self.verbose = verbose
+        self.num_cores = cpu_count() - 1
         self.w1 = 1.0
         self.w2 = 1.0
         self.mutex = Lock()
@@ -99,9 +97,8 @@ class PathEvaluator:
         jobs = collections.deque() 
         eval_queue = Queue()
         evaluated_paths = []
-        for i in xrange(len(paths)):
-            if self.verbose:
-                print "Evaluate path " + str(i)
+        for i in xrange(len(paths)):            
+            logging.info("PathEvaluator: Evaluate path " + str(i))
             p = Process(target=self.evaluate, args=(i, eval_queue, paths[i], horizon,))
             p.start()
             jobs.append(p)           
@@ -198,21 +195,16 @@ class PathEvaluator:
             collsion_sum = 0.0
         else:
             collision_sum = sum(collision_probs) / float(horizon_L)
-        tr = np.trace(EE_covariance)
-        if self.verbose:
-            with self.mutex:
-                print "========================================"
-                print "collision sum: " + str(collision_sum)            
-                print "trace: " + str(tr)
-                print "========================================"
+        tr = np.trace(EE_covariance)        
+        logging.info("========================================")
+        logging.info("PathEvaluator: collision sum for path " + 
+                     str(index) + 
+                     " is " + 
+                     str(collision_sum))            
+        logging.info("PathEvaluator: Trace of end-effector covariance matrix is " + str(tr))
+        logging.info("========================================")
         objective_p = [collision_sum, tr]
         eval_queue.put((objective_p, path))
-        '''if objective_p < min_objective:
-            min_objective = objective_p
-            best_path = (paths[l][0], paths[l][1], paths[l][2])        
-        return best_path'''
-    
-    
         
 
 if __name__ == "__main__":

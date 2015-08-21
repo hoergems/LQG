@@ -9,12 +9,13 @@ from gen_ik_solution import *
 import json
 import time
 import numpy as np
+import logging
 
 class IKSolutionGenerator:
     def __init__(self):
         self.serializer = Serializer()
     
-    def setup(self, num_links, workspace_dimension, obstacles, max_velocity, delta_t, joint_constraints, robot_file, environment_file, verbose_rrt):
+    def setup(self, num_links, workspace_dimension, obstacles, max_velocity, delta_t, joint_constraints, robot_file, environment_file):
         """
         Generate the obstacles
         """
@@ -25,7 +26,7 @@ class IKSolutionGenerator:
             print obstacle
             obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))
         self.path_planner = PathPlanningInterface()
-        self.path_planner.setup(num_links, workspace_dimension, obstacles, max_velocity, delta_t, False, joint_constraints, verbose_rrt)
+        self.path_planner.setup(num_links, workspace_dimension, obstacles, max_velocity, delta_t, False, joint_constraints)
         
         self.env = openravepy.Environment()
         self.env.StopSimulation()
@@ -33,9 +34,7 @@ class IKSolutionGenerator:
         self.env.Load(environment_file)
         
         self.robot = self.env.GetRobots()[0]
-        self.robot.SetActiveManipulator("arm") 
-        
-        self.verbose = verbose_rrt         
+        self.robot.SetActiveManipulator("arm")   
 
     def generate(self, start_state, goal_position, workspace_dimension):        
         possible_ik_solutions = []        
@@ -68,7 +67,7 @@ class IKSolutionGenerator:
         for i in xrange(len(possible_ik_solutions)):            
             ik_solution = [possible_ik_solutions[i][k] for k in xrange(len(start_state))] 
             self.path_planner.set_start_and_goal(start_state, [ik_solution])           
-            path = self.path_planner.plan_paths(1, 0, self.verbose)
+            path = self.path_planner.plan_paths(1, 0)
             if len(path[0]) != 0:
                 print "SOLUTION FOUND"                
                 solutions.append(path[0][0][-1])                

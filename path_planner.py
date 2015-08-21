@@ -2,6 +2,7 @@ import numpy as np
 import plot as Plot
 import copy
 import time
+import logging
 from ompl import base as ob
 from ompl.util import noOutputHandler, restorePreviousOutputHandler
 from ompl import geometric as og
@@ -19,8 +20,7 @@ class PathPlanner:
                    delta_t, 
                    use_linear_path, 
                    sim_run, 
-                   joint_constraints, 
-                   verbose_rrt,
+                   joint_constraints,                   
                    goal_states=[]):        
         self.space_dimension = space_dimension
         self.workspace_dimension = workspace_dimension        
@@ -29,8 +29,8 @@ class PathPlanner:
         self.use_linear_path = use_linear_path
         self.sim_run = sim_run
         self.joint_constraints = joint_constraints
-        self.goal_states = goal_states
-        if not verbose_rrt:
+        self.goal_states = goal_states        
+        if logging.getLogger().getEffectiveLevel() == logging.WARN:
             noOutputHandler()
         
     def set_start_state(self, start_state):
@@ -46,7 +46,7 @@ class PathPlanner:
             path_collides = self.path_collides(path)
         if path_collides: 
             if not self.motion_validator.isValid(self.start_state):
-                print "Start or goal state not valid!"
+                logging.warn("PathPlanner: Start or goal state not valid. Skipping")
                 return [], [], []            
             if len(self.goal_states) == 0:
                 gs = ob.State(self.si.getStateSpace())
@@ -65,26 +65,24 @@ class PathPlanner:
             start_time = time.time()            
             while not self.problem_definition.hasSolution():                
                 self.planner.solve(10.0)
-                delta = time.time() - start_time
-                print "delta " + str(delta)
+                delta = time.time() - start_time                
                 if delta > 1.0:
                     restorePreviousOutputHandler()
                 if delta > 3.0:
-                    print "returning NONE"
+                    logging.warn("PathPlanner: Maximum allowed planning time exceeded. Aborting")
                     xs = []
                     us = []
                     zs = []
-                    return xs, us, zs         
+                    return xs, us, zs 
+            logging.info("PathPlanner: Finished planning. Planning time was " + 
+                         str(time.time() - start_time) +
+                         " seconds")        
             path = []
                 
             if self.problem_definition.hasSolution():                                
                 solution_path = self.problem_definition.getSolutionPath()
-                states = solution_path.getStates()
-                print "len solution path " + str(len(states))                
-                path = [np.array([state[i] for i in xrange(self.space.getDimension())]) for state in states]
-                #print "path " + str(path)
-            else:
-                print "no solution"            
+                states = solution_path.getStates()                          
+                path = [np.array([state[i] for i in xrange(self.space.getDimension())]) for state in states]       
         return self._augment_path(path)
     
     

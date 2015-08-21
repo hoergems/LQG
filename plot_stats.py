@@ -24,7 +24,8 @@ class PlotStats:
         print "plotting average distance to goal"
         self.plot_average_dist_to_goal(serializer, dir=dir)
         print "plotting mean rewards"
-        self.plot_mean_rewards(serializer, dir=dir, show_legend=True)        
+        self.plot_rewards(serializer, dir=dir, show_legend=True)
+        self.plot_sample_variances(serializer, dir=dir, show_legend=True)        
         print "plotting mean planning times"
         self.plot_mean_planning_times(serializer, dir=dir) 
         cart_coords = serializer.load_cartesian_coords(dir, "cartesian_coords_" + algorithm + ".yaml")
@@ -120,29 +121,68 @@ class PlotStats:
                             show_legend=False,
                             save=self.save,
                             filename=dir + "/avg_distance.png")
-            
-    def plot_mean_rewards(self, serializer, dir="stats", show_legend=False):        
+        
+    def plot_sample_variances(self, serializer, dir="stats", show_legend=False):
         stats = serializer.load_stats('stats.yaml', path=dir)
         m_cov = stats['m_cov']
-        sets = []
+        sample_variances_sets = []
         labels = []
-        mean_rewards = []
-        files = glob.glob(os.path.join(os.path.join(dir, "rewards*")))
+        sample_variances = []
+        files = glob.glob(os.path.join(os.path.join(dir, "sample_variances*.yaml")))
         for file in sorted(files):
             file_str = file
             try:
                 file_str = file.split("/")[-1].split(".")[0]
                 #file_str = file.split("/")[1].split(".")[0].split("_")[1]                
             except Exception as e:
-                print e
-                
-                   
-            #mean_rewards = serializer.load_stats('rewards.yaml', path="stats")
+                print e   
+            
+            sample_variances.append(serializer.load_stats(file))            
+            data = []
+            for k in xrange(len(m_cov)):
+                data.append(np.array([m_cov[k], sample_variances[-1][k]]))
+            sample_variances_sets.append(np.array(data))
+            label_string = ""
+            for i in xrange(len(file_str.split("_"))):
+                if i != 0:
+                    label_string += " " + file_str.split("_")[i]
+                else:
+                    label_string += file_str.split("_")[i]
+            labels.append(label_string)        
+        min_m = [min(m) for m in sample_variances]
+        max_m = [max(m) for m in sample_variances]        
+        Plot.plot_2d_n_sets(sample_variances_sets,
+                            labels=labels,
+                            xlabel="joint covariance",
+                            ylabel="sample variance",
+                            x_range=[m_cov[0], m_cov[-1]],
+                            y_range=[min(min_m), max(max_m) * 1.05],
+                            show_legend=show_legend,
+                            save=self.save,
+                            filename=dir + "/sample_variance.pdf")
+        
+            
+    def plot_rewards(self, serializer, dir="stats", show_legend=False):        
+        stats = serializer.load_stats('stats.yaml', path=dir)
+        m_cov = stats['m_cov']
+        mean_rewards_sets = []
+        labels = []
+        mean_rewards = []
+        
+        files = glob.glob(os.path.join(os.path.join(dir, "mean_rewards*.yaml")))
+        for file in sorted(files):
+            file_str = file
+            try:
+                file_str = file.split("/")[-1].split(".")[0]
+                #file_str = file.split("/")[1].split(".")[0].split("_")[1]                
+            except Exception as e:
+                print e   
+            
             mean_rewards.append(serializer.load_stats(file))            
             data = []
             for k in xrange(len(m_cov)):
                 data.append(np.array([m_cov[k], mean_rewards[-1][k]]))
-            sets.append(np.array(data))
+            mean_rewards_sets.append(np.array(data))
             label_string = ""
             for i in xrange(len(file_str.split("_"))):
                 if i != 0:
@@ -152,7 +192,7 @@ class PlotStats:
             labels.append(label_string)        
         min_m = [min(m) for m in mean_rewards]
         max_m = [max(m) for m in mean_rewards]        
-        Plot.plot_2d_n_sets(sets,
+        Plot.plot_2d_n_sets(mean_rewards_sets,
                             labels=labels,
                             xlabel="joint covariance",
                             ylabel="mean reward",

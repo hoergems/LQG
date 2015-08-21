@@ -1,5 +1,6 @@
 import numpy as np
 import kalman as kalman
+import logging
 from scipy.stats import multivariate_normal
 from kin import *
 from util import *
@@ -46,7 +47,7 @@ class Simulator:
         self.illegal_move_penalty = illegal_move_penalty
         self.exit_reward = exit_reward
     
-    def setup_simulator(self, num_simulation_runs, stop_when_terminal, verbose): 
+    def setup_simulator(self, num_simulation_runs, stop_when_terminal): 
         links = v2_double()
         axis = v2_int()
         
@@ -71,7 +72,6 @@ class Simulator:
                
         self.num_simulation_runs = num_simulation_runs        
         self.stop_when_terminal = stop_when_terminal
-        self.verbose = verbose
         
     def simulate_step(self, 
                       xs, us, zs, 
@@ -113,9 +113,8 @@ class Simulator:
                          current_step,
                          n_steps):
         terminal_state_reached = False
-        Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs))       
-        if self.verbose:
-            print "Executing for " + str(n_steps) + " steps"        
+        Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs))
+        logging.info("Simulator: Executing for " + str(n_steps) + " steps")        
         for i in xrange(n_steps):                        
             if not (terminal_state_reached and self.stop_when_terminal):
                 u_dash = np.dot(Ls[i + 1], x_tilde)        
@@ -130,11 +129,11 @@ class Simulator:
                 state[:] = x_true   
                 ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
                 ee_position = np.array([ee_position_arr[j] for j in xrange(len(ee_position_arr))])
-                print "ee_position " + str(ee_position)
+                logging.info("Simulator: Current end-effector position is " + str(ee_position))
                 if self.is_terminal(ee_position):
                     terminal_state_reached = True                        
                     total_reward += discount * self.exit_reward                        
-                    print "Terminal state reached: reward = " + str(total_reward)                                  
+                    logging.info("Terminal state reached: reward = " + str(total_reward))                                  
                     
                 z_t = self.get_observation(x_true, self.H, self.N, self.W)
                 z_dash_t = z_t - zs[i]
@@ -160,9 +159,9 @@ class Simulator:
     def simulate(self, xs, us, zs, run):
         Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)
         cart_coords = []
-        mean_reward = 0.0
+        rewards = []
         for j in xrange(self.num_simulation_runs):
-            print "simulation run " + str(j) + " for run " + str(run) 
+            logging.info("Simulator: Execute simulation run " + str(j) + " for run " + str(run)) 
             x_true = xs[0]
             #x_tilde = xs[0]
             x_tilde = np.array([0.0 for i in xrange(self.num_links)])        
@@ -210,9 +209,8 @@ class Simulator:
             ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
             ee_position = np.array([ee_position_arr[i] for i in xrange(len(ee_position_arr))])
             cart_coords.append(ee_position.tolist())
-            mean_reward += reward            
-        mean_reward /= self.num_simulation_runs                        
-        return cart_coords, np.asscalar(mean_reward)
+            rewards.append(reward)
+        return cart_coords, rewards
     
     def is_in_collision(self, state):
         """
@@ -236,7 +234,7 @@ class Simulator:
         x_new = np.add(np.add(np.dot(A, x_dash), np.dot(B, u_dash)), np.dot(V, m))
         x_new = self.check_constraints(x_new)
         if self.is_in_collision(x_new):
-            print "COLLISION DETECTED"
+            logging.warn("Simulator: Collision detected. Setting state estimate to the previous state")
             return x_dash, True 
         return x_new, False
     

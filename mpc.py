@@ -12,6 +12,8 @@ import numpy as np
 import os
 import sys
 import time
+import scipy
+import logging
 from xml.dom import minidom
 from gen_ik_solution import *
 
@@ -21,7 +23,12 @@ class MPC:
         serializer = Serializer()
         self.utils = Utils()
         config = serializer.read_config("config_mpc.yaml")
-        self.set_params(config)        
+        self.set_params(config)
+        
+        logging_level = logging.WARN
+        if self.verbose:
+            logging_level = logging.DEBUG
+        logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)        
         
         dir = "stats/mpc" + str(self.num_execution_steps)
         if not os.path.exists(dir):
@@ -37,8 +44,8 @@ class MPC:
         environment = serializer.load_environment(file="env.xml", path="environment")       
         obstacles = []
         terrain = Terrain("default", 0.0, 1.0, True)
-        for obstacle in environment:
-            print obstacle
+        logging.info("Loading obstacles")
+        for obstacle in environment:            
             obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain)) 
         
         """ Setup operations """
@@ -49,8 +56,7 @@ class MPC:
                                            self.max_velocity, 
                                            self.delta_t, 
                                            self.use_linear_path, 
-                                           self.joint_constraints, 
-                                           config['verbose'])
+                                           self.joint_constraints)
         
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
         self.goal_states = self.get_goal_states(serializer, obstacles)
@@ -58,16 +64,27 @@ class MPC:
         if self.check_positive_definite([C, D]):            
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
             emds = []
-            cartesian_coords, mean_rewards, total_rewards, sample_variances, emds, mean_planning_times = self.mpc(self.theta_0, m_covs, self.horizon, obstacles, config['verbose'])
+            cartesian_coords, rewards, emds, mean_planning_times = self.mpc(self.theta_0, m_covs, self.horizon, obstacles)
                        
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
             #serializer.save_paths(best_paths, 'best_paths.yaml', True, path="stats")
             serializer.save_cartesian_coords(cartesian_coords, path=dir, filename="cartesian_coords_mpc" + str(self.num_execution_steps) + ".yaml")            
-            serializer.save_stats(stats, path=dir)            
-            serializer.save_rewards(mean_rewards, path=dir)
+            serializer.save_stats(stats, path=dir)
             serializer.save_mean_planning_times(mean_planning_times, path=dir)
-            serializer.save_total_rewards(total_rewards, path=dir)
-            serializer.save_sample_variances(sample_variances, path=dir)
+            
+            reward_variances = []
+            mean_rewards = []
+            for i in xrange(len(m_covs)):
+                n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards[i]))
+                mean_rewards.append(np.asscalar(mean))
+                reward_variances.append(np.asscalar(var))
+            
+            serializer.save_rewards(rewards, path=dir, filename="rewards_mpc" + str(self.num_execution_steps) + ".yaml")    
+            serializer.save_rewards(mean_rewards, path=dir, filename="mean_rewards_mpc" + str(self.num_execution_steps) + ".yaml")
+            serializer.save_rewards(reward_variances, path=dir, filename="sample_variances_mpc" + str(self.num_execution_steps) + ".yaml")
+            serializer.save_rewards([np.asscalar(np.sqrt(reward_variances[i])) for i in xrange(len(reward_variances))],
+                                    path=dir,
+                                    filename="sample_standard_deviations_mpc" + str(self.num_execution_steps) + ".yaml")
             
             if not os.path.exists(dir + "/environment"):
                 os.makedirs(dir + "/environment") 
@@ -88,7 +105,7 @@ class MPC:
             obstacles.append(Obstacle(trans[0], trans[1], 2.0 * dim[0], 2.0 * dim[1]))        
         return obstacles                   
             
-    def mpc(self, initial_belief, m_covs, horizon, obstacles, verbose):
+    def mpc(self, initial_belief, m_covs, horizon, obstacles):
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
         cart_coords = []
         mean_rewards = []
@@ -98,7 +115,7 @@ class MPC:
         emds = []
         for j in xrange(len(m_covs)):            
             
-            print "Evaluating covariance " + str(m_covs[j])
+            logging.info("MPC: Evaluating covariance " + str(m_covs[j]))
             
             """
             The process noise covariance matrix
@@ -115,8 +132,7 @@ class MPC:
                                       self.num_links,
                                       self.workspace_dimension, 
                                       self.sample_size, 
-                                      obstacles, 
-                                      verbose)
+                                      obstacles)
             self.sim.setup_problem(A, B, C, D, H, V, W, M, N, 
                                    obstacles, 
                                    self.goal_position, 
@@ -124,7 +140,7 @@ class MPC:
                                    self.num_links,
                                    self.workspace_dimension, 
                                    self.joint_constraints)            
-            self.sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal, verbose)
+            self.sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
             
             mean_reward = 0.0
             cartesian_coords = []
@@ -132,7 +148,8 @@ class MPC:
             mean_planning_time = 0.0
             for k in xrange(self.num_simulation_runs):
                 #x_tilde = initial_belief               
-                
+                print "MPC: Joint covariance: " + str(m_covs[j])
+                print "MPC: simulation run " + str(k + 1)
                 x_true = initial_belief
                 x_estimate = initial_belief
                 total_reward = 0.0
@@ -141,22 +158,28 @@ class MPC:
                 terminal = False
                 planning_time = 0.0                
                 while current_step < self.max_num_steps and not terminal:
-                    t0 = time.time()
-                    print "gs " + str(self.goal_states)
+                    t0 = time.time()                    
                     self.path_planning_interface.set_start_and_goal(x_estimate, self.goal_states)
-                    paths = self.path_planning_interface.plan_paths(self.num_paths, 0, self.verbose)
+                    logging.info("MPC: Constructing " + str(self.num_paths) + " paths")
+                    paths = self.path_planning_interface.plan_paths(self.num_paths, 0)
                     if len(paths) == 0:
-                        print "unsolvable situation"
+                        logging.error("MPC: Couldn't find any paths from start state" + 
+                                      str(x_estimate) + 
+                                      " to goal states") 
+                                      
                         total_reward = np.array([-self.illegal_move_penalty])[0]
-                        current_step += 1
-                        print "break"                       
+                        current_step += 1                                             
                         break
-                    print "evaluate paths..."
+                    logging.info("MPC: Paths constructed. Evaluating them according the planning objective")
                     xs, us, zs = self.path_evaluator.evaluate_paths(paths, horizon=horizon)
                     
                     planning_time += time.time() - t0
-                    print "planning time: " + str(time.time() - t0)
-                    print "evaluation done. Average planning time: " + str(planning_time / (current_step + 1.0))
+                    logging.info("MPC: total planning time for step : " + 
+                                 str(current_step) +
+                                 " was " +
+                                 str(time.time() - t0) +
+                                 " seconds")
+                    logging.info("MPC: Average planning time was: " + str(planning_time / (current_step + 1.0)))
                     x_tilde = np.array([0.0 for i in xrange(self.num_links)])
                     
                     n_steps = self.num_execution_steps
@@ -165,8 +188,7 @@ class MPC:
                     if current_step + n_steps > self.max_num_steps:
                         n_steps = self.max_num_steps - current_step
                                           
-                    print "run for " + str(n_steps) + " steps" 
-                    print "current step " + str(current_step)                   
+                    logging.info("MPC: Execute best path for " + str(n_steps) + " steps")
                     x_true, x_tilde, x_estimate, P_t, current_step, total_reward, terminal = self.sim.simulate_n_steps(xs, us, zs, 
                                                                                                                        x_true, 
                                                                                                                        x_tilde,
@@ -175,13 +197,9 @@ class MPC:
                                                                                                                        total_reward,
                                                                                                                        current_step,
                                                                                                                        n_steps) 
-                    #x_estimate = x_tilde + xs[n_steps]
-                    print "m_cov: " + str(m_covs[j])
-                    print "run: " + str(k)
-                    print "step: " + str(current_step)
-                    if verbose:
-                        print "x_true " + str(x_true)
-                        print "x_estimate " + str(x_estimate)                
+                                        
+                    logging.info("MPC: Execution finished. True state is " + str(x_true))
+                    logging.info("MPC: Estimated state is " + str(x_estimate))                
                 total_reward_cov.append(np.asscalar(total_reward))
                 mean_reward += total_reward
                 mean_planning_time += (planning_time / current_step)
@@ -191,24 +209,19 @@ class MPC:
                 ee_position_vec = self.kinematics.getEndEffectorPosition(x_true_vec)
                 ee_position = np.array([ee_position_vec[i] for i in xrange(len(ee_position_vec))])
                 cartesian_coords.append(ee_position.tolist())
-                print "total_reward " + str(total_reward)
-            print "mean_reward " + str(mean_reward)
-            
-            """Calculate sample variance """
-            mean = sum(total_reward_cov) / len(total_reward_cov)
-            print "MEAN " + str(mean)            
-            variance = sum([np.square(total_reward_cov[i] - mean) for i in xrange(len(total_reward_cov))]) / len(total_reward_cov)
-            print "VARIANCE " + str(variance)
-            sample_variances.append(np.asscalar(variance))
+                logging.info("MPC: Done. total_reward is " + str(total_reward))
+            logging.info("MPC: Finished simulations for covariance value  " + 
+                         str(m_covs[j]) +
+                         ". Mean reward is " + 
+                         str(mean_reward))
             total_rewards.append(total_reward_cov)
             mean_reward /= self.num_simulation_runs            
             mean_rewards.append(np.asscalar(mean_reward))            
             mean_planning_time /= self.num_simulation_runs
             mean_planning_times.append(mean_planning_time)
             emds.append(calc_EMD(cartesian_coords, self.num_bins))
-            cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])
-        print "mean_rewards " + str(mean_rewards)        
-        return cart_coords, mean_rewards, total_rewards, sample_variances, emds, mean_planning_times
+            cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])            
+        return cart_coords, total_rewards, emds, mean_planning_times
             
     def problem_setup(self, delta_t, num_links):
         links = v2_double()
@@ -256,18 +269,9 @@ class MPC:
                                     self.delta_t,
                                     self.joint_constraints,
                                     model_file,
-                                    "environment/env.xml",
-                                    self.verbose)
-        solutions = ik_solution_generator.generate(self.theta_0, self.goal_position, self.workspace_dimension)
-        '''print "goal position " + str(self.goal_position)
-        print "solutions " + str(solutions)
-        vecs = [v_double() for i in xrange(len(solutions))]
-        for i in xrange(len(vecs)):
-            vecs[i][:] = solutions[i]
-            print "EE " + str([k for k in self.kinematics.getEndEffectorPosition(vecs[i])])
-        sleep'''
-        serializer.save_goal_states([solutions[i] for i in xrange(len(solutions))])
-        
+                                    "environment/env.xml")
+        solutions = ik_solution_generator.generate(self.theta_0, self.goal_position, self.workspace_dimension)        
+        serializer.save_goal_states([solutions[i] for i in xrange(len(solutions))])        
         return solutions
         
     def check_positive_definite(self, matrices):
@@ -275,7 +279,7 @@ class MPC:
             try:
                 np.linalg.cholesky(m)
             except:
-                print "Matrices are not positive definite. Fix that!"
+                logging.error("MPC: Matrices are not positive definite. Fix that!")
                 return False
         return True
          
@@ -303,7 +307,7 @@ class MPC:
         self.stop_when_terminal = config['stop_when_terminal']
         self.horizon = config['horizon']
         self.max_num_steps = config['max_num_steps']
-        self.verbose = config['verbose_rrt']
+        self.verbose = config['verbose']
         self.joint_constraints = [-config['joint_constraint'], config['joint_constraint']]
         self.sample_size = config['sample_size']  
         self.workspace_dimension = config['workspace_dimension']
@@ -319,6 +323,6 @@ if __name__ == "__main__":
         if "plot" in sys.argv[1]:
             MPC(True)
             sys.exit()
-        print "Unrecognized command line argument: " + str(sys.argv[1]) 
+        logging.error("Unrecognized command line argument: " + str(sys.argv[1])) 
         sys.exit()   
     MPC(False)

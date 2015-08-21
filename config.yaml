@@ -8,7 +8,7 @@ num_generated_paths: 10
 use_linear_path: False
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 1
+num_simulation_runs: 2
 
 # Number of links the manipulator consists of
 num_links: 3
@@ -40,7 +40,7 @@ min_covariance: 0.002
 max_covariance: 0.02
 
 # The number of covariance steps
-covariance_steps: 1
+covariance_steps: 2
 
 # The observation covariance
 observation_covariance: 0.0001

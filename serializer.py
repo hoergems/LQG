@@ -32,12 +32,14 @@ class Serializer:
         with open(os.path.join(path, "stats.yaml"), 'w') as f:
             f.write(yaml.dump(stats, default_flow_style=False))
             
-    def save_rewards(self, rewards, path=""):
+    def save_rewards(self, rewards, path="", filename=""):
         if not os.path.exists(path):
             os.makedirs(path)
-        for file in glob.glob(os.path.join(path, "rewards.yaml")):
+        if filename == "":
+            filename = "rewards.yaml"
+        for file in glob.glob(os.path.join(path, filename)):
             os.remove(file)
-        with open(os.path.join(path, "rewards.yaml"), 'w') as f:
+        with open(os.path.join(path, filename), 'w') as f:
             f.write(yaml.dump(rewards, default_flow_style=False))
             
     def save_avg_path_lengths(self, lengths, path=""):

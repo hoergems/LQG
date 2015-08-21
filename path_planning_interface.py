@@ -16,8 +16,7 @@ class PathPlanningInterface:
               max_velocity, 
               delta_t, 
               use_linear_path, 
-              joint_constraints, 
-              verbose):
+              joint_constraints):
         self.num_links = num_links
         self.workspace_dimension = workspace_dimension        
         self.num_cores = cpu_count()
@@ -27,26 +26,20 @@ class PathPlanningInterface:
         self.max_velocity = max_velocity
         self.delta_t = delta_t
         self.use_linear_path = use_linear_path
-        self.joint_constraints = joint_constraints        
-        self.verbose = verbose
+        self.joint_constraints = joint_constraints
         
     def set_start_and_goal(self, start_state, goal_states):        
         self.start_state = start_state
         self.goal_states = goal_states
         
-    def plan_paths(self, num, sim_run, verbose):        
+    def plan_paths(self, num, sim_run):        
         jobs = collections.deque()        
         path_queue = Queue()
-        paths = [] 
-        print "Generating paths..."
-        for i in xrange(num): 
-            if self.verbose: 
-                print "generating path " + str(i)
-            p = Process(target=self.construct_path, args=(self.obstacles, path_queue, sim_run, self.joint_constraints, verbose,))
-            #p = Process(target=self.construct_path2, args=(path_planner, path_queue,))
+        paths = []        
+        for i in xrange(num):
+            p = Process(target=self.construct_path, args=(self.obstacles, path_queue, sim_run, self.joint_constraints,))
             p.start()
-            jobs.append(p)           
-            
+            jobs.append(p)
             if len(jobs) == self.num_cores - 1 or i == num - 1:
                 if i == num - 1 and not len(jobs) == self.num_cores - 1:
                     while not path_queue.qsize() == num % (self.num_cores - 1):
@@ -71,7 +64,7 @@ class PathPlanningInterface:
         queue.put((xs, us, zs))
         return 
     
-    def construct_path(self, obstacles, queue, sim_run, joint_constraints, verbose):                
+    def construct_path(self, obstacles, queue, sim_run, joint_constraints,):                
         path_planner = PathPlanner()
         path_planner.set_params(self.num_links,
                                 self.workspace_dimension,                                 
@@ -79,8 +72,7 @@ class PathPlanningInterface:
                                 self.delta_t, 
                                 self.use_linear_path,
                                 sim_run, 
-                                joint_constraints,                               
-                                verbose,
+                                joint_constraints,
                                 goal_states=self.goal_states)
         path_planner.setup_ompl()
         path_planner.set_start_state(self.start_state)        
