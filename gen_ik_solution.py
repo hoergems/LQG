@@ -23,8 +23,8 @@ class IKSolutionGenerator:
         obstacles = []
         terrain = Terrain("default", 0.0, 1.0, True)
         for obstacle in environment:
-            print obstacle
-            obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))
+            print obstacle            
+            obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))        
         self.path_planner = PathPlanningInterface()
         self.path_planner.setup(num_links, workspace_dimension, obstacles, max_velocity, delta_t, False, joint_constraints)
         
@@ -64,11 +64,14 @@ class IKSolutionGenerator:
             
         solutions = []
         n = 0
-        for i in xrange(len(possible_ik_solutions)):            
+        logging.info("IKSolutionGenerator: " + str(len(possible_ik_solutions)) + " possible ik solutions found")
+        for i in xrange(len(possible_ik_solutions)):        
+            logging.info("IKSolutionGenerator: Checking ik solution " + str(i) + " for validity")            
             ik_solution = [possible_ik_solutions[i][k] for k in xrange(len(start_state))] 
             self.path_planner.set_start_and_goal(start_state, [ik_solution])           
-            path = self.path_planner.plan_paths(1, 0)
-            if len(path[0]) != 0:
+            path = self.path_planner.plan_paths(1, 0) 
+            print path           
+            if len(path) != 0:
                 print "SOLUTION FOUND"                
                 solutions.append(path[0][0][-1])                
             n += 1

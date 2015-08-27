@@ -145,22 +145,28 @@ class Serializer:
             print "No such file or directory: " + str(os.path.join(path, file))
             return []       
         return paths['paths']
-    
-    def save_goal_states(self, goal_states, path="", filename=None):        
-        if filename == None:
-            filename = "goal_states.yaml"
-        for file in glob.glob(os.path.join(path, filename)):
+        
+    def serialize_ik_solutions(self, ik_solutions):
+        for file in glob.glob('goalstates.txt'):
             os.remove(file)
-        with open(os.path.join(path, filename), 'w') as f:                
-            f.write(yaml.dump(goal_states, default_flow_style=False))
-            
-    def load_goal_states(self, file, path=""):
-        try:        
-            gs = yaml.load(open(os.path.join(path, file), 'r'), yaml.CLoader)
-            return gs
-        except IOError:
-            print "No such file or directory: " + str(os.path.join(path, file))
-            return []       
+        with open('goalstates.txt', 'w') as f:
+            for i in xrange(len(ik_solutions)):
+                for j in xrange(len(ik_solutions[i])):
+                    f.write(str(ik_solutions[i][j]) + " ")
+                if not i == len(ik_solutions) - 1:
+                    f.write("\n")
+                    
+    def deserialize_joint_angles(self, path="", file=""):
+        float_arrs = []
+        if not file == "":
+            with open(os.path.join(path, file), 'r') as f:
+                for line in f.readlines():                    
+                    arr = line.split(" ")
+                    print arr                    
+                    float_arr = [float(arr[k]) for k in xrange(0, len(arr) - 1)]
+                    float_arrs.append(float_arr)
+            return float_arrs
+        return []      
         
     
     def load_environment(self, file="env.xml", path="stats/environment"):

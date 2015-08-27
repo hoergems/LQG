@@ -19,8 +19,8 @@ class PathPlanningInterface:
               joint_constraints):
         self.num_links = num_links
         self.workspace_dimension = workspace_dimension        
-        self.num_cores = cpu_count()
-        #self.num_cores = 2       
+        #self.num_cores = cpu_count()
+        self.num_cores = 2       
         self.obstacles = obstacles
         
         self.max_velocity = max_velocity
@@ -36,7 +36,7 @@ class PathPlanningInterface:
         jobs = collections.deque()        
         path_queue = Queue()
         paths = []        
-        for i in xrange(num):
+        for i in xrange(num):            
             p = Process(target=self.construct_path, args=(self.obstacles, path_queue, sim_run, self.joint_constraints,))
             p.start()
             jobs.append(p)
@@ -51,10 +51,10 @@ class PathPlanningInterface:
                 q_size = path_queue.qsize()
                 for j in xrange(q_size):
                     p_e = path_queue.get()
-                    if not len(p_e) == 0:                         
+                    if not len(p_e[0]) == 0:                         
                         paths.append([[p_e[0][i].tolist() for i in xrange(len(p_e[0]))], 
                                       [p_e[1][i].tolist() for i in xrange(len(p_e[0]))], 
-                                      [p_e[2][i].tolist() for i in xrange(len(p_e[0]))]])      
+                                      [p_e[2][i].tolist() for i in xrange(len(p_e[0]))]])          
         return paths
     
     def construct_path2(self, path_planner, queue):
@@ -65,7 +65,7 @@ class PathPlanningInterface:
         return 
     
     def construct_path(self, obstacles, queue, sim_run, joint_constraints,):                
-        path_planner = PathPlanner()
+        path_planner = PathPlanner()        
         path_planner.set_params(self.num_links,
                                 self.workspace_dimension,                                 
                                 self.max_velocity, 
@@ -78,8 +78,9 @@ class PathPlanningInterface:
         path_planner.set_start_state(self.start_state)        
         path_planner.set_obstacles(obstacles)             
         xs, us, zs = path_planner.plan_path()
-        if len(xs) == 0:
-            return        
+        '''if len(xs) == 0:
+            print "RETURNING"
+            return '''       
         queue.put((xs, us, zs))
         return   
     

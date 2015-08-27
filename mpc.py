@@ -14,6 +14,9 @@ import sys
 import time
 import scipy
 import logging
+import shutil
+import difflib
+from difflib import Differ
 from xml.dom import minidom
 from gen_ik_solution import *
 
@@ -170,7 +173,7 @@ class MPC:
                         total_reward = np.array([-self.illegal_move_penalty])[0]
                         current_step += 1                                             
                         break
-                    logging.info("MPC: Paths constructed. Evaluating them according the planning objective")
+                    logging.info("MPC: " + str(len(paths)) + " Paths constructed. Evaluating them according the planning objective")
                     xs, us, zs = self.path_evaluator.evaluate_paths(paths, horizon=horizon)
                     
                     planning_time += time.time() - t0
@@ -255,24 +258,73 @@ class MPC:
         D = 2.0 * np.identity(num_links)
         return A, H, B, V, W, C, D
     
+    def compareEnvironmentToTmpFiles(self, problem):
+        if not os.path.exists("tmp/" + problem):
+            os.makedirs("tmp/" + problem)            
+            return False
+        
+        if not (os.path.exists('tmp/' + problem + '/env.xml') and
+                os.path.exists('tmp/' + problem + '/config_mpc.yaml')):            
+            return False
+        
+        with open("environment/env.xml", 'r') as f1, open('tmp/' + problem + '/env.xml', 'r') as f2:
+            missing_from_b = [
+                diff[2:] for diff in Differ().compare(f1.readlines(), f2.readlines())
+                if diff.startswith('-')
+            ]
+            if len(missing_from_b) != 0:                
+                return False
+            
+        
+        with open('config_mpc.yaml', 'r') as f1, open('tmp/' + problem + '/config_mpc.yaml', 'r') as f2:
+            missing_from_b = [
+                diff[2:] for diff in Differ().compare(f1.readlines(), f2.readlines())
+                if diff.startswith('-')
+            ]
+            
+            for i in xrange(len(missing_from_b)):
+                if ("num_links" in missing_from_b[i] or
+                    "workspace_dimensions" in missing_from_b[i] or
+                    "goal_position" in missing_from_b[i] or
+                    "goal_radius" in missing_from_b[i]):
+                    return False
+        
+        """ If same, use existing goalstates """
+        try:        
+            shutil.copy2('tmp/' + problem + '/goalstates.txt', "goalstates.txt")
+        except:
+            return False
+        return True
+    
+    def copyToTmp(self, problem):
+        shutil.copy2("environment/env.xml", 'tmp/' + problem + '/env.xml')
+        shutil.copy2("goalstates.txt", 'tmp/' + problem + '/goalstates.txt')
+        shutil.copy2('config_mpc.yaml', 'tmp/' + problem + '/config_mpc.yaml')
+    
     def get_goal_states(self, serializer, obstacles):
         #goal_states = [np.array(gs) for gs in serializer.load_goal_states("goal_states.yaml")]
         #return goal_states
-        ik_solution_generator = IKSolutionGenerator()
-        model_file = "model/model.xml"
-        if self.workspace_dimension == 3:
-            model_file = "model/model3D.xml"
-        ik_solution_generator.setup(self.num_links,
-                                    self.workspace_dimension,
-                                    obstacles,
-                                    self.max_velocity,
-                                    self.delta_t,
-                                    self.joint_constraints,
-                                    model_file,
-                                    "environment/env.xml")
-        solutions = ik_solution_generator.generate(self.theta_0, self.goal_position, self.workspace_dimension)        
-        serializer.save_goal_states([solutions[i] for i in xrange(len(solutions))])        
-        return solutions
+        if not self.compareEnvironmentToTmpFiles("mpc"):                     
+            ik_solution_generator = IKSolutionGenerator()
+            model_file = "model/model.xml"
+            if self.workspace_dimension == 3:
+                model_file = "model/model3D.xml"
+            ik_solution_generator.setup(self.num_links,
+                                        self.workspace_dimension,
+                                        obstacles,
+                                        self.max_velocity,
+                                        self.delta_t,
+                                        self.joint_constraints,
+                                        model_file,
+                                        "environment/env.xml")
+            ik_solutions = ik_solution_generator.generate(self.theta_0, self.goal_position, self.workspace_dimension)
+            
+            serializer.serialize_ik_solutions([ik_solutions[i] for i in xrange(len(ik_solutions))])
+            self.copyToTmp("mpc")    
+        else:
+            ik_solutions = serializer.deserialize_joint_angles(path="", file="goalstates.txt") 
+        print "iksol " + str(ik_solutions)       
+        return ik_solutions
         
     def check_positive_definite(self, matrices):
         for m in matrices:

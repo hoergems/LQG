@@ -29,9 +29,10 @@ class PathPlanner:
         self.use_linear_path = use_linear_path
         self.sim_run = sim_run
         self.joint_constraints = joint_constraints
-        self.goal_states = goal_states        
+        self.goal_states = goal_states              
         if logging.getLogger().getEffectiveLevel() == logging.WARN:
-            noOutputHandler()
+            #noOutputHandler()
+            pass
         
     def set_start_state(self, start_state):
         self.start_state = ob.State(self.si.getStateSpace())
@@ -42,38 +43,43 @@ class PathPlanner:
         self.problem_definition.clearSolutionPaths()
         path_collides = True 
         if self.use_linear_path and not goal_state == None:       
-            path = self.linear_path(self.start_state, self.goal_state)
+            path = self.linear_path(self.start_state, goal_state)
             path_collides = self.path_collides(path)
-        if path_collides: 
+        if path_collides:
             if not self.motion_validator.isValid(self.start_state):
                 logging.warn("PathPlanner: Start or goal state not valid. Skipping")
                 return [], [], []            
-            if len(self.goal_states) == 0:
+            if len(self.goal_states) == 0:                
                 gs = ob.State(self.si.getStateSpace())
                 for i in xrange(self.si.getStateSpace().getDimension()):
                     gs[i] = goal_state[i]
                 self.problem_definition.setStartAndGoalStates(self.start_state, gs)
-            else:                
+            else:
+                gs = []
+                for goal_state in self.goal_states:
+                    if self.motion_validator.isValid(goal_state):
+                        gs.append(goal_state)
+                if len(gs) == 0:
+                    return [], [], []       
                 self.problem_definition.addStartState(self.start_state)
-                self.problem_definition.setGoal(GoalRegion(self.si, self.goal_states))
-            self.planner = og.RRTConnect(self.si)
+                self.problem_definition.setGoal(GoalRegion(self.si, gs))
+            self.planner = og.RRTConnect(self.si)            
             self.planner.setRange(np.sqrt(self.si.getStateSpace().getDimension() * np.square(self.delta_t * self.max_velocity)))        
             self.planner.setProblemDefinition(self.problem_definition)
             self.planner.setup()
             
             
             start_time = time.time()            
-            while not self.problem_definition.hasSolution():                
+            while not self.problem_definition.hasSolution():
+                print "range " + str(self.planner.getRange())                
                 self.planner.solve(10.0)
-                delta = time.time() - start_time                
-                if delta > 1.0:
-                    restorePreviousOutputHandler()
-                if delta > 3.0:
+                delta = time.time() - start_time
+                '''if delta > 2.0:
                     logging.warn("PathPlanner: Maximum allowed planning time exceeded. Aborting")
                     xs = []
                     us = []
                     zs = []
-                    return xs, us, zs 
+                    return xs, us, zs''' 
             logging.info("PathPlanner: Finished planning. Planning time was " + 
                          str(time.time() - start_time) +
                          " seconds")        

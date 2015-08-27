@@ -31,6 +31,7 @@ class PathEvaluator:
         self.obstacles = obstacles
         self.sample_size = sample_size
         self.num_cores = cpu_count() - 1
+        #self.num_cores = 2
         self.w1 = 1.0
         self.w2 = 1.0
         self.mutex = Lock()
@@ -97,15 +98,20 @@ class PathEvaluator:
         jobs = collections.deque() 
         eval_queue = Queue()
         evaluated_paths = []
-        for i in xrange(len(paths)):            
-            logging.info("PathEvaluator: Evaluate path " + str(i))
-            p = Process(target=self.evaluate, args=(i, eval_queue, paths[i], horizon,))
+        paths_tmp = []
+        for i in xrange(len(paths)):
+            if len(paths[i][0]) != 0:
+                paths_tmp.append(paths[i])        
+        
+        for i in xrange(len(paths_tmp)):            
+            logging.info("PathEvaluator: Evaluate path " + str(i))            
+            p = Process(target=self.evaluate, args=(i, eval_queue, paths_tmp[i], horizon,))
             p.start()
             jobs.append(p)           
             
-            if len(jobs) == self.num_cores - 1 or i == len(paths) - 1:
-                if i == len(paths) - 1 and not len(jobs) == self.num_cores - 1:
-                    while not eval_queue.qsize() == len(paths) % (self.num_cores - 1):
+            if len(jobs) == self.num_cores - 1 or i == len(paths_tmp) - 1:
+                if i == len(paths_tmp) - 1 and not len(jobs) == self.num_cores - 1:
+                    while not eval_queue.qsize() == len(paths_tmp) % (self.num_cores - 1):
                         time.sleep(0.00001)
                 else:
                     while not eval_queue.qsize() == self.num_cores - 1:
@@ -158,8 +164,7 @@ class PathEvaluator:
                          np.hstack((NU, NU))))
         ee_distributions = []
         ee_approx_distr = []
-        collision_probs = []            
-                             
+        collision_probs = []     
         for i in xrange(0, horizon_L):                
             P_hat_t = kalman.compute_p_hat_t(self.A, P_t, self.V, self.M)
             K_t = kalman.compute_kalman_gain(self.H, P_hat_t, self.W, self.N)

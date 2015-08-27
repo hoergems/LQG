@@ -11,6 +11,7 @@ class GoalRegion(ob.GoalSampleableRegion):
         
     def sampleGoal(self, state):        
         random_goal_state = random.choice(self.goal_states)
+        print random_goal_state
         for i in xrange(self.si.getStateSpace().getDimension()):
             state[i] = random_goal_state[i]
         
