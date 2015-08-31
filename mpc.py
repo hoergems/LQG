@@ -5,20 +5,17 @@ from serializer import Serializer
 from obstacle import Obstacle
 from kin import *
 from util import *
+from util_py import *
 from obstacle import *
 from EMD import *
 from plot_stats import PlotStats
 import numpy as np
-import os
 import sys
+import os
 import time
 import scipy
 import logging
-import shutil
-import difflib
-from difflib import Differ
 from xml.dom import minidom
-from gen_ik_solution import *
 
 class MPC:
     def __init__(self, plot):
@@ -62,9 +59,18 @@ class MPC:
                                            self.joint_constraints)
         
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
-        self.goal_states = self.get_goal_states(serializer, obstacles)
+        self.goal_states = get_goal_states("mpc", 
+                                           serializer, 
+                                           obstacles, 
+                                           self.num_links, 
+                                           self.workspace_dimension,
+                                           self.max_velocity,
+                                           self.delta_t,
+                                           self.joint_constraints,
+                                           self.theta_0,
+                                           self.goal_position)
         
-        if self.check_positive_definite([C, D]):            
+        if check_positive_definite([C, D]):            
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
             emds = []
             cartesian_coords, rewards, emds, mean_planning_times = self.mpc(self.theta_0, m_covs, self.horizon, obstacles)
@@ -95,18 +101,7 @@ class MPC:
             cmd = "cp environment/env.xml " + dir + "/environment"
             os.system(cmd)
             if plot:
-                PlotStats(True, "mpc")
-                
-    def load_environment(self):
-        xmldoc = minidom.parse('environment/env.xml') 
-        obstacle_translations = xmldoc.getElementsByTagName('Translation')
-        obstacle_dimensions = xmldoc.getElementsByTagName('extents')
-        obstacles = []
-        for i in xrange(len(obstacle_translations)):
-            trans = [float(k) for k in obstacle_translations[i].childNodes[0].nodeValue.split(" ")]
-            dim =  [float(k) for k in obstacle_dimensions[i].childNodes[0].nodeValue.split(" ")] 
-            obstacles.append(Obstacle(trans[0], trans[1], 2.0 * dim[0], 2.0 * dim[1]))        
-        return obstacles                   
+                PlotStats(True, "mpc")     
             
     def mpc(self, initial_belief, m_covs, horizon, obstacles):
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
@@ -257,84 +252,6 @@ class MPC:
         C = 2.0 * np.identity(num_links)
         D = 2.0 * np.identity(num_links)
         return A, H, B, V, W, C, D
-    
-    def compareEnvironmentToTmpFiles(self, problem):
-        if not os.path.exists("tmp/" + problem):
-            os.makedirs("tmp/" + problem)            
-            return False
-        
-        if not (os.path.exists('tmp/' + problem + '/env.xml') and
-                os.path.exists('tmp/' + problem + '/config_mpc.yaml')):            
-            return False
-        
-        with open("environment/env.xml", 'r') as f1, open('tmp/' + problem + '/env.xml', 'r') as f2:
-            missing_from_b = [
-                diff[2:] for diff in Differ().compare(f1.readlines(), f2.readlines())
-                if diff.startswith('-')
-            ]
-            if len(missing_from_b) != 0:                
-                return False
-            
-        
-        with open('config_mpc.yaml', 'r') as f1, open('tmp/' + problem + '/config_mpc.yaml', 'r') as f2:
-            missing_from_b = [
-                diff[2:] for diff in Differ().compare(f1.readlines(), f2.readlines())
-                if diff.startswith('-')
-            ]
-            
-            for i in xrange(len(missing_from_b)):
-                if ("num_links" in missing_from_b[i] or
-                    "workspace_dimensions" in missing_from_b[i] or
-                    "goal_position" in missing_from_b[i] or
-                    "goal_radius" in missing_from_b[i]):
-                    return False
-        
-        """ If same, use existing goalstates """
-        try:        
-            shutil.copy2('tmp/' + problem + '/goalstates.txt', "goalstates.txt")
-        except:
-            return False
-        return True
-    
-    def copyToTmp(self, problem):
-        shutil.copy2("environment/env.xml", 'tmp/' + problem + '/env.xml')
-        shutil.copy2("goalstates.txt", 'tmp/' + problem + '/goalstates.txt')
-        shutil.copy2('config_mpc.yaml', 'tmp/' + problem + '/config_mpc.yaml')
-    
-    def get_goal_states(self, serializer, obstacles):
-        #goal_states = [np.array(gs) for gs in serializer.load_goal_states("goal_states.yaml")]
-        #return goal_states
-        if not self.compareEnvironmentToTmpFiles("mpc"):                     
-            ik_solution_generator = IKSolutionGenerator()
-            model_file = "model/model.xml"
-            if self.workspace_dimension == 3:
-                model_file = "model/model3D.xml"
-            ik_solution_generator.setup(self.num_links,
-                                        self.workspace_dimension,
-                                        obstacles,
-                                        self.max_velocity,
-                                        self.delta_t,
-                                        self.joint_constraints,
-                                        model_file,
-                                        "environment/env.xml")
-            ik_solutions = ik_solution_generator.generate(self.theta_0, self.goal_position, self.workspace_dimension)
-            
-            serializer.serialize_ik_solutions([ik_solutions[i] for i in xrange(len(ik_solutions))])
-            self.copyToTmp("mpc")    
-        else:
-            ik_solutions = serializer.deserialize_joint_angles(path="", file="goalstates.txt") 
-        print "iksol " + str(ik_solutions)       
-        return ik_solutions
-        
-    def check_positive_definite(self, matrices):
-        for m in matrices:
-            try:
-                np.linalg.cholesky(m)
-            except:
-                logging.error("MPC: Matrices are not positive definite. Fix that!")
-                return False
-        return True
-         
         
     def set_params(self, config):
         self.num_paths = config['num_generated_paths']

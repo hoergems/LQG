@@ -69,10 +69,9 @@ class IKSolutionGenerator:
             logging.info("IKSolutionGenerator: Checking ik solution " + str(i) + " for validity")            
             ik_solution = [possible_ik_solutions[i][k] for k in xrange(len(start_state))] 
             self.path_planner.set_start_and_goal(start_state, [ik_solution])           
-            path = self.path_planner.plan_paths(1, 0) 
-            print path           
+            path = self.path_planner.plan_paths(1, 0)
             if len(path) != 0:
-                print "SOLUTION FOUND"                
+                logging.info("IKSolutionGenerator: ik solution " + str(i) + " is a valid ik solution")                
                 solutions.append(path[0][0][-1])                
             n += 1
         self.path_planner = None

@@ -152,24 +152,26 @@ class LQG:
     def get_goal_states(self, serializer, obstacles):
         #goal_states = [np.array(gs) for gs in serializer.load_goal_states("goal_states.yaml")]
         #return goal_states
-        ik_solution_generator = IKSolutionGenerator()
-        model_file = "model/model.xml"
-        if self.workspace_dimension == 3:
-            model_file = "model/model3D.xml"
-        ik_solution_generator.setup(self.num_links,
-                                    self.workspace_dimension,
-                                    obstacles,
-                                    self.max_velocity,
-                                    self.delta_t,
-                                    self.joint_constraints,
-                                    model_file,
-                                    "environment/env.xml")
-        solutions = ik_solution_generator.generate(self.theta_0, self.goal_position, self.workspace_dimension)
-        print "solutions " + str(solutions)
-        
-        serializer.save_goal_states([solutions[i] for i in xrange(len(solutions))])
-        ik_solution_generator = None
-        return solutions
+        if not self.compareEnvironmentToTmpFiles("mpc"):                     
+            ik_solution_generator = IKSolutionGenerator()
+            model_file = "model/model.xml"
+            if self.workspace_dimension == 3:
+                model_file = "model/model3D.xml"
+            ik_solution_generator.setup(self.num_links,
+                                        self.workspace_dimension,
+                                        obstacles,
+                                        self.max_velocity,
+                                        self.delta_t,
+                                        self.joint_constraints,
+                                        model_file,
+                                        "environment/env.xml")
+            ik_solutions = ik_solution_generator.generate(self.theta_0, self.goal_position, self.workspace_dimension)
+            
+            serializer.serialize_ik_solutions([ik_solutions[i] for i in xrange(len(ik_solutions))])
+            self.copyToTmp("LQG")    
+        else:
+            ik_solutions = serializer.deserialize_joint_angles(path="", file="goalstates.txt")          
+        return ik_solutions
             
     def problem_setup(self, delta_t, num_links):
         A = np.identity(num_links)

@@ -56,7 +56,11 @@ class MotionValidator(ob.MotionValidator):
         """
         Checks if a state is valid
         """
-        return (self._satisfies_bounds(state) and not self._in_collision(None, state))   
+        if not self._satisfies_bounds(state):
+            return False
+        if self._in_collision(None, state):
+            return False
+        return True  
                 
         
     def _dist(self, s1, s2):
