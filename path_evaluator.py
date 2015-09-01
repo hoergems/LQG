@@ -36,6 +36,7 @@ class PathEvaluator:
         #self.num_cores = 2
         self.w1 = w1
         self.w2 = w2
+        self.workspace_dimension = workspace_dimension
         self.mutex = Lock()
         
         links = v2_double()
@@ -88,11 +89,14 @@ class PathEvaluator:
             return np.array([[-links[0] * np.sin(state[0]) - links[1] * np.sin(state[0] + state[1]), -links[1] * np.sin(state[0] + state[1])],
                             [links[0] * np.cos(state[0]) + links[1] * np.cos(state[0] + state[1]), links[1] * np.cos(state[0] + state[1])]])
         elif len(state) == 3:
-            s2 = np.sin(state[0] + state[1] + state[2])
-            c2 = np.cos(state[0] + state[1] + state[2])
-            return np.array([[-links[0] * s0 - links[1] * s1 -links[2] * s2, -links[1] * s1 - links[2] * s2, -links[2] * s2],
-                             [links[0] * c0 + links[1] * c1 + links[2] * c2, links[1] * c1 + links[2] * c2, links[2] * c2],
-                             [1.0, 1.0, 1.0]])
+            if self.workspace_dimension == 2:
+                s2 = np.sin(state[0] + state[1] + state[2])
+                c2 = np.cos(state[0] + state[1] + state[2])                
+                return np.array([[-links[0] * s0 - links[1] * s1 -links[2] * s2, -links[1] * s1 - links[2] * s2, -links[2] * s2],
+                                 [links[0] * c0 + links[1] * c1 + links[2] * c2, links[1] * c1 + links[2] * c2, links[2] * c2],
+                                 [1.0, 1.0, 1.0]])
+            
+                
         return None
     
     def evaluate_paths(self, paths, horizon=-1):

@@ -33,6 +33,8 @@ namespace shared {
             
             std::vector<double> rotation_offsets_;
             
+            void check(const std::vector<double> &joint_angles) const;
+            
             Eigen::MatrixXd getTransformationMatr(double sigma_n, double d_n, double a_n, double alpha_n) const;
             
             
