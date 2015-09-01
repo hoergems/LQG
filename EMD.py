@@ -3,6 +3,7 @@ __author__ = 'GongLi'
 #from pulp import *
 import numpy as np
 import cv
+import logging
 
 def compute_earth_mover(H1, H2):
     """
@@ -48,7 +49,7 @@ def calc_EMD(cartesian_coords, num_bins):
     """
     The historgram from the resulting cartesian coordinates
     """ 
-    print "Calculating histograms..."      
+    logging.info("EMD: Calculating histograms...")      
     H, xedges, yedges = get_2d_histogram(X, 
                                          Y, 
                                          histogram_range,
@@ -61,9 +62,8 @@ def calc_EMD(cartesian_coords, num_bins):
                                                            histogram_range, 
                                                            bins=num_bins)
         
-    print "Calculating EMD..."
-    emd = compute_earth_mover(H, H_delta)
-    print "EMD is " + str(emd)
+    logging.info("EMD: Calculating EMD...")
+    emd = compute_earth_mover(H, H_delta)    
     #Plot.plot_histogram(H, xedges, yedges)
     return emd 
 
@@ -131,7 +131,7 @@ def EMD(feature1, feature2, w1, w2):
     flow = value(problem.objective)
  
     if tempMin == 0.0:
-        print "Solution is infinite"
+        logging.error("EMD: Solution is infinite")
         return -1.0
     return flow / tempMin
     

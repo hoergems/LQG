@@ -3,6 +3,7 @@ import numpy as np
 import plot as Plot
 import glob
 import os
+import logging
 from serializer import Serializer
 from kin import *
 from util import *
@@ -14,24 +15,24 @@ class PlotStats:
         if not os.path.isdir(dir):
             os.makedirs(dir)      
         self.save = save
-        print "Loading cartesian coordinates..."  
+        logging.info("PlotStats: Loading cartesian coordinates...") 
         serializer = Serializer()
         self.setup_kinematics(serializer, dir=dir)
-        print "plotting paths"    
+        logging.info("PlotStats: plotting paths")    
         self.plot_paths(serializer, dir=dir)
         self.plot_paths(serializer, best_paths=True, dir=dir)
         
-        print "plotting average distance to goal"
+        logging.info("PlotStats: plotting average distance to goal")
         self.plot_average_dist_to_goal(serializer, dir=dir)
-        print "plotting mean rewards"
+        logging.info("PlotStats: plotting mean rewards")
         self.plot_rewards(serializer, dir=dir, show_legend=True)
         self.plot_sample_variances(serializer, dir=dir, show_legend=True)        
-        print "plotting mean planning times"
+        logging.info("PlotStats: plotting mean planning times")
         self.plot_mean_planning_times(serializer, dir=dir) 
         cart_coords = serializer.load_cartesian_coords(dir, "cartesian_coords_" + algorithm + ".yaml")
-        print "plotting EMD graph..."
+        logging.info("PlotStats: plotting EMD graph...")
         self.plot_emd_graph(serializer, cart_coords, dir=dir) 
-        print "plotting histograms..."        
+        logging.info("PlotStats: plotting histograms...")        
         self.save_histogram_plots(serializer, cart_coords, dir=dir)
         
     def setup_kinematics(self, serializer, dir='stats'):
@@ -85,7 +86,7 @@ class PlotStats:
                         label_string += file_str.split("_")[i]
                 labels.append(label_string)               
             except Exception as e:
-                print e
+                logging.error("PlotStats: " + str(e))
             data = []
             cart_coords = serializer.load_cartesian_coords(dir, file.split("/")[-1])
             dists = []
@@ -135,7 +136,7 @@ class PlotStats:
                 file_str = file.split("/")[-1].split(".")[0]
                 #file_str = file.split("/")[1].split(".")[0].split("_")[1]                
             except Exception as e:
-                print e   
+                logging.error("PlotStats: " + str(e))   
             
             sample_variances.append(serializer.load_stats(file))            
             data = []
@@ -176,7 +177,7 @@ class PlotStats:
                 file_str = file.split("/")[-1].split(".")[0]
                 #file_str = file.split("/")[1].split(".")[0].split("_")[1]                
             except Exception as e:
-                print e   
+                logging.error("PlotStats: " + str(e))   
             
             mean_rewards.append(serializer.load_stats(file))            
             data = []
@@ -291,8 +292,7 @@ class PlotStats:
             colors.append(None)
         obstacles = serializer.load_environment("env.xml", path=dir + "/environment")        
         if not obstacles == None:
-            for obstacle in obstacles:
-                print obstacle
+            for obstacle in obstacles:                
                 point1 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0]
                 point2 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0]
                 point3 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0]
@@ -316,11 +316,16 @@ class PlotStats:
     
         
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
+    logging_level = logging.DEBUG
+    logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)
+    if len(sys.argv) > 2:
         algorithm = sys.argv[1]
         if "save" in sys.argv[2]:
             PlotStats(True, algorithm)
             sys.exit()       
         PlotStats(False)
+        sys.exit() 
+    else:
+        logging.error("Wrong number of arguments. Should be 'python plot_stats ALGORITHM SAVE'")
         sys.exit()   
     PlotStats(False)

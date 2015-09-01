@@ -3,6 +3,7 @@ import yaml
 import glob
 import os
 import numpy as np
+import logging
 from obstacle import Obstacle
 from xml.dom import minidom
 
@@ -10,18 +11,17 @@ class Serializer:
     def __init__(self):
         pass
         
-    def read_config(self, filename=None, path=""):
+    def read_config(self, filename=None, path=""):        
         if filename == None:
             filename = glob.glob(os.path.join(path, "config*"))[0]
             if "mpc" in filename:
                 filename = "config_mpc.yaml"
             else:
-                filename = "config.yaml"
-        try:
-            print "filename " + str(filename) 
+                filename = "config_lqg.yaml"
+        try:            
             return yaml.load(open(os.path.join(path, filename), 'r'), yaml.CLoader)
         except:
-            print "Can't read " + path + "/" + filename + ". No such file" 
+            logging.error("Serializer: Can't read " + path + "/" + filename + ". No such file") 
             return None
         
     def save_stats(self, stats, path=""):
@@ -75,7 +75,7 @@ class Serializer:
                 for file in glob.glob(os.path.join(path, filename)):
                     os.remove(file)
             except:
-                print "Couldn't load paths.yaml"        
+                logging.error("Serializer: Couldn't load paths.yaml")        
         for i in xrange(len(paths)):                       
             path_arr = []           
             for j in xrange(len(paths[i][0])):
@@ -142,14 +142,14 @@ class Serializer:
         try:        
             paths = yaml.load(open(os.path.join(path, file), 'r'), yaml.CLoader) 
         except IOError:
-            print "No such file or directory: " + str(os.path.join(path, file))
+            logging.error("Serializer: No such file or directory: " + str(os.path.join(path, file)))
             return []       
         return paths['paths']
         
-    def serialize_ik_solutions(self, ik_solutions):
-        for file in glob.glob('goalstates.txt'):
-            os.remove(file)
-        with open('goalstates.txt', 'w') as f:
+    def serialize_ik_solutions(self, ik_solutions, path="", file=""):        
+        for f in glob.glob(os.path.join(path, file)):
+            os.remove(f)
+        with open(os.path.join(path, file), 'w') as f:
             for i in xrange(len(ik_solutions)):
                 for j in xrange(len(ik_solutions[i])):
                     f.write(str(ik_solutions[i][j]) + " ")
@@ -161,8 +161,7 @@ class Serializer:
         if not file == "":
             with open(os.path.join(path, file), 'r') as f:
                 for line in f.readlines():                    
-                    arr = line.split(" ")
-                    print arr                    
+                    arr = line.split(" ")                                       
                     float_arr = [float(arr[k]) for k in xrange(0, len(arr) - 1)]
                     float_arrs.append(float_arr)
             return float_arrs
@@ -173,7 +172,7 @@ class Serializer:
         try:
             xmldoc = minidom.parse(os.path.join(path, file)) 
         except Exception as e:
-            print e
+            logging.error("Serializer: " + str(e))
             return None            
         obstacle_translations = xmldoc.getElementsByTagName('Translation')
         obstacle_dimensions = xmldoc.getElementsByTagName('extents')

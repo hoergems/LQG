@@ -19,10 +19,8 @@ class PathPlanningInterface:
               joint_constraints):
         self.num_links = num_links
         self.workspace_dimension = workspace_dimension        
-        self.num_cores = cpu_count()
-        #self.num_cores = 2       
-        self.obstacles = obstacles
-        
+        self.num_cores = cpu_count()         
+        self.obstacles = obstacles        
         self.max_velocity = max_velocity
         self.delta_t = delta_t
         self.use_linear_path = use_linear_path
@@ -76,12 +74,8 @@ class PathPlanningInterface:
         path_planner.setup_ompl()
         path_planner.set_obstacles(obstacles)
         path_planner.set_start_state(self.start_state) 
-        path_planner.set_goal_state(self.goal_states)       
-                 
-        xs, us, zs = path_planner.plan_path()
-        '''if len(xs) == 0:
-            print "RETURNING"
-            return '''       
+        path_planner.set_goal_state(self.goal_states)
+        xs, us, zs = path_planner.plan_path()               
         queue.put((xs, us, zs))
         return   
     

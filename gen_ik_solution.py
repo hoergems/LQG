@@ -22,8 +22,7 @@ class IKSolutionGenerator:
         environment = self.serializer.load_environment(file=environment_file, path="")
         obstacles = []
         terrain = Terrain("default", 0.0, 1.0, True)
-        for obstacle in environment:
-            print obstacle            
+        for obstacle in environment:                   
             obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))        
         self.path_planner = PathPlanningInterface()
         self.path_planner.setup(num_links, workspace_dimension, obstacles, max_velocity, delta_t, False, joint_constraints)
@@ -47,7 +46,7 @@ class IKSolutionGenerator:
                 
             #robot.SetDOFValues(joint_start, robot.GetManipulator('arm').GetArmIndices())
             target=ikmodel.manip.GetTransform()[0:2,3]
-            print "target " + str(target)
+            logging.info("IKSolutionGenerator: target " + str(target))
             target[0] = goal_position[0]
             target[1] = goal_position[1]
             
@@ -75,11 +74,10 @@ class IKSolutionGenerator:
                 solutions.append(path[0][0][-1])                
             n += 1
         self.path_planner = None
-        if not len(solutions) == 0:
-            #print "IK solution is " + str(solution[0])
+        if not len(solutions) == 0:            
             return solutions        
         else:
-            print "Couldn't find a valid IK solution. Defined problem seems to be infeasible."
+            logging.error("IKSoultionGenerator: Couldn't find a valid IK solution. Defined problem seems to be infeasible.")
             return []
         
             

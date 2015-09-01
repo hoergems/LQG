@@ -130,7 +130,9 @@ class MPC:
                                       self.num_links,
                                       self.workspace_dimension, 
                                       self.sample_size, 
-                                      obstacles)
+                                      obstacles,
+                                      self.w1,
+                                      self.w2)
             self.sim.setup_problem(A, B, C, D, H, V, W, M, N, 
                                    obstacles, 
                                    self.goal_position, 
@@ -280,6 +282,8 @@ class MPC:
         self.joint_constraints = [-config['joint_constraint'], config['joint_constraint']]
         self.sample_size = config['sample_size']  
         self.workspace_dimension = config['workspace_dimension']
+        self.w1 = config['w1']
+        self.w2 = config['w2']
         
         
         """

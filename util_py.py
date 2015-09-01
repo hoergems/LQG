@@ -47,6 +47,10 @@ def compareEnvironmentToTmpFiles(problem):
                 return False
         
     """ If same, use existing goalstates """
+    if os.path.exists("tmp/" + problem + "/goalstates.txt"):
+        return True
+    return False
+        
     try:        
         shutil.copy2('tmp/' + problem + '/goalstates.txt', "goalstates.txt")
     except:
@@ -80,13 +84,13 @@ def get_goal_states(problem,
                                     "environment/env.xml")
         ik_solutions = ik_solution_generator.generate(theta_0, goal_position, workspace_dimension)
             
-        serializer.serialize_ik_solutions([ik_solutions[i] for i in xrange(len(ik_solutions))])
+        serializer.serialize_ik_solutions([ik_solutions[i] for i in xrange(len(ik_solutions))], path='tmp/' + problem, file='goalstates.txt')
         copyToTmp(problem)    
     else:
-        ik_solutions = serializer.deserialize_joint_angles(path="", file="goalstates.txt")          
+        ik_solutions = serializer.deserialize_joint_angles(path="tmp/" + problem, file="goalstates.txt")          
     return ik_solutions
 
 def copyToTmp(problem):
     shutil.copy2("environment/env.xml", 'tmp/' + problem + '/env.xml')
-    shutil.copy2("goalstates.txt", 'tmp/' + problem + '/goalstates.txt')
+    #shutil.copy2("goalstates.txt", 'tmp/' + problem + '/goalstates.txt')
     shutil.copy2('config_' + str(problem) + '.yaml', 'tmp/' + problem + '/config_' + str(problem) + '.yaml')

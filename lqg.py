@@ -8,25 +8,25 @@ import logging
 import scipy
 from serializer import Serializer
 from obstacle import *
+from util_py import *
 import kalman as kalman
 from path_evaluator import PathEvaluator
 from simulator import Simulator
 from path_planning_interface import PathPlanningInterface
 from EMD import *
-from plot_stats import PlotStats
 from xml.dom import minidom
 from gen_ik_solution import *
 
 class LQG:
     def __init__(self, plot):
-        dir = "stats/LQG"
+        dir = "stats/lqg"
         sim = Simulator()
         path_evaluator = PathEvaluator()
         path_planner = PathPlanningInterface()    
         serializer = Serializer()        
         
         """ Reading the config """
-        config = serializer.read_config("config.yaml")
+        config = serializer.read_config("config_lqg.yaml")
         self.set_params(config) 
         
         logging_level = logging.WARN
@@ -38,12 +38,20 @@ class LQG:
         environment = serializer.load_environment(file="env.xml", path="environment")       
         obstacles = []
         terrain = Terrain("default", 0.0, 1.0, True)
-        for obstacle in environment:
-            print obstacle
+        for obstacle in environment:            
             obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))          
         
         """ Setup operations """
-        goal_states = self.get_goal_states(serializer, obstacles)
+        goal_states = get_goal_states("lqg",
+                                      serializer, 
+                                      obstacles,
+                                      self.num_links,
+                                      self.workspace_dimension,
+                                      self.max_velocity,
+                                      self.delta_t,
+                                      self.joint_constraints,
+                                      self.theta_0,
+                                      self.goal_position)
         
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
         path_planner.setup(self.num_links,
@@ -57,13 +65,11 @@ class LQG:
         path_planner.set_start_and_goal(self.theta_0, goal_states)      
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
         
-        if self.check_positive_definite([C, D]):            
+        if check_positive_definite([C, D]):            
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
             emds = []
-            print "use from file " + str(self.use_paths_from_file)
-            
             if self.use_paths_from_file and len(glob.glob(os.path.join(dir, "paths.yaml"))) == 1:
-                print "Loading paths from file"
+                logging.info("LQG: Loading paths from file")
                 in_paths = serializer.load_paths("paths.yaml", path=dir) 
                 paths = []               
                 for path in in_paths:
@@ -88,7 +94,7 @@ class LQG:
             best_paths = []
             all_rewards = []         
             for j in xrange(len(m_covs)):
-                print "Evaluating covariance " + str(m_covs[j])
+                logging.info("LQG: Evaluating paths for covariance value " + str(m_covs[j]))
                 """
                 The process noise covariance matrix
                 """
@@ -103,7 +109,9 @@ class LQG:
                                      self.num_links,
                                      config['workspace_dimension'], 
                                      self.sample_size, 
-                                     obstacles)  
+                                     obstacles,
+                                     self.w1,
+                                     self.w2)  
                 xs, us, zs = path_evaluator.evaluate_paths(paths)
                                 
                 best_paths.append([[xs[i] for i in xrange(len(xs))], 
@@ -125,7 +133,7 @@ class LQG:
                 all_rewards.append([np.asscalar(rewards[k]) for k in xrange(len(rewards))])            
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
             serializer.save_paths(best_paths, 'best_paths.yaml', True, path=dir)
-            serializer.save_cartesian_coords(cart_coords, path=dir, filename="cartesian_coords_LQG.yaml")            
+            serializer.save_cartesian_coords(cart_coords, path=dir, filename="cartesian_coords_lqg.yaml")            
             serializer.save_stats(stats, path=dir) 
             
             mean_rewards = []
@@ -138,7 +146,7 @@ class LQG:
             serializer.save_rewards(all_rewards, path=dir, filename="rewards_lqg.yaml")
             serializer.save_rewards(mean_rewards, path=dir, filename="mean_rewards_lqg.yaml")
             serializer.save_rewards(variances, path=dir, filename="sample_variances_lqg.yaml")
-            cmd = "cp config.yaml " + dir           
+            cmd = "cp config_lqg.yaml " + dir           
             os.system(cmd)
             
             if not os.path.exists(dir + "/environment"):
@@ -146,32 +154,6 @@ class LQG:
                        
             cmd = "cp environment/env.xml " + dir + "/environment"
             os.system(cmd)
-            
-            PlotStats(True, "LQG")
-            
-    def get_goal_states(self, serializer, obstacles):
-        #goal_states = [np.array(gs) for gs in serializer.load_goal_states("goal_states.yaml")]
-        #return goal_states
-        if not self.compareEnvironmentToTmpFiles("mpc"):                     
-            ik_solution_generator = IKSolutionGenerator()
-            model_file = "model/model.xml"
-            if self.workspace_dimension == 3:
-                model_file = "model/model3D.xml"
-            ik_solution_generator.setup(self.num_links,
-                                        self.workspace_dimension,
-                                        obstacles,
-                                        self.max_velocity,
-                                        self.delta_t,
-                                        self.joint_constraints,
-                                        model_file,
-                                        "environment/env.xml")
-            ik_solutions = ik_solution_generator.generate(self.theta_0, self.goal_position, self.workspace_dimension)
-            
-            serializer.serialize_ik_solutions([ik_solutions[i] for i in xrange(len(ik_solutions))])
-            self.copyToTmp("LQG")    
-        else:
-            ik_solutions = serializer.deserialize_joint_angles(path="", file="goalstates.txt")          
-        return ik_solutions
             
     def problem_setup(self, delta_t, num_links):
         A = np.identity(num_links)
@@ -188,15 +170,6 @@ class LQG:
         for path in paths:            
             avg_length += len(path[0])
         return avg_length / len(paths)
-        
-    def check_positive_definite(self, matrices):
-        for m in matrices:
-            try:
-                np.linalg.cholesky(m)
-            except:
-                print "Matrices are not positive definite. Fix that!"
-                return False
-        return True
         
     def set_params(self, config):        
         self.num_paths = config['num_generated_paths']
@@ -224,6 +197,8 @@ class LQG:
         self.joint_constraints = [-config['joint_constraint'], config['joint_constraint']]
         self.sample_size = config['sample_size']  
         self.workspace_dimension = config['workspace_dimension'] 
+        self.w1 = config['w1']
+        self.w2 = config['w2']
             
 
 if __name__ == "__main__":

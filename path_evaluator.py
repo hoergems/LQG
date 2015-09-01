@@ -17,7 +17,9 @@ class PathEvaluator:
               num_links, 
               workspace_dimension, 
               sample_size, 
-              obstacles):        
+              obstacles,
+              w1, 
+              w2):        
         self.A = A
         self.B = B
         self.C = C
@@ -32,8 +34,8 @@ class PathEvaluator:
         self.sample_size = sample_size
         self.num_cores = cpu_count() - 1
         #self.num_cores = 2
-        self.w1 = 1.0
-        self.w2 = 1.0
+        self.w1 = w1
+        self.w2 = w2
         self.mutex = Lock()
         
         links = v2_double()
@@ -60,8 +62,7 @@ class PathEvaluator:
     def get_probability_of_collision(self, mean, cov):
         samples = multivariate_normal.rvs(mean, cov, self.sample_size)
         pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True)
-        sum_pdf = sum(pdf)
-        #pdf = [s / sum(pdf) for s in pdf]
+        sum_pdf = sum(pdf)        
         pdfs = []
         for i in xrange(len(samples)):
             joint_angles = v_double()
@@ -101,8 +102,7 @@ class PathEvaluator:
         paths_tmp = []
         for i in xrange(len(paths)):
             if len(paths[i][0]) != 0:
-                paths_tmp.append(paths[i])        
-        
+                paths_tmp.append(paths[i])
         for i in xrange(len(paths_tmp)):            
             logging.info("PathEvaluator: Evaluate path " + str(i))            
             p = Process(target=self.evaluate, args=(i, eval_queue, paths_tmp[i], horizon,))
@@ -133,14 +133,10 @@ class PathEvaluator:
         best_path = evaluated_paths[0][1]
         min_objective = self.w1 * collision_sums[0] + self.w2 * traces_sums[0] 
         for i in xrange(1, len(collision_sums)):
-            val = self.w1 * collision_sums[i] + self.w2 * traces_sums[i]
+            val = self.w1 * collision_sums[i] + self.w2 * traces_sums[i]            
             if val < min_objective:
                 min_objective = val
-                best_path = evaluated_paths[i][1]     
-        '''for p in evaluated_paths:
-            if p[0] < min_objective:
-                min_objective = p[0]
-                best_path = p[1] '''               
+                best_path = evaluated_paths[i][1]
         return best_path
     
     def evaluate(self, index, eval_queue, path, horizon):
@@ -186,12 +182,11 @@ class PathEvaluator:
                     
             Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))
             cov_state = np.array([[Cov[j, k] for k in xrange(self.num_links)] for j in xrange(self.num_links)])
-            j = self.get_jacobian([1.0 for k in xrange(self.num_links)], xs[i])
-            EE_covariance = np.dot(np.dot(j, cov_state), np.transpose(j))
+            jacobian = self.get_jacobian([1.0 for k in xrange(self.num_links)], xs[i])
+            EE_covariance = np.dot(np.dot(jacobian, cov_state), np.transpose(jacobian))
             EE_covariance = np.array([[EE_covariance[j, k] for k in xrange(2)] for j in xrange(2)])
             probs = 0.0
-            if len(self.obstacles) > 0 and np.trace(self.M) != 0.0:
-                #print "get collision probs"                    
+            if len(self.obstacles) > 0 and np.trace(self.M) != 0.0:                               
                 probs = self.get_probability_of_collision(xs[i], cov_state)
                 collision_probs.append(probs)
             else:

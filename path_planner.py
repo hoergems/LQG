@@ -28,8 +28,8 @@ class PathPlanner:
         self.use_linear_path = use_linear_path
         self.sim_run = sim_run
         self.joint_constraints = joint_constraints                     
-        '''if logging.getLogger().getEffectiveLevel() == logging.WARN:
-            noOutputHandler()'''
+        if logging.getLogger().getEffectiveLevel() == logging.WARN:
+            noOutputHandler()
             
         
     def set_start_state(self, start_state):
@@ -85,11 +85,7 @@ class PathPlanner:
                     us = []
                     zs = []
                     return xs, us, zs
-            '''logging.info("PathPlanner: Finished planning. Planning time was " + 
-                         str(time.time() - start_time) +
-                         " seconds")'''        
             path = []
-                
             if self.problem_definition.hasSolution():
                 logging.info("PathPlanner: Solution found after " +str(time.time() - start_time) + " s")                             
                 solution_path = self.problem_definition.getSolutionPath()
@@ -131,8 +127,7 @@ class PathPlanner:
         return path
         
     def setup_ompl(self):
-        self.joint_constraints = [-np.pi, np.pi]
-        print self.joint_constraints
+        self.joint_constraints = [-np.pi, np.pi]        
         self.space = ob.RealVectorStateSpace(dim=self.space_dimension)
         bounds = ob.RealVectorBounds(self.space_dimension)        
         for i in xrange(self.space_dimension):
@@ -163,8 +158,7 @@ class PathPlanner:
         new_path.append([path[-1], np.array([0.0 for i in xrange(self.si.getStateSpace().getDimension())]), path[-1]])
         xs = [new_path[i][0] for i in xrange(len(path))]
         us = [new_path[i][1] for i in xrange(len(path))]
-        zs = [new_path[i][2] for i in xrange(len(path))]
-        #print "xs" + str(xs)
+        zs = [new_path[i][2] for i in xrange(len(path))]        
         return xs, us, zs
                
         
