@@ -156,12 +156,13 @@ class Simulator:
                 state[i] = self.joint_constraints[1] - 0.00001        
         return state
         
-    def simulate(self, xs, us, zs, run):
+    def simulate(self, xs, us, zs, cov_value):
         Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)
         cart_coords = []
         rewards = []
         for j in xrange(self.num_simulation_runs):
-            logging.info("Simulator: Execute simulation run " + str(j) + " for run " + str(run)) 
+            print "Simulator: Execute simulation run " + str(j) + " for covariance value " + str(cov_value)
+            
             x_true = xs[0]
             #x_tilde = xs[0]
             x_tilde = np.array([0.0 for i in xrange(self.num_links)])        
@@ -234,7 +235,7 @@ class Simulator:
         x_new = np.add(np.add(np.dot(A, x_dash), np.dot(B, u_dash)), np.dot(V, m))
         x_new = self.check_constraints(x_new)
         if self.is_in_collision(x_new):
-            logging.warn("Simulator: Collision detected. Setting state estimate to the previous state")
+            logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
             return x_dash, True 
         return x_new, False
     

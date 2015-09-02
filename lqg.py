@@ -82,6 +82,7 @@ class LQG:
                         zs.append([path[j][2 * self.num_links + i] for i in xrange(self.num_links)])
                     paths.append([xs, us, zs])
             else:
+                print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
                 paths = path_planner.plan_paths(self.num_paths, 0)                   
                 serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path=dir)               
             
@@ -94,7 +95,7 @@ class LQG:
             best_paths = []
             all_rewards = []         
             for j in xrange(len(m_covs)):
-                logging.info("LQG: Evaluating paths for covariance value " + str(m_covs[j]))
+                print "LQG: Evaluating paths for covariance value " + str(m_covs[j]) + "..."
                 """
                 The process noise covariance matrix
                 """
@@ -126,7 +127,7 @@ class LQG:
                                   config['workspace_dimension'], 
                                   self.joint_constraints)
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)           
-                cartesian_coords, rewards = sim.simulate(xs, us, zs, j)
+                cartesian_coords, rewards = sim.simulate(xs, us, zs, m_covs[j])
                                 
                 cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])                
                 emds.append(calc_EMD(cartesian_coords, self.num_bins))
@@ -153,7 +154,7 @@ class LQG:
                 os.makedirs(dir + "/environment") 
                        
             cmd = "cp environment/env.xml " + dir + "/environment"
-            os.system(cmd)
+            os.system(cmd)            
             
     def problem_setup(self, delta_t, num_links):
         A = np.identity(num_links)
@@ -208,5 +209,5 @@ if __name__ == "__main__":
             sys.exit()
         print "Unrecognized command line argument: " + str(sys.argv[1]) 
         sys.exit()   
-    LQG(False)
+    LQG(False)    
     

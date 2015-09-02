@@ -62,8 +62,7 @@ class PathEvaluator:
 
     def get_probability_of_collision(self, mean, cov):
         samples = multivariate_normal.rvs(mean, cov, self.sample_size)
-        pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True)
-        sum_pdf = sum(pdf)        
+        pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True)               
         pdfs = []
         for i in xrange(len(samples)):
             joint_angles = v_double()
@@ -180,6 +179,7 @@ class PathEvaluator:
             if val < min_objective:
                 min_objective = val
                 best_path = evaluated_paths[i][1]
+        logging.info("PathEvaluator: Objective value for the best path is " + str(min_objective))        
         return best_path
     
     def evaluate(self, index, eval_queue, path, horizon):
