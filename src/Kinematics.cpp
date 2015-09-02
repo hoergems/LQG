@@ -61,9 +61,9 @@ std::pair<fcl::Vec3f, fcl::Matrix3f> Kinematics::getPoseOfLinkN(const std::vecto
        Eigen::MatrixXd b = getTransformationMatr(joint_angles[1], 0.0, links_[1][0], rotation_offsets_[2]);
        Eigen::MatrixXd c = getTransformationMatr(joint_angles[2], 0.0, links_[2][0], 0.0);      
        res = a*(b*c);
-       cout << "res " << res << endl;
-       check(joint_angles);
-       sleep(2);
+       //cout << "res " << res << endl;
+       //check(joint_angles);
+       //sleep(2);
        
        
        
@@ -90,8 +90,8 @@ void Kinematics::check(const std::vector<double> &joint_angles) const{
    double l3 = 1.0;
    
    Eigen::MatrixXd b(4,4);
-   b << c3*(c1*c2-s1*s2)-s3*(c1*s2+c2*s1), -s3*(c1*c2-s1*s2)+c3*(-c1*s2-c2*s1), 0.0, l3*(c3*(c1*c2-s1*s2)-s3*(c1*s2-c2*s1))+c1*(l2*s2+l1)-l2*s1*s2,
-        c3*(c2*s1+c1*s2)+s3*(-s1*s2+c1*c2), -s3*(c2*s1+c1*s2)+c3*(-s1*s2+c1*c2), 0.0, l3*(c3*(c2*s1+c1*s2)-s3*(s1*s2+c1*c2))+s1*(l2*c2+l1)+l2*c1*s2,
+   b << c3*(c1*c2-s1*s2)-s3*(c1*s2+c2*s1), -s3*(c1*c2-s1*s2)+c3*(-c1*s2-c2*s1), 0.0, l3*(c3*(c1*c2-s1*s2)+s3*(-c1*s2-c2*s1))+l2*(c1*c2-s1*s2)+l1*c1,
+        c3*(c2*s1+c1*s2)+s3*(-s1*s2+c1*c2), -s3*(c2*s1+c1*s2)+c3*(-s1*s2+c1*c2), 0.0, l3*(c3*(c2*s1+c1*s2)+s3*(-s1*s2+c1*c2))+l2*(c2*s1+c1*s2)+l1*s1,
         0.0, 0.0, 1.0, 0.0,
         0.0, 0.0, 0.0, 1.0;
    cout << "b " << b << endl;

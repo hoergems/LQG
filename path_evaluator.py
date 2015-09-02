@@ -89,15 +89,54 @@ class PathEvaluator:
             return np.array([[-links[0] * np.sin(state[0]) - links[1] * np.sin(state[0] + state[1]), -links[1] * np.sin(state[0] + state[1])],
                             [links[0] * np.cos(state[0]) + links[1] * np.cos(state[0] + state[1]), links[1] * np.cos(state[0] + state[1])]])
         elif len(state) == 3:
+            l1 = links[0]
+            l2 = links[1]
+            l3 = links[2]
+            c1 = np.cos(state[0])
+            c2 = np.cos(state[1])
+            c3 = np.cos(state[2])
+            s1 = np.sin(state[0])
+            s2 = np.sin(state[1])
+            s3 = np.sin(state[2])
             if self.workspace_dimension == 2:
-                s2 = np.sin(state[0] + state[1] + state[2])
-                c2 = np.cos(state[0] + state[1] + state[2])                
-                return np.array([[-links[0] * s0 - links[1] * s1 -links[2] * s2, -links[1] * s1 - links[2] * s2, -links[2] * s2],
-                                 [links[0] * c0 + links[1] * c1 + links[2] * c2, links[1] * c1 + links[2] * c2, links[2] * c2],
-                                 [1.0, 1.0, 1.0]])
+                O_0 = np.array([0.0, 
+                                0.0, 
+                                0.0])
+                O_1 = np.array([l1*c1, 
+                                l1*s1, 
+                                0.0])
+                O_2 = np.array([l2*(c1*c2-s1*s2)+l1*c1,
+                                l2*(c2*s1+c1*s2)+l1*s1,
+                                0.0])
+                O_3 = np.array([l3*(c3*(c1*c2-s1*s2)+s3*(-c1*s2-c2*s1))+l2*(c1*c2-s1*s2)+l1*c1,
+                                l3*(c3*(c2*s1+c1*s2)+s3*(-s1*s2+c1*c2))+l2*(c2*s1+c1*s2)+l1*s1,
+                                0.0])
+                z_0 = np.array([0.0, 0.0, 1.0])
+                z_1 = np.array([0.0, 0.0, 1.0])
+                z_2 = np.array([0.0, 0.0, 1.0])
+            else:
+                O_0 = np.array([0.0, 
+                                0.0, 
+                                0.0])
+                O_1 = np.array([l1*c1,
+                                l1*s1,
+                                0.0])
+                O_2 = np.array([c1*(l2*c2+l1),
+                                s1*(l2*c2+l1),
+                                -l2*s2])
+                O_3 = np.array([l3*c1*(c2*c3-s2*s3)+c1*(l2*c2+l1),
+                                l3*s1*(c2*c3-s2*s3)+s1*(l2*c2+l1),
+                                l3*(-c3*s2-c2*s3)-l2*s2])
+                z_0 = np.array([0.0, 0.0, 1.0])
+                z_1 = np.array([-s1, c1, 0.0])
+                z_2 = np.array([-s1, c1, 0.0])
             
-                
-        return None
+            v1 = np.vstack((np.array([np.cross(z_0, np.subtract(O_3, O_0))]).T, np.array([z_0]).T))
+            v2 = np.vstack((np.array([np.cross(z_1, np.subtract(O_3, O_1))]).T, np.array([z_1]).T))
+            v3 = np.vstack((np.array([np.cross(z_2, np.subtract(O_3, O_2))]).T, np.array([z_2]).T))
+            
+            j = np.hstack((np.hstack((v1, v2)), v3))            
+            return j
     
     def evaluate_paths(self, paths, horizon=-1):
         jobs = collections.deque() 
@@ -186,9 +225,9 @@ class PathEvaluator:
                     
             Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))
             cov_state = np.array([[Cov[j, k] for k in xrange(self.num_links)] for j in xrange(self.num_links)])
-            jacobian = self.get_jacobian([1.0 for k in xrange(self.num_links)], xs[i])
-            EE_covariance = np.dot(np.dot(jacobian, cov_state), np.transpose(jacobian))
-            EE_covariance = np.array([[EE_covariance[j, k] for k in xrange(2)] for j in xrange(2)])
+            jacobian = self.get_jacobian([1.0 for k in xrange(self.num_links)], xs[i])                        
+            EE_covariance = np.dot(np.dot(jacobian, cov_state), jacobian.T)            
+            #EE_covariance = np.array([[EE_covariance[j, k] for k in xrange(2)] for j in xrange(2)])
             probs = 0.0
             if len(self.obstacles) > 0 and np.trace(self.M) != 0.0:                               
                 probs = self.get_probability_of_collision(xs[i], cov_state)
