@@ -26,6 +26,8 @@ class PlotStats:
         self.plot_average_dist_to_goal(serializer, dir=dir)
         logging.info("PlotStats: plotting mean rewards")
         self.plot_rewards(serializer, dir=dir, show_legend=True)
+        logging.info("PlotStats: plotting % successful runs")
+        self.plot_num_successes(serializer, dir=dir)
         self.plot_sample_variances(serializer, dir=dir, show_legend=True)        
         logging.info("PlotStats: plotting mean planning times")
         self.plot_mean_planning_times(serializer, dir=dir) 
@@ -123,6 +125,51 @@ class PlotStats:
                             save=self.save,
                             filename=dir + "/avg_distance.png")
         
+    def plot_num_successes(self, serializer, dir="stats"):
+        config = serializer.read_config(path=dir)    
+        stats = serializer.load_stats('stats.yaml', path=dir)
+        m_cov = stats['m_cov']    
+        filename = glob.glob(os.path.join(dir, "num_successes_*.yaml"))[0]
+        
+        files = glob.glob(os.path.join(os.path.join(dir, "num_successes*.yaml")))      
+        num_succ_runs = [] 
+        num_succ_runs_sets = [] 
+        labels = []
+        for file in sorted(files):
+            file_str = file
+            try:
+                file_str = file.split("/")[-1].split(".")[0]
+                #file_str = file.split("/")[1].split(".")[0].split("_")[1]                
+            except Exception as e:
+                logging.error("PlotStats: " + str(e))   
+            
+            num_succ_runs.append(serializer.load_stats(file))            
+            data = []
+            for k in xrange(len(m_cov)):
+                data.append(np.array([m_cov[k], num_succ_runs[-1][k]]))
+            num_succ_runs_sets.append(np.array(data))
+            label_string = ""
+            for i in xrange(len(file_str.split("_"))):
+                if i != 0:
+                    label_string += " " + file_str.split("_")[i]
+                else:
+                    label_string += file_str.split("_")[i]
+            labels.append(label_string)
+        min_m = [min(m) for m in num_succ_runs]
+        max_m = [max(m) for m in num_succ_runs]
+               
+        Plot.plot_2d_n_sets(num_succ_runs_sets,
+                            labels=labels,
+                            xlabel="joint covariance",
+                            ylabel="% successful runs",
+                            x_range=[m_cov[0], m_cov[-1]],
+                            y_range=[min(min_m) * 0.95, max(max_m) * 1.05],
+                            show_legend=True,
+                            save=self.save,
+                            filename=dir + "/successful_runs.pdf")
+           
+        
+        
     def plot_sample_variances(self, serializer, dir="stats", show_legend=False):
         stats = serializer.load_stats('stats.yaml', path=dir)
         m_cov = stats['m_cov']
@@ -192,7 +239,7 @@ class PlotStats:
                     label_string += file_str.split("_")[i]
             labels.append(label_string)        
         min_m = [min(m) for m in mean_rewards]
-        max_m = [max(m) for m in mean_rewards]        
+        max_m = [max(m) for m in mean_rewards]               
         Plot.plot_2d_n_sets(mean_rewards_sets,
                             labels=labels,
                             xlabel="joint covariance",

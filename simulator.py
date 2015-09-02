@@ -73,7 +73,7 @@ class Simulator:
         self.num_simulation_runs = num_simulation_runs        
         self.stop_when_terminal = stop_when_terminal
         
-    def simulate_step(self, 
+    '''def simulate_step(self, 
                       xs, us, zs, 
                       x_true,
                       x_tilde,
@@ -101,7 +101,7 @@ class Simulator:
         z_dash_t = z_t - zs[0]
         x_tilde_dash_t, P_dash = kalman.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
         x_tilde, P_t = kalman.kalman_update(x_tilde_dash_t, z_dash_t, self.H, P_dash, self.W, self.N, self.num_links)
-        return x_true, x_tilde, P_t, total_reward, terminal_state_reached
+        return x_true, x_tilde, P_t, total_reward, terminal_state_reached'''
     
     def simulate_n_steps(self,
                          xs, us, zs,
@@ -110,6 +110,7 @@ class Simulator:
                          x_estimate,
                          P_t,
                          total_reward,
+                         successes,
                          current_step,
                          n_steps):
         terminal_state_reached = False
@@ -132,7 +133,8 @@ class Simulator:
                 logging.info("Simulator: Current end-effector position is " + str(ee_position))
                 if self.is_terminal(ee_position):
                     terminal_state_reached = True                        
-                    total_reward += discount * self.exit_reward                        
+                    total_reward += discount * self.exit_reward 
+                    successes += 1                       
                     logging.info("Terminal state reached: reward = " + str(total_reward))                                  
                     
                 z_t = self.get_observation(x_true, self.H, self.N, self.W)
@@ -146,7 +148,7 @@ class Simulator:
                                     
                 #print "x_true " + str(x_true)
                 #print "x_estimate " + str(x_estimate_new)            
-        return x_true, x_tilde, x_estimate, P_t, current_step + n_steps, total_reward, terminal_state_reached
+        return x_true, x_tilde, x_estimate, P_t, current_step + n_steps, total_reward, successes, terminal_state_reached
     
     def check_constraints(self, state):        
         for i in xrange(len(state)):                          
@@ -160,6 +162,7 @@ class Simulator:
         Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)
         cart_coords = []
         rewards = []
+        successes = 0
         for j in xrange(self.num_simulation_runs):
             print "Simulator: Execute simulation run " + str(j) + " for covariance value " + str(cov_value)
             
@@ -191,7 +194,8 @@ class Simulator:
                     ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
                     ee_position = np.array([ee_position_arr[i] for i in xrange(len(ee_position_arr))])
                     if self.is_terminal(ee_position):
-                        terminal_state_reached = True                        
+                        terminal_state_reached = True
+                        successes += 1                       
                         reward += discount * self.exit_reward                       
                     
                     """
@@ -211,7 +215,7 @@ class Simulator:
             ee_position = np.array([ee_position_arr[i] for i in xrange(len(ee_position_arr))])
             cart_coords.append(ee_position.tolist())
             rewards.append(reward)
-        return cart_coords, rewards
+        return cart_coords, rewards, successes
     
     def is_in_collision(self, state):
         """

@@ -50,6 +50,16 @@ class Serializer:
         with open(os.path.join(path, "avg_path_lengths.yaml"), 'w') as f:
             f.write(yaml.dump(lengths, default_flow_style=False))
             
+    def save_num_successes(self, successes, path="", filename=""):
+        if not os.path.exists(path):
+            os.makedirs(path)
+        if filename == "":
+            filename = "num_successes.yaml"
+        for file in glob.glob(os.path.join(path, filename)):
+            os.remove(file)
+        with open(os.path.join(path, filename), 'w') as f:
+            f.write(yaml.dump(successes, default_flow_style=False))
+            
     def save_mean_planning_times(self, planning_times, path=""):
         if not os.path.exists(path):
             os.makedirs(path)
@@ -115,6 +125,13 @@ class Serializer:
             os.remove(file)
         with open(os.path.join(path, filename), 'w') as f:                
             f.write(yaml.dump(total_rewards, default_flow_style=False))
+            
+            
+    def load_num_successes(self, path="", filename=None):
+        if filename == None:
+            filename = "num_successes.yaml"       
+        with open(os.path.join(path, filename), 'r') as f:
+            return yaml.load(f, yaml.CLoader)
             
     def load_total_rewards(self, path="", file=None): 
         if file == None:

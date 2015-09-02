@@ -73,11 +73,12 @@ class MPC:
         if check_positive_definite([C, D]):            
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
             emds = []
-            cartesian_coords, rewards, emds, mean_planning_times = self.mpc(self.theta_0, m_covs, self.horizon, obstacles)
+            cartesian_coords, rewards, emds, mean_planning_times, all_succesful_runs = self.mpc(self.theta_0, m_covs, self.horizon, obstacles)
                        
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
             #serializer.save_paths(best_paths, 'best_paths.yaml', True, path="stats")
-            serializer.save_cartesian_coords(cartesian_coords, path=dir, filename="cartesian_coords_mpc" + str(self.num_execution_steps) + ".yaml")            
+            serializer.save_cartesian_coords(cartesian_coords, path=dir, filename="cartesian_coords_mpc" + str(self.num_execution_steps) + ".yaml")
+            serializer.save_num_successes(all_succesful_runs, path=dir, filename="num_successes_mpc" + str(self.num_execution_steps) + ".yaml")            
             serializer.save_stats(stats, path=dir)
             serializer.save_mean_planning_times(mean_planning_times, path=dir)
             
@@ -110,6 +111,7 @@ class MPC:
         total_rewards = []
         sample_variances = []
         mean_planning_times = []
+        all_successful_runs = []
         emds = []
         for j in xrange(len(m_covs)):            
             
@@ -146,6 +148,7 @@ class MPC:
             cartesian_coords = []
             total_reward_cov = []
             mean_planning_time = 0.0
+            successful_runs = 0
             for k in xrange(self.num_simulation_runs):
                 #x_tilde = initial_belief               
                 print "MPC: Joint covariance: " + str(m_covs[j])
@@ -189,14 +192,15 @@ class MPC:
                         n_steps = self.max_num_steps - current_step
                                           
                     logging.info("MPC: Execute best path for " + str(n_steps) + " steps")
-                    x_true, x_tilde, x_estimate, P_t, current_step, total_reward, terminal = self.sim.simulate_n_steps(xs, us, zs, 
-                                                                                                                       x_true, 
-                                                                                                                       x_tilde,
-                                                                                                                       x_estimate,
-                                                                                                                       P_t,
-                                                                                                                       total_reward,
-                                                                                                                       current_step,
-                                                                                                                       n_steps) 
+                    x_true, x_tilde, x_estimate, P_t, current_step, total_reward, successful_runs, terminal = self.sim.simulate_n_steps(xs, us, zs, 
+                                                                                                                                        x_true, 
+                                                                                                                                        x_tilde,
+                                                                                                                                        x_estimate,
+                                                                                                                                        P_t,
+                                                                                                                                        total_reward,
+                                                                                                                                        successful_runs,
+                                                                                                                                        current_step,
+                                                                                                                                        n_steps) 
                                         
                     logging.info("MPC: Execution finished. True state is " + str(x_true))
                     logging.info("MPC: Estimated state is " + str(x_estimate))                
@@ -219,9 +223,10 @@ class MPC:
             mean_rewards.append(np.asscalar(mean_reward))            
             mean_planning_time /= self.num_simulation_runs
             mean_planning_times.append(mean_planning_time)
+            all_successful_runs.append((100.0 / self.num_simulation_runs) * successful_runs)
             emds.append(calc_EMD(cartesian_coords, self.num_bins))
             cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])            
-        return cart_coords, total_rewards, emds, mean_planning_times
+        return cart_coords, total_rewards, emds, mean_planning_times, all_successful_runs
             
     def problem_setup(self, delta_t, num_links):
         links = v2_double()

@@ -93,7 +93,8 @@ class LQG:
                                        
             cart_coords = []  
             best_paths = []
-            all_rewards = []         
+            all_rewards = []
+            successes = []         
             for j in xrange(len(m_covs)):
                 print "LQG: Evaluating paths for covariance value " + str(m_covs[j]) + "..."
                 """
@@ -127,14 +128,16 @@ class LQG:
                                   config['workspace_dimension'], 
                                   self.joint_constraints)
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)           
-                cartesian_coords, rewards = sim.simulate(xs, us, zs, m_covs[j])
+                cartesian_coords, rewards, successful_runs = sim.simulate(xs, us, zs, m_covs[j])
                                 
                 cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])                
                 emds.append(calc_EMD(cartesian_coords, self.num_bins))
-                all_rewards.append([np.asscalar(rewards[k]) for k in xrange(len(rewards))])            
+                all_rewards.append([np.asscalar(rewards[k]) for k in xrange(len(rewards))]) 
+                successes.append((100.0 / self.num_simulation_runs) * successful_runs)    
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
             serializer.save_paths(best_paths, 'best_paths.yaml', True, path=dir)
-            serializer.save_cartesian_coords(cart_coords, path=dir, filename="cartesian_coords_lqg.yaml")            
+            serializer.save_cartesian_coords(cart_coords, path=dir, filename="cartesian_coords_lqg.yaml") 
+            serializer.save_num_successes(successes, path=dir, filename="num_successes_lqg.yaml")           
             serializer.save_stats(stats, path=dir) 
             
             mean_rewards = []
