@@ -69,7 +69,7 @@ class PathEvaluator:
             joint_angles[:] = [samples[i][j] for j in xrange(self.num_links)]
             collision_structures = self.utils.createManipulatorCollisionStructures(joint_angles, self.kinematics)
             for obstacle in self.obstacles:
-                if obstacle.inCollision(collision_structures):                               
+                if obstacle.inCollisionDiscrete(collision_structures):                               
                     pdfs.append(pdf[i]) 
                     break            
             

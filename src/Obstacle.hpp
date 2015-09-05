@@ -12,6 +12,11 @@
 #include <memory>
 #include "Terrain.hpp"
 #include "fcl/BV/BV.h"
+#include "fcl/collision_object.h"
+#include "fcl/collision_data.h"
+#include "fcl/continuous_collision.h"
+#include "fcl/shape/geometric_shapes.h"
+#include "fcl/shape/geometric_shapes_utility.h"
 //#include "utils.hpp"
 
 #include <mutex>
@@ -29,9 +34,13 @@ class Obstacle {
         
         bool in_collision(std::vector<fcl::OBB> &other_collision_structures);
         
+        bool in_collision(const fcl::CollisionObject &collision_object_start, const fcl::CollisionObject &collision_object_goal);
+        
         bool in_collision(std::vector<double> &point);
         
-        bool in_collision(boost::python::list &ns);
+        bool in_collision_discrete(boost::python::list &ns);
+
+        bool in_collision_continuous(boost::python::list &ns);
 
         std::shared_ptr<Terrain> getTerrain() const;
         
@@ -50,10 +59,14 @@ class Obstacle {
         double size_z_;
         
         fcl::OBB collision_structure_;
+        
+        std::shared_ptr<fcl::CollisionObject> collision_object_ptr_;
                 
         const shared::Terrain terrain_;
         
         void createCollisionStructure();
+        
+        void createCollisionObject();
 
 };
 

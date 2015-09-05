@@ -39,7 +39,7 @@ class Simulator:
         self.goal_radius = goal_radius
         self.num_links = num_links 
         self.workspace_dimension = workspace_dimension   
-        self.joint_constraints = joint_constraints
+        self.joint_constraints = joint_constraints        
         
     def setup_reward_function(self, discount_factor, step_penalty, illegal_move_penalty, exit_reward):
         self.discount_factor = discount_factor
@@ -225,7 +225,7 @@ class Simulator:
         joint_angles[:] = state
         collision_structures = self.utils.createManipulatorCollisionStructures(joint_angles, self.kinematics)
         for obstacle in self.obstacles:
-            if obstacle.inCollision(collision_structures):                               
+            if obstacle.inCollisionDiscrete(collision_structures):                               
                 return True
         return False
     

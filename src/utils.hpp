@@ -12,6 +12,9 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/foreach.hpp>
 #include "fcl/BV/BV.h" 
+#include "fcl/collision_object.h"
+#include "fcl/shape/geometric_shapes.h"
+#include "fcl/shape/geometric_shapes_utility.h"
 #include <iostream>
 #include <iosfwd> 
 #include <string>
@@ -36,7 +39,10 @@ class Utils {
 		std::vector<fcl::OBB> createManipulatorCollisionStructures(const std::vector<double> &joint_angles, 
                                                                    std::shared_ptr<shared::Kinematics> &kinematics);
 
-                bool serializeStatePath(std::vector<std::vector<double>> state_path);
+                std::vector<fcl::CollisionObject> createManipulatorCollisionObjects(const std::vector<double> &joint_angles,
+                                                                                    std::shared_ptr<shared::Kinematics> &kinematics) const;
+
+        bool serializeStatePath(std::vector<std::vector<double>> state_path);
 };
 
 }

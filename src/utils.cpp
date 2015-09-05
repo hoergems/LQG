@@ -57,12 +57,8 @@ std::vector<std::vector<double>> Utils::loadGoalStates() {
         catch (std::ios_base::failure& e) {
             std::cerr << e.what() << '\n';
             sleep(5);
-        } 
-        
-        
-        if (!file) {
-           cout << "MAAAAAN" << endl;
         }
+        
         double dub_val;
         std::string line;
                
@@ -158,11 +154,7 @@ void Utils::loadObstaclesXML(std::vector<std::shared_ptr<shared::Obstacle> > *ob
                                                            obstacles[i].size_z,
                                                            terrain));
        std::vector<double> dimensions = obst->at(i)->getDimensions();
-       cout << "dim " << dimensions[0] << ", " << dimensions[1] << ", " << dimensions[2] << ", ";
-       cout << dimensions[3] << ", " << dimensions[4] << ", " << dimensions[5] << endl;
     }
-    
-    
 }
 
 void Utils::loadTerrains(std::vector<std::shared_ptr<shared::Terrain> > *terrains,
@@ -238,6 +230,23 @@ std::vector<fcl::OBB> Utils::createManipulatorCollisionStructures(const std::vec
     return collision_structures;
 }
 
+std::vector<fcl::CollisionObject> Utils::createManipulatorCollisionObjects(const std::vector<double> &joint_angles,
+                                                                           std::shared_ptr<shared::Kinematics> &kinematics) const {
+    std::vector<fcl::CollisionObject> vec;
+    fcl::AABB link_aabb(fcl::Vec3f(0.0, -0.0025, -0.0025), fcl::Vec3f(1.0, 0.0025, 0.0025));
+    int n = 0;
+    for (size_t i = 0; i < joint_angles.size(); i++) {
+        const std::pair<fcl::Vec3f, fcl::Matrix3f> pose_link_n = kinematics->getPoseOfLinkN(joint_angles, n);
+        fcl::Box* box = new fcl::Box();
+        fcl::Transform3f box_tf;
+        fcl::Transform3f trans(pose_link_n.second, pose_link_n.first);        
+        fcl::constructBox(link_aabb, trans, *box, box_tf);        
+        vec.push_back(fcl::CollisionObject(boost::shared_ptr<fcl::CollisionGeometry>(box), box_tf));
+        n++;
+    }
+    return vec;
+}
+
 bool Utils::serializeStatePath(std::vector<std::vector<double>> state_path) {
     std::stringstream ss;
     std::string file("../../python/state_path1.txt");
@@ -277,9 +286,12 @@ BOOST_PYTHON_MODULE(util) {
          .def(vector_indexing_suite<std::vector<int> >());
     
     class_<fcl::OBB>("OBB");
+    class_<fcl::CollisionObject>("CollisionObject", init<const boost::shared_ptr<fcl::CollisionGeometry>, const fcl::Transform3f>());
     to_python_converter<std::vector<fcl::OBB, std::allocator<fcl::OBB> >, VecToList<fcl::OBB> >();
+    to_python_converter<std::vector<fcl::CollisionObject, std::allocator<fcl::CollisionObject> >, VecToList<fcl::CollisionObject> >();
     class_<Utils>("Utils")
-         .def("createManipulatorCollisionStructures", &Utils::createManipulatorCollisionStructures)         
+         .def("createManipulatorCollisionStructures", &Utils::createManipulatorCollisionStructures)
+         .def("createManipulatorCollisionObjects", &Utils::createManipulatorCollisionObjects)         
          
     ;
 }
