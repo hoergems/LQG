@@ -37,10 +37,10 @@ class Utils {
                 std::vector<std::vector<double>> loadGoalStates();
 				          
 		std::vector<fcl::OBB> createManipulatorCollisionStructures(const std::vector<double> &joint_angles, 
-                                                                   std::shared_ptr<shared::Kinematics> &kinematics);
+                                                                           const std::shared_ptr<shared::Kinematics> &kinematics) const;
 
                 std::vector<fcl::CollisionObject> createManipulatorCollisionObjects(const std::vector<double> &joint_angles,
-                                                                                    std::shared_ptr<shared::Kinematics> &kinematics) const;
+                                                                                    const std::shared_ptr<shared::Kinematics> &kinematics) const;
 
         bool serializeStatePath(std::vector<std::vector<double>> state_path);
 };
