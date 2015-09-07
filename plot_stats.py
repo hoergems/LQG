@@ -28,7 +28,8 @@ class PlotStats:
         self.plot_rewards(serializer, dir=dir, show_legend=True)
         logging.info("PlotStats: plotting % successful runs")
         self.plot_num_successes(serializer, dir=dir)
-        self.plot_sample_variances(serializer, dir=dir, show_legend=True)        
+        self.plot_sample_variances(serializer, dir=dir, show_legend=True)
+        self.plot_sample_standard_deviations(serializer, dir=dir, show_legend=True)        
         logging.info("PlotStats: plotting mean planning times")
         self.plot_mean_planning_times(serializer, dir=dir) 
         cart_coords = serializer.load_cartesian_coords(dir, "cartesian_coords_" + algorithm + ".yaml")
@@ -209,6 +210,45 @@ class PlotStats:
                             save=self.save,
                             filename=dir + "/sample_variance.pdf")
         
+    def plot_sample_standard_deviations(self, serializer, dir="stats", show_legend=False):
+        stats = serializer.load_stats('stats.yaml', path=dir)
+        m_cov = stats['m_cov']
+        sample_deviations_sets = []
+        labels = []
+        sample_deviations = []
+        files = glob.glob(os.path.join(os.path.join(dir, "sample_standard_deviations*.yaml")))
+        for file in sorted(files):
+            file_str = file
+            try:
+                file_str = file.split("/")[-1].split(".")[0]
+                #file_str = file.split("/")[1].split(".")[0].split("_")[1]                
+            except Exception as e:
+                logging.error("PlotStats: " + str(e))   
+            
+            sample_deviations.append(serializer.load_stats(file))            
+            data = []
+            for k in xrange(len(m_cov)):
+                data.append(np.array([m_cov[k], sample_deviations[-1][k]]))
+            sample_deviations_sets.append(np.array(data))
+            label_string = ""
+            for i in xrange(len(file_str.split("_"))):
+                if i != 0:
+                    label_string += " " + file_str.split("_")[i]
+                else:
+                    label_string += file_str.split("_")[i]
+            labels.append(label_string)        
+        min_m = [min(m) for m in sample_deviations]
+        max_m = [max(m) for m in sample_deviations]        
+        Plot.plot_2d_n_sets(sample_deviations_sets,
+                            labels=labels,
+                            xlabel="joint covariance",
+                            ylabel="sample standard deviation",
+                            x_range=[m_cov[0], m_cov[-1]],
+                            y_range=[min(min_m), max(max_m) * 1.05],
+                            show_legend=show_legend,
+                            save=self.save,
+                            filename=dir + "/sample_standard_deviations.pdf")
+        
             
     def plot_rewards(self, serializer, dir="stats", show_legend=False):        
         stats = serializer.load_stats('stats.yaml', path=dir)
@@ -281,7 +321,7 @@ class PlotStats:
                                 y_range=[min(min_m), max(max_m)],
                                 show_legend=True,
                                 save=self.save,
-                                filename=dir + "/mean_planning_times.png")
+                                filename=dir + "/mean_planning_times.pdf")
         
     def plot_emd_graph(self, serializer, cartesian_coords, dir="stats"):
         stats = serializer.load_stats('stats.yaml', path=dir) 

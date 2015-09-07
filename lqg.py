@@ -141,15 +141,22 @@ class LQG:
             serializer.save_stats(stats, path=dir) 
             
             mean_rewards = []
-            variances = []
+            reward_variances = []
             for i in xrange(len(m_covs)):
                 n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(all_rewards[i]))
                 mean_rewards.append(np.asscalar(mean))
-                variances.append(np.asscalar(var))
+                if np.isnan(np.asscalar(var)):
+                    var = 0.0
+                else:
+                    var = np.asscalar(var)
+                reward_variances.append(var)
                        
             serializer.save_rewards(all_rewards, path=dir, filename="rewards_lqg.yaml")
             serializer.save_rewards(mean_rewards, path=dir, filename="mean_rewards_lqg.yaml")
-            serializer.save_rewards(variances, path=dir, filename="sample_variances_lqg.yaml")
+            serializer.save_rewards(reward_variances, path=dir, filename="sample_variances_lqg.yaml")
+            serializer.save_rewards([np.asscalar(np.sqrt(reward_variances[i])) for i in xrange(len(reward_variances))],
+                                    path=dir,
+                                    filename="sample_standard_deviations_lqg.yaml")
             cmd = "cp config_lqg.yaml " + dir           
             os.system(cmd)
             

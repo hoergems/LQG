@@ -86,8 +86,14 @@ class MPC:
             mean_rewards = []
             for i in xrange(len(m_covs)):
                 n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards[i]))
+                print "mean " + str(mean)               
                 mean_rewards.append(np.asscalar(mean))
-                reward_variances.append(np.asscalar(var))
+                if np.isnan(np.asscalar(var)):
+                    var = 0.0
+                else:
+                    var = np.asscalar(var)
+                print "var " + str(var)
+                reward_variances.append(var)
             
             serializer.save_rewards(rewards, path=dir, filename="rewards_mpc" + str(self.num_execution_steps) + ".yaml")    
             serializer.save_rewards(mean_rewards, path=dir, filename="mean_rewards_mpc" + str(self.num_execution_steps) + ".yaml")
@@ -176,13 +182,13 @@ class MPC:
                     logging.info("MPC: " + str(len(paths)) + " Paths constructed. Evaluating them according the planning objective")
                     xs, us, zs = self.path_evaluator.evaluate_paths(paths, horizon=horizon)
                     
-                    planning_time += time.time() - t0
+                    planning_time_step = time.time() - t0
+                    planning_time += planning_time_step
                     logging.info("MPC: total planning time for step : " + 
                                  str(current_step) +
                                  " was " +
-                                 str(time.time() - t0) +
-                                 " seconds")
-                    logging.info("MPC: Average planning time was: " + str(planning_time / (current_step + 1.0)))
+                                 str(planning_time_step) +
+                                 " seconds")                    
                     x_tilde = np.array([0.0 for i in xrange(self.num_links)])
                     
                     n_steps = self.num_execution_steps
@@ -207,7 +213,7 @@ class MPC:
                 total_reward_cov.append(np.asscalar(total_reward))
                 mean_reward += total_reward
                 mean_planning_time += (planning_time / current_step)
-                
+                logging.info("MPC: Average planning time was: " + str(mean_planning_time))
                 x_true_vec = v_double()
                 x_true_vec[:] = x_true
                 ee_position_vec = self.kinematics.getEndEffectorPosition(x_true_vec)

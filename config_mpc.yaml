@@ -8,7 +8,7 @@ num_generated_paths: 20
 use_linear_path: True
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 1
+num_simulation_runs: 2
 
 # Number of links the manipulator consists of
 num_links: 3
@@ -35,10 +35,10 @@ num_bins: 201
 min_covariance: 0.0
 
 # The maximum joint state covariance
-max_covariance: 0.02
+max_covariance: 0.0002
 
 # The number of covariance steps
-covariance_steps: 1
+covariance_steps: 2
 
 # The observation covariance
 observation_covariance: 0.0001
