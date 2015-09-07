@@ -152,14 +152,8 @@ class PlotStats:
             data = []
             for k in xrange(len(m_cov)):
                 data.append(np.array([m_cov[k], num_succ_runs[-1][k]]))
-            num_succ_runs_sets.append(np.array(data))
-            label_string = ""
-            for i in xrange(len(file_str.split("_"))):
-                if i != 0:
-                    label_string += " " + file_str.split("_")[i]
-                else:
-                    label_string += file_str.split("_")[i]
-            labels.append(label_string)
+            num_succ_runs_sets.append(np.array(data))            
+            labels.append(file.split("/")[-1].split(".")[0].split("_")[2])
         min_m = [min(m) for m in num_succ_runs]
         max_m = [max(m) for m in num_succ_runs]
                
@@ -194,14 +188,8 @@ class PlotStats:
             data = []
             for k in xrange(len(m_cov)):
                 data.append(np.array([m_cov[k], sample_variances[-1][k]]))
-            sample_variances_sets.append(np.array(data))
-            label_string = ""
-            for i in xrange(len(file_str.split("_"))):
-                if i != 0:
-                    label_string += " " + file_str.split("_")[i]
-                else:
-                    label_string += file_str.split("_")[i]
-            labels.append(label_string)        
+            sample_variances_sets.append(np.array(data))            
+            labels.append(file_str.split("_")[2])        
         min_m = [min(m) for m in sample_variances]
         max_m = [max(m) for m in sample_variances]        
         Plot.plot_2d_n_sets(sample_variances_sets,
@@ -233,14 +221,8 @@ class PlotStats:
             data = []
             for k in xrange(len(m_cov)):
                 data.append(np.array([m_cov[k], sample_deviations[-1][k]]))
-            sample_deviations_sets.append(np.array(data))
-            label_string = ""
-            for i in xrange(len(file_str.split("_"))):
-                if i != 0:
-                    label_string += " " + file_str.split("_")[i]
-                else:
-                    label_string += file_str.split("_")[i]
-            labels.append(label_string)        
+            sample_deviations_sets.append(np.array(data))            
+            labels.append(file_str.split("_")[3])        
         min_m = [min(m) for m in sample_deviations]
         max_m = [max(m) for m in sample_deviations]        
         Plot.plot_2d_n_sets(sample_deviations_sets,
@@ -264,7 +246,8 @@ class PlotStats:
         files = glob.glob(os.path.join(os.path.join(dir, "mean_rewards*.yaml")))
         for file in sorted(files):
             file_str = file
-            try:
+            
+            try:                
                 file_str = file.split("/")[-1].split(".")[0]
                 #file_str = file.split("/")[1].split(".")[0].split("_")[1]                
             except Exception as e:
@@ -274,16 +257,10 @@ class PlotStats:
             data = []
             for k in xrange(len(m_cov)):
                 data.append(np.array([m_cov[k], mean_rewards[-1][k]]))
-            mean_rewards_sets.append(np.array(data))
-            label_string = ""
-            for i in xrange(len(file_str.split("_"))):
-                if i != 0:
-                    label_string += " " + file_str.split("_")[i]
-                else:
-                    label_string += file_str.split("_")[i]
-            labels.append(label_string)        
+            mean_rewards_sets.append(np.array(data))            
+            labels.append(file_str.split("_")[2])        
         min_m = [min(m) for m in mean_rewards]
-        max_m = [max(m) for m in mean_rewards]               
+        max_m = [max(m) for m in mean_rewards]                 
         Plot.plot_2d_n_sets(mean_rewards_sets,
                             labels=labels,
                             xlabel="joint covariance",
@@ -305,9 +282,9 @@ class PlotStats:
         labels = []
         mean_planning_times = []
         for file in glob.glob(os.path.join(os.path.join(dir, filename))):
-            file_str = file
+            file_str = file            
             try:
-                file_str = file.split("/")[1].split(".")[0].split("_")[1]
+                file_str = file.split("/")[2].split(".")[0].split("_")[-1]
             except:
                 pass
                    
@@ -326,7 +303,7 @@ class PlotStats:
                                 xlabel="joint covariance",
                                 ylabel="mean planning times (seconds)",
                                 x_range=[m_cov[0], m_cov[-1]],
-                                y_range=[min(min_m), max(max_m) * 1.05],
+                                y_range=[min(min_m)*0.95, max(max_m) * 1.05],
                                 show_legend=True,
                                 save=self.save,
                                 filename=dir + "/" + output)
@@ -365,49 +342,50 @@ class PlotStats:
             
     def plot_paths(self, serializer, best_paths=False, dir="stats"):
         config = serializer.read_config(path=dir)
-        dim = config['num_links']        
-        colors = []
-        if best_paths:
-            paths = serializer.load_paths("best_paths.yaml", path=dir)
-            filename = "best_paths.png"
-        else:
-            paths = serializer.load_paths("paths.yaml", path=dir)            
-            filename = "paths.png"
-        sets = []
-        for path in paths:
-            path_coords = []
-            for elem in path:
-                state = [elem[i] for i in xrange(dim)]
-                state_v = v_double()
-                state_v[:] = state
-                path_coords_v = self.kinematics.getEndEffectorPosition(state_v)
-                path_coords_elem = [path_coords_v[i] for i in xrange(len(path_coords_v))]
-                path_coords.append(path_coords_elem)
-            sets.append(np.array(path_coords))
-            colors.append(None)
-        obstacles = serializer.load_environment("env.xml", path=dir + "/environment")        
-        if not obstacles == None:
-            for obstacle in obstacles:                
-                point1 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0]
-                point2 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0]
-                point3 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0]
-                point4 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0]
-                sets.append(np.array([point1, point2]))                
-                sets.append(np.array([point2, point3]))
-                sets.append(np.array([point3, point4]))
-                sets.append(np.array([point4, point1])) 
-                colors.extend(['k' for j in xrange(4)])                       
-        Plot.plot_2d_n_sets(sets,
-                            colors=colors, 
-                            xlabel='x', 
-                            ylabel='y', 
-                            x_range=[-3.5, 3.5], 
-                            y_range=[-3.5, 3.5],
-                            plot_type="lines",
-                            show_legend=False,
-                            save=self.save,
-                            path=dir,
-                            filename=filename)    
+        if config['plot_paths']:
+            dim = config['num_links']        
+            colors = []
+            if best_paths:
+                paths = serializer.load_paths("best_paths.yaml", path=dir)
+                filename = "best_paths.png"
+            else:
+                paths = serializer.load_paths("paths.yaml", path=dir)            
+                filename = "paths.png"
+            sets = []
+            for path in paths:
+                path_coords = []
+                for elem in path:
+                    state = [elem[i] for i in xrange(dim)]
+                    state_v = v_double()
+                    state_v[:] = state
+                    path_coords_v = self.kinematics.getEndEffectorPosition(state_v)
+                    path_coords_elem = [path_coords_v[i] for i in xrange(len(path_coords_v))]
+                    path_coords.append(path_coords_elem)
+                sets.append(np.array(path_coords))
+                colors.append(None)
+            obstacles = serializer.load_environment("env.xml", path=dir + "/environment")        
+            if not obstacles == None:
+                for obstacle in obstacles:                
+                    point1 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0]
+                    point2 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0]
+                    point3 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0]
+                    point4 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0]
+                    sets.append(np.array([point1, point2]))                
+                    sets.append(np.array([point2, point3]))
+                    sets.append(np.array([point3, point4]))
+                    sets.append(np.array([point4, point1])) 
+                    colors.extend(['k' for j in xrange(4)])                       
+            Plot.plot_2d_n_sets(sets,
+                                colors=colors, 
+                                xlabel='x', 
+                                ylabel='y', 
+                                x_range=[-3.5, 3.5], 
+                                y_range=[-3.5, 3.5],
+                                plot_type="lines",
+                                show_legend=False,
+                                save=self.save,
+                                path=dir,
+                                filename=filename)    
     
         
 if __name__ == "__main__":

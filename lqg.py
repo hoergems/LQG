@@ -88,8 +88,9 @@ class LQG:
                 t0 = time.time()
                 paths = path_planner.plan_paths(self.num_paths, 0) 
                 time_to_generate_paths = time.time() - t0 
-                print "LQG: Time to generate paths: " + str(time_to_generate_paths) + " seconds"                
-                serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path=dir)               
+                print "LQG: Time to generate paths: " + str(time_to_generate_paths) + " seconds"
+                if self.plot_paths:                
+                    serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path=dir)               
             
             
             """ Determine average path length """
@@ -142,7 +143,8 @@ class LQG:
                 all_rewards.append([np.asscalar(rewards[k]) for k in xrange(len(rewards))]) 
                 successes.append((100.0 / self.num_simulation_runs) * successful_runs)    
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
-            serializer.save_paths(best_paths, 'best_paths.yaml', True, path=dir)
+            if self.plot_paths:
+                serializer.save_paths(best_paths, 'best_paths.yaml', True, path=dir)
             serializer.save_cartesian_coords(cart_coords, path=dir, filename="cartesian_coords_lqg.yaml") 
             serializer.save_num_successes(successes, path=dir, filename="num_successes_lqg.yaml") 
             serializer.save_mean_planning_times(mean_planning_times, path=dir, filename="mean_planning_times_per_run_lqg.yaml")          
@@ -218,6 +220,7 @@ class LQG:
         self.workspace_dimension = config['workspace_dimension'] 
         self.w1 = config['w1']
         self.w2 = config['w2']
+        self.plot_paths = config['plot_paths']
             
 
 if __name__ == "__main__":

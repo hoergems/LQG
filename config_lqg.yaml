@@ -41,7 +41,7 @@ min_covariance: 0.0
 max_covariance: 0.02
 
 # The number of covariance steps
-covariance_steps: 3
+covariance_steps: 2
 
 # The observation covariance
 observation_covariance: 0.0001
@@ -75,6 +75,8 @@ sample_size: 100
 joint_constraint: 3.14159
 
 stop_when_terminal: True
+
+plot_paths: False
 
 
 
