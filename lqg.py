@@ -42,6 +42,7 @@ class LQG:
             obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))          
         
         """ Setup operations """
+        print "LQG: Generating goal states..."
         goal_states = get_goal_states("lqg",
                                       serializer, 
                                       obstacles,
@@ -52,6 +53,7 @@ class LQG:
                                       self.joint_constraints,
                                       self.theta_0,
                                       self.goal_position)
+        print "LQG: " + str(len(goal_states)) + " goal states generated" 
         
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
         path_planner.setup(self.num_links,
