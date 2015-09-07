@@ -116,7 +116,7 @@ class MPC:
         total_rewards = []
         sample_variances = []
         mean_planning_times = []
-        total_planning_times_run = []
+        total_planning_times_cov = []
         all_successful_runs = []
         emds = []
         for j in xrange(len(m_covs)):            
@@ -154,7 +154,7 @@ class MPC:
             cartesian_coords = []
             total_reward_cov = []
             mean_planning_time = 0.0
-            total_planning_time_run = 0.0
+            total_planning_time_cov = 0.0
             successful_runs = 0
             for k in xrange(self.num_simulation_runs):
                 #x_tilde = initial_belief               
@@ -166,7 +166,8 @@ class MPC:
                 
                 current_step = 0
                 terminal = False
-                planning_time = 0.0                
+                planning_time = 0.0
+                total_planning_time_run = 0.0              
                 while current_step < self.max_num_steps and not terminal:
                     t0 = time.time()                    
                     self.path_planning_interface.set_start_and_goal(x_estimate, self.goal_states)
@@ -215,7 +216,7 @@ class MPC:
                 mean_reward += total_reward
                 mean_planning_time += (planning_time / current_step)
                 total_planning_time_run += planning_time
-                logging.info("MPC: Average planning time per planning step was: " + str(planning_time / current_step))
+                logging.info("MPC: Average planning time per planning step was: " + str(planning_time / current_step))                
                 x_true_vec = v_double()
                 x_true_vec[:] = x_true
                 ee_position_vec = self.kinematics.getEndEffectorPosition(x_true_vec)
@@ -231,12 +232,12 @@ class MPC:
             mean_rewards.append(np.asscalar(mean_reward))            
             mean_planning_time /= self.num_simulation_runs
             mean_planning_times.append(mean_planning_time)
-            total_planning_time_run /= self.num_simulation_runs
-            total_planning_times_run.append(total_planning_time_run)
+            total_planning_time_cov = total_planning_time_run / self.num_simulation_runs
+            total_planning_times_cov.append(total_planning_time_run)
             all_successful_runs.append((100.0 / self.num_simulation_runs) * successful_runs)
             emds.append(calc_EMD(cartesian_coords, self.num_bins))
             cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])            
-        return cart_coords, total_rewards, emds, mean_planning_times, total_planning_times_run, all_successful_runs
+        return cart_coords, total_rewards, emds, mean_planning_times, total_planning_times_cov, all_successful_runs
             
     def problem_setup(self, delta_t, num_links):
         links = v2_double()

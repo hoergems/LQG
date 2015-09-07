@@ -168,7 +168,7 @@ class PlotStats:
                             xlabel="joint covariance",
                             ylabel="% successful runs",
                             x_range=[m_cov[0], m_cov[-1]],
-                            y_range=[min(min_m) * 0.95, max(max_m) * 1.05],
+                            y_range=[min(min_m), max(max_m) * 1.05],
                             show_legend=True,
                             save=self.save,
                             filename=dir + "/successful_runs.pdf")
@@ -326,7 +326,7 @@ class PlotStats:
                                 xlabel="joint covariance",
                                 ylabel="mean planning times (seconds)",
                                 x_range=[m_cov[0], m_cov[-1]],
-                                y_range=[min(min_m), max(max_m)],
+                                y_range=[min(min_m), max(max_m) * 1.05],
                                 show_legend=True,
                                 save=self.save,
                                 filename=dir + "/" + output)

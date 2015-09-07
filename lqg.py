@@ -145,7 +145,7 @@ class LQG:
             serializer.save_paths(best_paths, 'best_paths.yaml', True, path=dir)
             serializer.save_cartesian_coords(cart_coords, path=dir, filename="cartesian_coords_lqg.yaml") 
             serializer.save_num_successes(successes, path=dir, filename="num_successes_lqg.yaml") 
-            serializer.save_mean_planning_times(mean_planning_times, path=dir, filename="mean_planning_times_lqg.yaml")          
+            serializer.save_mean_planning_times(mean_planning_times, path=dir, filename="mean_planning_times_per_run_lqg.yaml")          
             serializer.save_stats(stats, path=dir) 
             
             mean_rewards = []
