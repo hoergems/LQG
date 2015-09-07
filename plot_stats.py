@@ -32,6 +32,10 @@ class PlotStats:
         self.plot_sample_standard_deviations(serializer, dir=dir, show_legend=True)        
         logging.info("PlotStats: plotting mean planning times")
         self.plot_mean_planning_times(serializer, dir=dir) 
+        self.plot_mean_planning_times(serializer, 
+                                      dir, 
+                                      filename="mean_planning_times_per_run*.yaml",
+                                      output="mean_planning_times_per_run.pdf")
         cart_coords = serializer.load_cartesian_coords(dir, "cartesian_coords_" + algorithm + ".yaml")
         logging.info("PlotStats: plotting EMD graph...")
         self.plot_emd_graph(serializer, cart_coords, dir=dir) 
@@ -290,13 +294,17 @@ class PlotStats:
                             save=self.save,
                             filename=dir + "/mean_rewards.pdf")
         
-    def plot_mean_planning_times(self, serializer, dir="stats"):        
+    def plot_mean_planning_times(self, serializer, dir="stats", filename="", output=""): 
+        if filename == "":
+            filename = "mean_planning_times_per_step*.yaml"
+        if output == "":
+            output = "mean_planning_times_per_step.pdf"       
         stats = serializer.load_stats('stats.yaml', path=dir)
         m_cov = stats['m_cov']
         sets = []
         labels = []
         mean_planning_times = []
-        for file in glob.glob(os.path.join(os.path.join(dir, "mean_planning_times.yaml"))):
+        for file in glob.glob(os.path.join(os.path.join(dir, filename))):
             file_str = file
             try:
                 file_str = file.split("/")[1].split(".")[0].split("_")[1]
@@ -321,7 +329,7 @@ class PlotStats:
                                 y_range=[min(min_m), max(max_m)],
                                 show_legend=True,
                                 save=self.save,
-                                filename=dir + "/mean_planning_times.pdf")
+                                filename=dir + "/" + output)
         
     def plot_emd_graph(self, serializer, cartesian_coords, dir="stats"):
         stats = serializer.load_stats('stats.yaml', path=dir) 

@@ -60,12 +60,14 @@ class Serializer:
         with open(os.path.join(path, filename), 'w') as f:
             f.write(yaml.dump(successes, default_flow_style=False))
             
-    def save_mean_planning_times(self, planning_times, path=""):
+    def save_mean_planning_times(self, planning_times, path="", filename=""):
         if not os.path.exists(path):
             os.makedirs(path)
-        for file in glob.glob(os.path.join(path, "mean_planning_times.yaml")):
+        if filename == "":
+            filename = "mean_planning_times.yaml"
+        for file in glob.glob(os.path.join(path, filename)):
             os.remove(file)
-        with open(os.path.join(path, "mean_planning_times.yaml"), 'w') as f:
+        with open(os.path.join(path, filename), 'w') as f:
             f.write(yaml.dump(planning_times, default_flow_style=False))
             
     def load_stats(self, filename, path=""):

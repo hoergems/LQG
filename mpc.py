@@ -73,26 +73,25 @@ class MPC:
         if check_positive_definite([C, D]):            
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
             emds = []
-            cartesian_coords, rewards, emds, mean_planning_times, all_succesful_runs = self.mpc(self.theta_0, m_covs, self.horizon, obstacles)
+            cartesian_coords, rewards, emds, mean_planning_times, total_planning_times_run, all_succesful_runs = self.mpc(self.theta_0, m_covs, self.horizon, obstacles)
                        
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
             #serializer.save_paths(best_paths, 'best_paths.yaml', True, path="stats")
             serializer.save_cartesian_coords(cartesian_coords, path=dir, filename="cartesian_coords_mpc" + str(self.num_execution_steps) + ".yaml")
             serializer.save_num_successes(all_succesful_runs, path=dir, filename="num_successes_mpc" + str(self.num_execution_steps) + ".yaml")            
             serializer.save_stats(stats, path=dir)
-            serializer.save_mean_planning_times(mean_planning_times, path=dir)
+            serializer.save_mean_planning_times(mean_planning_times, path=dir, filename="mean_planning_times_per_step_" + str(self.num_execution_steps) + ".yaml")
+            serializer.save_mean_planning_times(total_planning_times_run, path=dir, filename="mean_planning_times_per_run_" + str(self.num_execution_steps) + ".yaml")
             
             reward_variances = []
             mean_rewards = []
             for i in xrange(len(m_covs)):
-                n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards[i]))
-                print "mean " + str(mean)               
+                n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards[i]))                            
                 mean_rewards.append(np.asscalar(mean))
                 if np.isnan(np.asscalar(var)):
                     var = 0.0
                 else:
-                    var = np.asscalar(var)
-                print "var " + str(var)
+                    var = np.asscalar(var)               
                 reward_variances.append(var)
             
             serializer.save_rewards(rewards, path=dir, filename="rewards_mpc" + str(self.num_execution_steps) + ".yaml")    
@@ -117,6 +116,7 @@ class MPC:
         total_rewards = []
         sample_variances = []
         mean_planning_times = []
+        total_planning_times_run = []
         all_successful_runs = []
         emds = []
         for j in xrange(len(m_covs)):            
@@ -154,6 +154,7 @@ class MPC:
             cartesian_coords = []
             total_reward_cov = []
             mean_planning_time = 0.0
+            total_planning_time_run = 0.0
             successful_runs = 0
             for k in xrange(self.num_simulation_runs):
                 #x_tilde = initial_belief               
@@ -213,7 +214,8 @@ class MPC:
                 total_reward_cov.append(np.asscalar(total_reward))
                 mean_reward += total_reward
                 mean_planning_time += (planning_time / current_step)
-                logging.info("MPC: Average planning time was: " + str(mean_planning_time))
+                total_planning_time_run += planning_time
+                logging.info("MPC: Average planning time per planning step was: " + str(planning_time / current_step))
                 x_true_vec = v_double()
                 x_true_vec[:] = x_true
                 ee_position_vec = self.kinematics.getEndEffectorPosition(x_true_vec)
@@ -229,10 +231,12 @@ class MPC:
             mean_rewards.append(np.asscalar(mean_reward))            
             mean_planning_time /= self.num_simulation_runs
             mean_planning_times.append(mean_planning_time)
+            total_planning_time_run /= self.num_simulation_runs
+            total_planning_times_run.append(total_planning_time_run)
             all_successful_runs.append((100.0 / self.num_simulation_runs) * successful_runs)
             emds.append(calc_EMD(cartesian_coords, self.num_bins))
             cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])            
-        return cart_coords, total_rewards, emds, mean_planning_times, all_successful_runs
+        return cart_coords, total_rewards, emds, mean_planning_times, total_planning_times_run, all_successful_runs
             
     def problem_setup(self, delta_t, num_links):
         links = v2_double()

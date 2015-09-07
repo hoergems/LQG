@@ -68,6 +68,8 @@ class LQG:
         if check_positive_definite([C, D]):            
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
             emds = []
+            mean_planning_times = []
+            time_to_generate_paths = 0.0
             if self.use_paths_from_file and len(glob.glob(os.path.join(dir, "paths.yaml"))) == 1:
                 logging.info("LQG: Loading paths from file")
                 in_paths = serializer.load_paths("paths.yaml", path=dir) 
@@ -83,7 +85,10 @@ class LQG:
                     paths.append([xs, us, zs])
             else:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
-                paths = path_planner.plan_paths(self.num_paths, 0)                   
+                t0 = time.time()
+                paths = path_planner.plan_paths(self.num_paths, 0) 
+                time_to_generate_paths = time.time() - t0 
+                print "LQG: Time to generate paths: " + str(time_to_generate_paths) + " seconds"                
                 serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path=dir)               
             
             
@@ -113,8 +118,10 @@ class LQG:
                                      self.sample_size, 
                                      obstacles,
                                      self.w1,
-                                     self.w2)  
+                                     self.w2)
+                t0 = time.time() 
                 xs, us, zs = path_evaluator.evaluate_paths(paths)
+                mean_planning_times.append(time_to_generate_paths + (time.time() - t0))
                                 
                 best_paths.append([[xs[i] for i in xrange(len(xs))], 
                                    [us[i] for i in xrange(len(us))],
@@ -137,7 +144,8 @@ class LQG:
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
             serializer.save_paths(best_paths, 'best_paths.yaml', True, path=dir)
             serializer.save_cartesian_coords(cart_coords, path=dir, filename="cartesian_coords_lqg.yaml") 
-            serializer.save_num_successes(successes, path=dir, filename="num_successes_lqg.yaml")           
+            serializer.save_num_successes(successes, path=dir, filename="num_successes_lqg.yaml") 
+            serializer.save_mean_planning_times(mean_planning_times, path=dir, filename="mean_planning_times_lqg.yaml")          
             serializer.save_stats(stats, path=dir) 
             
             mean_rewards = []
