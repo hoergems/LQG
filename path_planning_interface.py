@@ -121,8 +121,7 @@ class PathPlanningInterface:
         path_planner.set_obstacles(obstacles)
         path_planner.set_start_state(self.start_state) 
         path_planner.set_goal_state(self.goal_states)
-        xs, us, zs = path_planner.plan_path()  
-        print "putting"             
+        xs, us, zs = path_planner.plan_path()
         queue.put((xs, us, zs))
         return   
     
