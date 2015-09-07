@@ -73,15 +73,29 @@ class MPC:
         if check_positive_definite([C, D]):            
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
             emds = []
-            cartesian_coords, rewards, emds, mean_planning_times, total_planning_times_run, all_succesful_runs = self.mpc(self.theta_0, m_covs, self.horizon, obstacles)
+            (cartesian_coords, 
+             rewards, 
+             emds, 
+             mean_planning_times_per_step, 
+             mean_planning_times_per_run, 
+             all_succesful_runs, 
+             mean_number_generated_paths_per_step, 
+             mean_number_generated_paths_per_run,
+             mean_number_planning_steps_cov) = self.mpc(self.theta_0, m_covs, self.horizon, obstacles)
                        
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
             #serializer.save_paths(best_paths, 'best_paths.yaml', True, path="stats")
             serializer.save_cartesian_coords(cartesian_coords, path=dir, filename="cartesian_coords_mpc" + str(self.num_execution_steps) + ".yaml")
             serializer.save_num_successes(all_succesful_runs, path=dir, filename="num_successes_mpc" + str(self.num_execution_steps) + ".yaml")            
             serializer.save_stats(stats, path=dir)
-            serializer.save_mean_planning_times(mean_planning_times, path=dir, filename="mean_planning_times_per_step_" + str(self.num_execution_steps) + ".yaml")
-            serializer.save_mean_planning_times(total_planning_times_run, path=dir, filename="mean_planning_times_per_run_" + str(self.num_execution_steps) + ".yaml")
+            serializer.save_mean_planning_times(mean_planning_times_per_step, path=dir, filename="mean_planning_times_per_step_" + str(self.num_execution_steps) + ".yaml")
+            serializer.save_mean_planning_times(mean_planning_times_per_run, path=dir, filename="mean_planning_times_per_run_" + str(self.num_execution_steps) + ".yaml")
+            serializer.save_mean_num_generated_paths(mean_number_generated_paths_per_step, 
+                                                     path=dir,
+                                                     filename="mean_num_generated_paths_per_step_mpc" + str(self.num_execution_steps))
+            serializer.save_mean_num_generated_paths(mean_number_generated_paths_per_run, 
+                                                     path=dir,
+                                                     filename="mean_num_generated_paths_per_run_mpc" + str(self.num_execution_steps))
             
             reward_variances = []
             mean_rewards = []
@@ -115,9 +129,12 @@ class MPC:
         mean_rewards = []
         total_rewards = []
         sample_variances = []
-        mean_planning_times = []
-        total_planning_times_cov = []
+        mean_planning_times_per_step = []
+        mean_planning_times_per_run = []
         all_successful_runs = []
+        mean_number_generated_paths_per_step = []
+        mean_number_generated_paths_per_run = []
+        mean_number_planning_steps_cov = []
         emds = []
         for j in xrange(len(m_covs)):            
             
@@ -134,13 +151,13 @@ class MPC:
             N = self.observation_covariance * np.identity(self.num_links)
             P_t = np.array([[0.0 for k in xrange(self.num_links)] for l in xrange(self.num_links)])
                 
-            self.path_evaluator.setup(A, B, C, D, H, M, N, V, W, 
-                                      self.num_links,
-                                      self.workspace_dimension, 
-                                      self.sample_size, 
-                                      obstacles,
-                                      self.w1,
-                                      self.w2)
+            self.path_planning_interface.setup_path_evaluator(A, B, C, D, H, M, N, V, W, 
+                                                              self.num_links,
+                                                              self.workspace_dimension, 
+                                                              self.sample_size, 
+                                                              obstacles,
+                                                              self.w1,
+                                                              self.w2)
             self.sim.setup_problem(A, B, C, D, H, V, W, M, N, 
                                    obstacles, 
                                    self.goal_position, 
@@ -152,10 +169,13 @@ class MPC:
             
             mean_reward = 0.0
             cartesian_coords = []
-            total_reward_cov = []
-            mean_planning_time = 0.0
-            total_planning_time_cov = 0.0
+            total_reward_cov = []            
+            
+            mean_planning_time_per_run = 0.0
+            
             successful_runs = 0
+            num_generated_paths_run = 0
+            mean_number_planning_steps = 0            
             for k in xrange(self.num_simulation_runs):
                 #x_tilde = initial_belief               
                 print "MPC: Joint covariance: " + str(m_covs[j])
@@ -165,15 +185,15 @@ class MPC:
                 total_reward = 0.0
                 
                 current_step = 0
-                terminal = False
-                planning_time = 0.0
-                total_planning_time_run = 0.0              
+                terminal = False                      
+                              
                 while current_step < self.max_num_steps and not terminal:
+                    mean_number_planning_steps += 1
                     t0 = time.time()                    
                     self.path_planning_interface.set_start_and_goal(x_estimate, self.goal_states)
-                    logging.info("MPC: Constructing " + str(self.num_paths) + " paths")
-                    paths = self.path_planning_interface.plan_paths(self.num_paths, 0)
-                    if len(paths) == 0:
+                    logging.info("MPC: Constructing paths")
+                    xs, us, zs, num_generated_paths = self.path_planning_interface.plan_and_evaluate_paths(self.num_paths, 0, horizon, self.timeout)                    
+                    if len(xs) == 0:
                         logging.error("MPC: Couldn't find any paths from start state" + 
                                       str(x_estimate) + 
                                       " to goal states") 
@@ -181,16 +201,11 @@ class MPC:
                         total_reward = np.array([-self.illegal_move_penalty])[0]
                         current_step += 1                                             
                         break
-                    logging.info("MPC: " + str(len(paths)) + " Paths constructed. Evaluating them according the planning objective")
-                    xs, us, zs = self.path_evaluator.evaluate_paths(paths, horizon=horizon)
-                    
-                    planning_time_step = time.time() - t0
-                    planning_time += planning_time_step
-                    logging.info("MPC: total planning time for step : " + 
-                                 str(current_step) +
-                                 " was " +
-                                 str(planning_time_step) +
-                                 " seconds")                    
+                    #logging.info("MPC: " + str(len(paths)) + " Paths constructed. Evaluating them according the planning objective")
+                    #xs, us, zs = self.path_evaluator.evaluate_paths(paths, horizon=horizon)
+                    mean_planning_time_per_run += time.time() - t0                    
+                    logging.info("MPC: Generated " + str(num_generated_paths) + " paths") 
+                    num_generated_paths_run += num_generated_paths                   
                     x_tilde = np.array([0.0 for i in xrange(self.num_links)])
                     
                     n_steps = self.num_execution_steps
@@ -213,15 +228,13 @@ class MPC:
                     logging.info("MPC: Execution finished. True state is " + str(x_true))
                     logging.info("MPC: Estimated state is " + str(x_estimate))                
                 total_reward_cov.append(np.asscalar(total_reward))
-                mean_reward += total_reward
-                mean_planning_time += (planning_time / current_step)
-                total_planning_time_run += planning_time
-                logging.info("MPC: Average planning time per planning step was: " + str(planning_time / current_step))                
+                mean_reward += total_reward                
+                                
                 x_true_vec = v_double()
                 x_true_vec[:] = x_true
                 ee_position_vec = self.kinematics.getEndEffectorPosition(x_true_vec)
                 ee_position = np.array([ee_position_vec[i] for i in xrange(len(ee_position_vec))])
-                cartesian_coords.append(ee_position.tolist())
+                cartesian_coords.append(ee_position.tolist())                
                 logging.info("MPC: Done. total_reward is " + str(total_reward))
             logging.info("MPC: Finished simulations for covariance value  " + 
                          str(m_covs[j]) +
@@ -229,15 +242,29 @@ class MPC:
                          str(mean_reward))
             total_rewards.append(total_reward_cov)
             mean_reward /= self.num_simulation_runs            
-            mean_rewards.append(np.asscalar(mean_reward))            
-            mean_planning_time /= self.num_simulation_runs
-            mean_planning_times.append(mean_planning_time)
-            total_planning_time_cov = total_planning_time_run / self.num_simulation_runs
-            total_planning_times_cov.append(total_planning_time_run)
+            mean_rewards.append(np.asscalar(mean_reward))
+            
+            mean_number_planning_steps /= self.num_simulation_runs
+            mean_number_planning_steps_cov.append(mean_number_planning_steps)
+            
+            mean_planning_times_per_run.append(mean_planning_time_per_run / self.num_simulation_runs)
+            mean_planning_times_per_step.append(mean_planning_times_per_run[-1] / mean_number_planning_steps)
+            
+            mean_number_generated_paths_per_run.append(num_generated_paths_run / self.num_simulation_runs)
+            mean_number_generated_paths_per_step.append(mean_number_generated_paths_per_run[-1] / mean_number_planning_steps)            
+            
             all_successful_runs.append((100.0 / self.num_simulation_runs) * successful_runs)
             emds.append(calc_EMD(cartesian_coords, self.num_bins))
             cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])            
-        return cart_coords, total_rewards, emds, mean_planning_times, total_planning_times_cov, all_successful_runs
+        return (cart_coords, 
+                total_rewards, 
+                emds, 
+                mean_planning_times_per_step, 
+                mean_planning_times_per_run, 
+                all_successful_runs, 
+                mean_number_generated_paths_per_step, 
+                mean_number_generated_paths_per_run,
+                mean_number_planning_steps_cov)
             
     def problem_setup(self, delta_t, num_links):
         links = v2_double()
@@ -300,6 +327,7 @@ class MPC:
         self.workspace_dimension = config['workspace_dimension']
         self.w1 = config['w1']
         self.w2 = config['w2']
+        self.timeout = config['timeout']
         
         
         """

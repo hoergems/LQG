@@ -136,6 +136,13 @@ class PathEvaluator:
             
             j = np.hstack((np.hstack((v1, v2)), v3))            
             return j
+        
+    def evaluate_path(self, path, horizon=-1):
+        eval_queue = Queue()
+        self.evaluate(0, eval_queue, path, horizon)
+        elem = eval_queue.get()
+        objective = self.w1 * elem[0][0] + self.w2 * elem[0][1]
+        return (elem[1], objective)
     
     def evaluate_paths(self, paths, horizon=-1):
         jobs = collections.deque() 

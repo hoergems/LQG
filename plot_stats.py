@@ -342,50 +342,53 @@ class PlotStats:
             
     def plot_paths(self, serializer, best_paths=False, dir="stats"):
         config = serializer.read_config(path=dir)
-        if config['plot_paths']:
-            dim = config['num_links']        
-            colors = []
-            if best_paths:
-                paths = serializer.load_paths("best_paths.yaml", path=dir)
-                filename = "best_paths.png"
-            else:
-                paths = serializer.load_paths("paths.yaml", path=dir)            
-                filename = "paths.png"
-            sets = []
-            for path in paths:
-                path_coords = []
-                for elem in path:
-                    state = [elem[i] for i in xrange(dim)]
-                    state_v = v_double()
-                    state_v[:] = state
-                    path_coords_v = self.kinematics.getEndEffectorPosition(state_v)
-                    path_coords_elem = [path_coords_v[i] for i in xrange(len(path_coords_v))]
-                    path_coords.append(path_coords_elem)
-                sets.append(np.array(path_coords))
-                colors.append(None)
-            obstacles = serializer.load_environment("env.xml", path=dir + "/environment")        
-            if not obstacles == None:
-                for obstacle in obstacles:                
-                    point1 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0]
-                    point2 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0]
-                    point3 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0]
-                    point4 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0]
-                    sets.append(np.array([point1, point2]))                
-                    sets.append(np.array([point2, point3]))
-                    sets.append(np.array([point3, point4]))
-                    sets.append(np.array([point4, point1])) 
-                    colors.extend(['k' for j in xrange(4)])                       
-            Plot.plot_2d_n_sets(sets,
-                                colors=colors, 
-                                xlabel='x', 
-                                ylabel='y', 
-                                x_range=[-3.5, 3.5], 
-                                y_range=[-3.5, 3.5],
-                                plot_type="lines",
-                                show_legend=False,
-                                save=self.save,
-                                path=dir,
-                                filename=filename)    
+        try:
+            if config['plot_paths']:
+                dim = config['num_links']        
+                colors = []
+                if best_paths:
+                    paths = serializer.load_paths("best_paths.yaml", path=dir)
+                    filename = "best_paths.png"
+                else:
+                    paths = serializer.load_paths("paths.yaml", path=dir)            
+                    filename = "paths.png"
+                sets = []
+                for path in paths:
+                    path_coords = []
+                    for elem in path:
+                        state = [elem[i] for i in xrange(dim)]
+                        state_v = v_double()
+                        state_v[:] = state
+                        path_coords_v = self.kinematics.getEndEffectorPosition(state_v)
+                        path_coords_elem = [path_coords_v[i] for i in xrange(len(path_coords_v))]
+                        path_coords.append(path_coords_elem)
+                    sets.append(np.array(path_coords))
+                    colors.append(None)
+                obstacles = serializer.load_environment("env.xml", path=dir + "/environment")        
+                if not obstacles == None:
+                    for obstacle in obstacles:                
+                        point1 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0]
+                        point2 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0]
+                        point3 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0]
+                        point4 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0]
+                        sets.append(np.array([point1, point2]))                
+                        sets.append(np.array([point2, point3]))
+                        sets.append(np.array([point3, point4]))
+                        sets.append(np.array([point4, point1])) 
+                        colors.extend(['k' for j in xrange(4)])                       
+                Plot.plot_2d_n_sets(sets,
+                                    colors=colors, 
+                                    xlabel='x', 
+                                    ylabel='y', 
+                                    x_range=[-3.5, 3.5], 
+                                    y_range=[-3.5, 3.5],
+                                    plot_type="lines",
+                                    show_legend=False,
+                                    save=self.save,
+                                    path=dir,
+                                    filename=filename)
+        except Exception as e:
+            print e    
     
         
 if __name__ == "__main__":
