@@ -52,6 +52,16 @@ class Serializer:
         with open(os.path.join(path, filename), 'w') as f:
             f.write(yaml.dump(mean_num_generated_paths, default_flow_style=False))
             
+    def save_mean_num_planning_steps(self, mean_num_planning_steps, path="", filename=""):
+        if not os.path.exists(path):
+            os.makedirs(path)
+        if filename == "":
+            filename = "mean_num_planning_steps_per_run.yaml"
+        for file in glob.glob(os.path.join(path, filename)):
+            os.remove(file)
+        with open(os.path.join(path, filename), 'w') as f:
+            f.write(yaml.dump(mean_num_planning_steps, default_flow_style=False))
+            
     def save_avg_path_lengths(self, lengths, path=""):
         if not os.path.exists(path):
             os.makedirs(path)

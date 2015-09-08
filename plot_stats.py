@@ -36,7 +36,25 @@ class PlotStats:
                                       dir, 
                                       filename="mean_planning_times_per_run*.yaml",
                                       output="mean_planning_times_per_run.pdf")
-        cart_coords = serializer.load_cartesian_coords(dir, "cartesian_coords_" + algorithm + ".yaml")
+        logging.info("PlotStats: plotting mean number of generated paths")
+        self.plot_mean_num_generated_paths(serializer,
+                                           dir,
+                                           filename="mean_num_generated_paths_per_step*.yaml",
+                                           output="mean_num_generated_paths_per_step.pdf")
+        self.plot_mean_num_generated_paths(serializer,
+                                           dir,
+                                           filename="mean_num_generated_paths_per_run*.yaml",
+                                           output="mean_num_generated_paths_per_run.pdf")
+        logging.info("PlotStats: plotting mean number of steps per run")
+        self.plot_mean_num_steps(serializer,
+                                 dir,
+                                 filename="mean_num_planning_steps_per_run*.yaml",
+                                 output="mean_num_planning_steps_per_run.pdf")
+        self.plot_mean_num_steps(serializer,
+                                 dir,
+                                 filename="mean_num_steps_per_run*.yaml",
+                                 output="mean_num_steps_per_run.pdf")
+        cart_coords = serializer.load_cartesian_coords(dir, "cartesian_coords_" + algorithm + ".yaml")        
         logging.info("PlotStats: plotting EMD graph...")
         self.plot_emd_graph(serializer, cart_coords, dir=dir) 
         logging.info("PlotStats: plotting histograms...")        
@@ -271,6 +289,82 @@ class PlotStats:
                             save=self.save,
                             filename=dir + "/mean_rewards.pdf")
         
+    def plot_mean_num_steps(self, serializer, dir="stats", filename="", output=""):
+        if filename == "":
+            filename = "mean_num_steps_per_run*.yaml"
+        if output == "":
+            output = "mean_num_steps_per_run.pdf" 
+        print filename      
+        stats = serializer.load_stats('stats.yaml', path=dir)
+        m_cov = stats['m_cov']
+        sets = []
+        labels = []
+        mean_num_steps = []
+        for file in glob.glob(os.path.join(os.path.join(dir, filename))):
+            file_str = file            
+            try:
+                file_str = file.split("/")[2].split(".")[0].split("_")[-1]
+            except:
+                pass
+                   
+            #mean_rewards = serializer.load_stats('rewards.yaml', path="stats")
+            mean_num_steps.append(serializer.load_stats(file))            
+            data = []
+            for k in xrange(len(m_cov)):
+                data.append(np.array([m_cov[k], mean_num_steps[-1][k]]))
+            sets.append(np.array(data))
+            labels.append(file_str)        
+        if not len(mean_num_steps) == 0:
+            min_m = [min(m) for m in mean_num_steps]
+            max_m = [max(m) for m in mean_num_steps]
+            Plot.plot_2d_n_sets(sets,
+                                labels=labels,
+                                xlabel="joint covariance",
+                                ylabel="mean number of steps per run",
+                                x_range=[m_cov[0], m_cov[-1]],
+                                y_range=[min(min_m)*0.95, max(max_m) * 1.05],
+                                show_legend=True,
+                                save=self.save,
+                                filename=dir + "/" + output)
+        
+    def plot_mean_num_generated_paths(self, serializer, dir="stats", filename="", output=""):
+        if filename == "":
+            filename = "mean_num_generated_paths_per_step*.yaml"
+        if output == "":
+            output = "mean_num_generated_paths_per_step.pdf" 
+        print filename      
+        stats = serializer.load_stats('stats.yaml', path=dir)
+        m_cov = stats['m_cov']
+        sets = []
+        labels = []
+        mean_num_generated_paths = []
+        for file in glob.glob(os.path.join(os.path.join(dir, filename))):
+            file_str = file            
+            try:
+                file_str = file.split("/")[2].split(".")[0].split("_")[-1]
+            except:
+                pass
+                   
+            #mean_rewards = serializer.load_stats('rewards.yaml', path="stats")
+            mean_num_generated_paths.append(serializer.load_stats(file))            
+            data = []
+            for k in xrange(len(m_cov)):
+                data.append(np.array([m_cov[k], mean_num_generated_paths[-1][k]]))
+            sets.append(np.array(data))
+            labels.append(file_str)        
+        if not len(mean_num_generated_paths) == 0:
+            min_m = [min(m) for m in mean_num_generated_paths]
+            max_m = [max(m) for m in mean_num_generated_paths]
+            Plot.plot_2d_n_sets(sets,
+                                labels=labels,
+                                xlabel="joint covariance",
+                                ylabel="mean num generated paths",
+                                x_range=[m_cov[0], m_cov[-1]],
+                                y_range=[min(min_m)*0.95, max(max_m) * 1.05],
+                                show_legend=True,
+                                save=self.save,
+                                filename=dir + "/" + output)
+        
     def plot_mean_planning_times(self, serializer, dir="stats", filename="", output=""): 
         if filename == "":
             filename = "mean_planning_times_per_step*.yaml"
@@ -282,7 +376,7 @@ class PlotStats:
         labels = []
         mean_planning_times = []
         for file in glob.glob(os.path.join(os.path.join(dir, filename))):
-            file_str = file            
+            file_str = file
             try:
                 file_str = file.split("/")[2].split(".")[0].split("_")[-1]
             except:
@@ -293,7 +387,7 @@ class PlotStats:
             data = []
             for k in xrange(len(m_cov)):
                 data.append(np.array([m_cov[k], mean_planning_times[-1][k]]))
-            sets.append(np.array(data))
+            sets.append(np.array(data))            
             labels.append(file_str)        
         if not len(mean_planning_times) == 0:
             min_m = [min(m) for m in mean_planning_times]
@@ -402,6 +496,6 @@ if __name__ == "__main__":
         PlotStats(False)
         sys.exit() 
     else:
-        logging.error("Wrong number of arguments. Should be 'python plot_stats ALGORITHM SAVE'")
+        logging.error("Wrong number of arguments. Should be 'python plot_stats.py ALGORITHM SAVE'")
         sys.exit()   
     PlotStats(False)
