@@ -182,9 +182,9 @@ class MPC:
             mean_planning_time_per_run = 0.0
             
             successful_runs = 0
-            num_generated_paths_run = 0
-            mean_number_planning_steps = 0 
-            mean_number_of_steps = 0           
+            num_generated_paths_run = 0.0
+            mean_number_planning_steps = 0.0 
+            mean_number_of_steps = 0.0           
             for k in xrange(self.num_simulation_runs):
                 #x_tilde = initial_belief               
                 print "MPC: Joint covariance: " + str(m_covs[j])
@@ -197,7 +197,7 @@ class MPC:
                 terminal = False                      
                               
                 while current_step < self.max_num_steps and not terminal:                    
-                    mean_number_planning_steps += 1
+                    mean_number_planning_steps += 1.0
                     t0 = time.time()                    
                     self.path_planning_interface.set_start_and_goal(x_estimate, self.goal_states)
                     logging.info("MPC: Constructing paths")
