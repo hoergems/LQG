@@ -49,8 +49,15 @@ class MPC:
             obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain)) 
         
         """ Setup operations """
-        self.sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)        
-        self.path_planning_interface.setup(self.num_links, 
+        model_file = os.getcwd() + "/model/model.xml"
+        if self.workspace_dimension == 3:
+            model_file = os.getcwd() + "/model/model3D.xml"
+        self.link_dimensions = self.utils.getLinkDimensions(model_file) 
+        self.sim.setup_reward_function(self.discount_factor, 
+                                       self.step_penalty, 
+                                       self.illegal_move_penalty, 
+                                       self.exit_reward)        
+        self.path_planning_interface.setup(self.link_dimensions, 
                                            self.workspace_dimension, 
                                            obstacles, 
                                            self.max_velocity, 
@@ -58,11 +65,11 @@ class MPC:
                                            self.use_linear_path, 
                                            self.joint_constraints)
         
-        A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
+        A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.link_dimensions)
         self.goal_states = get_goal_states("mpc", 
                                            serializer, 
                                            obstacles, 
-                                           self.num_links, 
+                                           self.link_dimensions, 
                                            self.workspace_dimension,
                                            self.max_velocity,
                                            self.delta_t,
@@ -127,11 +134,16 @@ class MPC:
                        
             cmd = "cp environment/env.xml " + dir + "/environment"
             os.system(cmd)
+            if not os.path.exists(dir + "/model"):
+                os.makedirs(dir + "/model")
+                
+            cmd = "cp " + model_file + " " + dir + "/model"
+            os.system(cmd)
             if plot:
                 PlotStats(True, "mpc")     
             
     def mpc(self, initial_belief, m_covs, horizon, obstacles):
-        A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
+        A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.link_dimensions)
         cart_coords = []
         mean_rewards = []
         total_rewards = []
@@ -151,16 +163,16 @@ class MPC:
             """
             The process noise covariance matrix
             """
-            M = m_covs[j] * np.identity(self.num_links)
+            M = m_covs[j] * np.identity(len(self.link_dimensions))
                 
             """
             The observation noise covariance matrix
             """
-            N = self.observation_covariance * np.identity(self.num_links)
-            P_t = np.array([[0.0 for k in xrange(self.num_links)] for l in xrange(self.num_links)])
+            N = self.observation_covariance * np.identity(len(self.link_dimensions))
+            P_t = np.array([[0.0 for k in xrange(len(self.link_dimensions))] for l in xrange(len(self.link_dimensions))])
                 
             self.path_planning_interface.setup_path_evaluator(A, B, C, D, H, M, N, V, W, 
-                                                              self.num_links,
+                                                              self.link_dimensions,
                                                               self.workspace_dimension, 
                                                               self.sample_size, 
                                                               obstacles,
@@ -170,7 +182,7 @@ class MPC:
                                    obstacles, 
                                    self.goal_position, 
                                    self.goal_radius, 
-                                   self.num_links,
+                                   self.link_dimensions,
                                    self.workspace_dimension, 
                                    self.joint_constraints)            
             self.sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
@@ -216,7 +228,7 @@ class MPC:
                     #logging.info("MPC: " + str(len(paths)) + " Paths constructed. Evaluating them according the planning objective")
                     #xs, us, zs = self.path_evaluator.evaluate_paths(paths, horizon=horizon)                                     
                     logging.info("MPC: Generated " + str(num_generated_paths) + " paths in " + str(t_e) + " seconds")
-                    x_tilde = np.array([0.0 for i in xrange(self.num_links)])
+                    x_tilde = np.array([0.0 for i in xrange(len(self.link_dimensions))])
                     n_steps = self.num_execution_steps
                     if n_steps > len(xs) - 1:
                        n_steps = len(xs) - 1
@@ -278,42 +290,31 @@ class MPC:
                 mean_number_planning_steps_cov,
                 mean_number_of_steps_per_run)
             
-    def problem_setup(self, delta_t, num_links):
-        links = v2_double()
+    def problem_setup(self, delta_t, link_dimensions):        
         axis = v2_int()
-        
-        link = v_double()
         ax1 = v_int()
         ax2 = v_int()
-        link[:] = [1.0, 0.0, 0.0]
-        links[:] = [link for i in xrange(num_links)]
-        
         ax1[:] = [0, 0, 1]
         if self.workspace_dimension == 2:
             ax2[:] = [0, 0, 1]            
         elif self.workspace_dimension == 3:
             ax2[:] = [0, 1, 0]
-            
-        axis[:] = [ax1, ax2, ax1]
-        
-        self.utils = Utils()
-                
+        axis[:] = [ax1, ax2, ax1]        
         self.kinematics = Kinematics()
-        self.kinematics.setLinksAndAxis(links, axis)
+        self.kinematics.setLinksAndAxis(link_dimensions, axis)
         
-        A = np.identity(num_links)
-        H = np.identity(num_links)
-        B = delta_t * np.identity(num_links)
-        V = np.identity(num_links)
-        W = np.identity(num_links)
-        C = 2.0 * np.identity(num_links)
-        D = 2.0 * np.identity(num_links)
+        A = np.identity(len(link_dimensions))
+        H = np.identity(len(link_dimensions))
+        B = delta_t * np.identity(len(link_dimensions))
+        V = np.identity(len(link_dimensions))
+        W = np.identity(len(link_dimensions))
+        C = 2.0 * np.identity(len(link_dimensions))
+        D = 2.0 * np.identity(len(link_dimensions))
         return A, H, B, V, W, C, D
         
     def set_params(self, config):
         self.num_paths = config['num_generated_paths']
-        self.use_linear_path = config['use_linear_path']
-        self.num_links = config['num_links']
+        self.use_linear_path = config['use_linear_path']        
         self.max_velocity = config['max_velocity']
         self.delta_t = 1.0 / config['control_rate']
         self.theta_0 = config['init_joint_angles']

@@ -1,11 +1,11 @@
 import openravepy
 from openravepy import *
 from openravepy.misc import InitOpenRAVELogging
-from kin import *
 from obstacle import *
 from serializer import Serializer
 from path_planning_interface import *
 from gen_ik_solution import *
+from kin import *
 import json
 import time
 import numpy as np
@@ -15,7 +15,15 @@ class IKSolutionGenerator:
     def __init__(self):
         self.serializer = Serializer()
     
-    def setup(self, num_links, workspace_dimension, obstacles, max_velocity, delta_t, joint_constraints, robot_file, environment_file):
+    def setup(self, 
+              link_dimensions, 
+              workspace_dimension, 
+              obstacles, 
+              max_velocity, 
+              delta_t, 
+              joint_constraints, 
+              robot_file, 
+              environment_file):
         """
         Generate the obstacles
         """
@@ -24,8 +32,15 @@ class IKSolutionGenerator:
         terrain = Terrain("default", 0.0, 1.0, True)
         for obstacle in environment:                   
             obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))        
+        self.link_dimensions = link_dimensions
         self.path_planner = PathPlanningInterface()
-        self.path_planner.setup(num_links, workspace_dimension, obstacles, max_velocity, delta_t, False, joint_constraints)
+        self.path_planner.setup(link_dimensions, 
+                                workspace_dimension, 
+                                obstacles, 
+                                max_velocity, 
+                                delta_t, 
+                                False, 
+                                joint_constraints)
         
         self.env = openravepy.Environment()
         self.env.StopSimulation()
@@ -53,7 +68,10 @@ class IKSolutionGenerator:
             possible_ik_solutions = ikmodel.manip.FindIKSolutions(IkParameterization(target,IkParameterization.Type.TranslationXY2D), False)            
             
         elif workspace_dimension == 3:            
-            solution, unique = self.legIK(goal_position[0], goal_position[1], goal_position[2])
+            solution, unique = self.legIK(goal_position[0], 
+                                          goal_position[1], 
+                                          goal_position[2],
+                                          self.link_dimensions)
             sol1 = solution
             #if unique:
             possible_ik_solutions = [sol1]
@@ -82,20 +100,20 @@ class IKSolutionGenerator:
         
             
         
-    def legIK(self, x, y, z, links=[1.0, 1.0, 1.0]):    
+    def legIK(self, x, y, z, links):    
         angles = []
         angles.append(np.arctan2(y, x))
-        x_im = np.sqrt(np.square(x) + np.square(y)) - links[0]        
+        x_im = np.sqrt(np.square(x) + np.square(y)) - links[0][0]        
         x_true = np.sqrt(np.square(x_im) + np.square(z))           
         alpha1 = np.arccos(np.abs(z) / x_true)           
-        a = np.square(links[2]) - np.square(links[1]) - np.square(x_true)        
-        b = -2.0 * links[1] * x_true        
+        a = np.square(links[2][0]) - np.square(links[1][0]) - np.square(x_true)        
+        b = -2.0 * links[1][0] * x_true        
         alpha2 = np.arccos(a / b)
         if np.isnan(alpha2):
             print "NO SOLUTION"
             return [], True
         alpha3 = alpha1 + alpha2 - (np.pi / 2.0)
-        beta = np.arccos((np.square(x_true) - np.square(links[2]) - np.square(links[1])) / (-2.0 * links[2] * links[1]))        
+        beta = np.arccos((np.square(x_true) - np.square(links[2][0]) - np.square(links[1][0])) / (-2.0 * links[2][0] * links[1][0]))        
         
         if z < 0:
             angles.append(-alpha3)

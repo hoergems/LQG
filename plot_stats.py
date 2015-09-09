@@ -8,6 +8,7 @@ from serializer import Serializer
 from kin import *
 from util import *
 from EMD import *
+import sets
 
 class PlotStats:
     def __init__(self, save, algorithm):
@@ -56,31 +57,33 @@ class PlotStats:
                                  output="mean_num_steps_per_run.pdf")
         cart_coords = serializer.load_cartesian_coords(dir, "cartesian_coords_" + algorithm + ".yaml")        
         logging.info("PlotStats: plotting EMD graph...")
-        self.plot_emd_graph(serializer, cart_coords, dir=dir) 
-        logging.info("PlotStats: plotting histograms...")        
-        self.save_histogram_plots(serializer, cart_coords, dir=dir)
+        try:
+            self.plot_emd_graph(serializer, cart_coords, dir=dir)
+            logging.info("PlotStats: plotting histograms...")        
+            self.save_histogram_plots(serializer, cart_coords, dir=dir) 
+        except:
+            pass
+        
         
     def setup_kinematics(self, serializer, dir='stats'):
         config = serializer.read_config(path=dir)
-        links = v2_double()
+        u = Utils()
+        model_file = os.getcwd() + "/" + dir + "/model/model.xml"
+        if config['workspace_dimension'] == 3:
+            model_file = os.getcwd() + "/" + dir + "/model/model3D.xml"
+        print "model file: " + model_file 
+        link_dimensions = u.getLinkDimensions(model_file)       
         axis = v2_int()
-        
-        link = v_double()
         ax1 = v_int()
         ax2 = v_int()
-        link[:] = [1.0, 0.0, 0.0]
-        links[:] = [link for i in xrange(config['num_links'])]
-        
         ax1[:] = [0, 0, 1]
         if config['workspace_dimension'] == 2:
             ax2[:] = [0, 0, 1]            
         elif config['workspace_dimension'] == 3:
             ax2[:] = [0, 1, 0]
-            
         axis[:] = [ax1, ax2, ax1]
-        
         self.kinematics = Kinematics()
-        self.kinematics.setLinksAndAxis(links, axis)
+        self.kinematics.setLinksAndAxis(link_dimensions, axis)
                
         
     def clear_stats(self):
@@ -448,6 +451,7 @@ class PlotStats:
                     filename = "paths.png"
                 sets = []
                 for path in paths:
+                                        
                     path_coords = []
                     for elem in path:
                         state = [elem[i] for i in xrange(dim)]
@@ -457,7 +461,16 @@ class PlotStats:
                         path_coords_elem = [path_coords_v[i] for i in xrange(len(path_coords_v))]
                         path_coords.append(path_coords_elem)
                     sets.append(np.array(path_coords))
-                    colors.append(None)
+                    
+                    colors.append(None)                
+                max_x = -100000.0 
+                max_y = -100000.0                
+                for s in sets:                    
+                    for c in s:                                                
+                        if c[0] > max_x:
+                            max_x = c[0]                        
+                        if c[1] > max_y:
+                            max_y = c[1]
                 obstacles = serializer.load_environment("env.xml", path=dir + "/environment")        
                 if not obstacles == None:
                     for obstacle in obstacles:                
@@ -474,8 +487,8 @@ class PlotStats:
                                     colors=colors, 
                                     xlabel='x', 
                                     ylabel='y', 
-                                    x_range=[-3.5, 3.5], 
-                                    y_range=[-3.5, 3.5],
+                                    x_range=[-max_x * 1.1, max_x * 1.1], 
+                                    y_range=[-max_y * 1.1, max_y * 1.1],
                                     plot_type="lines",
                                     show_legend=False,
                                     save=self.save,

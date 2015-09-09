@@ -14,21 +14,20 @@ Kinematics::Kinematics():
 void Kinematics::setLinksAndAxis(std::vector<std::vector<double>> links, std::vector<std::vector<int>> axis) {
     for (size_t i = 0; i < links.size(); i++) {
         links_.push_back(links[i]);
-    }    
+    }
+
     for (size_t i = 0; i < axis.size(); i++) {
         rotation_offsets_.push_back(0.0);
-        if (axis[i][1] == 1) {           
+        if (axis[i][1] == 1) {
            rotation_offsets_[i] = -M_PI / 2.0;
         }
-        /**else if (axis[i][1] == 1) {
-           cout << "DAFUUUCK2" << endl;
-           sleep(2);
+        else if (axis[i][1] == 1) {
            rotation_offsets_[i] = M_PI / 2.0;
-        }*/       
+        }       
     }
 }
 
-std::vector<double> Kinematics::getPositionOfLinkN(const std::vector<double> &joint_angles, int &n) const {
+std::vector<double> Kinematics::getPositionOfLinkN(const std::vector<double> &joint_angles, const int &n) const {
     std::pair<fcl::Vec3f, fcl::Matrix3f> link_n_pose = getPoseOfLinkN(joint_angles, n);
     return std::vector<double>({link_n_pose.first[0], link_n_pose.first[1], link_n_pose.first[2]});
 }
@@ -40,7 +39,7 @@ std::vector<double> Kinematics::getEndEffectorPosition(const std::vector<double>
     return std::vector<double>({ee_pose.first[0], ee_pose.first[1], ee_pose.first[2]});
 }  
 
-std::pair<fcl::Vec3f, fcl::Matrix3f> Kinematics::getPoseOfLinkN(const std::vector<double> &joint_angles, int &n) const {
+std::pair<fcl::Vec3f, fcl::Matrix3f> Kinematics::getPoseOfLinkN(const std::vector<double> &joint_angles, const int &n) const {
    Eigen::MatrixXd res(4, 4);
    if (n == 0) {
        res = getTransformationMatr(joint_angles[0], 0.0, 0.0, rotation_offsets_[0]);             
@@ -60,7 +59,7 @@ std::pair<fcl::Vec3f, fcl::Matrix3f> Kinematics::getPoseOfLinkN(const std::vecto
        Eigen::MatrixXd a = getTransformationMatr(joint_angles[0], 0.0, links_[0][0], rotation_offsets_[1]);
        Eigen::MatrixXd b = getTransformationMatr(joint_angles[1], 0.0, links_[1][0], rotation_offsets_[2]);
        Eigen::MatrixXd c = getTransformationMatr(joint_angles[2], 0.0, links_[2][0], 0.0);      
-       res = a*(b*c);       
+       res = a*(b*c);
    } 
    
    fcl::Vec3f r_vec = fcl::Vec3f(res(0, 3), res(1, 3), res(2, 3));

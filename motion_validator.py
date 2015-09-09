@@ -17,25 +17,21 @@ class MotionValidator(ob.MotionValidator):
             super(MotionValidator, self).__init__(si)
             
     def set_workspace_dimension(self, workspace_dimension):
-        links = v2_double()
         axis = v2_int()
-        
-        link = v_double()
         ax1 = v_int()
         ax2 = v_int()
-        link[:] = [1.0, 0.0, 0.0]
-        links[:] = [link for i in xrange(self.si.getStateSpace().getDimension())]
-        
         ax1[:] = [0, 0, 1]
         if workspace_dimension == 2:
             ax2[:] = [0, 0, 1]            
         elif workspace_dimension == 3:
             ax2[:] = [0, 1, 0]
             
-        axis[:] = [ax1, ax2, ax1]
-        
+        axis[:] = [ax1, ax2, ax1]        
         self.kinematics = Kinematics()
-        self.kinematics.setLinksAndAxis(links, axis)
+        self.kinematics.setLinksAndAxis(self.link_dimensions, axis)
+        
+    def set_link_dimensions(self, link_dimensions):        
+        self.link_dimensions = link_dimensions
             
     def set_max_distance(self, max_velocity, delta_t):
         self.max_dist = np.sqrt(self.si.getStateSpace().getDimension() * np.square(delta_t * max_velocity))
@@ -71,7 +67,7 @@ class MotionValidator(ob.MotionValidator):
     
     def _satisfies_bounds(self, state):
         bounds = self.si.getStateSpace().getBounds()
-        for i in xrange(self.si.getStateSpace().getDimension()):
+        for i in xrange(self.si.getStateSpace().getDimension()):            
             if (state[i] < bounds.low[0] or
                 state[i] > bounds.high[0]):                              
                 return False
@@ -83,7 +79,9 @@ class MotionValidator(ob.MotionValidator):
         """ 
         joint_angles2 = v_double()
         joint_angles2[:] = [state2[i] for i in xrange(self.si.getStateSpace().getDimension())]
-        collision_structures_goal = self.utils.createManipulatorCollisionStructures(joint_angles2, self.kinematics)
+        collision_structures_goal = self.utils.createManipulatorCollisionStructures(joint_angles2, 
+                                                                                    self.link_dimensions, 
+                                                                                    self.kinematics)
                 
         for obstacle in self.obstacles:
             if obstacle.inCollisionDiscrete(collision_structures_goal):
@@ -94,8 +92,12 @@ class MotionValidator(ob.MotionValidator):
         joint_angles1 = v_double()
         joint_angles1[:] = [state1[i] for i in xrange(self.si.getStateSpace().getDimension())]        
         
-        manipulator_collision_objects_start = self.utils.createManipulatorCollisionObjects(joint_angles1, self.kinematics)
-        manipulator_collision_objects_goal = self.utils.createManipulatorCollisionObjects(joint_angles2, self.kinematics)
+        manipulator_collision_objects_start = self.utils.createManipulatorCollisionObjects(joint_angles1,
+                                                                                           self.link_dimensions, 
+                                                                                           self.kinematics)
+        manipulator_collision_objects_goal = self.utils.createManipulatorCollisionObjects(joint_angles2,
+                                                                                          self.link_dimensions, 
+                                                                                          self.kinematics)
         for obstacle in self.obstacles:
             for i in xrange(len(manipulator_collision_objects_start)):
                 if obstacle.inCollisionContinuous([manipulator_collision_objects_start[i],

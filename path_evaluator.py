@@ -14,7 +14,7 @@ class PathEvaluator:
         pass
     
     def setup(self, A, B, C, D, H, M, N, V, W, 
-              num_links, 
+              link_dimensions, 
               workspace_dimension, 
               sample_size, 
               obstacles,
@@ -29,7 +29,7 @@ class PathEvaluator:
         self.N = N
         self.V = V
         self.W = W 
-        self.num_links = num_links
+        self.link_dimensions = link_dimensions
         self.obstacles = obstacles
         self.sample_size = sample_size
         self.num_cores = cpu_count() - 1
@@ -37,27 +37,19 @@ class PathEvaluator:
         self.w1 = w1
         self.w2 = w2
         self.workspace_dimension = workspace_dimension
-        self.mutex = Lock()
+        self.mutex = Lock()        
         
-        links = v2_double()
         axis = v2_int()
-        
-        link = v_double()
         ax1 = v_int()
         ax2 = v_int()
-        link[:] = [1.0, 0.0, 0.0]
-        links[:] = [link for i in xrange(num_links)]
-        
         ax1[:] = [0, 0, 1]
         if workspace_dimension == 2:
             ax2[:] = [0, 0, 1]            
         elif workspace_dimension == 3:
             ax2[:] = [0, 1, 0]
-            
         axis[:] = [ax1, ax2, ax1]
-        
         self.kinematics = Kinematics()
-        self.kinematics.setLinksAndAxis(links, axis)
+        self.kinematics.setLinksAndAxis(self.link_dimensions, axis)
         self.utils = Utils()
 
     def get_probability_of_collision(self, mean, cov):
@@ -66,8 +58,10 @@ class PathEvaluator:
         pdfs = []
         for i in xrange(len(samples)):
             joint_angles = v_double()
-            joint_angles[:] = [samples[i][j] for j in xrange(self.num_links)]
-            collision_structures = self.utils.createManipulatorCollisionStructures(joint_angles, self.kinematics)
+            joint_angles[:] = [samples[i][j] for j in xrange(len(self.link_dimensions))]
+            collision_structures = self.utils.createManipulatorCollisionStructures(joint_angles, 
+                                                                                   self.link_dimensions,
+                                                                                   self.kinematics)
             for obstacle in self.obstacles:
                 if obstacle.inCollisionDiscrete(collision_structures):                               
                     pdfs.append(pdf[i]) 
@@ -200,7 +194,7 @@ class PathEvaluator:
         if horizon == -1 or len(xs) - 1 < horizon:            
             horizon_L = len(xs) - 1
         Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, horizon_L)
-        P_t = np.array([[0.0 for i in xrange(self.num_links)] for i in xrange(self.num_links)])
+        P_t = np.array([[0.0 for i in xrange(len(self.link_dimensions))] for i in xrange(len(self.link_dimensions))])
         P_0 = np.copy(P_t)
         NU = np.copy(P_t)
                 
@@ -214,7 +208,7 @@ class PathEvaluator:
         for i in xrange(0, horizon_L):                
             P_hat_t = kalman.compute_p_hat_t(self.A, P_t, self.V, self.M)
             K_t = kalman.compute_kalman_gain(self.H, P_hat_t, self.W, self.N)
-            P_t = kalman.compute_P_t(K_t, self.H, P_hat_t, self.num_links)
+            P_t = kalman.compute_P_t(K_t, self.H, P_hat_t, len(self.link_dimensions))
             F_0 = np.hstack((self.A, np.dot(self.B, Ls[i])))
             F_1 = np.hstack((np.dot(np.dot(K_t, self.H), self.A), 
                              np.add(self.A, np.subtract(np.dot(self.B, Ls[i]), np.dot(np.dot(K_t, self.H), self.A)))))            
@@ -226,13 +220,13 @@ class PathEvaluator:
             FRF = np.dot(np.dot(F_t, R_t), np.transpose(F_t))
             GQG = np.dot(np.dot(G_t, Q_t), np.transpose(G_t))
             R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))
-            Gamma_t = np.vstack((np.hstack((np.identity(self.num_links), NU)), 
+            Gamma_t = np.vstack((np.hstack((np.identity(len(self.link_dimensions)), NU)), 
                                  np.hstack((NU, Ls[i]))))
                     
                     
             Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))
-            cov_state = np.array([[Cov[j, k] for k in xrange(self.num_links)] for j in xrange(self.num_links)])
-            jacobian = self.get_jacobian([1.0 for k in xrange(self.num_links)], xs[i])                        
+            cov_state = np.array([[Cov[j, k] for k in xrange(len(self.link_dimensions))] for j in xrange(len(self.link_dimensions))])
+            jacobian = self.get_jacobian([l[0] for l in self.link_dimensions], xs[i])                        
             EE_covariance = np.dot(np.dot(jacobian, cov_state), jacobian.T)            
             #EE_covariance = np.array([[EE_covariance[j, k] for k in xrange(2)] for j in xrange(2)])
             probs = 0.0

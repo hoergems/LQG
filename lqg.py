@@ -6,6 +6,7 @@ import sys
 import util
 import logging
 import scipy
+from util import *
 from serializer import Serializer
 from obstacle import *
 from util_py import *
@@ -34,6 +35,8 @@ class LQG:
             logging_level = logging.DEBUG
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)
         
+        self.utils = Utils()
+        
         """ Load the obstacles """ 
         environment = serializer.load_environment(file="env.xml", path="environment")       
         obstacles = []
@@ -42,11 +45,15 @@ class LQG:
             obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))          
         
         """ Setup operations """
+        model_file = os.getcwd() + "/model/model.xml"
+        if self.workspace_dimension == 3:
+            model_file = os.getcwd() + "/model/model3D.xml"
+        self.link_dimensions = self.utils.getLinkDimensions(model_file)        
         print "LQG: Generating goal states..."
         goal_states = get_goal_states("lqg",
                                       serializer, 
                                       obstacles,
-                                      self.num_links,
+                                      self.link_dimensions,
                                       self.workspace_dimension,
                                       self.max_velocity,
                                       self.delta_t,
@@ -56,7 +63,7 @@ class LQG:
         print "LQG: " + str(len(goal_states)) + " goal states generated" 
         
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
-        path_planner.setup(self.num_links,
+        path_planner.setup(self.link_dimensions,
                            self.workspace_dimension,
                            obstacles,  
                            self.max_velocity, 
@@ -65,7 +72,7 @@ class LQG:
                            self.joint_constraints)
         #self.path_planning_interface.setup(obstacles, self.num_links, self.max_velocity, self.delta_t, self.use_linear_path, self.joint_constraints, config['verbose'])
         path_planner.set_start_and_goal(self.theta_0, goal_states)      
-        A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.num_links)
+        A, H, B, V, W, C, D = self.problem_setup(self.delta_t, len(self.link_dimensions))
         
         if check_positive_definite([C, D]):            
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
@@ -81,14 +88,14 @@ class LQG:
                     us = []
                     zs = []
                     for j in xrange(len(path)):
-                        xs.append([path[j][i] for i in xrange(self.num_links)])
-                        us.append([path[j][self.num_links + i] for i in xrange(self.num_links)])
-                        zs.append([path[j][2 * self.num_links + i] for i in xrange(self.num_links)])
+                        xs.append([path[j][i] for i in xrange(len(self.link_dimensions))])
+                        us.append([path[j][len(self.link_dimensions) + i] for i in xrange(len(self.link_dimensions))])
+                        zs.append([path[j][2 * len(self.link_dimensions) + i] for i in xrange(len(self.link_dimensions))])
                     paths.append([xs, us, zs])
             else:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
                 t0 = time.time()
-                paths = path_planner.plan_paths(self.num_paths, 0) 
+                paths = path_planner.plan_paths(self.num_paths, 0)
                 time_to_generate_paths = time.time() - t0 
                 print "LQG: Time to generate paths: " + str(time_to_generate_paths) + " seconds"
                 if self.plot_paths:                
@@ -108,15 +115,15 @@ class LQG:
                 """
                 The process noise covariance matrix
                 """
-                M = m_covs[j] * np.identity(self.num_links)
+                M = m_covs[j] * np.identity(len(self.link_dimensions))
                 
                 """
                 The observation noise covariance matrix
                 """
-                N = self.observation_covariance * np.identity(self.num_links)
+                N = self.observation_covariance * np.identity(len(self.link_dimensions))
                 
                 path_evaluator.setup(A, B, C, D, H, M, N, V, W, 
-                                     self.num_links,
+                                     self.link_dimensions,
                                      config['workspace_dimension'], 
                                      self.sample_size, 
                                      obstacles,
@@ -134,14 +141,17 @@ class LQG:
                                   obstacles, 
                                   self.goal_position, 
                                   self.goal_radius, 
-                                  self.num_links, 
+                                  self.link_dimensions, 
                                   config['workspace_dimension'], 
                                   self.joint_constraints)
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)           
                 cartesian_coords, rewards, successful_runs = sim.simulate(xs, us, zs, m_covs[j])
                                 
-                cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])                
-                emds.append(calc_EMD(cartesian_coords, self.num_bins))
+                cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])
+                try:                             
+                    emds.append(calc_EMD(cartesian_coords, self.num_bins))
+                except:
+                    pass
                 all_rewards.append([np.asscalar(rewards[k]) for k in xrange(len(rewards))]) 
                 successes.append((100.0 / self.num_simulation_runs) * successful_runs)    
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
@@ -176,7 +186,13 @@ class LQG:
                 os.makedirs(dir + "/environment") 
                        
             cmd = "cp environment/env.xml " + dir + "/environment"
-            os.system(cmd)            
+            os.system(cmd) 
+            
+            if not os.path.exists(dir + "/model"):
+                os.makedirs(dir + "/model")
+                
+            cmd = "cp " + model_file + " " + dir + "/model"
+            os.system(cmd)           
             
     def problem_setup(self, delta_t, num_links):
         A = np.identity(num_links)
@@ -217,7 +233,7 @@ class LQG:
         self.step_penalty = config['step_penalty']
         self.exit_reward = config['exit_reward']
         self.stop_when_terminal = config['stop_when_terminal']
-        self.joint_constraints = [-config['joint_constraint'], config['joint_constraint']]
+        self.joint_constraints = [config['joint_constraints'][0], config['joint_constraints'][1]]
         self.sample_size = config['sample_size']  
         self.workspace_dimension = config['workspace_dimension'] 
         self.w1 = config['w1']

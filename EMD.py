@@ -44,6 +44,7 @@ def get_2d_histogram(X, Y, range, bins=200):
 def calc_EMD(cartesian_coords, num_bins):    
     X = np.array([coords[0] for coords in cartesian_coords])
     Y = np.array([coords[1] for coords in cartesian_coords])
+    
     histogram_range = [[-3.1, 3.1], [-3.1, 3.1]]
         
     """

@@ -18,11 +18,11 @@ namespace shared {
             
             void setLinksAndAxis(std::vector<std::vector<double>> links, std::vector<std::vector<int>> axis); 
             
-            std::vector<double> getPositionOfLinkN(const std::vector<double> &joint_angles, int &n) const;
+            std::vector<double> getPositionOfLinkN(const std::vector<double> &joint_angles, const int &n) const;
             
             std::vector<double> getEndEffectorPosition(const std::vector<double> &joint_angles) const;
             
-            std::pair<fcl::Vec3f, fcl::Matrix3f> getPoseOfLinkN(const std::vector<double> &joint_angles, int &n) const;
+            std::pair<fcl::Vec3f, fcl::Matrix3f> getPoseOfLinkN(const std::vector<double> &joint_angles, const int &n) const;
             
             std::pair<fcl::Vec3f, fcl::Matrix3f> getEndEffectorPose(const std::vector<double> &joint_angles) const;
             

@@ -19,8 +19,8 @@
      <offsetfrom>Base</offsetfrom>
      <Translation>0.0 0 0.005</Translation>
      <Geom type="box">
-       <Translation>0.5 0 0</Translation>
-       <Extents>0.5 0.01 0.005</Extents>
+       <Translation>1.0 0 0</Translation>
+       <Extents>1.0 0.01 0.005</Extents>
      </Geom>
    </Body>
    <Joint circular="true" name="j1" type="hinge">
@@ -36,10 +36,10 @@
    
    <Body name="Arm1" type="dynamic">
      <offsetfrom>Arm0</offsetfrom>
-     <Translation>1.0 0 0.0</Translation>
+     <Translation>2.0 0 0.0</Translation>
      <Geom type="box">
-       <Translation>0.5 0.0 0</Translation>
-       <Extents>0.5 0.0075 0.005</Extents>
+       <Translation>1.0 0.0 0</Translation>
+       <Extents>1.0 0.0075 0.005</Extents>
      </Geom>
    </Body>
    <Joint circular="true" name="j2" type="hinge">
@@ -55,10 +55,10 @@
 
    <Body name="Arm2" type="dynamic">
      <offsetfrom>Arm1</offsetfrom>
-     <Translation>1.0 0.0 0.0</Translation>
+     <Translation>2.0 0.0 0.0</Translation>
      <Geom type="box">
-       <Translation>0.5 0.0 0</Translation>
-       <Extents>0.5 0.0075 0.005</Extents>
+       <Translation>1.0 0.0 0</Translation>
+       <Extents>1.0 0.0075 0.005</Extents>
      </Geom>
    </Body>
    <Joint circular="true" name="j3" type="hinge">
@@ -80,7 +80,7 @@
    <joints>j1 j2 j3</joints>      
    <closingdirection>1 1</closingdirection>
    <direction>1 0 0</direction>
-   <Translation>1.0 0 0</Translation>
+   <Translation>2.0 0 0</Translation>
  </Manipulator>
 
 </Robot>

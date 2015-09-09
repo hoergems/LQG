@@ -14,14 +14,15 @@ class PathPlanner:
         pass     
     
     def set_params(self, 
-                   space_dimension, 
+                   link_dimensions, 
                    workspace_dimension,
                    max_velocity, 
                    delta_t, 
                    use_linear_path, 
                    sim_run, 
-                   joint_constraints):        
-        self.space_dimension = space_dimension
+                   joint_constraints):
+        self.link_dimensions = link_dimensions        
+        self.space_dimension = len(link_dimensions)
         self.workspace_dimension = workspace_dimension        
         self.max_velocity = max_velocity
         self.delta_t = delta_t 
@@ -126,16 +127,16 @@ class PathPlanner:
             path.append(goal)
         return path
         
-    def setup_ompl(self):
-        self.joint_constraints = [-np.pi, np.pi]        
+    def setup_ompl(self):             
         self.space = ob.RealVectorStateSpace(dim=self.space_dimension)
-        bounds = ob.RealVectorBounds(self.space_dimension)        
+        bounds = ob.RealVectorBounds(self.space_dimension)               
         for i in xrange(self.space_dimension):
             bounds.setLow(i, self.joint_constraints[0])
             bounds.setHigh(i, self.joint_constraints[1])
         self.space.setBounds(bounds)
         self.si = ob.SpaceInformation(self.space)
         self.motion_validator = MotionValidator(self.si)
+        self.motion_validator.set_link_dimensions(self.link_dimensions)
         self.motion_validator.set_workspace_dimension(self.workspace_dimension) 
         self.motion_validator.set_max_distance(self.max_velocity, self.delta_t) 
         self.si.setStateValidityChecker(ob.StateValidityCheckerFn(self.motion_validator.isValid))      

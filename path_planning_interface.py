@@ -12,14 +12,14 @@ class PathPlanningInterface:
         pass
     
     def setup_path_evaluator(self, A, B, C, D, H, M, N, V, W, 
-                            num_links, 
-                            workspace_dimension, 
-                            sample_size, 
-                            obstacles,
-                            w1, 
-                            w2):
+                             link_dimensions, 
+                             workspace_dimension, 
+                             sample_size, 
+                             obstacles,
+                             w1, 
+                             w2):
         self.path_evaluator.setup(A, B, C, D, H, M, N, V, W, 
-                                  num_links, 
+                                  link_dimensions, 
                                   workspace_dimension, 
                                   sample_size, 
                                   obstacles,
@@ -27,14 +27,14 @@ class PathPlanningInterface:
                                   w2)
     
     def setup(self, 
-              num_links, 
+              link_dimensions, 
               workspace_dimension,
               obstacles, 
               max_velocity, 
               delta_t, 
               use_linear_path, 
               joint_constraints):
-        self.num_links = num_links
+        self.link_dimensions = link_dimensions
         self.workspace_dimension = workspace_dimension        
         self.num_cores = cpu_count()
         #self.num_cores = 2         
@@ -138,7 +138,7 @@ class PathPlanningInterface:
     
     def construct_and_evaluate_path(self, obstacles, queue, sim_run, joint_constraints, horizon):
         path_planner = PathPlanner()        
-        path_planner.set_params(self.num_links,
+        path_planner.set_params(self.link_dimensions,
                                 self.workspace_dimension,                                 
                                 self.max_velocity, 
                                 self.delta_t, 
@@ -156,7 +156,7 @@ class PathPlanningInterface:
     
     def construct_path(self, obstacles, queue, sim_run, joint_constraints,):                
         path_planner = PathPlanner()        
-        path_planner.set_params(self.num_links,
+        path_planner.set_params(self.link_dimensions,
                                 self.workspace_dimension,                                 
                                 self.max_velocity, 
                                 self.delta_t, 
