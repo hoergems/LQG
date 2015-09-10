@@ -60,6 +60,8 @@ class LQG:
                                       self.joint_constraints,
                                       self.theta_0,
                                       self.goal_position)
+        if len(goal_states) == 0:
+            logging.error("LQG: Couldn't generate any goal states. Problem seems to be infeasible")
         print "LQG: " + str(len(goal_states)) + " goal states generated" 
         
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
@@ -145,6 +147,7 @@ class LQG:
                                   self.joint_constraints)
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)           
                 cartesian_coords, rewards, successful_runs = sim.simulate(xs, us, zs, m_covs[j])
+                print cartesian_coords
                                 
                 cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])
                 try:                             
@@ -157,11 +160,20 @@ class LQG:
                 all_rewards.append([np.asscalar(rewards[k]) for k in xrange(len(rewards))]) 
                 successes.append((100.0 / self.num_simulation_runs) * successful_runs)
             lengths_best_paths = []
+            average_distances_to_goal_area = []            
+            for i in xrange(len(cart_coords)):
+                average_distances_to_goal_area.append(self.get_average_distance_to_goal_area(self.goal_position, 
+                                                                                             self.goal_radius, 
+                                                                                             cart_coords[i]))
+            
             for i in xrange(len(best_paths)):
                 lengths_best_paths.append(float(len(best_paths[i][0])))
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
             if self.plot_paths:
                 serializer.save_paths(best_paths, 'best_paths.yaml', True, path=dir)
+            serializer.save_average_distances_to_goal_area(average_distances_to_goal_area,
+                                                           path=dir,
+                                                           filename="avg_distances_to_goal_area_lqg.yaml")
             serializer.save_lengths_best_paths(lengths_best_paths, path=dir, filename="mean_num_steps_per_run_lqg.yaml")
             serializer.save_cartesian_coords(cart_coords, path=dir, filename="cartesian_coords_lqg.yaml") 
             serializer.save_num_successes(successes, path=dir, filename="num_successes_lqg.yaml") 
@@ -198,7 +210,20 @@ class LQG:
                 os.makedirs(dir + "/model")
                 
             cmd = "cp " + model_file + " " + dir + "/model"
-            os.system(cmd)           
+            os.system(cmd)
+            
+    def get_average_distance_to_goal_area(self, goal_position, goal_radius, cartesian_coords):        
+        avg_dist = 0.0
+        goal_pos = np.array(goal_position)        
+        for i in xrange(len(cartesian_coords)):            
+            cart = np.array(cartesian_coords[i])            
+            dist = np.linalg.norm(goal_pos - cart)            
+            if dist < goal_radius:
+                dist = 0.0
+            avg_dist += dist
+        if avg_dist == 0.0:
+            return avg_dist        
+        return np.asscalar(avg_dist) / len(cartesian_coords)          
             
     def problem_setup(self, delta_t, num_links):
         A = np.identity(num_links)

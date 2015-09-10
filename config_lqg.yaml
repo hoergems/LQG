@@ -11,7 +11,7 @@ use_linear_path: False
 num_simulation_runs: 5
 
 # Dimension of the workspace (2 = 2D, 3 = 3D)
-workspace_dimension: 3
+workspace_dimension: 2
 
 # Maximum angular velocity of the joints (in rad/sec)
 max_velocity: 2.0
@@ -23,7 +23,7 @@ control_rate: 30.0
 init_joint_angles: [0.0, 0.0, 0.0]
 
 # The goal position of the end effector. If set to None, a random goal position will be generated
-goal_position: [0.0, 4.0, 0.0]
+goal_position: [0.0, 3.0, 0.0]
 
 # The radius around the goal position to define the end effector's goal area
 goal_radius: 0.4
@@ -32,13 +32,13 @@ goal_radius: 0.4
 num_bins: 201
 
 # The minimum joint state covariance
-min_covariance: 0.002
+min_covariance: 0.0
 
 # The maximum joint state covariance
 max_covariance: 0.02
 
 # The number of covariance steps
-covariance_steps: 3
+covariance_steps: 2
 
 # The observation covariance
 observation_covariance: 0.0001

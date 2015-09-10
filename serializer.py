@@ -52,6 +52,16 @@ class Serializer:
         with open(os.path.join(path, filename), 'w') as f:
             f.write(yaml.dump(mean_num_generated_paths, default_flow_style=False))
             
+    def save_average_distances_to_goal_area(self, avg_distances, path="", filename=""):
+        if not os.path.exists(path):
+            os.makedirs(path)
+        if filename == "":
+            filename = "avg_distances_to_goal_area.yaml"
+        for file in glob.glob(os.path.join(path, filename)):
+            os.remove(file)
+        with open(os.path.join(path, filename), 'w') as f:
+            f.write(yaml.dump(avg_distances, default_flow_style=False))
+            
     def save_lengths_best_paths(self, mean_lengths, path="", filename=""):
         if not os.path.exists(path):
             os.makedirs(path)

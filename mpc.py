@@ -111,6 +111,14 @@ class MPC:
                                                     path=dir,
                                                     filename="mean_num_steps_per_run_mpc" + str(self.num_execution_steps) + ".yaml")
             
+            average_distances_to_goal_area = []            
+            for i in xrange(len(cartesian_coords)):
+                average_distances_to_goal_area.append(self.get_average_distance_to_goal_area(self.goal_position, 
+                                                                                             self.goal_radius, 
+                                                                                             cartesian_coords[i]))
+            serializer.save_average_distances_to_goal_area(average_distances_to_goal_area,
+                                                           path=dir,
+                                                           filename="avg_distances_to_goal_area_mpc" + str(self.num_execution_steps) + ".yaml")
             reward_variances = []
             mean_rewards = []
             for i in xrange(len(m_covs)):
@@ -121,6 +129,8 @@ class MPC:
                 else:
                     var = np.asscalar(var)               
                 reward_variances.append(var)
+                
+            
             
             serializer.save_rewards(rewards, path=dir, filename="rewards_mpc" + str(self.num_execution_steps) + ".yaml")    
             serializer.save_rewards(mean_rewards, path=dir, filename="mean_rewards_mpc" + str(self.num_execution_steps) + ".yaml")
@@ -140,7 +150,20 @@ class MPC:
             cmd = "cp " + model_file + " " + dir + "/model"
             os.system(cmd)
             if plot:
-                PlotStats(True, "mpc")     
+                PlotStats(True, "mpc")
+                
+    def get_average_distance_to_goal_area(self, goal_position, goal_radius, cartesian_coords):        
+        avg_dist = 0.0
+        goal_pos = np.array(goal_position)        
+        for i in xrange(len(cartesian_coords)):            
+            cart = np.array(cartesian_coords[i])            
+            dist = np.linalg.norm(goal_pos - cart)            
+            if dist < goal_radius:
+                dist = 0.0
+            avg_dist += dist
+        if avg_dist == 0.0:
+            return avg_dist        
+        return np.asscalar(avg_dist) / len(cartesian_coords)     
             
     def mpc(self, initial_belief, m_covs, horizon, obstacles):
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.link_dimensions)

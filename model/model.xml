@@ -80,7 +80,7 @@
    <joints>j1 j2 j3</joints>      
    <closingdirection>1 1</closingdirection>
    <direction>1 0 0</direction>
-   <Translation>1.0 0 0</Translation>
+   <Translation>1 0 0</Translation>
  </Manipulator>
 
 </Robot>
