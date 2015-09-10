@@ -60,12 +60,6 @@ def compareEnvironmentToTmpFiles(problem, model_file):
     if os.path.exists("tmp/" + problem + "/goalstates.txt"):
         return True
     return False
-        
-    try:        
-        shutil.copy2('tmp/' + problem + '/goalstates.txt', "goalstates.txt")
-    except:
-        return False
-    return True
 
 def get_goal_states(problem, 
                     serializer, 
@@ -103,6 +97,5 @@ def get_goal_states(problem,
 
 def copyToTmp(problem):
     shutil.copy2("environment/env.xml", 'tmp/' + problem + '/env.xml')
-    shutil.copy2("model/model.xml", 'tmp/' + problem + '/model.xml')
-    #shutil.copy2("goalstates.txt", 'tmp/' + problem + '/goalstates.txt')
+    shutil.copy2("model/model.xml", 'tmp/' + problem + '/model.xml')    
     shutil.copy2('config_' + str(problem) + '.yaml', 'tmp/' + problem + '/config_' + str(problem) + '.yaml')

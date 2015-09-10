@@ -41,11 +41,12 @@ def get_2d_histogram(X, Y, range, bins=200):
             H[i, j] /= sum        
     return H, xedges, yedges
 
-def calc_EMD(cartesian_coords, num_bins):    
+def calc_EMD(cartesian_coords, num_bins, goal_position, link_dimensions):    
     X = np.array([coords[0] for coords in cartesian_coords])
     Y = np.array([coords[1] for coords in cartesian_coords])
     
-    histogram_range = [[-3.1, 3.1], [-3.1, 3.1]]
+    dim = sum([l[0] for l in link_dimensions])    
+    histogram_range = [[-dim * 1.1, dim * 1.1], [-dim * 1.1, dim * 1.1]]
         
     """
     The historgram from the resulting cartesian coordinates
@@ -58,8 +59,8 @@ def calc_EMD(cartesian_coords, num_bins):
     """
     The histogram from a delta distribution located at the goal position
     """
-    H_delta, xedges_delta, yedges_delta = get_2d_histogram([0.0], 
-                                                           [-3.0], 
+    H_delta, xedges_delta, yedges_delta = get_2d_histogram([goal_position[0]], 
+                                                           [goal_position[1]], 
                                                            histogram_range, 
                                                            bins=num_bins)
         

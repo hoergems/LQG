@@ -41,7 +41,7 @@ class LQG:
         environment = serializer.load_environment(file="env.xml", path="environment")       
         obstacles = []
         terrain = Terrain("default", 0.0, 1.0, True)
-        for obstacle in environment:            
+        for obstacle in environment:                       
             obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))          
         
         """ Setup operations """
@@ -70,7 +70,6 @@ class LQG:
                            self.delta_t, 
                            self.use_linear_path, 
                            self.joint_constraints)
-        #self.path_planning_interface.setup(obstacles, self.num_links, self.max_velocity, self.delta_t, self.use_linear_path, self.joint_constraints, config['verbose'])
         path_planner.set_start_and_goal(self.theta_0, goal_states)      
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, len(self.link_dimensions))
         
@@ -149,7 +148,10 @@ class LQG:
                                 
                 cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])
                 try:                             
-                    emds.append(calc_EMD(cartesian_coords, self.num_bins))
+                    emds.append(calc_EMD(cartesian_coords, 
+                                         self.num_bins, 
+                                         self.goal_position, 
+                                         self.link_dimensions))
                 except:
                     pass
                 all_rewards.append([np.asscalar(rewards[k]) for k in xrange(len(rewards))]) 
@@ -212,8 +214,7 @@ class LQG:
         
     def set_params(self, config):        
         self.num_paths = config['num_generated_paths']
-        self.use_linear_path = config['use_linear_path']
-        self.num_links = config['num_links']
+        self.use_linear_path = config['use_linear_path']        
         self.max_velocity = config['max_velocity']
         self.delta_t = 1.0 / config['control_rate']
         self.theta_0 = config['init_joint_angles']

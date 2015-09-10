@@ -92,7 +92,8 @@ class IKSolutionGenerator:
                 solutions.append(path[0][0][-1])                
             n += 1
         self.path_planner = None
-        if not len(solutions) == 0:            
+        if not len(solutions) == 0: 
+            print "IKSolutionGenerator: Found " + str(len(solutions)) + " valid goal states"           
             return solutions        
         else:
             logging.error("IKSoultionGenerator: Couldn't find a valid IK solution. Defined problem seems to be infeasible.")
@@ -110,7 +111,7 @@ class IKSolutionGenerator:
         b = -2.0 * links[1][0] * x_true        
         alpha2 = np.arccos(a / b)
         if np.isnan(alpha2):
-            print "NO SOLUTION"
+            logging.error("IKSolutionGenerator: Couldn't generate an inverse kinematic solution for goal position " + str((x, y, z)))
             return [], True
         alpha3 = alpha1 + alpha2 - (np.pi / 2.0)
         beta = np.arccos((np.square(x_true) - np.square(links[2][0]) - np.square(links[1][0])) / (-2.0 * links[2][0] * links[1][0]))        
@@ -124,7 +125,7 @@ class IKSolutionGenerator:
         
         for angle in angles:
             if np.isnan(angle):
-                print "ANGLE IS NAN"
+                logging.error("IKSolutionGenerator: Couldn't generate an inverse kinematic solution for goal position " + str((x, y, z)))
                 return [], True
         if ((angles[1] > 0 and angles[2] < 0) or
             (angles[1] < 0 and angles[2] > 0)):

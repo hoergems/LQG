@@ -277,7 +277,10 @@ class MPC:
             mean_number_generated_paths_per_step.append(mean_number_generated_paths_per_run[-1] / mean_number_planning_steps)            
             
             all_successful_runs.append((100.0 / self.num_simulation_runs) * successful_runs)
-            emds.append(calc_EMD(cartesian_coords, self.num_bins))
+            emds.append(calc_EMD(cartesian_coords, 
+                                 self.num_bins, 
+                                 self.goal_position, 
+                                 self.link_dimensions))
             cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])            
         return (cart_coords, 
                 total_rewards, 

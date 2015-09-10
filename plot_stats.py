@@ -57,12 +57,11 @@ class PlotStats:
                                  output="mean_num_steps_per_run.pdf")
         cart_coords = serializer.load_cartesian_coords(dir, "cartesian_coords_" + algorithm + ".yaml")        
         logging.info("PlotStats: plotting EMD graph...")
-        try:
-            self.plot_emd_graph(serializer, cart_coords, dir=dir)
-            logging.info("PlotStats: plotting histograms...")        
-            self.save_histogram_plots(serializer, cart_coords, dir=dir) 
-        except:
-            pass
+       
+        self.plot_emd_graph(serializer, cart_coords, dir=dir)
+        logging.info("PlotStats: plotting histograms...")        
+        self.save_histogram_plots(serializer, cart_coords, dir=dir) 
+        
         
         
     def setup_kinematics(self, serializer, dir='stats'):
@@ -407,14 +406,20 @@ class PlotStats:
         
     def plot_emd_graph(self, serializer, cartesian_coords, dir="stats"):
         stats = serializer.load_stats('stats.yaml', path=dir) 
-        config = serializer.read_config(path=dir)       
+        config = serializer.read_config(path=dir)
+        goal_position = config['goal_position']
+        utils = Utils()
+        model_file = "model.xml" 
+        if config['workspace_dimension'] == 3:
+            model_file = "model3D.xml"
+        link_dimensions = utils.getLinkDimensions(os.getcwd() + "/" + dir + "/model/" + model_file)     
         #emd = stats['emd']
         m_cov = stats['m_cov']
         
         emds = []
         for k in xrange(len(cartesian_coords)):
             #cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])                
-            emds.append(calc_EMD(cartesian_coords[k], config['num_bins']))
+            emds.append(calc_EMD(cartesian_coords[k], config['num_bins'], goal_position, link_dimensions))
         
         arr = np.array([np.array([m_cov[i], emds[i]]) for i in xrange(len(emds))])
         Plot.plot_2d_n_sets([arr], 
@@ -429,19 +434,29 @@ class PlotStats:
         
     def save_histogram_plots(self, serializer, cart_coords, dir="stats"):
         config = serializer.read_config(path=dir)
-        
+        utils = Utils()
+        model_file = "model.xml" 
+        if config['workspace_dimension'] == 3:
+            model_file = "model3D.xml"
+        link_dimensions = utils.getLinkDimensions(os.getcwd() + "/" + dir + "/model/" + model_file)
+        dim = sum([l[0] for l in link_dimensions])
         for k in xrange(len(cart_coords)):                    
             X = np.array([cart_coords[k][i][0] for i in xrange(len(cart_coords[0]))])
             Y = np.array([cart_coords[k][i][1] for i in xrange(len(cart_coords[0]))])
-            histogram_range = [[-3.1, 3.1], [-3.1, 3.1]]
+            histogram_range = [[-dim * 1.1, dim * 1.1], [-dim * 1.1, dim * 1.1]]
             H, xedges, yedges = get_2d_histogram(X, Y, histogram_range, bins=config['num_bins'])        
             Plot.plot_histogram(H, xedges, yedges, save=self.save, path=dir, filename="hist"+ str(k) + ".png")
             
     def plot_paths(self, serializer, best_paths=False, dir="stats"):
         config = serializer.read_config(path=dir)
+        utils = Utils()
+        model_file = "model.xml" 
+        if config['workspace_dimension'] == 3:
+            model_file = "model3D.xml"
+        link_dimensions = utils.getLinkDimensions(os.getcwd() + "/" + dir + "/model/" + model_file)
         try:
             if config['plot_paths']:
-                dim = config['num_links']        
+                dim = len(link_dimensions)        
                 colors = []
                 if best_paths:
                     paths = serializer.load_paths("best_paths.yaml", path=dir)
