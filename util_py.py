@@ -70,9 +70,7 @@ def get_goal_states(problem,
                     delta_t,
                     joint_constraints,
                     theta_0,
-                    goal_position):
-    #goal_states = [np.array(gs) for gs in serializer.load_goal_states("goal_states.yaml")]
-    #return goal_states
+                    goal_position):    
     model_file = "model.xml"
     if workspace_dimension == 3:
         model_file = "model3D.xml"
