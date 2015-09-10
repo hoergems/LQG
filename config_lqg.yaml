@@ -8,7 +8,7 @@ num_generated_paths: 30
 use_linear_path: False
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 50
+num_simulation_runs: 5
 
 # Dimension of the workspace (2 = 2D, 3 = 3D)
 workspace_dimension: 3
@@ -38,7 +38,7 @@ min_covariance: 0.002
 max_covariance: 0.02
 
 # The number of covariance steps
-covariance_steps: 1
+covariance_steps: 3
 
 # The observation covariance
 observation_covariance: 0.0001

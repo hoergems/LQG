@@ -8,10 +8,10 @@ num_generated_paths: 0
 use_linear_path: True
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 3
+num_simulation_runs: 150
 
-# Dimension of the workspace (2 = 2D, 3 = 3D)
-workspace_dimension: 3
+# Number of links the manipulator consists of
+num_links: 3
 
 # Maximum angular velocity of the joints (in rad/sec)
 max_velocity: 2.0
@@ -23,7 +23,7 @@ control_rate: 30.0
 init_joint_angles: [0.0, 0.0, 0.0]
 
 # The goal position of the end effector
-goal_position: [0.0, 3.0, 0.0]
+goal_position: [0.0, -3.0, 0.0]
 
 # The radius around the goal position to define the end effector's goal area
 goal_radius: 0.2
@@ -38,7 +38,7 @@ min_covariance: 0.0
 max_covariance: 0.02
 
 # The number of covariance steps
-covariance_steps: 2
+covariance_steps: 20
 
 # The observation covariance
 observation_covariance: 0.0001
@@ -69,6 +69,8 @@ stop_when_terminal: True
 # Number of samples drawn from the state distribution at step i 
 # in order to evaluate collision probability
 sample_size: 50
+
+workspace_dimension: 2
 
 ######## MPC parameters ############
 

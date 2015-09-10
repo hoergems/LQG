@@ -155,10 +155,14 @@ class LQG:
                 except:
                     pass
                 all_rewards.append([np.asscalar(rewards[k]) for k in xrange(len(rewards))]) 
-                successes.append((100.0 / self.num_simulation_runs) * successful_runs)    
+                successes.append((100.0 / self.num_simulation_runs) * successful_runs)
+            lengths_best_paths = []
+            for i in xrange(len(best_paths)):
+                lengths_best_paths.append(float(len(best_paths[i][0])))
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
             if self.plot_paths:
                 serializer.save_paths(best_paths, 'best_paths.yaml', True, path=dir)
+            serializer.save_lengths_best_paths(lengths_best_paths, path=dir, filename="mean_num_steps_per_run_lqg.yaml")
             serializer.save_cartesian_coords(cart_coords, path=dir, filename="cartesian_coords_lqg.yaml") 
             serializer.save_num_successes(successes, path=dir, filename="num_successes_lqg.yaml") 
             serializer.save_mean_planning_times(mean_planning_times, path=dir, filename="mean_planning_times_per_run_lqg.yaml")          
