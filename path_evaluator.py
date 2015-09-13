@@ -52,7 +52,7 @@ class PathEvaluator:
         self.kinematics.setLinksAndAxis(self.link_dimensions, axis)
         self.utils = Utils()
 
-    def get_probability_of_collision(self, mean, cov):
+    def get_probability_of_collision(self, mean, cov):        
         samples = multivariate_normal.rvs(mean, cov, self.sample_size)
         pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True)               
         pdfs = []

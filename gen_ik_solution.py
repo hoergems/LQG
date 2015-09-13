@@ -97,7 +97,7 @@ class IKSolutionGenerator:
         
             
         
-    def legIK(self, x, y, z, links):    
+    def legIK(self, x, y, z, links):           
         angles = []
         angles.append(np.arctan2(y, x))
         x_im = np.sqrt(np.square(x) + np.square(y)) - links[0][0]        

@@ -43,7 +43,7 @@ class MPC:
         """ Load the environment """ 
         environment = serializer.load_environment(file="env.xml", path="environment")       
         obstacles = []
-        terrain = Terrain("default", 0.0, 1.0, True)
+        terrain = Terrain("default", 0.0, 1.0, False)
         logging.info("Loading obstacles")
         for obstacle in environment:            
             obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain)) 
@@ -75,7 +75,7 @@ class MPC:
                                            self.delta_t,
                                            self.joint_constraints,
                                            self.theta_0,
-                                           self.goal_position)
+                                           self.goal_position)        
         
         if check_positive_definite([C, D]):            
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
@@ -250,7 +250,7 @@ class MPC:
                         break
                     #logging.info("MPC: " + str(len(paths)) + " Paths constructed. Evaluating them according the planning objective")
                     #xs, us, zs = self.path_evaluator.evaluate_paths(paths, horizon=horizon)                                     
-                    logging.info("MPC: Generated " + str(num_generated_paths) + " paths in " + str(t_e) + " seconds")
+                    logging.warn("MPC: Generated " + str(num_generated_paths) + " paths in " + str(t_e) + " seconds")
                     x_tilde = np.array([0.0 for i in xrange(len(self.link_dimensions))])
                     n_steps = self.num_execution_steps
                     if n_steps > len(xs) - 1:
@@ -269,8 +269,9 @@ class MPC:
                                                                                                                                         current_step,
                                                                                                                                         n_steps) 
                                         
-                    logging.info("MPC: Execution finished. True state is " + str(x_true))
-                    logging.info("MPC: Estimated state is " + str(x_estimate))                
+                    logging.warn("MPC: Execution finished. True state is " + str(x_true))
+                    logging.warn("MPC: Estimated state is " + str(x_estimate)) 
+                    logging.warn("MPC: terminal " + str(terminal))               
                 total_reward_cov.append(np.asscalar(total_reward))
                 mean_reward += total_reward                
                 mean_number_of_steps += current_step                

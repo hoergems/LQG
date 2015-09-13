@@ -17,9 +17,9 @@ OPTS = $(shell python-config --include) -O2
 BOOSTFLAGS= -lboost_system -lboost_program_options -lboost_python
 
 
-#all: kin.so util.so obstacle.so libpath_planner.so clean
+all: kin.so util.so obstacle.so libpath_planner.so clean
 
-all: obstacle.so util.so pp.so clean	
+#all: obstacle.so util.so pp.so clean	
 
 util.so: Terrain.o Obstacle.o Kinematics.o Utils.o
 	$(CC) $(INCLUDEFLAGS) -Wl,-rpath,$(PYLIBPATH) -shared $^ -o $@ $(LDFLAGS) $(BOOSTFLAGS) 
@@ -33,7 +33,7 @@ Kinematics.o: Kinematics.cpp
 obstacle.so: Kinematics.o Utils.o Terrain.o Obstacle.o
 	$(CC) $(INCLUDEFLAGS) -Wl,-rpath,$(PYLIBPATH) -shared $^ -o $@ $(LDFLAGS) $(BOOSTFLAGS)
 
-pp.so: Obstacle.o Terrain.o Kinematics.o Utils.o ManipulatorGoalRegion.o MotionValidator.o PathPlanner.o
+libpath_planner.so: Obstacle.o Terrain.o Kinematics.o Utils.o ManipulatorGoalRegion.o MotionValidator.o PathPlanner.o
 	$(CC) $(INCLUDEFLAGS) -shared $^ -o $@ $(LDFLAGS) $(BOOSTFLAGS)
 	
 Obstacle.o: Obstacle.cpp
