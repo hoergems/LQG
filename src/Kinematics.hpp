@@ -25,6 +25,8 @@ namespace shared {
             std::pair<fcl::Vec3f, fcl::Matrix3f> getPoseOfLinkN(const std::vector<double> &joint_angles, const int &n) const;
             
             std::pair<fcl::Vec3f, fcl::Matrix3f> getEndEffectorPose(const std::vector<double> &joint_angles) const;
+
+            bool setLinksAndAxisCalled();
             
             
             
@@ -32,6 +34,8 @@ namespace shared {
             std::vector<std::vector<double>> links_;
             
             std::vector<double> rotation_offsets_;
+
+            bool setLinksAndAxisCalled_;
             
             Eigen::MatrixXd getTransformationMatr(double sigma_n, double d_n, double a_n, double alpha_n) const;
             

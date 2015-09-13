@@ -149,7 +149,9 @@ void Utils::loadObstaclesXML(std::vector<std::shared_ptr<shared::Obstacle> > *ob
                             if (vs.first == "Body") {                               
                                 boost::property_tree::ptree subtree2 = (boost::property_tree::ptree)vs.second;
                                 BOOST_FOREACH(boost::property_tree::ptree::value_type &vss, subtree2) {                                    
-                                    if (vss.first == "Geom") {                                                                            
+                                    if (vss.first == "Geom") { 
+                                        cout << "GETTING GEOM " << endl;
+                                        sleep(2);                                                                  
                                         std::string trans = vss.second.get<std::string>("Translation");
                                         std::string size_string = vss.second.get<std::string>("extents");                                        
                                         std::istringstream trans_s(trans);
@@ -169,11 +171,14 @@ void Utils::loadObstaclesXML(std::vector<std::shared_ptr<shared::Obstacle> > *ob
                                         obstacles[obstacles.size() - 1].size_z = size[2];
                                     }
                                     else if (vss.first == "Terrain") {
+                                        cout << "Getting terrain" << endl;
+                                        sleep(2);
                                         TerrainStruct terrain;
                                         terrain.name = vss.second.get_child("<xmlattr>.name").data();
                                         terrain.velocityDamping = vss.second.get<double>("Damping");
                                         terrain.traversalCost = vss.second.get<double>("Cost");                                        
-                                        terrain.traversable = vss.second.get<bool>("Traversable");                                        
+                                        terrain.traversable = vss.second.get<bool>("Traversable");
+                                        cout << "terrain traversable " << terrain.traversable << endl;                                        
                                         obstacles[obstacles.size() - 1].terrain = terrain;
                                         
                                     }

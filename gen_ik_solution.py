@@ -27,11 +27,7 @@ class IKSolutionGenerator:
         """
         Generate the obstacles
         """
-        environment = self.serializer.load_environment(file=environment_file, path="")
-        obstacles = []
-        terrain = Terrain("default", 0.0, 1.0, True)
-        for obstacle in environment:                   
-            obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))        
+        
         self.link_dimensions = link_dimensions
         self.path_planner = PathPlanningInterface()
         self.path_planner.setup(link_dimensions, 

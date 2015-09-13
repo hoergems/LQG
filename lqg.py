@@ -40,9 +40,9 @@ class LQG:
         """ Load the obstacles """ 
         environment = serializer.load_environment(file="env.xml", path="environment")       
         obstacles = []
-        terrain = Terrain("default", 0.0, 1.0, True)
+        terrain = Terrain("default", 0.0, 1.0, False)                
         for obstacle in environment:                       
-            obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))          
+            obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))                    
         
         """ Setup operations """
         model_file = os.getcwd() + "/model/model.xml"

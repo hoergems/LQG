@@ -8,7 +8,8 @@ namespace shared {
 
 Kinematics::Kinematics():
     links_(),    
-    rotation_offsets_() {
+    rotation_offsets_(),
+    setLinksAndAxisCalled_(false) {
 }
 
 void Kinematics::setLinksAndAxis(std::vector<std::vector<double>> links, std::vector<std::vector<int>> axis) {
@@ -25,6 +26,8 @@ void Kinematics::setLinksAndAxis(std::vector<std::vector<double>> links, std::ve
            rotation_offsets_[i] = M_PI / 2.0;
         }       
     }
+
+    setLinksAndAxisCalled_ = true;
 }
 
 std::vector<double> Kinematics::getPositionOfLinkN(const std::vector<double> &joint_angles, const int &n) const {
@@ -84,6 +87,10 @@ Eigen::MatrixXd Kinematics::getTransformationMatr(double sigma_n, double d_n, do
     return b;
 }
 
+bool Kinematics::setLinksAndAxisCalled() {
+    return setLinksAndAxisCalled_;
+}
+
 
 
 BOOST_PYTHON_MODULE(kin)
@@ -95,7 +102,8 @@ BOOST_PYTHON_MODULE(kin)
     class_<Kinematics, std::shared_ptr<Kinematics>>("Kinematics")
         .def("getPositionOfLinkN", &Kinematics::getPositionOfLinkN)
         .def("getEndEffectorPosition", &Kinematics::getEndEffectorPosition)
-        .def("setLinksAndAxis", &Kinematics::setLinksAndAxis)       
+        .def("setLinksAndAxis", &Kinematics::setLinksAndAxis) 
+        .def("setLinksAndAxisCalled", &Kinematics::setLinksAndAxisCalled)      
     ;
 }
  

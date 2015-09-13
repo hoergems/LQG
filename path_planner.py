@@ -127,20 +127,28 @@ class PathPlanner:
             path.append(goal)
         return path
         
-    def setup_ompl(self):             
+    def setup_ompl(self):   
+        print "set space"          
         self.space = ob.RealVectorStateSpace(dim=self.space_dimension)
-        bounds = ob.RealVectorBounds(self.space_dimension)               
+        bounds = ob.RealVectorBounds(self.space_dimension) 
+        print "set bounds"              
         for i in xrange(self.space_dimension):
             bounds.setLow(i, self.joint_constraints[0])
             bounds.setHigh(i, self.joint_constraints[1])
+        print "set bounds 2"
         self.space.setBounds(bounds)
+        print "set si"
         self.si = ob.SpaceInformation(self.space)
+        print "set motion validator"
         self.motion_validator = MotionValidator(self.si)
         self.motion_validator.set_link_dimensions(self.link_dimensions)
         self.motion_validator.set_workspace_dimension(self.workspace_dimension) 
         self.motion_validator.set_max_distance(self.max_velocity, self.delta_t) 
-        self.si.setStateValidityChecker(ob.StateValidityCheckerFn(self.motion_validator.isValid))      
+        print "set state validiy checker"
+        self.si.setStateValidityChecker(ob.StateValidityCheckerFn(self.motion_validator.isValid))
+        print "set motion validator"      
         self.si.setMotionValidator(self.motion_validator)
+        print "si.setup"
         self.si.setup()
         self.problem_definition = ob.ProblemDefinition(self.si)
         

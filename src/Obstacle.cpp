@@ -22,8 +22,7 @@ Obstacle::Obstacle(double pos_x, double pos_y, double pos_z, double size_x, doub
     size_z_(size_z),
     collision_structure_(),
     collision_object_ptr_(),    
-    terrain_(terrain) {
-    
+    terrain_(terrain) {    
     createCollisionStructure();
     createCollisionObject();
 }
@@ -39,8 +38,8 @@ bool Obstacle::in_collision(const std::vector<std::shared_ptr<Obstacle> > &other
 }
 
 bool Obstacle::in_collision(std::vector<OBB> &other_collision_structures) {
-    for (size_t i = 0; i < other_collision_structures.size(); i++) {
-        if (collision_structure_.overlap(other_collision_structures[i])) {
+    for (size_t i = 0; i < other_collision_structures.size(); i++) {        
+        if (collision_structure_.overlap(other_collision_structures[i])) {            
             return true;
         }
     }
@@ -95,7 +94,7 @@ void Obstacle::createCollisionObject() {
     collision_object_ptr_ = std::make_shared<fcl::CollisionObject>(fcl::CollisionObject(boost::shared_ptr<CollisionGeometry>(box), box_tf));
 }
 
-void Obstacle::createCollisionStructure() {
+void Obstacle::createCollisionStructure() {    
     Vec3f p1(pos_x_ - size_x_ / 2.0, 
              pos_y_ - size_y_ / 2.0, 
              pos_z_ - size_z_ / 2.0);
@@ -124,6 +123,10 @@ std::vector<double> Obstacle::getDimensions() const {
     return dimensions;
 }
 
+bool Obstacle::isTraversable() {
+    return terrain_.isTraversable();
+}
+
 BOOST_PYTHON_MODULE(obstacle)
 {   
     #include "Terrain.hpp"
@@ -141,6 +144,7 @@ BOOST_PYTHON_MODULE(obstacle)
          .def("getDimensions", &Obstacle::getDimensions)
          .def("inCollisionDiscrete", in_collision_d)
          .def("inCollisionContinuous", in_collision_c)
+         .def("isTraversable", &Obstacle::isTraversable)         
     ;
 }
 

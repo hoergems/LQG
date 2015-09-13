@@ -46,7 +46,9 @@ class Obstacle {
         
         std::shared_ptr<fcl::OBB> getCollisionStructure() const; 
         
-        std::vector<double> getDimensions() const;     
+        std::vector<double> getDimensions() const; 
+
+        bool isTraversable();    
         
 
     private:   
