@@ -41,7 +41,7 @@ class PathPlanningInterface:
         self.link_dimensions = link_dimensions
         self.workspace_dimension = workspace_dimension        
         self.num_cores = cpu_count()
-        #self.num_cores = 2         
+        self.num_cores = 2         
         self.obstacles = obstacles        
         self.max_velocity = max_velocity
         self.delta_t = delta_t
@@ -160,20 +160,7 @@ class PathPlanningInterface:
         queue.put((xs, us, zs))
         return
     
-    def construct_and_evaluate_path(self, obstacles, queue, joint_constraints, horizon):
-        '''path_planner = PathPlanner()        
-        path_planner.set_params(self.link_dimensions,
-                                self.workspace_dimension,                                 
-                                self.max_velocity, 
-                                self.delta_t, 
-                                self.use_linear_path,
-                                sim_run, 
-                                joint_constraints)
-        path_planner.setup_ompl()
-        path_planner.set_obstacles(obstacles)
-        path_planner.set_start_state(self.start_state) 
-        path_planner.set_goal_state(self.goal_states)
-        xs, us, zs = path_planner.plan_path()'''        
+    def construct_and_evaluate_path(self, obstacles, queue, joint_constraints, horizon):              
         xs, us, zs = self._construct(obstacles, joint_constraints)
         eval_result = self.path_evaluator.evaluate_path([xs, us, zs], horizon)
                            
@@ -184,29 +171,11 @@ class PathPlanningInterface:
     
     def construct_path(self, obstacles, queue, joint_constraints,):
         xs, us, zs = self._construct(obstacles, joint_constraints) 
-        queue.put((xs, us, zs))
-        #return xs, us, zs 
-                         
-        '''path_planner = PathPlanner()        
-        path_planner.set_params(self.link_dimensions,
-                                self.workspace_dimension,                                 
-                                self.max_velocity, 
-                                self.delta_t, 
-                                self.use_linear_path,
-                                sim_run, 
-                                joint_constraints)        
-        path_planner.setup_ompl()        
-        path_planner.set_obstacles(obstacles)        
-        path_planner.set_start_state(self.start_state)        
-        path_planner.set_goal_state(self.goal_states)        
-        xs, us, zs = path_planner.plan_path()        
-        queue.put((xs, us, zs))
-        return '''
+        queue.put((xs, us, zs))        
         
     def _construct(self, obstacles, joint_constraints):
         path_planner2 = libpath_planner.PathPlanner(self.kinematics,
-                                                    len(self.link_dimensions),                                                    
-                                                    0.2,
+                                                    len(self.link_dimensions),
                                                     self.delta_t,
                                                     self.max_velocity,
                                                     1.0,
@@ -239,7 +208,7 @@ class PathPlanningInterface:
             xs_elem = []
             for j in xrange(len(xs_temp[i])):
                 xs_elem.append(xs_temp[i][j])
-            state_path.append(xs_elem)
+            state_path.append(xs_elem)    
         xs, us, zs = self._augment_path(state_path)
         return xs, us, zs
         

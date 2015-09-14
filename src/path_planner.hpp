@@ -33,8 +33,7 @@ namespace shared {
             
             
             PathPlanner(std::shared_ptr<Kinematics> kinematics,
-                        int dim,                        
-                        double goal_threshold,                        
+                        int dim,             
                         double delta_t,
                         double max_joint_velocity,
                         double stretching_factor,                                                
@@ -89,9 +88,7 @@ namespace shared {
             ompl::base::SpaceInformationPtr si_;
 
             /** The definition of the path planning problem */
-            ompl::base::ProblemDefinitionPtr problem_definition_;            
-
-            double goal_threshold_;
+            ompl::base::ProblemDefinitionPtr problem_definition_;
 
             /** A pointer to the path planner */
             ompl::base::PlannerPtr planner_;

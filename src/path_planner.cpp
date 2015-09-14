@@ -6,8 +6,7 @@ using std::endl;
 namespace shared {
 
 PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
-                         int dim,                         
-                         double goal_threshold,
+                         int dim,
                          double delta_t,
                          double max_joint_velocity,
                          double stretching_factor, 
@@ -18,16 +17,11 @@ PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
     max_joint_velocity_(max_joint_velocity),
     stretching_factor_(stretching_factor),
     planning_range_((1.0 / stretching_factor_) * std::sqrt(dim * std::pow(delta_t_ * max_joint_velocity_, 2))),  
-    use_rrt_heuristic_(use_rrt_heuristic), 
-    //space_(nullptr),
+    use_rrt_heuristic_(use_rrt_heuristic),    
     space_(new ompl::base::RealVectorStateSpace(dim_)),    
-    si_(new ompl::base::SpaceInformation(space_)),
-    //si_(nullptr),
+    si_(new ompl::base::SpaceInformation(space_)),    
     problem_definition_(new ompl::base::ProblemDefinition(si_)),
-    //problem_definition_(nullptr),
-    goal_threshold_(goal_threshold),
     planner_(new ompl::geometric::RRTConnect(si_)), //We use RRTConnect as the motion planner,
-    //planner_(nullptr),
     obstacles_(),    
     kinematics_(kinematics), 
     motionValidator_(new MotionValidator(si_, kinematics_, obstacles_, max_joint_velocity_, delta_t_)),
@@ -210,10 +204,7 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
         return linear_path;
     }  
     
-    /** Solve the planning problem with a maximum of 10 seconds per attempt */
-    //ompl::base::PlannerPtr planner_(new ompl::geometric::RRTConnect(si_));  
-    //planner_->setProblemDefinition(problem_definition_); 
-    //planner_->as<ompl::geometric::RRTConnect>()->setRange(planning_range_);
+    /** Solve the planning problem with a maximum of 10 seconds per attempt */    
     bool solved = false;
     boost::timer t;    
     
@@ -252,7 +243,6 @@ BOOST_PYTHON_MODULE(libpath_planner) {
     
     class_<PathPlanner>("PathPlanner", init<std::shared_ptr<Kinematics>, 
                                             int,                                             
-                                            double, 
                                             double, 
                                             double, 
                                             double,
