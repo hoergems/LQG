@@ -1,6 +1,7 @@
 import numpy as np
 import kalman as kalman
 import logging
+import time
 from scipy.stats import multivariate_normal
 from kin import *
 from util import *
@@ -80,13 +81,22 @@ class Simulator:
         logging.info("Simulator: Executing for " + str(n_steps) + " steps")        
         for i in xrange(n_steps):                        
             if not (terminal_state_reached and self.stop_when_terminal):
-                u_dash = np.dot(Ls[i + 1], x_tilde)        
-                x_true, collided = self.apply_control(x_true, np.add(u_dash, us[i]), self.A, self.B, self.V, self.M)
-                discount = np.power(self.discount_factor, current_step)
-                if collided:
-                    total_reward += discount * (-1.0 * self.illegal_move_penalty)
+                u_dash = np.dot(Ls[i], x_tilde)
+                u = np.add(u_dash, us[i]) 
+                        
+                x_true_temp = self.apply_control(x_true, 
+                                                 u, 
+                                                 self.A, 
+                                                 self.B, 
+                                                 self.V, 
+                                                 self.M)
+                collided = False
+                if self.is_in_collision(x_true_temp):
+                    logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
+                    collided = True
                 else:
-                    total_reward += discount * (-1.0 * self.step_penalty)                
+                    x_true = x_true_temp
+                x_dash = np.subtract(x_true, xs[i + 1])           
                 
                 state = v_double()
                 state[:] = x_true   
@@ -99,11 +109,15 @@ class Simulator:
                     successes += 1                       
                     logging.info("Terminal state reached: reward = " + str(total_reward))                                  
                     
-                z_t = self.get_observation(x_true, self.H, self.N, self.W)
-                z_dash_t = z_t - zs[i]
-                x_tilde_dash_t, P_dash = kalman.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
-                x_tilde, P_t = kalman.kalman_update(x_tilde_dash_t, 
-                                                    z_dash_t, 
+                z = self.get_observation(x_true, self.H, self.N, self.W)
+                z_dash = np.subtract(z, zs[i+1])
+                
+                """
+                Kalman prediction and update
+                """
+                x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
+                x_tilde, P_t = kalman.kalman_update(x_tilde_dash, 
+                                                    z_dash, 
                                                     self.H, 
                                                     P_dash, 
                                                     self.W, 
@@ -112,10 +126,7 @@ class Simulator:
                 x_estimate_new = self.check_constraints(x_tilde + xs[i + 1])
                 
                 if not self.is_in_collision(x_estimate_new):
-                    x_estimate = x_estimate_new 
-                                    
-                #print "x_true " + str(x_true)
-                #print "x_estimate " + str(x_estimate_new)            
+                    x_estimate = x_estimate_new
         return x_true, x_tilde, x_estimate, P_t, current_step + n_steps, total_reward, successes, terminal_state_reached
     
     def check_constraints(self, state):        
@@ -127,7 +138,7 @@ class Simulator:
         return state
         
     def simulate(self, xs, us, zs, cov_value):
-        Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)
+        Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)        
         cart_coords = []
         rewards = []
         successes = 0
@@ -135,9 +146,12 @@ class Simulator:
         for j in xrange(self.num_simulation_runs):
             print "Simulator: Execute simulation run " + str(j) + " for covariance value " + str(cov_value)
             x_true = xs[0]
+            x_dash = xs[0]
             #x_tilde = xs[0]
             x_tilde = np.array([0.0 for i in xrange(len(self.link_dimensions))])        
-            u_dash = np.array([0.0 for j in xrange(len(self.link_dimensions))])        
+            u_dash = np.array([0.0 for j in xrange(len(self.link_dimensions))])
+            z = zs[0]
+            z_dash = np.array([0.0 for i in xrange(len(self.link_dimensions))])        
             P_t = np.array([[0.0 for k in xrange(len(self.link_dimensions))] for l in xrange(len(self.link_dimensions))])
             reward = 0.0
             terminal_state_reached = False          
@@ -147,11 +161,45 @@ class Simulator:
                     Generate u_dash using LQG
                     """                
                     u_dash = np.dot(Ls[i], x_tilde)
-                                
+                    u = np.add(u_dash, us[i])                    
+                    
+                    '''print "xs[i] " + str(xs[i])
+                    print "x_true " + str(x_true)                    
+                    print "x_dash " + str(x_dash)
+                    print "x_tilde " + str(x_tilde) 
+                    print "z " + str(z)
+                    print "z_dash " + str(z_dash)                
+                    print ""
+                    time.sleep(1)
+                    print "u_dash " + str(u_dash)
+                    print "u " + str(u)'''
+                        
                     """
                     Generate a true state and check for collision and terminal state
-                    """                            
-                    x_true, collided = self.apply_control(x_true, np.add(u_dash, us[i]), self.A, self.B, self.V, self.M)
+                    """
+                    #x_dash = np.subtract(x_true, np.array(xs[i + 1]))
+                    x_true_temp = self.apply_control(x_true, 
+                                                     u, 
+                                                     self.A, 
+                                                     self.B, 
+                                                     self.V, 
+                                                     self.M)
+                    collided = False
+                    if self.is_in_collision(x_true_temp):
+                        logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
+                        collided = True
+                    else:
+                        x_true = x_true_temp
+                    x_dash = np.subtract(x_true, xs[i + 1])
+                    '''x_dash_temp = self.apply_control(x_dash, 
+                                                     u_dash, 
+                                                     self.A, 
+                                                     self.B, 
+                                                     self.V, 
+                                                     self.M)
+                    x_true_temp = np.add(x_dash_temp, xs[i + 1])'''                    
+                    
+                    
                     discount = np.power(self.discount_factor, i)
                     if collided:
                         reward += discount * (-1.0 * self.illegal_move_penalty)
@@ -169,15 +217,19 @@ class Simulator:
                     """
                     Obtain an observation
                     """
-                    z_t = self.get_observation(x_true, self.H, self.N, self.W)
-                    z_dash_t = z_t - zs[i]
+                    z = self.get_observation(x_true, self.H, self.N, self.W)
+                    z_dash = np.subtract(z, zs[i+1])
+                    '''z_dash = self.get_observation(x_dash, self.H, self.N, self.W)
+                    z = np.add(z_dash, zs[i+1])'''
+                    
+                   
                                 
                     """
                     Kalman prediction and update
                     """
-                    x_tilde_dash_t, P_dash = kalman.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
-                    x_tilde, P_t = kalman.kalman_update(x_tilde_dash_t, 
-                                                        z_dash_t, 
+                    x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
+                    x_tilde, P_t = kalman.kalman_update(x_tilde_dash, 
+                                                        z_dash, 
                                                         self.H, 
                                                         P_dash, 
                                                         self.W, 
@@ -214,10 +266,7 @@ class Simulator:
         m = self.get_random_joint_angles([0.0 for i in xrange(len(self.link_dimensions))], M)        
         x_new = np.add(np.add(np.dot(A, x_dash), np.dot(B, u_dash)), np.dot(V, m))
         x_new = self.check_constraints(x_new)
-        if self.is_in_collision(x_new):
-            logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
-            return x_dash, True 
-        return x_new, False
+        return x_new
     
     def get_random_joint_angles(self, mu, cov):        
         #with self.lock:
