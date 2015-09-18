@@ -110,13 +110,16 @@ class LQG:
             cart_coords = []  
             best_paths = []
             all_rewards = []
-            successes = []         
+            successes = []
+                    
             for j in xrange(len(m_covs)):
                 print "LQG: Evaluating paths for covariance value " + str(m_covs[j]) + "..."
                 """
                 The process noise covariance matrix
                 """
                 M = m_covs[j] * np.identity(len(self.link_dimensions))
+                
+                P_t = np.array([[0.0 for k in xrange(len(self.link_dimensions))] for l in xrange(len(self.link_dimensions))]) 
                 
                 """
                 The observation noise covariance matrix
@@ -131,7 +134,7 @@ class LQG:
                                      self.w1,
                                      self.w2)
                 t0 = time.time() 
-                xs, us, zs = path_evaluator.evaluate_paths(paths)
+                xs, us, zs = path_evaluator.evaluate_paths(paths, P_t)
                 mean_planning_times.append(time_to_generate_paths + (time.time() - t0))
                                 
                 best_paths.append([[xs[i] for i in xrange(len(xs))], 
@@ -146,8 +149,12 @@ class LQG:
                                   config['workspace_dimension'], 
                                   self.joint_constraints)
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)           
-                cartesian_coords, rewards, successful_runs = sim.simulate(xs, us, zs, m_covs[j])
-                print cartesian_coords
+                (cartesian_coords, 
+                 rewards, 
+                 successful_runs, 
+                 all_collisions,
+                 state_covariances,
+                 estimated_states) = sim.simulate(xs, us, zs, m_covs[j])                
                                 
                 cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])
                 try:                             

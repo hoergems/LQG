@@ -77,8 +77,10 @@ class Simulator:
                          current_step,
                          n_steps):
         terminal_state_reached = False
-        Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs))
-        logging.info("Simulator: Executing for " + str(n_steps) + " steps")        
+        Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)
+        logging.info("Simulator: Executing for " + str(n_steps) + " steps") 
+        estimated_states = []
+        estimated_covariances = []       
         for i in xrange(n_steps):                        
             if not (terminal_state_reached and self.stop_when_terminal):
                 u_dash = np.dot(Ls[i], x_tilde)
@@ -90,11 +92,14 @@ class Simulator:
                                                  self.B, 
                                                  self.V, 
                                                  self.M)
+                discount = np.power(self.discount_factor, current_step)
                 collided = False
                 if self.is_in_collision(x_true_temp):
                     logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
+                    total_reward += discount * (-1.0 * self.illegal_move_penalty)
                     collided = True
                 else:
+                    total_reward += discount * (-1.0 * self.step_penalty)
                     x_true = x_true_temp
                 x_dash = np.subtract(x_true, xs[i + 1])           
                 
@@ -127,7 +132,18 @@ class Simulator:
                 
                 if not self.is_in_collision(x_estimate_new):
                     x_estimate = x_estimate_new
-        return x_true, x_tilde, x_estimate, P_t, current_step + n_steps, total_reward, successes, terminal_state_reached
+                estimated_states.append(x_estimate)
+                estimated_covariances.append(P_t)
+        return (x_true, 
+                x_tilde, 
+                x_estimate, 
+                P_t, 
+                current_step + n_steps, 
+                total_reward, 
+                successes, 
+                terminal_state_reached,
+                estimated_states,
+                estimated_covariances)
     
     def check_constraints(self, state):        
         for i in xrange(len(state)):                          
@@ -141,6 +157,9 @@ class Simulator:
         Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)        
         cart_coords = []
         rewards = []
+        all_num_collisions = []
+        state_covariances = []
+        estimated_states = []
         successes = 0
         
         for j in xrange(self.num_simulation_runs):
@@ -154,7 +173,10 @@ class Simulator:
             z_dash = np.array([0.0 for i in xrange(len(self.link_dimensions))])        
             P_t = np.array([[0.0 for k in xrange(len(self.link_dimensions))] for l in xrange(len(self.link_dimensions))])
             reward = 0.0
-            terminal_state_reached = False          
+            terminal_state_reached = False
+            num_collisions = 1 
+            state_covariance = []
+            estimated_s = []         
             for i in xrange(0, len(xs) - 1):
                 if not (terminal_state_reached and self.stop_when_terminal):                                
                     """
@@ -183,12 +205,16 @@ class Simulator:
                                                      self.A, 
                                                      self.B, 
                                                      self.V, 
-                                                     self.M)
+                                                     self.M)                    
                     collided = False
+                    discount = np.power(self.discount_factor, i)
                     if self.is_in_collision(x_true_temp):
+                        num_collisions += 1
                         logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
-                        collided = True
+                        reward += discount * (-1.0 * self.illegal_move_penalty)
+                        
                     else:
+                        reward += discount * (-1.0 * self.step_penalty)
                         x_true = x_true_temp
                     x_dash = np.subtract(x_true, xs[i + 1])
                     '''x_dash_temp = self.apply_control(x_dash, 
@@ -197,14 +223,7 @@ class Simulator:
                                                      self.B, 
                                                      self.V, 
                                                      self.M)
-                    x_true_temp = np.add(x_dash_temp, xs[i + 1])'''                    
-                    
-                    
-                    discount = np.power(self.discount_factor, i)
-                    if collided:
-                        reward += discount * (-1.0 * self.illegal_move_penalty)
-                    else:
-                        reward += discount * (-1.0 * self.step_penalty)
+                    x_true_temp = np.add(x_dash_temp, xs[i + 1])'''
                     state = v_double()
                     state[:] = x_true   
                     ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
@@ -234,14 +253,19 @@ class Simulator:
                                                         P_dash, 
                                                         self.W, 
                                                         self.N, 
-                                                        len(self.link_dimensions))                   
+                                                        len(self.link_dimensions))
+                    estimated_s.append(x_tilde + xs[i + 1])
+                    state_covariance.append(P_t)                   
             state = v_double()
             state[:] = x_true   
             ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
             ee_position = np.array([ee_position_arr[i] for i in xrange(len(ee_position_arr))])
             cart_coords.append(ee_position.tolist())
             rewards.append(reward)
-        return cart_coords, rewards, successes
+            all_num_collisions.append(num_collisions)
+            state_covariances.append(state_covariance)
+            estimated_states.append(estimated_s)
+        return cart_coords, rewards, successes, all_num_collisions, state_covariances, estimated_states
     
     def is_in_collision(self, state):
         """
@@ -262,7 +286,7 @@ class Simulator:
             return True
         return False
     
-    def apply_control(self, x_dash, u_dash, A, B, V, M):        
+    def apply_control(self, x_dash, u_dash, A, B, V, M):               
         m = self.get_random_joint_angles([0.0 for i in xrange(len(self.link_dimensions))], M)        
         x_new = np.add(np.add(np.dot(A, x_dash), np.dot(B, u_dash)), np.dot(V, m))
         x_new = self.check_constraints(x_new)

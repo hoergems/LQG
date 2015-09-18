@@ -8,7 +8,7 @@ num_generated_paths: 0
 use_linear_path: True
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 2
+num_simulation_runs: 10
 
 # Dimension of the workspace (2 = 2D, 3 = 3D)
 workspace_dimension: 2
@@ -26,7 +26,7 @@ init_joint_angles: [0.0, 0.0, 0.0]
 goal_position: [0.0, 3.0, 0.0]
 
 # The radius around the goal position to define the end effector's goal area
-goal_radius: 0.03
+goal_radius: 0.04
 
 #Number of bins for the histograms
 num_bins: 201
@@ -35,20 +35,20 @@ num_bins: 201
 min_covariance: 0.0
 
 # The maximum joint state covariance
-max_covariance: 0.002
+max_covariance: 0.02
 
 # The number of covariance steps
-covariance_steps: 2
+covariance_steps: 5
 
 # The observation covariance
-observation_covariance: 0.0001
+observation_covariance: 0.001
 
 # Path evaluation weights
 # Weight for the collision probability
 w1: 1.0
 
 # Weight for the end effector covariance trace
-w2: 1.0
+w2: 0.0
 
 # Reward params
 discount_factor: 1.0
@@ -81,7 +81,7 @@ max_num_steps: 200
 num_execution_steps: 20
 
 # Maximum allowed planning time per step
-timeout: 5.0
+timeout: 1.0
 
 
 

@@ -32,8 +32,8 @@ class PathEvaluator:
         self.link_dimensions = link_dimensions
         self.obstacles = obstacles
         self.sample_size = sample_size
-        #self.num_cores = cpu_count() - 1
-        self.num_cores = 2
+        self.num_cores = cpu_count() - 1
+        #self.num_cores = 2
         self.w1 = w1
         self.w2 = w2
         self.workspace_dimension = workspace_dimension
@@ -54,7 +54,8 @@ class PathEvaluator:
 
     def get_probability_of_collision(self, mean, cov):        
         samples = multivariate_normal.rvs(mean, cov, self.sample_size)
-        pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True)               
+        pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True) 
+        pdf /= sum(pdf)              
         pdfs = []
         for i in xrange(len(samples)):
             joint_angles = v_double()
@@ -65,11 +66,16 @@ class PathEvaluator:
             for obstacle in self.obstacles:
                 if obstacle.inCollisionDiscrete(collision_structures):                               
                     pdfs.append(pdf[i]) 
-                    break            
-            
+                    break
+        sum_colliding_pdfs = sum(pdfs)        
+        return sum_colliding_pdfs
+                
+        return collision_prob
+        print pdfs 
         the_sum = 0.0
         if len(pdfs) > 0:
-            the_sum = sum(pdfs)                  
+            the_sum = sum(pdfs)
+        print "the_sum " + str(the_sum)                  
         return the_sum
     
     def get_jacobian(self, links, state):
@@ -131,14 +137,14 @@ class PathEvaluator:
             j = np.hstack((np.hstack((v1, v2)), v3))            
             return j
         
-    def evaluate_path(self, path, horizon=-1):
+    def evaluate_path(self, path, P_t, horizon=-1):
         eval_queue = Queue()
-        self.evaluate(0, eval_queue, path, horizon)
+        self.evaluate(0, eval_queue, path, P_t, horizon)
         elem = eval_queue.get()
         objective = self.w1 * elem[0][0] + self.w2 * elem[0][1]
         return (elem[1], objective)
     
-    def evaluate_paths(self, paths, horizon=-1):
+    def evaluate_paths(self, paths, P_t, horizon=-1):
         jobs = collections.deque() 
         eval_queue = Queue()
         evaluated_paths = []
@@ -148,7 +154,7 @@ class PathEvaluator:
                 paths_tmp.append(paths[i])
         for i in xrange(len(paths_tmp)):            
             logging.info("PathEvaluator: Evaluate path " + str(i))            
-            p = Process(target=self.evaluate, args=(i, eval_queue, paths_tmp[i], horizon,))
+            p = Process(target=self.evaluate, args=(i, eval_queue, paths_tmp[i], P_t, horizon,))
             p.start()
             jobs.append(p)           
             
@@ -163,11 +169,7 @@ class PathEvaluator:
                 q_size = eval_queue.qsize()
                 for j in xrange(q_size):                     
                     evaluated_paths.append(eval_queue.get())
-        collision_sum = sum([evaluated_paths[i][0][0] for i in xrange(len(evaluated_paths))])
-        if collision_sum == 0.0:
-            collision_sums = [0.0 for i in xrange(len(evaluated_paths))]
-        else:
-            collision_sums = [evaluated_paths[i][0][0] / collision_sum for i in xrange(len(evaluated_paths))]        
+        collision_sums = [evaluated_paths[i][0][0] for i in xrange(len(evaluated_paths))]        
         traces_sum = sum([evaluated_paths[i][0][1] for i in xrange(len(evaluated_paths))])
         if traces_sum == 0.0:
             traces_sums = [0.0 for i in xrange(len(evaluated_paths))]
@@ -183,51 +185,50 @@ class PathEvaluator:
         logging.info("PathEvaluator: Objective value for the best path is " + str(min_objective))        
         return best_path
     
-    def evaluate(self, index, eval_queue, path, horizon):
+    def evaluate(self, index, eval_queue, path, P_t, horizon):        
         min_objective = 1000000.0        
         
         xs = path[0]
         us = path[1]
         zs = path[2]
             
-        horizon_L = horizon 
-        if horizon == -1 or len(xs) - 1 < horizon:            
-            horizon_L = len(xs) - 1
-        Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, horizon_L)
-        P_t = np.array([[0.0 for i in xrange(len(self.link_dimensions))] for i in xrange(len(self.link_dimensions))])
-        P_0 = np.copy(P_t)
-        NU = np.copy(P_t)
+        horizon_L = horizon + 1 
+        if horizon == -1 or len(xs) < horizon:            
+            horizon_L = len(xs)                
+        Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, horizon_L - 1)
+        NU = np.array([[0.0 for i in xrange(len(self.link_dimensions))] for i in xrange(len(self.link_dimensions))])
                 
         Q_t = np.vstack((np.hstack((self.M, NU)), 
                          np.hstack((NU, self.N))))
-        R_t = np.vstack((np.hstack((P_0, NU)),
+        R_t = np.vstack((np.hstack((P_t, NU)),
                          np.hstack((NU, NU))))
         ee_distributions = []
         ee_approx_distr = []
         collision_probs = []     
-        for i in xrange(0, horizon_L):                
+        for i in xrange(1, horizon_L):                
             P_hat_t = kalman.compute_p_hat_t(self.A, P_t, self.V, self.M)
             K_t = kalman.compute_kalman_gain(self.H, P_hat_t, self.W, self.N)
             P_t = kalman.compute_P_t(K_t, self.H, P_hat_t, len(self.link_dimensions))
-            F_0 = np.hstack((self.A, np.dot(self.B, Ls[i])))
+            F_0 = np.hstack((self.A, np.dot(self.B, Ls[i-1])))            
             F_1 = np.hstack((np.dot(np.dot(K_t, self.H), self.A), 
-                             np.add(self.A, np.subtract(np.dot(self.B, Ls[i]), np.dot(np.dot(K_t, self.H), self.A)))))            
-            F_t = np.vstack((F_0, F_1))
+                             np.add(self.A, np.subtract(np.dot(self.B, Ls[i-1]), np.dot(np.dot(K_t, self.H), self.A)))))
+            F_t = np.vstack((F_0, F_1))            
             G_t = np.vstack((np.hstack((self.V, NU)), 
                              np.hstack((np.dot(np.dot(K_t, self.H), self.V), np.dot(K_t, self.W)))))
                     
-            """ Compute R """            
-            FRF = np.dot(np.dot(F_t, R_t), np.transpose(F_t))
-            GQG = np.dot(np.dot(G_t, Q_t), np.transpose(G_t))
-            R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))
+            """ Compute R """
+            R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))             
+            L = np.identity(len(self.link_dimensions))
+            if i != horizon_L - 1:
+                L = Ls[i]    
             Gamma_t = np.vstack((np.hstack((np.identity(len(self.link_dimensions)), NU)), 
-                                 np.hstack((NU, Ls[i]))))
+                                 np.hstack((NU, L))))                  
+                   
+            Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))            
+            cov_state = np.array([[Cov[j, k] for k in xrange(len(self.link_dimensions))] for j in xrange(len(self.link_dimensions))]) 
                     
-                    
-            Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))
-            cov_state = np.array([[Cov[j, k] for k in xrange(len(self.link_dimensions))] for j in xrange(len(self.link_dimensions))])
-            jacobian = self.get_jacobian([l[0] for l in self.link_dimensions], xs[i])                        
-            EE_covariance = np.dot(np.dot(jacobian, cov_state), jacobian.T)            
+            jacobian = self.get_jacobian([l[0] for l in self.link_dimensions], xs[i])                                             
+            EE_covariance = np.dot(np.dot(jacobian, cov_state), jacobian.T)
             #EE_covariance = np.array([[EE_covariance[j, k] for k in xrange(2)] for j in xrange(2)])
             probs = 0.0
             if len(self.obstacles) > 0 and np.trace(self.M) != 0.0:                               

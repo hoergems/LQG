@@ -68,7 +68,7 @@ class PathPlanningInterface:
         self.start_state = start_state
         self.goal_states = goal_states
         
-    def plan_and_evaluate_paths(self, num, sim_run, horizon, timeout):
+    def plan_and_evaluate_paths(self, num, sim_run, horizon, P_t, timeout):
         jobs = collections.deque()
         path_queue = Queue()
         evaluated_paths = []
@@ -77,7 +77,7 @@ class PathPlanningInterface:
         t0 = time.time()        
         while True: 
             if len(jobs) != self.num_cores - 1:           
-                p = Process(target=self.construct_and_evaluate_path, args=(self.obstacles, path_queue, self.joint_constraints, horizon,))
+                p = Process(target=self.construct_and_evaluate_path, args=(self.obstacles, path_queue, self.joint_constraints, horizon, P_t,))
                 #p.daemon = True
                 p.start()                       
                 jobs.append(p)
@@ -160,9 +160,9 @@ class PathPlanningInterface:
         queue.put((xs, us, zs))
         return
     
-    def construct_and_evaluate_path(self, obstacles, queue, joint_constraints, horizon):              
+    def construct_and_evaluate_path(self, obstacles, queue, joint_constraints, horizon, P_t):              
         xs, us, zs = self._construct(obstacles, joint_constraints)
-        eval_result = self.path_evaluator.evaluate_path([xs, us, zs], horizon)
+        eval_result = self.path_evaluator.evaluate_path([xs, us, zs], P_t, horizon)
                            
         queue.put((xs, us, zs, eval_result[1]))           
         #queue.put((xs, us, zs, 0.0))

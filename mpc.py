@@ -89,7 +89,9 @@ class MPC:
              mean_number_generated_paths_per_step, 
              mean_number_generated_paths_per_run,
              mean_number_planning_steps_cov,
-             mean_number_of_steps_per_run) = self.mpc(self.theta_0, m_covs, self.horizon, obstacles)
+             mean_number_of_steps_per_run,
+             estimated_states_cov,
+             estimated_covariances_cov) = self.mpc(self.theta_0, m_covs, self.horizon, obstacles)
                        
             stats = dict(m_cov = m_covs.tolist(), emd = emds)
             #serializer.save_paths(best_paths, 'best_paths.yaml', True, path="stats")
@@ -178,6 +180,8 @@ class MPC:
         mean_number_generated_paths_per_run = []
         mean_number_planning_steps_cov = []
         mean_number_of_steps_per_run = []
+        estimated_states_cov = []
+        estimated_covariances_cov = []
         emds = []
         for j in xrange(len(m_covs)):            
             
@@ -212,7 +216,9 @@ class MPC:
             
             mean_reward = 0.0
             cartesian_coords = []
-            total_reward_cov = []            
+            total_reward_cov = [] 
+            all_estimated_states = []
+            all_estimated_covariances = []           
             
             mean_planning_time_per_run = 0.0
             
@@ -226,17 +232,19 @@ class MPC:
                 print "MPC: simulation run " + str(k + 1)
                 x_true = initial_belief
                 x_estimate = initial_belief
+                P_t = np.array([[0.0 for i in xrange(len(self.link_dimensions))] for i in xrange(len(self.link_dimensions))])                
                 total_reward = 0.0
                 
                 current_step = 0
                 terminal = False                      
-                              
+                estimated_states = []
+                estimated_covariances = []             
                 while current_step < self.max_num_steps and not terminal:                    
                     mean_number_planning_steps += 1.0
                     t0 = time.time()                    
                     self.path_planning_interface.set_start_and_goal(x_estimate, self.goal_states)
                     logging.info("MPC: Constructing paths")
-                    xs, us, zs, num_generated_paths = self.path_planning_interface.plan_and_evaluate_paths(self.num_paths, 0, horizon, self.timeout)
+                    xs, us, zs, num_generated_paths = self.path_planning_interface.plan_and_evaluate_paths(self.num_paths, 0, horizon, P_t, self.timeout)
                     t_e = time.time() - t0
                     mean_planning_time_per_run += t_e  
                     num_generated_paths_run += num_generated_paths                   
@@ -259,19 +267,30 @@ class MPC:
                         n_steps = self.max_num_steps - current_step
                                           
                     logging.info("MPC: Execute best path for " + str(n_steps) + " steps")
-                    x_true, x_tilde, x_estimate, P_t, current_step, total_reward, successful_runs, terminal = self.sim.simulate_n_steps(xs, us, zs, 
-                                                                                                                                        x_true, 
-                                                                                                                                        x_tilde,
-                                                                                                                                        x_estimate,
-                                                                                                                                        P_t,
-                                                                                                                                        total_reward,
-                                                                                                                                        successful_runs,
-                                                                                                                                        current_step,
-                                                                                                                                        n_steps) 
-                                        
+                    (x_true, 
+                     x_tilde, 
+                     x_estimate, 
+                     P_t, 
+                     current_step, 
+                     total_reward, 
+                     successful_runs, 
+                     terminal,
+                     estimated_s,
+                     estimated_c) = self.sim.simulate_n_steps(xs, us, zs,
+                                                              x_true,                                                              
+                                                              x_tilde,
+                                                              x_estimate,
+                                                              P_t,
+                                                              total_reward,
+                                                              successful_runs,
+                                                              current_step,
+                                                              n_steps) 
+                    estimated_states.extend(estimated_s)
+                    estimated_covariances.extend(estimated_c)                   
                     logging.warn("MPC: Execution finished. True state is " + str(x_true))
                     logging.warn("MPC: Estimated state is " + str(x_estimate)) 
-                    logging.warn("MPC: terminal " + str(terminal))               
+                    logging.warn("MPC: terminal " + str(terminal))
+                print "total reward " + str(total_reward)           
                 total_reward_cov.append(np.asscalar(total_reward))
                 mean_reward += total_reward                
                 mean_number_of_steps += current_step                
@@ -279,7 +298,9 @@ class MPC:
                 x_true_vec[:] = x_true
                 ee_position_vec = self.kinematics.getEndEffectorPosition(x_true_vec)
                 ee_position = np.array([ee_position_vec[i] for i in xrange(len(ee_position_vec))])
-                cartesian_coords.append(ee_position.tolist())                
+                cartesian_coords.append(ee_position.tolist()) 
+                all_estimated_states.append(estimated_states)
+                all_estimated_covariances.append(estimated_covariances)               
                 logging.info("MPC: Done. total_reward is " + str(total_reward))
             logging.info("MPC: Finished simulations for covariance value  " + 
                          str(m_covs[j]) +
@@ -305,7 +326,9 @@ class MPC:
                                  self.num_bins, 
                                  self.goal_position, 
                                  self.link_dimensions))
-            cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])            
+            cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])
+            estimated_states_cov.append(all_estimated_states)
+            estimated_covariances_cov.append(all_estimated_covariances)            
         return (cart_coords, 
                 total_rewards, 
                 emds, 
@@ -315,7 +338,9 @@ class MPC:
                 mean_number_generated_paths_per_step, 
                 mean_number_generated_paths_per_run,
                 mean_number_planning_steps_cov,
-                mean_number_of_steps_per_run)
+                mean_number_of_steps_per_run,
+                estimated_states_cov,
+                estimated_covariances_cov)
             
     def problem_setup(self, delta_t, link_dimensions):        
         axis = v2_int()

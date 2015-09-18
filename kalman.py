@@ -30,6 +30,6 @@ def compute_gain(A, B, C, D, l):
     for i in xrange(l):            
         L = -np.dot(np.dot(np.dot(linalg.inv(np.add(np.dot(np.dot(np.transpose(B), S), B), D)), np.transpose(B)), S), A)
         Ls.append(L)
-        S = np.add(C, np.add(np.dot(np.dot(np.transpose(A), S), A), np.dot(np.dot(np.dot(np.transpose(A), S), B), L)))
-    Ls = Ls[::-1]
+        S = np.add(C, np.add(np.dot(np.dot(np.transpose(A), S), A), np.dot(np.dot(np.dot(np.transpose(A), S), B), L)))    
+    Ls = Ls[::-1]    
     return Ls
