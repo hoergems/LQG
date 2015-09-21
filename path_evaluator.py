@@ -33,7 +33,7 @@ class PathEvaluator:
         self.obstacles = obstacles
         self.sample_size = sample_size
         self.num_cores = cpu_count() - 1
-        #self.num_cores = 2
+        self.num_cores = 2
         self.w1 = w1
         self.w2 = w2
         self.workspace_dimension = workspace_dimension
@@ -177,20 +177,21 @@ class PathEvaluator:
             traces_sums = [evaluated_paths[i][0][1] / traces_sum for i in xrange(len(evaluated_paths))]
         best_path = evaluated_paths[0][1]
         min_objective = self.w1 * collision_sums[0] + self.w2 * traces_sums[0] 
+        best_cov = evaluated_paths[0][2]
         for i in xrange(1, len(collision_sums)):
             val = self.w1 * collision_sums[i] + self.w2 * traces_sums[i]            
             if val < min_objective:
                 min_objective = val
                 best_path = evaluated_paths[i][1]
-        logging.info("PathEvaluator: Objective value for the best path is " + str(min_objective))        
+                best_cov = evaluated_paths[i][2]
+        logging.info("PathEvaluator: Objective value for the best path is " + str(min_objective))
+        logging.info("cov b " + str(best_cov))         
         return best_path
     
-    def evaluate(self, index, eval_queue, path, P_t, horizon):        
-        min_objective = 1000000.0        
-        
+    def evaluate(self, index, eval_queue, path, P_t, horizon):
         xs = path[0]
         us = path[1]
-        zs = path[2]
+        zs = path[2]        
             
         horizon_L = horizon + 1 
         if horizon == -1 or len(xs) < horizon:            
@@ -200,32 +201,35 @@ class PathEvaluator:
                 
         Q_t = np.vstack((np.hstack((self.M, NU)), 
                          np.hstack((NU, self.N))))
-        R_t = np.vstack((np.hstack((P_t, NU)),
-                         np.hstack((NU, NU))))
+        R_t = np.vstack((np.hstack((np.copy(P_t), NU)),
+                         np.hstack((NU, NU))))       
+        
         ee_distributions = []
         ee_approx_distr = []
-        collision_probs = []     
+        collision_probs = [] 
+        Cov = 0    
         for i in xrange(1, horizon_L):                
             P_hat_t = kalman.compute_p_hat_t(self.A, P_t, self.V, self.M)
             K_t = kalman.compute_kalman_gain(self.H, P_hat_t, self.W, self.N)
             P_t = kalman.compute_P_t(K_t, self.H, P_hat_t, len(self.link_dimensions))
-            F_0 = np.hstack((self.A, np.dot(self.B, Ls[i-1])))            
-            F_1 = np.hstack((np.dot(np.dot(K_t, self.H), self.A), 
-                             np.add(self.A, np.subtract(np.dot(self.B, Ls[i-1]), np.dot(np.dot(K_t, self.H), self.A)))))
-            F_t = np.vstack((F_0, F_1))            
+            F_0 = np.hstack((self.A, np.dot(self.B, Ls[i-1])))
+            F_1 = np.hstack((np.dot(K_t, np.dot(self.H, self.A)), 
+                             np.add(self.A, np.subtract(np.dot(self.B, Ls[i-1]), np.dot(K_t, np.dot(self.H, self.A))))))            
+            F_t = np.vstack((F_0, F_1))                     
             G_t = np.vstack((np.hstack((self.V, NU)), 
                              np.hstack((np.dot(np.dot(K_t, self.H), self.V), np.dot(K_t, self.W)))))
-                    
-            """ Compute R """
-            R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))             
+            G_t_1 = np.vstack((np.hstack((self.V, NU)),
+                               np.hstack((np.dot(K_t, np.dot(self.H, self.V)), np.dot(K_t, self.W)))))            
+            """ Compute R """            
+            R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))  
             L = np.identity(len(self.link_dimensions))
             if i != horizon_L - 1:
                 L = Ls[i]    
             Gamma_t = np.vstack((np.hstack((np.identity(len(self.link_dimensions)), NU)), 
                                  np.hstack((NU, L))))                  
                    
-            Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))            
-            cov_state = np.array([[Cov[j, k] for k in xrange(len(self.link_dimensions))] for j in xrange(len(self.link_dimensions))]) 
+            Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))                     
+            cov_state = np.array([[Cov[j, k] for k in xrange(len(self.link_dimensions))] for j in xrange(len(self.link_dimensions))])
                     
             jacobian = self.get_jacobian([l[0] for l in self.link_dimensions], xs[i])                                             
             EE_covariance = np.dot(np.dot(jacobian, cov_state), jacobian.T)
@@ -249,7 +253,7 @@ class PathEvaluator:
         logging.info("PathEvaluator: Trace of end-effector covariance matrix is " + str(tr))
         logging.info("========================================")
         objective_p = [collision_sum, tr]
-        eval_queue.put((objective_p, path))
+        eval_queue.put((objective_p, path, Cov))
         
 
 if __name__ == "__main__":

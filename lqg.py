@@ -72,7 +72,7 @@ class LQG:
                            self.delta_t, 
                            self.use_linear_path, 
                            self.joint_constraints)
-        path_planner.set_start_and_goal(self.theta_0, goal_states)      
+        path_planner.set_start_and_goal(self.theta_0, goal_states)         
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, len(self.link_dimensions))
         
         if check_positive_definite([C, D]):            
@@ -238,8 +238,8 @@ class LQG:
         B = delta_t * np.identity(num_links)
         V = np.identity(num_links)
         W = np.identity(num_links)
-        C = 2.0 * np.identity(num_links)
-        D = 2.0 * np.identity(num_links)
+        C = np.identity(num_links)
+        D = np.identity(num_links)
         return A, H, B, V, W, C, D
             
     def get_avg_path_length(self, paths):
