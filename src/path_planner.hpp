@@ -12,6 +12,7 @@
 #include "ManipulatorGoalRegion.hpp"
 #include <boost/make_shared.hpp>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
+#include <ompl/geometric/planners/rrt/RRT.h>
 #include <ompl/base/Path.h>
 #include <ompl/base/PlannerTerminationCondition.h>
 #include <ompl/geometric/PathGeometric.h>

@@ -52,14 +52,15 @@ class PathEvaluator:
         self.kinematics.setLinksAndAxis(self.link_dimensions, axis)
         self.utils = Utils()
 
-    def get_probability_of_collision(self, mean, cov):        
-        samples = multivariate_normal.rvs(mean, cov, self.sample_size)
+    def get_probability_of_collision(self, mean, cov):              
+        samples = multivariate_normal.rvs(mean, cov, self.sample_size)        
         pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True) 
-        pdf /= sum(pdf)              
+        pdf /= sum(pdf)                         
         pdfs = []
         for i in xrange(len(samples)):
+            vec = [samples[i][j] for j in xrange(len(self.link_dimensions))]
             joint_angles = v_double()
-            joint_angles[:] = [samples[i][j] for j in xrange(len(self.link_dimensions))]
+            joint_angles[:] = vec
             collision_structures = self.utils.createManipulatorCollisionStructures(joint_angles, 
                                                                                    self.link_dimensions,
                                                                                    self.kinematics)
@@ -67,16 +68,14 @@ class PathEvaluator:
                 if obstacle.inCollisionDiscrete(collision_structures):                               
                     pdfs.append(pdf[i]) 
                     break
+        '''if not len(pdfs) == 0:
+            print "pdf " + str(pdf) 
+            print "pdfs " + str(pdfs)
+            print "sum(pdf) " + str(sum(pdf))
+            print "sum(pdfs) " + str(sum(pdfs))
+            time.sleep(1)'''
         sum_colliding_pdfs = sum(pdfs)        
         return sum_colliding_pdfs
-                
-        return collision_prob
-        print pdfs 
-        the_sum = 0.0
-        if len(pdfs) > 0:
-            the_sum = sum(pdfs)
-        print "the_sum " + str(the_sum)                  
-        return the_sum
     
     def get_jacobian(self, links, state):
         s0 = np.sin(state[0])
@@ -185,7 +184,8 @@ class PathEvaluator:
                 best_path = evaluated_paths[i][1]
                 best_cov = evaluated_paths[i][2]
         logging.info("PathEvaluator: Objective value for the best path is " + str(min_objective))
-        logging.info("cov b " + str(best_cov))         
+        logging.info("cov b " + str(best_cov)) 
+        time.sleep(2)        
         return best_path
     
     def evaluate(self, index, eval_queue, path, P_t, horizon):
@@ -206,22 +206,29 @@ class PathEvaluator:
         
         ee_distributions = []
         ee_approx_distr = []
-        collision_probs = [] 
+        collision_probs = []
+        
+        if len(self.obstacles) > 0 and np.trace(self.M) != 0.0:                               
+            probs = self.get_probability_of_collision(xs[0], P_t)
+            collision_probs.append(probs)
+         
         Cov = 0    
-        for i in xrange(1, horizon_L):                
+        for i in xrange(1, horizon_L):                         
             P_hat_t = kalman.compute_p_hat_t(self.A, P_t, self.V, self.M)
             K_t = kalman.compute_kalman_gain(self.H, P_hat_t, self.W, self.N)
             P_t = kalman.compute_P_t(K_t, self.H, P_hat_t, len(self.link_dimensions))
-            F_0 = np.hstack((self.A, np.dot(self.B, Ls[i-1])))
+            
+            F_0 = np.hstack((self.A, np.dot(self.B, Ls[i-1])))            
             F_1 = np.hstack((np.dot(K_t, np.dot(self.H, self.A)), 
                              np.add(self.A, np.subtract(np.dot(self.B, Ls[i-1]), np.dot(K_t, np.dot(self.H, self.A))))))            
-            F_t = np.vstack((F_0, F_1))                     
+            F_t = np.vstack((F_0, F_1))                              
             G_t = np.vstack((np.hstack((self.V, NU)), 
                              np.hstack((np.dot(np.dot(K_t, self.H), self.V), np.dot(K_t, self.W)))))
             G_t_1 = np.vstack((np.hstack((self.V, NU)),
                                np.hstack((np.dot(K_t, np.dot(self.H, self.V)), np.dot(K_t, self.W)))))            
             """ Compute R """            
-            R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))  
+            R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t)))) 
+            #print "R_t " + str(R_t) 
             L = np.identity(len(self.link_dimensions))
             if i != horizon_L - 1:
                 L = Ls[i]    
@@ -229,8 +236,7 @@ class PathEvaluator:
                                  np.hstack((NU, L))))                  
                    
             Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))                     
-            cov_state = np.array([[Cov[j, k] for k in xrange(len(self.link_dimensions))] for j in xrange(len(self.link_dimensions))])
-                    
+            cov_state = np.array([[Cov[j, k] for k in xrange(len(self.link_dimensions))] for j in xrange(len(self.link_dimensions))])               
             jacobian = self.get_jacobian([l[0] for l in self.link_dimensions], xs[i])                                             
             EE_covariance = np.dot(np.dot(jacobian, cov_state), jacobian.T)
             #EE_covariance = np.array([[EE_covariance[j, k] for k in xrange(2)] for j in xrange(2)])
@@ -243,7 +249,11 @@ class PathEvaluator:
         if float(horizon_L) == 0.0:
             collsion_sum = 0.0
         else:
+            print "len(collision_probs) " + str(len(collision_probs)) 
+            print "sum(collision probs) " + str(sum(collision_probs))
+            print "horizon_L " + str(float(horizon_L))
             collision_sum = sum(collision_probs) / float(horizon_L)
+            print "collision sum " + str(collision_sum)            
         tr = np.trace(EE_covariance)        
         logging.info("========================================")
         logging.info("PathEvaluator: collision sum for path " + 

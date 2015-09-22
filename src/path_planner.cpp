@@ -21,7 +21,7 @@ PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
     space_(new ompl::base::RealVectorStateSpace(dim_)),    
     si_(new ompl::base::SpaceInformation(space_)),    
     problem_definition_(new ompl::base::ProblemDefinition(si_)),
-    planner_(new ompl::geometric::RRTConnect(si_)), //We use RRTConnect as the motion planner,
+    planner_(new ompl::geometric::RRT(si_)), //We use RRTConnect as the motion planner,
     obstacles_(),    
     kinematics_(kinematics), 
     motionValidator_(new MotionValidator(si_, kinematics_, obstacles_, max_joint_velocity_, delta_t_)),
@@ -54,7 +54,7 @@ void PathPlanner::setup() {
     planner_->setProblemDefinition(problem_definition_);
     
     /** Use RRTConnect as the planning algorithm */   
-    boost::shared_ptr<ompl::geometric::RRTConnect> planner_ptr = boost::static_pointer_cast<ompl::geometric::RRTConnect>(planner_);
+    boost::shared_ptr<ompl::geometric::RRT> planner_ptr = boost::static_pointer_cast<ompl::geometric::RRT>(planner_);
     
     /** Set the planning range of the planner */    
     planner_ptr->setRange(planning_range_);          

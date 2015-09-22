@@ -165,13 +165,15 @@ class Simulator:
         for j in xrange(self.num_simulation_runs):
             print "Simulator: Execute simulation run " + str(j) + " for covariance value " + str(cov_value)
             x_true = xs[0]
-            x_dash = xs[0]
+            x_est = xs[0]
+            x_dash = np.array([0.0 for i in xrange(len(self.link_dimensions))])
             #x_tilde = xs[0]
             x_tilde = np.array([0.0 for i in xrange(len(self.link_dimensions))])        
             u_dash = np.array([0.0 for j in xrange(len(self.link_dimensions))])
             z = zs[0]
             z_dash = np.array([0.0 for i in xrange(len(self.link_dimensions))])        
             P_t = np.array([[0.0 for k in xrange(len(self.link_dimensions))] for l in xrange(len(self.link_dimensions))])
+            P_t2 = np.array([[0.0 for k in xrange(len(self.link_dimensions))] for l in xrange(len(self.link_dimensions))])
             reward = 0.0
             terminal_state_reached = False
             num_collisions = 0 
@@ -183,14 +185,11 @@ class Simulator:
                     Generate u_dash using LQG
                     """                
                     u_dash = np.dot(Ls[i], x_tilde)
-                    u = np.add(u_dash, us[i])                    
+                    u = np.add(u_dash, us[i])
                     
-                    print "LS[i] " + str(Ls[i])
-                    print "u_dash " + str(u_dash)                    
-                    print "u " + str(u)
-                    print "us[i] " + str(us[i])                
-                    
-                    time.sleep(1)
+                    #print "u_dash " + str(u_dash)                    
+                    #print "u " + str(u)
+                    #print "us[i] " + str(us[i])
                         
                     """
                     Generate a true state and check for collision and terminal state
@@ -202,20 +201,19 @@ class Simulator:
                                                      self.B, 
                                                      self.V, 
                                                      self.M)
-                    print "x_true " + str(x_true_temp) 
-                    print "xs[i] " + str(xs[i + 1])                    
+                    #print "x_true " + str(x_true_temp) 
+                    #print "xs[i] " + str(xs[i + 1])                    
                     collided = False
                     discount = np.power(self.discount_factor, i)
                     if self.is_in_collision(x_true_temp):
                         num_collisions += 1
                         logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
                         reward += discount * (-1.0 * self.illegal_move_penalty)
-                        
                     else:
                         reward += discount * (-1.0 * self.step_penalty)
                         x_true = x_true_temp
                     x_dash = np.subtract(x_true, xs[i + 1])
-                    print "x_dash " + str(x_dash)
+                    #print "x_dash " + str(x_dash)
                     
                     '''x_dash_temp = self.apply_control(x_dash, 
                                                      u_dash, 
@@ -235,8 +233,7 @@ class Simulator:
                         num_collisions += 1
                         logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
                         reward += discount * (-1.0 * self.illegal_move_penalty)
-                        sleep
-                        
+                        x_dash = x_true - xs[i + 1]
                     else:
                         reward += discount * (-1.0 * self.step_penalty)
                         x_dash = x_dash_temp
@@ -260,24 +257,27 @@ class Simulator:
                     '''z_dash = self.get_observation(x_dash, self.H, self.N, self.W)
                     z = np.add(z_dash, zs[i+1])'''
                     
-                    print "z " + str(z)
-                    print "z_dash " + str(z_dash)
+                    #print "z " + str(z)
+                    #print "z_dash " + str(z_dash)
                     
                                 
                     """
                     Kalman prediction and update
                     """
                     x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
-                    
                     x_tilde, P_t = kalman.kalman_update(x_tilde_dash, 
                                                         z_dash, 
                                                         self.H, 
                                                         P_dash, 
                                                         self.W, 
                                                         self.N, 
-                                                        len(self.link_dimensions))
-                    print "x_tilde " + str(x_tilde)
-                    print "============================="
+                                                        len(self.link_dimensions))                    
+                    #print "x_tilde " + str(x_tilde)
+                    #print "x_est " + str(x_est)
+                    #print "P_t " + str(P_t)
+                    #print "P_t2 " + str(P_t2)
+                    #print "============================="
+                    #time.sleep(1)
                     '''x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u, self.A, self.B, P_t, self.V, self.M)
                     
                     x_tilde, P_t = kalman.kalman_update(x_tilde_dash, 
