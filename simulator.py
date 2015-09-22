@@ -185,30 +185,25 @@ class Simulator:
                     u_dash = np.dot(Ls[i], x_tilde)
                     u = np.add(u_dash, us[i])                    
                     
-                    
-                    print "u_dash " + str(u_dash)
+                    print "LS[i] " + str(Ls[i])
+                    print "u_dash " + str(u_dash)                    
                     print "u " + str(u)
-                    print "us[i] " + str(us[i])
-                    print "xs[i] " + str(xs[i])
-                    print "x_true " + str(x_true)                    
-                    print "x_dash " + str(x_dash)
-                    print "x_tilde " + str(x_tilde) 
-                    print "z " + str(z)
-                    print "z_dash " + str(z_dash)
-                    print "P_t " + str(P_t)                
-                    print "" 
+                    print "us[i] " + str(us[i])                
+                    
                     time.sleep(1)
                         
                     """
                     Generate a true state and check for collision and terminal state
                     """
                     #x_dash = np.subtract(x_true, np.array(xs[i + 1]))
-                    '''x_true_temp = self.apply_control(x_true, 
+                    x_true_temp = self.apply_control(x_true, 
                                                      u, 
                                                      self.A, 
                                                      self.B, 
                                                      self.V, 
-                                                     self.M)                    
+                                                     self.M)
+                    print "x_true " + str(x_true_temp) 
+                    print "xs[i] " + str(xs[i + 1])                    
                     collided = False
                     discount = np.power(self.discount_factor, i)
                     if self.is_in_collision(x_true_temp):
@@ -219,14 +214,20 @@ class Simulator:
                     else:
                         reward += discount * (-1.0 * self.step_penalty)
                         x_true = x_true_temp
-                    x_dash = np.subtract(x_true, xs[i + 1])'''
-                    x_dash_temp = self.apply_control(x_dash, 
+                    x_dash = np.subtract(x_true, xs[i + 1])
+                    print "x_dash " + str(x_dash)
+                    
+                    '''x_dash_temp = self.apply_control(x_dash, 
                                                      u_dash, 
                                                      self.A, 
                                                      self.B, 
                                                      self.V, 
                                                      self.M)
-                    x_true_temp = np.add(x_dash_temp, xs[i + 1])    
+                    print "x_dash " + str(x_dash_temp)
+                    x_true_temp = np.add(x_dash_temp, xs[i + 1]) 
+                    print "x_true " + str(x_true_temp) 
+                    print "xs[i] " + str(xs[i + 1]) 
+                       
                     
                     collided = False
                     discount = np.power(self.discount_factor, i)
@@ -239,7 +240,7 @@ class Simulator:
                     else:
                         reward += discount * (-1.0 * self.step_penalty)
                         x_dash = x_dash_temp
-                        x_true = x_true_temp                   
+                        x_true = x_true_temp'''                  
                     
                     
                     state = v_double()
@@ -254,18 +255,20 @@ class Simulator:
                     """
                     Obtain an observation
                     """
-                    ''''z = self.get_observation(x_true, self.H, self.N, self.W)
-                    z_dash = np.subtract(z, zs[i+1])'''
-                    z_dash = self.get_observation(x_dash, self.H, self.N, self.W)
-                    z = np.add(z_dash, zs[i+1])
+                    z = self.get_observation(x_true, self.H, self.N, self.W)
+                    z_dash = np.subtract(z, zs[i+1])
+                    '''z_dash = self.get_observation(x_dash, self.H, self.N, self.W)
+                    z = np.add(z_dash, zs[i+1])'''
                     
-                   
+                    print "z " + str(z)
+                    print "z_dash " + str(z_dash)
+                    
                                 
                     """
                     Kalman prediction and update
                     """
                     x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
-                    print "P_dash " + str(P_dash)
+                    
                     x_tilde, P_t = kalman.kalman_update(x_tilde_dash, 
                                                         z_dash, 
                                                         self.H, 
@@ -273,8 +276,20 @@ class Simulator:
                                                         self.W, 
                                                         self.N, 
                                                         len(self.link_dimensions))
+                    print "x_tilde " + str(x_tilde)
+                    print "============================="
+                    '''x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u, self.A, self.B, P_t, self.V, self.M)
+                    
+                    x_tilde, P_t = kalman.kalman_update(x_tilde_dash, 
+                                                        z, 
+                                                        self.H, 
+                                                        P_dash, 
+                                                        self.W, 
+                                                        self.N, 
+                                                        len(self.link_dimensions))
+                    print "x_tilde " + str(x_tilde)
                     estimated_s.append(x_tilde + xs[i + 1])
-                    state_covariance.append(P_t)                   
+                    state_covariance.append(P_t)'''                   
             state = v_double()
             state[:] = x_true   
             ee_position_arr = self.kinematics.getEndEffectorPosition(state)                

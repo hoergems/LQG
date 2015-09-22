@@ -238,8 +238,8 @@ class LQG:
         B = delta_t * np.identity(num_links)
         V = np.identity(num_links)
         W = np.identity(num_links)
-        C = np.identity(num_links)
-        D = np.identity(num_links)
+        C = 5.0 * np.identity(num_links)
+        D = 5.0 * np.identity(num_links)
         return A, H, B, V, W, C, D
             
     def get_avg_path_length(self, paths):

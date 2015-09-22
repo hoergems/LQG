@@ -33,7 +33,7 @@ class PathEvaluator:
         self.obstacles = obstacles
         self.sample_size = sample_size
         self.num_cores = cpu_count() - 1
-        self.num_cores = 2
+        #self.num_cores = 2
         self.w1 = w1
         self.w2 = w2
         self.workspace_dimension = workspace_dimension
