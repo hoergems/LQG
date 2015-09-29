@@ -17,14 +17,17 @@ from path_planning_interface import PathPlanningInterface
 from EMD import *
 from xml.dom import minidom
 from gen_ik_solution import *
+from history_entry import *
 
 class LQG:
     def __init__(self, plot):
         dir = "stats/lqg"
+        self.clear_stats(dir)
         sim = Simulator()
         path_evaluator = PathEvaluator()
-        path_planner = PathPlanningInterface()    
-        serializer = Serializer()        
+        path_planner = PathPlanningInterface()
+        serializer = self.init_serializer()
+        
         
         """ Reading the config """
         config = serializer.read_config("config_lqg.yaml")
@@ -148,7 +151,39 @@ class LQG:
                                   self.link_dimensions, 
                                   config['workspace_dimension'], 
                                   self.joint_constraints)
-                sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)           
+                sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
+                
+                successes = 0                
+                for k in xrange(self.num_simulation_runs):
+                    serializer.write_line("log.log", "tmp/lqg", "RUN #" + str(k) + " \n")
+                    (x_true, 
+                     x_tilde, 
+                     x_estimate, 
+                     P_t, 
+                     current_step, 
+                     total_reward, 
+                     success, 
+                     terminal,
+                     estimated_s,
+                     estimated_c,                     
+                     history_entries) = sim.simulate_n_steps(xs, us, zs,
+                                                             xs[0],
+                                                             np.array([0.0 for i in xrange(len(self.link_dimensions))]),
+                                                             xs[0],
+                                                             np.array([[0.0 for k in xrange(len(self.link_dimensions))] for l in xrange(len(self.link_dimensions))]),
+                                                             0.0,                                                           
+                                                             0,
+                                                             len(xs) - 1)
+                    #history_entries.insert(0, HistoryEntry())
+                    for history_entry in history_entries:
+                        history_entry.serialize("tmp/lqg", "log.log")
+                        '''serializer.write_line("log.log", "tmp/lqg", "t = " + str(history_entry.t) + " \n")
+                        state_str = ""
+                        for l in xrange(len(history_entry.x_true)):
+                            state_str += str(history_entry.x_true[l]) + " "
+                        serializer.write_line("log.log", "tmp/lqg", "s: " + state_str + " \n")'''
+                                         
+                                          
                 (cartesian_coords, 
                  rewards, 
                  successful_runs, 
@@ -218,6 +253,18 @@ class LQG:
                 
             cmd = "cp " + model_file + " " + dir + "/model"
             os.system(cmd)
+            
+    def init_serializer(self):
+        serializer = Serializer()
+        serializer.create_temp_dir("lqg")
+        return serializer
+            
+    def clear_stats(self, dir):        
+        if os.path.isdir(dir):
+            cmd = "rm -rf " + dir + "/*"            
+            os.system(cmd)
+        else:
+            os.makedirs(dir)
             
     def get_average_distance_to_goal_area(self, goal_position, goal_radius, cartesian_coords):        
         avg_dist = 0.0

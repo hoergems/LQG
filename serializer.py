@@ -10,6 +10,18 @@ from xml.dom import minidom
 class Serializer:
     def __init__(self):
         pass
+    
+    def write_line(self, filename, path, line):
+        with open(os.path.join(path, filename), 'a+') as f:
+            f.write(line)
+            
+    def create_temp_dir(self, alg):
+        if not os.path.exists("tmp/" + str(alg)):            
+            os.makedirs("tmp/" + str(alg))
+        for file in glob.glob(os.path.join("tmp/" + alg, "log.log")):
+            os.remove(file)
+        
+        
         
     def read_config(self, filename=None, path=""):        
         if filename == None:

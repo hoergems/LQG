@@ -31,8 +31,7 @@ class MPC:
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)        
         
         dir = "stats/mpc" + str(self.num_execution_steps)
-        if not os.path.exists(dir):
-            os.makedirs(dir)
+        self.clear_stats(dir)
         cmd = "cp config_mpc.yaml " + dir            
         os.system(cmd)
         
@@ -154,6 +153,13 @@ class MPC:
             if plot:
                 PlotStats(True, "mpc")
                 
+    def clear_stats(self, dir):
+        if os.path.isdir(dir):
+            cmd = "rm -rf " + dir + "/*"            
+            os.system(cmd)
+        else:
+            os.makedirs(dir)
+                
     def get_average_distance_to_goal_area(self, goal_position, goal_radius, cartesian_coords):        
         avg_dist = 0.0
         goal_pos = np.array(goal_position)        
@@ -235,7 +241,7 @@ class MPC:
                 P_t = np.array([[0.0 for i in xrange(len(self.link_dimensions))] for i in xrange(len(self.link_dimensions))])                
                 total_reward = 0.0
                 
-                current_step = 0
+                current_step = 0                
                 terminal = False                      
                 estimated_states = []
                 estimated_covariances = []             
@@ -273,7 +279,7 @@ class MPC:
                      P_t, 
                      current_step, 
                      total_reward, 
-                     successful_runs, 
+                     success, 
                      terminal,
                      estimated_s,
                      estimated_c) = self.sim.simulate_n_steps(xs, us, zs,
@@ -281,10 +287,11 @@ class MPC:
                                                               x_tilde,
                                                               x_estimate,
                                                               P_t,
-                                                              total_reward,
-                                                              successful_runs,
+                                                              total_reward,                                                                 
                                                               current_step,
-                                                              n_steps) 
+                                                              n_steps)
+                    if (success):
+                        successful_runs += 1 
                     estimated_states.extend(estimated_s)
                     estimated_covariances.extend(estimated_c)                   
                     logging.warn("MPC: Execution finished. True state is " + str(x_true))

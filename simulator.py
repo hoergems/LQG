@@ -5,6 +5,7 @@ import time
 from scipy.stats import multivariate_normal
 from kin import *
 from util import *
+from history_entry import *
 
 class Simulator:
     def __init__(self):
@@ -72,19 +73,33 @@ class Simulator:
                          x_tilde,
                          x_estimate,
                          P_t,
-                         total_reward,
-                         successes,
+                         total_reward,                         
                          current_step,
                          n_steps):
+        history_entries = []
+        
         terminal_state_reached = False
+        success = False
         Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)
         logging.info("Simulator: Executing for " + str(n_steps) + " steps") 
         estimated_states = []
         estimated_covariances = []       
         for i in xrange(n_steps):                        
             if not (terminal_state_reached and self.stop_when_terminal):
+                history_entries.append(HistoryEntry(current_step + i,
+                                                    x_true, 
+                                                    x_estimate, 
+                                                    None,
+                                                    None,
+                                                    P_t,
+                                                    False,
+                                                    False,
+                                                    0.0))
+                                
                 u_dash = np.dot(Ls[i], x_tilde)
                 u = np.add(u_dash, us[i]) 
+                
+                history_entries[-1].set_action(u)
                         
                 x_true_temp = self.apply_control(x_true, 
                                                  u, 
@@ -92,14 +107,17 @@ class Simulator:
                                                  self.B, 
                                                  self.V, 
                                                  self.M)
-                discount = np.power(self.discount_factor, current_step)
+                discount = np.power(self.discount_factor, current_step + i)
                 collided = False
                 if self.is_in_collision(x_true_temp):
                     logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
                     total_reward += discount * (-1.0 * self.illegal_move_penalty)
+                    history_entries[-1].set_reward(-1.0 * self.illegal_move_penalty)
                     collided = True
+                    
                 else:
                     total_reward += discount * (-1.0 * self.step_penalty)
+                    history_entries[-1].set_reward(-1.0 * self.step_penalty)
                     x_true = x_true_temp
                 x_dash = np.subtract(x_true, xs[i + 1])           
                 
@@ -110,12 +128,14 @@ class Simulator:
                 logging.info("Simulator: Current end-effector position is " + str(ee_position))
                 if self.is_terminal(ee_position):
                     terminal_state_reached = True                        
-                    total_reward += discount * self.exit_reward 
-                    successes += 1                       
+                    total_reward += discount * self.exit_reward
+                    history_entries[-1].set_reward(self.exit_reward)
+                    success = True                      
                     logging.info("Terminal state reached: reward = " + str(total_reward))                                  
                     
                 z = self.get_observation(x_true, self.H, self.N, self.W)
                 z_dash = np.subtract(z, zs[i+1])
+                history_entries[-1].set_observation(z)
                 
                 """
                 Kalman prediction and update
@@ -134,16 +154,21 @@ class Simulator:
                     x_estimate = x_estimate_new
                 estimated_states.append(x_estimate)
                 estimated_covariances.append(P_t)
+                
+                history_entries[-1].set_collided(collided)
+                history_entries[-1].set_terminal(terminal_state_reached)
+                #history_entries.append(HistoryEntry(current_step + i, x_true, x_estimate, u, z, P_t, collided))
         return (x_true, 
                 x_tilde, 
                 x_estimate, 
                 P_t, 
                 current_step + n_steps, 
                 total_reward, 
-                successes, 
+                success, 
                 terminal_state_reached,
                 estimated_states,
-                estimated_covariances)
+                estimated_covariances,                
+                history_entries)
     
     def check_constraints(self, state):        
         for i in xrange(len(state)):                          

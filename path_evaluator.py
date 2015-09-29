@@ -67,13 +67,7 @@ class PathEvaluator:
             for obstacle in self.obstacles:
                 if obstacle.inCollisionDiscrete(collision_structures):                               
                     pdfs.append(pdf[i]) 
-                    break
-        '''if not len(pdfs) == 0:
-            print "pdf " + str(pdf) 
-            print "pdfs " + str(pdfs)
-            print "sum(pdf) " + str(sum(pdf))
-            print "sum(pdfs) " + str(sum(pdfs))
-            time.sleep(1)'''
+                    break        
         sum_colliding_pdfs = sum(pdfs)        
         return sum_colliding_pdfs
     
@@ -184,8 +178,6 @@ class PathEvaluator:
                 best_path = evaluated_paths[i][1]
                 best_cov = evaluated_paths[i][2]
         logging.info("PathEvaluator: Objective value for the best path is " + str(min_objective))
-        logging.info("cov b " + str(best_cov)) 
-        time.sleep(2)        
         return best_path
     
     def evaluate(self, index, eval_queue, path, P_t, horizon):
@@ -227,8 +219,7 @@ class PathEvaluator:
             G_t_1 = np.vstack((np.hstack((self.V, NU)),
                                np.hstack((np.dot(K_t, np.dot(self.H, self.V)), np.dot(K_t, self.W)))))            
             """ Compute R """            
-            R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t)))) 
-            #print "R_t " + str(R_t) 
+            R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))
             L = np.identity(len(self.link_dimensions))
             if i != horizon_L - 1:
                 L = Ls[i]    
@@ -248,12 +239,8 @@ class PathEvaluator:
                 collision_probs.append(0.0)
         if float(horizon_L) == 0.0:
             collsion_sum = 0.0
-        else:
-            print "len(collision_probs) " + str(len(collision_probs)) 
-            print "sum(collision probs) " + str(sum(collision_probs))
-            print "horizon_L " + str(float(horizon_L))
-            collision_sum = sum(collision_probs) / float(horizon_L)
-            print "collision sum " + str(collision_sum)            
+        else:            
+            collision_sum = sum(collision_probs) / float(horizon_L)                   
         tr = np.trace(EE_covariance)        
         logging.info("========================================")
         logging.info("PathEvaluator: collision sum for path " + 
