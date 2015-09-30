@@ -20,7 +20,7 @@ from xml.dom import minidom
 class MPC:
     def __init__(self, plot):
         """ Reading the config """
-        serializer = Serializer()
+        serializer = self.init_serializer()
         self.utils = Utils()
         config = serializer.read_config("config_mpc.yaml")
         self.set_params(config)
@@ -32,6 +32,7 @@ class MPC:
         
         dir = "stats/mpc" + str(self.num_execution_steps)
         self.clear_stats(dir)
+        serializer.create_temp_dir("mpc" + str(self.num_execution_steps))
         cmd = "cp config_mpc.yaml " + dir            
         os.system(cmd)
         
@@ -79,66 +80,18 @@ class MPC:
         if check_positive_definite([C, D]):            
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
             emds = []
-            (cartesian_coords, 
-             rewards, 
-             emds, 
-             mean_planning_times_per_step, 
-             mean_planning_times_per_run, 
-             all_succesful_runs, 
-             mean_number_generated_paths_per_step, 
-             mean_number_generated_paths_per_run,
-             mean_number_planning_steps_cov,
-             mean_number_of_steps_per_run,
-             estimated_states_cov,
-             estimated_covariances_cov) = self.mpc(self.theta_0, m_covs, self.horizon, obstacles)
+            self.mpc(self.theta_0, m_covs, self.horizon, obstacles, serializer)
                        
-            stats = dict(m_cov = m_covs.tolist(), emd = emds)
+            #stats = dict(m_cov = m_covs.tolist(), emd = emds)
             #serializer.save_paths(best_paths, 'best_paths.yaml', True, path="stats")
-            serializer.save_cartesian_coords(cartesian_coords, path=dir, filename="cartesian_coords_mpc" + str(self.num_execution_steps) + ".yaml")
-            serializer.save_num_successes(all_succesful_runs, path=dir, filename="num_successes_mpc" + str(self.num_execution_steps) + ".yaml")            
-            serializer.save_stats(stats, path=dir)
-            serializer.save_mean_planning_times(mean_planning_times_per_step, path=dir, filename="mean_planning_times_per_step_mpc" + str(self.num_execution_steps) + ".yaml")
-            serializer.save_mean_planning_times(mean_planning_times_per_run, path=dir, filename="mean_planning_times_per_run_mpc" + str(self.num_execution_steps) + ".yaml")
-            serializer.save_mean_num_generated_paths(mean_number_generated_paths_per_step, 
-                                                     path=dir,
-                                                     filename="mean_num_generated_paths_per_step_mpc" + str(self.num_execution_steps) + ".yaml")
-            serializer.save_mean_num_generated_paths(mean_number_generated_paths_per_run, 
-                                                     path=dir,
-                                                     filename="mean_num_generated_paths_per_run_mpc" + str(self.num_execution_steps) + ".yaml")
-            serializer.save_mean_num_planning_steps(mean_number_planning_steps_cov,
-                                                    path=dir,
-                                                    filename="mean_num_planning_steps_per_run_mpc" + str(self.num_execution_steps) + ".yaml")
-            serializer.save_mean_num_planning_steps(mean_number_of_steps_per_run,
-                                                    path=dir,
-                                                    filename="mean_num_steps_per_run_mpc" + str(self.num_execution_steps) + ".yaml")
+            #serializer.save_cartesian_coords(cartesian_coords, path=dir, filename="cartesian_coords_mpc" + str(self.num_execution_steps) + ".yaml")
             
-            average_distances_to_goal_area = []            
+            #serializer.save_stats(stats, path=dir)
+            '''average_distances_to_goal_area = []            
             for i in xrange(len(cartesian_coords)):
                 average_distances_to_goal_area.append(self.get_average_distance_to_goal_area(self.goal_position, 
                                                                                              self.goal_radius, 
-                                                                                             cartesian_coords[i]))
-            serializer.save_average_distances_to_goal_area(average_distances_to_goal_area,
-                                                           path=dir,
-                                                           filename="avg_distances_to_goal_area_mpc" + str(self.num_execution_steps) + ".yaml")
-            reward_variances = []
-            mean_rewards = []
-            for i in xrange(len(m_covs)):
-                n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards[i]))                            
-                mean_rewards.append(np.asscalar(mean))
-                if np.isnan(np.asscalar(var)):
-                    var = 0.0
-                else:
-                    var = np.asscalar(var)               
-                reward_variances.append(var)
-                
-            
-            
-            serializer.save_rewards(rewards, path=dir, filename="rewards_mpc" + str(self.num_execution_steps) + ".yaml")    
-            serializer.save_rewards(mean_rewards, path=dir, filename="mean_rewards_mpc" + str(self.num_execution_steps) + ".yaml")
-            serializer.save_rewards(reward_variances, path=dir, filename="sample_variances_mpc" + str(self.num_execution_steps) + ".yaml")
-            serializer.save_rewards([np.asscalar(np.sqrt(reward_variances[i])) for i in xrange(len(reward_variances))],
-                                    path=dir,
-                                    filename="sample_standard_deviations_mpc" + str(self.num_execution_steps) + ".yaml")
+                                                                                             cartesian_coords[i]))'''
             
             if not os.path.exists(dir + "/environment"):
                 os.makedirs(dir + "/environment") 
@@ -171,25 +124,17 @@ class MPC:
             avg_dist += dist
         if avg_dist == 0.0:
             return avg_dist        
-        return np.asscalar(avg_dist) / len(cartesian_coords)     
+        return np.asscalar(avg_dist) / len(cartesian_coords) 
+    
+    def init_serializer(self):
+        serializer = Serializer()        
+        return serializer    
             
-    def mpc(self, initial_belief, m_covs, horizon, obstacles):
+    def mpc(self, initial_belief, m_covs, horizon, obstacles, serializer):
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.link_dimensions)
         cart_coords = []
-        mean_rewards = []
-        total_rewards = []
-        sample_variances = []
-        mean_planning_times_per_step = []
-        mean_planning_times_per_run = []
-        all_successful_runs = []
-        mean_number_generated_paths_per_step = []
-        mean_number_generated_paths_per_run = []
-        mean_number_planning_steps_cov = []
-        mean_number_of_steps_per_run = []
-        estimated_states_cov = []
-        estimated_covariances_cov = []
         emds = []
-        for j in xrange(len(m_covs)):            
+        for j in xrange(len(m_covs)):                       
             
             logging.info("MPC: Evaluating covariance " + str(m_covs[j]))
             
@@ -218,11 +163,9 @@ class MPC:
                                    self.link_dimensions,
                                    self.workspace_dimension, 
                                    self.joint_constraints)            
-            self.sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
+            self.sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)            
             
-            mean_reward = 0.0
-            cartesian_coords = []
-            total_reward_cov = [] 
+            cartesian_coords = []            
             all_estimated_states = []
             all_estimated_covariances = []           
             
@@ -231,9 +174,13 @@ class MPC:
             successful_runs = 0
             num_generated_paths_run = 0.0
             mean_number_planning_steps = 0.0 
-            mean_number_of_steps = 0.0           
-            for k in xrange(self.num_simulation_runs):
-                #x_tilde = initial_belief               
+            mean_number_of_steps = 0.0 
+            
+            rewards_cov = []          
+            for k in xrange(self.num_simulation_runs):                  
+                serializer.write_line("log.log", 
+                                      "tmp/mpc" + str(self.num_execution_steps), 
+                                      "RUN #" + str(k + 1) + " \n")           
                 print "MPC: Joint covariance: " + str(m_covs[j])
                 print "MPC: simulation run " + str(k + 1)
                 x_true = initial_belief
@@ -249,8 +196,10 @@ class MPC:
                     mean_number_planning_steps += 1.0
                     t0 = time.time()                    
                     self.path_planning_interface.set_start_and_goal(x_estimate, self.goal_states)
+                    
                     logging.info("MPC: Constructing paths")
                     xs, us, zs, num_generated_paths = self.path_planning_interface.plan_and_evaluate_paths(self.num_paths, 0, horizon, P_t, self.timeout)
+                    
                     t_e = time.time() - t0
                     mean_planning_time_per_run += t_e  
                     num_generated_paths_run += num_generated_paths                   
@@ -261,9 +210,7 @@ class MPC:
                                       
                         total_reward = np.array([-self.illegal_move_penalty])[0]
                         current_step += 1                                             
-                        break
-                    #logging.info("MPC: " + str(len(paths)) + " Paths constructed. Evaluating them according the planning objective")
-                    #xs, us, zs = self.path_evaluator.evaluate_paths(paths, horizon=horizon)                                     
+                        break                         
                     logging.warn("MPC: Generated " + str(num_generated_paths) + " paths in " + str(t_e) + " seconds")
                     x_tilde = np.array([0.0 for i in xrange(len(self.link_dimensions))])
                     n_steps = self.num_execution_steps
@@ -282,72 +229,102 @@ class MPC:
                      success, 
                      terminal,
                      estimated_s,
-                     estimated_c) = self.sim.simulate_n_steps(xs, us, zs,
-                                                              x_true,                                                              
-                                                              x_tilde,
-                                                              x_estimate,
-                                                              P_t,
-                                                              total_reward,                                                                 
-                                                              current_step,
-                                                              n_steps)
+                     estimated_c,
+                     history_entries) = self.sim.simulate_n_steps(xs, us, zs,
+                                                                  x_true,                                                              
+                                                                  x_tilde,
+                                                                  x_estimate,
+                                                                  P_t,
+                                                                  total_reward,                                                                 
+                                                                  current_step,
+                                                                  n_steps)
                     if (success):
-                        successful_runs += 1 
+                        successful_runs += 1
+                        
+                    for history_entry in history_entries:                        
+                        history_entry.serialize("tmp/mpc" + str(self.num_execution_steps), "log.log")    
+                         
                     estimated_states.extend(estimated_s)
                     estimated_covariances.extend(estimated_c)                   
                     logging.warn("MPC: Execution finished. True state is " + str(x_true))
                     logging.warn("MPC: Estimated state is " + str(x_estimate)) 
                     logging.warn("MPC: terminal " + str(terminal))
-                print "total reward " + str(total_reward)           
-                total_reward_cov.append(np.asscalar(total_reward))
-                mean_reward += total_reward                
+                rewards_cov.append(total_reward)
+                serializer.write_line("log.log", 
+                                      "tmp/mpc" + str(self.num_execution_steps), 
+                                      "Reward: " + str(total_reward) + " \n") 
+                serializer.write_line("log.log", 
+                                      "tmp/mpc"  + str(self.num_execution_steps), 
+                                      "\n")
+                               
                 mean_number_of_steps += current_step                
                 x_true_vec = v_double()
                 x_true_vec[:] = x_true
                 ee_position_vec = self.kinematics.getEndEffectorPosition(x_true_vec)
                 ee_position = np.array([ee_position_vec[i] for i in xrange(len(ee_position_vec))])
-                cartesian_coords.append(ee_position.tolist()) 
-                all_estimated_states.append(estimated_states)
-                all_estimated_covariances.append(estimated_covariances)               
+                cartesian_coords.append(ee_position.tolist())
                 logging.info("MPC: Done. total_reward is " + str(total_reward))
             logging.info("MPC: Finished simulations for covariance value  " + 
-                         str(m_covs[j]) +
-                         ". Mean reward is " + 
-                         str(mean_reward))
-            total_rewards.append(total_reward_cov)
-            mean_reward /= self.num_simulation_runs            
-            mean_rewards.append(np.asscalar(mean_reward))
+                         str(m_covs[j]))
             
-            mean_number_planning_steps /= self.num_simulation_runs
-            mean_number_planning_steps_cov.append(mean_number_planning_steps)
+            n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))
             
-            mean_number_of_steps_per_run.append(mean_number_of_steps / self.num_simulation_runs)
+            serializer.write_line("log.log", 
+                                  "tmp/mpc" + str(self.num_execution_steps), 
+                                  "Mean rewards: " + str(mean) + " \n")
+            serializer.write_line("log.log",
+                                  "tmp/mpc" + str(self.num_execution_steps), 
+                                  "Reward variance: " + str(var) + " \n")
+            serializer.write_line("log.log", 
+                                  "tmp/mpc" + str(self.num_execution_steps), 
+                                  "Reward standard deviation: " + str(np.sqrt(var)) + " \n")
             
-            mean_planning_times_per_run.append(mean_planning_time_per_run / self.num_simulation_runs)
-            mean_planning_times_per_step.append(mean_planning_times_per_run[-1] / mean_number_planning_steps)
+            serializer.write_line("log.log", 
+                                  "tmp/mpc"  + str(self.num_execution_steps), 
+                                  "Num successes: " + str(successful_runs) + " \n")
             
-            mean_number_generated_paths_per_run.append(num_generated_paths_run / self.num_simulation_runs)
-            mean_number_generated_paths_per_step.append(mean_number_generated_paths_per_run[-1] / mean_number_planning_steps)            
+            mean_number_planning_steps /= self.num_simulation_runs            
+            serializer.write_line("log.log", 
+                                  "tmp/mpc"  + str(self.num_execution_steps), 
+                                  "Mean number of planning steps: " + str(mean_number_planning_steps) + " \n")
+            mean_number_of_steps /= self.num_simulation_runs
+            serializer.write_line("log.log", 
+                                  "tmp/mpc"  + str(self.num_execution_steps), 
+                                  "Mean number of steps per run: " + str(mean_number_of_steps) + " \n")
             
-            all_successful_runs.append((100.0 / self.num_simulation_runs) * successful_runs)
+            mean_planning_time_per_run /= self.num_simulation_runs
+            serializer.write_line("log.log", 
+                                  "tmp/mpc"  + str(self.num_execution_steps), 
+                                  "Mean planning time per run: " + str(mean_planning_time_per_run) + " \n")
+            
+            mean_planning_time_per_step = mean_planning_time_per_run / mean_number_planning_steps
+            serializer.write_line("log.log", 
+                                  "tmp/mpc"  + str(self.num_execution_steps), 
+                                  "Mean planning time per step: " + str(mean_planning_time_per_step) + " \n")            
+            
+            num_generated_paths_run /= self.num_simulation_runs
+            serializer.write_line("log.log", 
+                                  "tmp/mpc"  + str(self.num_execution_steps), 
+                                  "Mean number of generated paths per run: " + str(num_generated_paths_run) + " \n")  
+            
+            num_generated_paths_step = num_generated_paths_run / mean_number_planning_steps
+            serializer.write_line("log.log", 
+                                  "tmp/mpc"  + str(self.num_execution_steps), 
+                                  "Mean number of generated paths per step: " + str(num_generated_paths_step) + " \n")
+            prob = "mpc" + str(self.num_execution_steps)
+            d = "stats/mpc" + str(self.num_execution_steps)
+            cmd = "mv tmp/" + prob + "/log.log " + d + "/log_" + prob + "_" + str(m_covs[j]) + ".log"
+            os.system(cmd)           
+            
+            
             emds.append(calc_EMD(cartesian_coords, 
                                  self.num_bins, 
                                  self.goal_position, 
                                  self.link_dimensions))
             cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])
-            estimated_states_cov.append(all_estimated_states)
-            estimated_covariances_cov.append(all_estimated_covariances)            
-        return (cart_coords, 
-                total_rewards, 
-                emds, 
-                mean_planning_times_per_step, 
-                mean_planning_times_per_run, 
-                all_successful_runs, 
-                mean_number_generated_paths_per_step, 
-                mean_number_generated_paths_per_run,
-                mean_number_planning_steps_cov,
-                mean_number_of_steps_per_run,
-                estimated_states_cov,
-                estimated_covariances_cov)
+            #estimated_states_cov.append(all_estimated_states)
+            #estimated_covariances_cov.append(all_estimated_covariances)            
+        
             
     def problem_setup(self, delta_t, link_dimensions):        
         axis = v2_int()

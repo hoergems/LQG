@@ -85,7 +85,7 @@ class Simulator:
         estimated_states = []
         estimated_covariances = []       
         for i in xrange(n_steps):                        
-            if not (terminal_state_reached and self.stop_when_terminal):
+            if not (terminal_state_reached and self.stop_when_terminal):                
                 history_entries.append(HistoryEntry(current_step + i,
                                                     x_true, 
                                                     x_estimate, 

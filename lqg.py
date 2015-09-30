@@ -26,8 +26,7 @@ class LQG:
         sim = Simulator()
         path_evaluator = PathEvaluator()
         path_planner = PathPlanningInterface()
-        serializer = self.init_serializer()
-        
+        serializer = self.init_serializer()        
         
         """ Reading the config """
         config = serializer.read_config("config_lqg.yaml")
@@ -138,7 +137,8 @@ class LQG:
                                      self.w2)
                 t0 = time.time() 
                 xs, us, zs = path_evaluator.evaluate_paths(paths, P_t)
-                mean_planning_times.append(time_to_generate_paths + (time.time() - t0))
+                mean_planning_time = time_to_generate_paths + (time.time() - t0)
+                #mean_planning_times.append(time_to_generate_paths + (time.time() - t0))
                                 
                 best_paths.append([[xs[i] for i in xrange(len(xs))], 
                                    [us[i] for i in xrange(len(us))],
@@ -153,9 +153,10 @@ class LQG:
                                   self.joint_constraints)
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
                 
-                successes = 0                
+                successes = 0 
+                rewards_cov = []               
                 for k in xrange(self.num_simulation_runs):
-                    serializer.write_line("log.log", "tmp/lqg", "RUN #" + str(k) + " \n")
+                    serializer.write_line("log.log", "tmp/lqg", "RUN #" + str(k + 1) + " \n")
                     (x_true, 
                      x_tilde, 
                      x_estimate, 
@@ -174,17 +175,15 @@ class LQG:
                                                              0.0,                                                           
                                                              0,
                                                              len(xs) - 1)
-                    #history_entries.insert(0, HistoryEntry())
-                    for history_entry in history_entries:
-                        history_entry.serialize("tmp/lqg", "log.log")
-                        '''serializer.write_line("log.log", "tmp/lqg", "t = " + str(history_entry.t) + " \n")
-                        state_str = ""
-                        for l in xrange(len(history_entry.x_true)):
-                            state_str += str(history_entry.x_true[l]) + " "
-                        serializer.write_line("log.log", "tmp/lqg", "s: " + state_str + " \n")'''
-                                         
+                    if success:
+                        successes += 1
+                    rewards_cov.append(total_reward)
+                    for history_entry in history_entries:                        
+                        history_entry.serialize("tmp/lqg", "log.log")                                          
+                    serializer.write_line("log.log", "tmp/lqg", "Reward: " + str(total_reward) + " \n") 
+                    serializer.write_line("log.log", "tmp/lqg", "\n")             
                                           
-                (cartesian_coords, 
+                '''(cartesian_coords, 
                  rewards, 
                  successful_runs, 
                  all_collisions,
@@ -199,46 +198,28 @@ class LQG:
                                          self.link_dimensions))
                 except:
                     pass
-                all_rewards.append([np.asscalar(rewards[k]) for k in xrange(len(rewards))]) 
-                successes.append((100.0 / self.num_simulation_runs) * successful_runs)
-            lengths_best_paths = []
-            average_distances_to_goal_area = []            
-            for i in xrange(len(cart_coords)):
-                average_distances_to_goal_area.append(self.get_average_distance_to_goal_area(self.goal_position, 
-                                                                                             self.goal_radius, 
-                                                                                             cart_coords[i]))
+                '''
+                serializer.write_line("log.log", "tmp/lqg", "Length best path: " + str(len(xs)) + " \n")
+                serializer.write_line("log.log", 
+                                      "tmp/lqg", 
+                                      "Average distance to goal area: 0 \n")
+                serializer.write_line("log.log", "tmp/lqg", "Num successes: " + str(successes) + " \n")
+                serializer.write_line("log.log", "tmp/lqg", "Mean planning time: " + str(mean_planning_time) + " \n")
+                
+                n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))
+                serializer.write_line("log.log", "tmp/lqg", "Mean rewards: " + str(mean) + " \n")
+                serializer.write_line("log.log", "tmp/lqg", "Reward variance: " + str(var) + " \n")
+                serializer.write_line("log.log", 
+                                      "tmp/lqg", 
+                                      "Reward standard deviation: " + str(np.sqrt(var)) + " \n")
+                cmd = "mv tmp//lqg/log.log " + dir + "/log_lqg_" + str(m_covs[j]) + ".log"
+                os.system(cmd)
+                
             
-            for i in xrange(len(best_paths)):
-                lengths_best_paths.append(float(len(best_paths[i][0])))
-            stats = dict(m_cov = m_covs.tolist(), emd = emds)
             if self.plot_paths:
-                serializer.save_paths(best_paths, 'best_paths.yaml', True, path=dir)
-            serializer.save_average_distances_to_goal_area(average_distances_to_goal_area,
-                                                           path=dir,
-                                                           filename="avg_distances_to_goal_area_lqg.yaml")
-            serializer.save_lengths_best_paths(lengths_best_paths, path=dir, filename="mean_num_steps_per_run_lqg.yaml")
-            serializer.save_cartesian_coords(cart_coords, path=dir, filename="cartesian_coords_lqg.yaml") 
-            serializer.save_num_successes(successes, path=dir, filename="num_successes_lqg.yaml") 
-            serializer.save_mean_planning_times(mean_planning_times, path=dir, filename="mean_planning_times_per_run_lqg.yaml")          
-            serializer.save_stats(stats, path=dir) 
+                serializer.save_paths(best_paths, 'best_paths.yaml', True, path=dir)                      
+            #serializer.save_stats(stats, path=dir)
             
-            mean_rewards = []
-            reward_variances = []
-            for i in xrange(len(m_covs)):
-                n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(all_rewards[i]))
-                mean_rewards.append(np.asscalar(mean))
-                if np.isnan(np.asscalar(var)):
-                    var = 0.0
-                else:
-                    var = np.asscalar(var)
-                reward_variances.append(var)
-                       
-            serializer.save_rewards(all_rewards, path=dir, filename="rewards_lqg.yaml")
-            serializer.save_rewards(mean_rewards, path=dir, filename="mean_rewards_lqg.yaml")
-            serializer.save_rewards(reward_variances, path=dir, filename="sample_variances_lqg.yaml")
-            serializer.save_rewards([np.asscalar(np.sqrt(reward_variances[i])) for i in xrange(len(reward_variances))],
-                                    path=dir,
-                                    filename="sample_standard_deviations_lqg.yaml")
             cmd = "cp config_lqg.yaml " + dir           
             os.system(cmd)
             

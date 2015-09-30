@@ -27,7 +27,7 @@ class IKSolutionGenerator:
         """
         Generate the obstacles
         """
-        
+        logging.info("IKSolutionGenerator: Setup")
         self.link_dimensions = link_dimensions
         self.path_planner = PathPlanningInterface()
         self.path_planner.setup(link_dimensions, 
@@ -37,12 +37,14 @@ class IKSolutionGenerator:
                                 delta_t, 
                                 False, 
                                 joint_constraints)
-        
+        logging.info("IKSolutionGenerator: Create OpenRAVE environment")
         self.env = openravepy.Environment()
         self.env.StopSimulation()
+        logging.info("IKSolutionGenerator: Loading robot file: " + str(robot_file))
         self.env.Load(robot_file)
+        logging.info("IKSolutionGenerator: Loading environment file")
         self.env.Load(environment_file)
-        
+        logging.info("IKSolutionGenerator: OpenRAVE initialized")
         self.robot = self.env.GetRobots()[0]
         self.robot.SetActiveManipulator("arm")   
 

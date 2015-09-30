@@ -8,7 +8,7 @@ num_generated_paths: 3
 use_linear_path: False
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 30
+num_simulation_runs: 3
 
 # Dimension of the workspace (2 = 2D, 3 = 3D)
 workspace_dimension: 2
