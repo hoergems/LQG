@@ -8,23 +8,32 @@ namespace shared {
 PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
                          int dim,
                          double delta_t,
+                         bool continuous_collision,
                          double max_joint_velocity,
                          double stretching_factor, 
-                         bool use_rrt_heuristic,                         
+                         bool use_rrt_heuristic,
+                         bool check_linear_path,                         
                          bool verbose):
     dim_(dim),
     delta_t_(delta_t),
+    continuous_collision_(continuous_collision),
     max_joint_velocity_(max_joint_velocity),
     stretching_factor_(stretching_factor),
     planning_range_((1.0 / stretching_factor_) * std::sqrt(dim * std::pow(delta_t_ * max_joint_velocity_, 2))),  
-    use_rrt_heuristic_(use_rrt_heuristic),    
+    use_rrt_heuristic_(use_rrt_heuristic),
+    check_linear_path_(check_linear_path),  
     space_(new ompl::base::RealVectorStateSpace(dim_)),    
     si_(new ompl::base::SpaceInformation(space_)),    
     problem_definition_(new ompl::base::ProblemDefinition(si_)),
     planner_(new ompl::geometric::RRTConnect(si_)), //We use RRTConnect as the motion planner,
     obstacles_(),    
     kinematics_(kinematics), 
-    motionValidator_(new MotionValidator(si_, kinematics_, obstacles_, max_joint_velocity_, delta_t_)),
+    motionValidator_(new MotionValidator(si_, 
+                                         kinematics_, 
+                                         obstacles_, 
+                                         max_joint_velocity_, 
+                                         delta_t_,
+                                         continuous_collision)),
     verbose_(verbose)
 {   
     if (!verbose_) {        
@@ -54,7 +63,7 @@ void PathPlanner::setup() {
     planner_->setProblemDefinition(problem_definition_);
     
     /** Use RRTConnect as the planning algorithm */   
-    boost::shared_ptr<ompl::geometric::RRT> planner_ptr = boost::static_pointer_cast<ompl::geometric::RRT>(planner_);
+    boost::shared_ptr<ompl::geometric::RRTConnect> planner_ptr = boost::static_pointer_cast<ompl::geometric::RRTConnect>(planner_);
     
     /** Set the planning range of the planner */    
     planner_ptr->setRange(planning_range_);          
@@ -180,29 +189,40 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
         }
         cout << endl;        
     }
+    
+    if (!isValid(start_state.get())) {
+        if (verbose_) {
+            cout << "Path planner: Start state not valid" << endl;
+        }
+        return solution_vector;    
+    }
+    
     problem_definition_->addStartState(start_state);    
     ompl::base::GoalPtr gp(new ManipulatorGoalRegion(si_, goal_states_));
     
     problem_definition_->setGoal(gp);
    
-    bool collides = false;       
-    std::vector<double> goal_state_vec = boost::dynamic_pointer_cast<ManipulatorGoalRegion>(gp)->sampleGoalVec();    
-    std::vector<std::vector<double> > linear_path(genLinearPath(ss_vec, goal_state_vec));
+    if (check_linear_path_) {
+        bool collides = false;       
+        std::vector<double> goal_state_vec = boost::dynamic_pointer_cast<ManipulatorGoalRegion>(gp)->sampleGoalVec();    
+        std::vector<std::vector<double> > linear_path(genLinearPath(ss_vec, goal_state_vec));
     
-    for (size_t i = 1; i < linear_path.size(); i++) {       
-       if (!(mv->checkMotion(linear_path[i - 1], linear_path[i]))) {            
-            collides = true;
-            break;
-        }            
+        for (size_t i = 1; i < linear_path.size(); i++) {       
+           if (!(mv->checkMotion(linear_path[i - 1], linear_path[i], continuous_collision_))) {            
+                collides = true;
+                break;
+            }            
+        }
+    
+        if (!collides && !use_rrt_heuristic_) {            
+            clear();        
+            if (verbose_) {
+                cout << "Linear path is a valid solution. Returning linear path of length " << linear_path.size() << endl;
+            }        
+            return linear_path;
+        } 
+    
     }
-    
-    if (!collides && !use_rrt_heuristic_) {            
-        clear();        
-        if (verbose_) {
-            cout << "Linear path is a valid solution. Returning linear path of length " << linear_path.size() << endl;
-        }        
-        return linear_path;
-    }  
     
     /** Solve the planning problem with a maximum of 10 seconds per attempt */    
     bool solved = false;
@@ -243,9 +263,11 @@ BOOST_PYTHON_MODULE(libpath_planner) {
     
     class_<PathPlanner>("PathPlanner", init<std::shared_ptr<Kinematics>, 
                                             int,                                             
-                                            double, 
+                                            double,
+                                            bool, 
                                             double, 
                                             double,
+                                            bool,
                                             bool,
                                             bool>())
                         .def("solve", &PathPlanner::solve)

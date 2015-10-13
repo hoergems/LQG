@@ -177,9 +177,11 @@ class PathPlanningInterface:
         path_planner2 = libpath_planner.PathPlanner(self.kinematics,
                                                     len(self.link_dimensions),
                                                     self.delta_t,
-                                                    self.max_velocity,
+                                                    True,
+                                                    self.max_velocity,                                                    
                                                     1.0,
                                                     False,
+                                                    self.use_linear_path,
                                                     self.verbose)
         path_planner2.setObstacles(obstacles)         
         goal_states = util.v2_double()

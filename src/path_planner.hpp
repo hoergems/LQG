@@ -12,7 +12,6 @@
 #include "ManipulatorGoalRegion.hpp"
 #include <boost/make_shared.hpp>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
-#include <ompl/geometric/planners/rrt/RRT.h>
 #include <ompl/base/Path.h>
 #include <ompl/base/PlannerTerminationCondition.h>
 #include <ompl/geometric/PathGeometric.h>
@@ -36,9 +35,11 @@ namespace shared {
             PathPlanner(std::shared_ptr<Kinematics> kinematics,
                         int dim,             
                         double delta_t,
+                        bool continuous_collision,
                         double max_joint_velocity,
                         double stretching_factor,                                                
-                        bool use_rrt_heuristic,                        
+                        bool use_rrt_heuristic,
+                        bool check_linear_path,                        
                         bool verbose);
                         
             ~PathPlanner() {clearAll();}
@@ -74,6 +75,8 @@ namespace shared {
             /** The maximum allowed euclidean distance between two connected nodes */
             double delta_t_;
             
+            bool continuous_collision_;
+            
             double max_joint_velocity_;
             
             double stretching_factor_;
@@ -81,6 +84,8 @@ namespace shared {
             double planning_range_;
             
             bool use_rrt_heuristic_;
+            
+            bool check_linear_path_;
 
             /** The space we're planning in */
             ompl::base::StateSpacePtr space_;

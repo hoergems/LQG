@@ -26,13 +26,16 @@ namespace shared {
                             std::shared_ptr<Kinematics> kinematics,                            
                             std::vector<std::shared_ptr<Obstacle> > obstacles,
                             double max_joint_velocity,
-                            double delta_t);
+                            double delta_t,
+                            bool continuous_collision);
             ~MotionValidator() = default;
 
             /** Check if a motion between two states is valid. This assumes that state s1 is valid */
             bool checkMotion(const ompl::base::State *s1, const ompl::base::State *s2) const;
 
-            bool checkMotion(const std::vector<double> &s1, const std::vector<double> &s2) const; 
+            bool checkMotion(const std::vector<double> &s1, 
+                             const std::vector<double> &s2,
+                             const bool &continuous_collision) const; 
  
             /** Check if a motion between two states is valid. This assumes that state s1 is valid */
             bool checkMotion(const ompl::base::State *s1, 
@@ -59,6 +62,8 @@ namespace shared {
             double max_joint_velocity_;
             
             double delta_t_;
+            
+            bool continuous_collision_;
             
             //std::vector<fcl::AABB> link_aabbs_;
 

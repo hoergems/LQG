@@ -11,45 +11,53 @@ MotionValidator::MotionValidator(const ompl::base::SpaceInformationPtr &si,
                                  std::shared_ptr<Kinematics> kinematics,                                 
                                  std::vector<std::shared_ptr<Obstacle> > obstacles,                                 
                                  double max_joint_velocity,
-                                 double delta_t):    
+                                 double delta_t,
+                                 bool continuous_collision):    
     ompl::base::MotionValidator(si),
     si_(si),
     kinematics_(kinematics),
     obstacles_(obstacles),    
     max_joint_velocity_(max_joint_velocity),
-    delta_t_(delta_t),    
+    delta_t_(delta_t),
+    continuous_collision_(continuous_collision),    
     utils_(),
     link_dimensions_()
 {
     
 }
 
-bool MotionValidator::checkMotion(const std::vector<double> &s1, const std::vector<double> &s2) const {
+bool MotionValidator::checkMotion(const std::vector<double> &s1, 
+                                  const std::vector<double> &s2, 
+                                  const bool &continuous_collision) const {
     std::vector<OBB> manipulator_collision_structures_goal = utils_.createManipulatorCollisionStructures(s2,
                                                                                                          link_dimensions_, 
                                                                                                          kinematics_);
     for (size_t i = 0; i < obstacles_.size(); i++) {        
         if (!obstacles_[i]->isTraversable()) {            
-            if(obstacles_[i]->in_collision(manipulator_collision_structures_goal)) {                
+            if(obstacles_[i]->in_collision(manipulator_collision_structures_goal)) {                         
                 return false;
             }
         }        
     }
-    std::vector<fcl::CollisionObject> manipulator_collision_objects_start = utils_.createManipulatorCollisionObjects(s1, 
-                                                                                                                     link_dimensions_,
-                                                                                                                     kinematics_);
-    std::vector<fcl::CollisionObject> manipulator_collision_objects_goal = utils_.createManipulatorCollisionObjects(s2, 
-                                                                                                                    link_dimensions_,
-                                                                                                                    kinematics_);
-    for (size_t i = 0; i < obstacles_.size(); i++) {
-        if (!obstacles_[i]->isTraversable()) {
-            for (size_t j = 0; j < manipulator_collision_objects_start.size(); j++) {
-                if (obstacles_[i]->in_collision(manipulator_collision_objects_start[j], manipulator_collision_objects_goal[j])) {                    
-                    return false;
+    
+    
+    if (continuous_collision) {        
+        std::vector<fcl::CollisionObject> manipulator_collision_objects_start = utils_.createManipulatorCollisionObjects(s1, 
+                                                                                                                         link_dimensions_,
+                                                                                                                         kinematics_);
+        std::vector<fcl::CollisionObject> manipulator_collision_objects_goal = utils_.createManipulatorCollisionObjects(s2, 
+                                                                                                                        link_dimensions_,
+                                                                                                                        kinematics_);
+        for (size_t i = 0; i < obstacles_.size(); i++) {
+            if (!obstacles_[i]->isTraversable()) {
+                for (size_t j = 0; j < manipulator_collision_objects_start.size(); j++) {
+                    if (obstacles_[i]->in_collision(manipulator_collision_objects_start[j], manipulator_collision_objects_goal[j])) {                    
+                        return false;
+                    }
                 }
             }
-        }
-    }      
+        } 
+    }     
       
     return true;
 }
@@ -62,9 +70,8 @@ bool MotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base:
         angles1.push_back(s1->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);        
         angles2.push_back(s2->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
     }
-    return checkMotion(angles1, angles2);
-    
-
+        
+    return checkMotion(angles1, angles2, continuous_collision_);
 }
 
 /** Check if a motion between two states is valid. This assumes that state s1 is valid */
