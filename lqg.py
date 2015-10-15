@@ -154,7 +154,8 @@ class LQG:
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
                 
                 successes = 0 
-                rewards_cov = []               
+                rewards_cov = []
+                print "LQG: Runnging " + str(self.num_simulation_runs) + " simulations..."              
                 for k in xrange(self.num_simulation_runs):
                     serializer.write_line("log.log", "tmp/lqg", "RUN #" + str(k + 1) + " \n")
                     (x_true, 

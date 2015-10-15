@@ -40,8 +40,8 @@ class PathPlanningInterface:
               joint_constraints):
         self.link_dimensions = link_dimensions
         self.workspace_dimension = workspace_dimension        
-        #self.num_cores = cpu_count()
-        self.num_cores = 2         
+        self.num_cores = cpu_count()
+        #self.num_cores = 2         
         self.obstacles = obstacles        
         self.max_velocity = max_velocity
         self.delta_t = delta_t
@@ -154,13 +154,6 @@ class PathPlanningInterface:
                
         return paths
     
-    def construct_path2(self, path_planner, queue):
-        xs, us, zs = path_planner.plan_path()
-        if len(xs) == 0:
-            return        
-        queue.put((xs, us, zs))
-        return
-    
     def construct_and_evaluate_path(self, obstacles, queue, joint_constraints, horizon, P_t):              
         xs, us, zs = self._construct(obstacles, joint_constraints)
         eval_result = self.path_evaluator.evaluate_path([xs, us, zs], P_t, horizon)
@@ -174,8 +167,7 @@ class PathPlanningInterface:
         xs, us, zs = self._construct(obstacles, joint_constraints) 
         queue.put((xs, us, zs))        
         
-    def _construct(self, obstacles, joint_constraints):
-        print "Construct path"
+    def _construct(self, obstacles, joint_constraints):        
         path_planner2 = libpath_planner.PathPlanner(self.kinematics,
                                                     len(self.link_dimensions),
                                                     self.delta_t,
@@ -185,7 +177,7 @@ class PathPlanningInterface:
                                                     False,
                                                     self.use_linear_path,
                                                     self.verbose,
-                                                    "RRT")
+                                                    "RRTConnect")
         path_planner2.setup()
         path_planner2.setObstacles(obstacles)
         link_dimensions = util.v2_double()
