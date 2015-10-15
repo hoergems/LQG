@@ -78,7 +78,10 @@ class LQG:
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, len(self.link_dimensions))
         
         if check_positive_definite([C, D]):            
-            m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
+            m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps, dtype=np.float32)
+            print "dtype " + str(m_covs.dtype)
+            m_covs = np.array([np.around(m_covs[i], 5) for i in xrange(len(m_covs))])
+            print "dtype2 " + str(m_covs.dtype)
             emds = []
             mean_planning_times = []
             time_to_generate_paths = 0.0
@@ -153,7 +156,8 @@ class LQG:
                                   self.joint_constraints)
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
                 
-                successes = 0 
+                successes = 0
+                num_collisions = 0 
                 rewards_cov = []
                 print "LQG: Runnging " + str(self.num_simulation_runs) + " simulations..."              
                 for k in xrange(self.num_simulation_runs):
@@ -180,7 +184,9 @@ class LQG:
                         successes += 1
                     rewards_cov.append(total_reward)
                     for history_entry in history_entries:                        
-                        history_entry.serialize("tmp/lqg", "log.log")                                          
+                        history_entry.serialize("tmp/lqg", "log.log")
+                        if history_entry.collided:
+                            num_collisions += 1                                          
                     serializer.write_line("log.log", "tmp/lqg", "Reward: " + str(total_reward) + " \n") 
                     serializer.write_line("log.log", "tmp/lqg", "\n")             
                                           
@@ -200,11 +206,15 @@ class LQG:
                 except:
                     pass
                 '''
+                serializer.write_line("log.log", "tmp/lqg", "Mean num collisions per run: " + str(num_collisions / self.num_simulation_runs) + " \n")    
+                print "col " + str(num_collisions / self.num_simulation_runs)
                 serializer.write_line("log.log", "tmp/lqg", "Length best path: " + str(len(xs)) + " \n")
                 serializer.write_line("log.log", 
                                       "tmp/lqg", 
                                       "Average distance to goal area: 0 \n")
                 serializer.write_line("log.log", "tmp/lqg", "Num successes: " + str(successes) + " \n")
+                print "succ " + str((100.0 / self.num_simulation_runs) * successes)
+                serializer.write_line("log.log", "tmp/lqg", "Percentage: " + str((100.0 / self.num_simulation_runs) * successes) + " \n")
                 serializer.write_line("log.log", "tmp/lqg", "Mean planning time: " + str(mean_planning_time) + " \n")
                 
                 n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))

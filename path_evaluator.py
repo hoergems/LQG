@@ -1,4 +1,5 @@
 import numpy as np
+import scipy
 import kalman as kalman
 from scipy.stats import multivariate_normal
 from kin import *
@@ -52,7 +53,9 @@ class PathEvaluator:
         self.kinematics.setLinksAndAxis(self.link_dimensions, axis)
         self.utils = Utils()
 
-    def get_probability_of_collision(self, mean, cov):              
+    def get_probability_of_collision(self, mean, cov):
+        with self.mutex:
+            np.random.seed()              
         samples = multivariate_normal.rvs(mean, cov, self.sample_size)        
         pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True) 
         pdf /= sum(pdf)                         
@@ -67,8 +70,9 @@ class PathEvaluator:
             for obstacle in self.obstacles:
                 if obstacle.inCollisionDiscrete(collision_structures):                               
                     pdfs.append(pdf[i]) 
-                    break        
-        sum_colliding_pdfs = sum(pdfs)        
+                    break                
+        #print "len pdfs " + str(len(pdfs))                
+        sum_colliding_pdfs = sum(pdfs)             
         return sum_colliding_pdfs
     
     def get_jacobian(self, links, state):
@@ -141,7 +145,7 @@ class PathEvaluator:
         jobs = collections.deque() 
         eval_queue = Queue()
         evaluated_paths = []
-        paths_tmp = []
+        paths_tmp = []        
         for i in xrange(len(paths)):
             if len(paths[i][0]) != 0:
                 paths_tmp.append(paths[i])
@@ -150,7 +154,7 @@ class PathEvaluator:
             p = Process(target=self.evaluate, args=(i, eval_queue, paths_tmp[i], P_t, horizon,))
             p.start()
             jobs.append(p)           
-            
+                
             if len(jobs) == self.num_cores - 1 or i == len(paths_tmp) - 1:
                 if i == len(paths_tmp) - 1 and not len(jobs) == self.num_cores - 1:
                     while not eval_queue.qsize() == len(paths_tmp) % (self.num_cores - 1):
@@ -162,7 +166,7 @@ class PathEvaluator:
                 q_size = eval_queue.qsize()
                 for j in xrange(q_size):                     
                     evaluated_paths.append(eval_queue.get())
-        collision_sums = [evaluated_paths[i][0][0] for i in xrange(len(evaluated_paths))]        
+        collision_sums = [evaluated_paths[i][0][0] for i in xrange(len(evaluated_paths))]               
         traces_sum = sum([evaluated_paths[i][0][1] for i in xrange(len(evaluated_paths))])
         if traces_sum == 0.0:
             traces_sums = [0.0 for i in xrange(len(evaluated_paths))]
@@ -239,8 +243,10 @@ class PathEvaluator:
                 collision_probs.append(0.0)
         if float(horizon_L) == 0.0:
             collsion_sum = 0.0
-        else:            
-            collision_sum = sum(collision_probs) / float(horizon_L)                   
+        else:    
+            collision_sum = sum(collision_probs) / len(collision_probs)       
+            #collision_sum = sum(collision_probs) / float(horizon_L)
+            #collision_sum = max(collision_probs)                  
         tr = np.trace(EE_covariance)        
         logging.info("========================================")
         logging.info("PathEvaluator: collision sum for path " + 

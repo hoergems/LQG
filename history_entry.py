@@ -68,7 +68,14 @@ class HistoryEntry:
             f.write(obs_str + " \n") 
             
             rew_str = "R: " + str(self.reward)
-            f.write(rew_str + " \n") 
+            f.write(rew_str + " \n")
+            
+            coll_string = "collided: "
+            if self.collided:
+                coll_string += "true"
+            else:
+                coll_string += "false"
+            f.write(coll_string + " \n") 
             
             term_string = "Terminal: true"
             if not self.terminal:
