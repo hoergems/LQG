@@ -12,6 +12,7 @@
 #include "ManipulatorGoalRegion.hpp"
 #include <boost/make_shared.hpp>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
+#include <ompl/geometric/planners/rrt/RRT.h>
 #include <ompl/base/Path.h>
 #include <ompl/base/PlannerTerminationCondition.h>
 #include <ompl/geometric/PathGeometric.h>
@@ -46,6 +47,8 @@ namespace shared {
             
             /** Checks of a state is valid */
             bool isValid(const ompl::base::State *state);
+            
+            bool isValidPy(std::vector<double> &state);
             
             /** Solve the deterministic motion planning problem */
             std::vector<std::vector<double> > solve(const std::vector<double> &start_state_vec);

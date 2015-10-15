@@ -5,7 +5,7 @@ verbose: False
 num_generated_paths: 0
 
 # For the simplest toy problem. Use a linear path between the start and goal state
-use_linear_path: True
+use_linear_path: False
 
 # Number of simulation runs for the best found path
 num_simulation_runs: 2

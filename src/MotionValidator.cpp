@@ -87,12 +87,11 @@ bool MotionValidator::isValid(const std::vector<double> &s1) const {
                                                                                                     kinematics_);
     for (size_t i = 0; i < obstacles_.size(); i++) {
         if (!obstacles_[i]->getTerrain()->isTraversable()) {
-            if (obstacles_[i]->in_collision(manipulator_collision_structures)) {                
+            if (obstacles_[i]->in_collision(manipulator_collision_structures)) {
                 return false;
             }
         }
     }
-    
     return true;    
 }
 

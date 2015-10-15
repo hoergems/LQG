@@ -88,6 +88,11 @@ ompl::base::MotionValidatorPtr PathPlanner::getMotionValidator() {
     return motionValidator_;
 }
 
+bool PathPlanner::isValidPy(std::vector<double> &state) {
+    bool valid = static_cast<MotionValidator &>(*motionValidator_).isValid(state);
+    return valid;    
+}
+
 bool PathPlanner::isValid(const ompl::base::State *state) {    
     std::vector<double> angles1;
     for (unsigned int i = 0; i < si_->getStateSpace()->getDimension(); i++) {
@@ -202,7 +207,7 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
     
     problem_definition_->setGoal(gp);
    
-    if (check_linear_path_) {
+    if (check_linear_path_) {    	
         bool collides = false;       
         std::vector<double> goal_state_vec = boost::dynamic_pointer_cast<ManipulatorGoalRegion>(gp)->sampleGoalVec();    
         std::vector<std::vector<double> > linear_path(genLinearPath(ss_vec, goal_state_vec));
@@ -272,7 +277,8 @@ BOOST_PYTHON_MODULE(libpath_planner) {
                                             bool>())
                         .def("solve", &PathPlanner::solve)
                         .def("setObstacles", &PathPlanner::setObstaclesPy) 
-                        .def("setGoalStates", &PathPlanner::setGoalStates) 
+                        .def("setGoalStates", &PathPlanner::setGoalStates)
+                        .def("isValid", &PathPlanner::isValidPy) 
                         .def("setup", &PathPlanner::setup) 
                         .def("setLinkDimensions", &PathPlanner::setLinkDimensions)          
     ;

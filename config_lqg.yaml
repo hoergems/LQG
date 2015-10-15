@@ -23,10 +23,10 @@ control_rate: 30.0
 init_joint_angles: [0.0, 0.0, 0.0]
 
 # The goal position of the end effector. If set to None, a random goal position will be generated
-goal_position: [0.0, 3.0, 0.0]
+goal_position: [-0.1, 2.5, 0.0]
 
 # The radius around the goal position to define the end effector's goal area
-goal_radius: 0.4
+goal_radius: 0.2
 
 #Number of bins for the histograms
 num_bins: 201
