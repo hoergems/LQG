@@ -13,7 +13,8 @@ PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
                          double stretching_factor, 
                          bool use_rrt_heuristic,
                          bool check_linear_path,                         
-                         bool verbose):
+                         bool verbose,
+                         std::string planner):
     dim_(dim),
     delta_t_(delta_t),
     continuous_collision_(continuous_collision),
@@ -25,7 +26,8 @@ PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
     space_(new ompl::base::RealVectorStateSpace(dim_)),    
     si_(new ompl::base::SpaceInformation(space_)),    
     problem_definition_(new ompl::base::ProblemDefinition(si_)),
-    planner_(new ompl::geometric::RRTConnect(si_)), //We use RRTConnect as the motion planner,
+    planner_str_(planner),    
+    planner_(new ompl::geometric::RRT(si_)), //We use RRTConnect as the motion planner,
     obstacles_(),    
     kinematics_(kinematics), 
     motionValidator_(new MotionValidator(si_, 
@@ -38,6 +40,13 @@ PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
 {   
     if (!verbose_) {        
         ompl::msg::noOutputHandler();
+    }
+    
+    if (planner_str_ == "RRTConnect") {
+    	planner_ = boost::shared_ptr<ompl::geometric::RRTConnect>(new ompl::geometric::RRTConnect(si_));
+    }
+    else {
+        planner_ = boost::shared_ptr<ompl::geometric::RRT>(new ompl::geometric::RRT(si_));
     }
 }
 
@@ -62,11 +71,15 @@ void PathPlanner::setup() {
     /** Let the planner know about our problem */    
     planner_->setProblemDefinition(problem_definition_);
     
-    /** Use RRTConnect as the planning algorithm */   
-    boost::shared_ptr<ompl::geometric::RRTConnect> planner_ptr = boost::static_pointer_cast<ompl::geometric::RRTConnect>(planner_);
-    
-    /** Set the planning range of the planner */    
-    planner_ptr->setRange(planning_range_);          
+    /** Use RRTConnect as the planning algorithm */
+    if (planner_str_ == "RRTConnect") {   
+    	boost::shared_ptr<ompl::geometric::RRTConnect> planner_ptr = boost::static_pointer_cast<ompl::geometric::RRTConnect>(planner_);
+    	planner_ptr->setRange(planning_range_);
+    }
+    else {
+        boost::shared_ptr<ompl::geometric::RRT> planner_ptr = boost::static_pointer_cast<ompl::geometric::RRT>(planner_);
+    	planner_ptr->setRange(planning_range_);
+    }          
 }
 
 void PathPlanner::setObstacles(std::vector<std::shared_ptr<Obstacle> > obstacles) {
@@ -274,7 +287,8 @@ BOOST_PYTHON_MODULE(libpath_planner) {
                                             double,
                                             bool,
                                             bool,
-                                            bool>())
+                                            bool,
+                                            std::string>())
                         .def("solve", &PathPlanner::solve)
                         .def("setObstacles", &PathPlanner::setObstaclesPy) 
                         .def("setGoalStates", &PathPlanner::setGoalStates)

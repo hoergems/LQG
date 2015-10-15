@@ -184,7 +184,8 @@ class PathPlanningInterface:
                                                     1.0,
                                                     False,
                                                     self.use_linear_path,
-                                                    self.verbose)
+                                                    self.verbose,
+                                                    "RRT")
         path_planner2.setup()
         path_planner2.setObstacles(obstacles)
         link_dimensions = util.v2_double()

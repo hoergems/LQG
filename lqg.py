@@ -234,6 +234,7 @@ class LQG:
                 
             cmd = "cp " + model_file + " " + dir + "/model"
             os.system(cmd)
+        print "Done"
             
     def init_serializer(self):
         serializer = Serializer()

@@ -41,7 +41,8 @@ namespace shared {
                         double stretching_factor,                                                
                         bool use_rrt_heuristic,
                         bool check_linear_path,                        
-                        bool verbose);
+                        bool verbose,
+                        std::string planner);
                         
             ~PathPlanner() {clearAll();}
             
@@ -98,6 +99,8 @@ namespace shared {
 
             /** The definition of the path planning problem */
             ompl::base::ProblemDefinitionPtr problem_definition_;
+            
+            std::string planner_str_;
 
             /** A pointer to the path planner */
             ompl::base::PlannerPtr planner_;
