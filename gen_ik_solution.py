@@ -21,9 +21,11 @@ class IKSolutionGenerator:
               obstacles, 
               max_velocity, 
               delta_t, 
-              joint_constraints, 
+              joint_constraints,
+              enforce_constraints,
               robot_file, 
-              environment_file):
+              environment_file,
+              planning_algorithm):        
         """
         Generate the obstacles
         """
@@ -36,7 +38,9 @@ class IKSolutionGenerator:
                                 max_velocity, 
                                 delta_t, 
                                 False, 
-                                joint_constraints)
+                                joint_constraints,
+                                enforce_constraints,
+                                planning_algorithm)
         logging.info("IKSolutionGenerator: Create OpenRAVE environment")
         self.env = openravepy.Environment()
         self.env.StopSimulation()

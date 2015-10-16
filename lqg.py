@@ -21,6 +21,7 @@ from history_entry import *
 
 class LQG:
     def __init__(self, plot):
+        np.set_printoptions(precision=16)
         dir = "stats/lqg"
         self.clear_stats(dir)
         sim = Simulator()
@@ -60,8 +61,10 @@ class LQG:
                                       self.max_velocity,
                                       self.delta_t,
                                       self.joint_constraints,
+                                      self.enforce_constraints,
                                       self.theta_0,
-                                      self.goal_position)
+                                      self.goal_position,
+                                      self.planning_algortihm)
         if len(goal_states) == 0:
             logging.error("LQG: Couldn't generate any goal states. Problem seems to be infeasible")
         print "LQG: " + str(len(goal_states)) + " goal states generated" 
@@ -73,7 +76,9 @@ class LQG:
                            self.max_velocity, 
                            self.delta_t, 
                            self.use_linear_path, 
-                           self.joint_constraints)
+                           self.joint_constraints,
+                           self.enforce_constraints,
+                           self.planning_algortihm)
         path_planner.set_start_and_goal(self.theta_0, goal_states)         
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, len(self.link_dimensions))
         
@@ -136,6 +141,8 @@ class LQG:
                                      config['workspace_dimension'], 
                                      self.sample_size, 
                                      obstacles,
+                                     self.joint_constraints,
+                                     self.enforce_constraints,
                                      self.w1,
                                      self.w2)
                 t0 = time.time() 
@@ -153,13 +160,14 @@ class LQG:
                                   self.goal_radius, 
                                   self.link_dimensions, 
                                   config['workspace_dimension'], 
-                                  self.joint_constraints)
+                                  self.joint_constraints,
+                                  self.enforce_constraints)
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
                 
                 successes = 0
                 num_collisions = 0 
                 rewards_cov = []
-                print "LQG: Runnging " + str(self.num_simulation_runs) + " simulations..."              
+                print "LQG: Running " + str(self.num_simulation_runs) + " simulations..."              
                 for k in xrange(self.num_simulation_runs):
                     serializer.write_line("log.log", "tmp/lqg", "RUN #" + str(k + 1) + " \n")
                     (x_true, 
@@ -310,13 +318,14 @@ class LQG:
         self.step_penalty = config['step_penalty']
         self.exit_reward = config['exit_reward']
         self.stop_when_terminal = config['stop_when_terminal']
-        self.joint_constraints = [config['joint_constraints'][0], config['joint_constraints'][1]]
+        self.joint_constraints = config['joint_constraints']
+        self.enforce_constraints = config['enforce_constraints']
         self.sample_size = config['sample_size']  
         self.workspace_dimension = config['workspace_dimension'] 
         self.w1 = config['w1']
         self.w2 = config['w2']
         self.plot_paths = config['plot_paths']
-            
+        self.planning_algortihm = config['planning_algorithm']        
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

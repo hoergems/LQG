@@ -37,7 +37,9 @@ class PathPlanningInterface:
               max_velocity, 
               delta_t, 
               use_linear_path, 
-              joint_constraints):
+              joint_constraints,
+              enforce_constraints,
+              planning_algorithm):
         self.link_dimensions = link_dimensions
         self.workspace_dimension = workspace_dimension        
         self.num_cores = cpu_count()
@@ -47,6 +49,11 @@ class PathPlanningInterface:
         self.delta_t = delta_t
         self.use_linear_path = use_linear_path
         self.joint_constraints = joint_constraints
+        self.enforce_constraints = enforce_constraints
+        
+        self.joint_constraints_vec = v_double()
+        self.joint_constraints_vec[:] = self.joint_constraints
+        
         axis = v2_int()
         ax1 = v_int()
         ax2 = v_int()
@@ -62,6 +69,7 @@ class PathPlanningInterface:
         self.verbose = False 
         if(logging.getLogger().isEnabledFor(logging.INFO)):
             self.verbose = True
+        self.planning_algorithm = planning_algorithm
                
         
     def set_start_and_goal(self, start_state, goal_states):        
@@ -172,12 +180,14 @@ class PathPlanningInterface:
                                                     len(self.link_dimensions),
                                                     self.delta_t,
                                                     True,
-                                                    self.max_velocity,                                                    
+                                                    self.max_velocity,
+                                                    self.joint_constraints_vec,
+                                                    self.enforce_constraints,                                                    
                                                     1.0,
                                                     False,
                                                     self.use_linear_path,
                                                     self.verbose,
-                                                    "RRTConnect")
+                                                    self.planning_algorithm)
         path_planner2.setup()
         path_planner2.setObstacles(obstacles)
         link_dimensions = util.v2_double()
@@ -218,10 +228,10 @@ class PathPlanningInterface:
         """
         Augments the path with controls and observations
         """    
-        new_path = []             
+        
+        new_path = []                   
         for i in xrange(len(path) - 1):
-            u = (np.array(path[i + 1]) - np.array(path[i])) / self.delta_t            
-            #new_path.append([path[i], [u[j] for j in xrange(len(u))], path[i]])            
+            u = (np.array(path[i + 1]) - np.array(path[i])) / self.delta_t
             new_path.append([path[i], u, path[i]])
         new_path.append([path[-1], np.array([0.0 for i in xrange(len(self.link_dimensions))]), path[-1]])
         xs = [np.array(new_path[i][0]) for i in xrange(len(path))]

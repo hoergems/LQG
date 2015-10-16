@@ -69,8 +69,10 @@ def get_goal_states(problem,
                     max_velocity,
                     delta_t,
                     joint_constraints,
+                    enforce_constraints,
                     theta_0,
-                    goal_position):    
+                    goal_position,
+                    planning_algorithm):    
     model_file = "model.xml"
     if workspace_dimension == 3:
         model_file = "model3D.xml"
@@ -83,8 +85,10 @@ def get_goal_states(problem,
                                     max_velocity,
                                     delta_t,
                                     joint_constraints,
+                                    enforce_constraints,
                                     model_file,
-                                    "environment/env.xml")
+                                    "environment/env.xml",
+                                    planning_algorithm)
         ik_solutions = ik_solution_generator.generate(theta_0, goal_position, workspace_dimension)
             
         serializer.serialize_ik_solutions([ik_solutions[i] for i in xrange(len(ik_solutions))], path='tmp/' + problem, file='goalstates.txt')

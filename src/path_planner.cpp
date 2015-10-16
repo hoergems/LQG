@@ -10,6 +10,8 @@ PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
                          double delta_t,
                          bool continuous_collision,
                          double max_joint_velocity,
+                         std::vector<double> joint_constraints,
+                         bool enforce_constraints,
                          double stretching_factor, 
                          bool use_rrt_heuristic,
                          bool check_linear_path,                         
@@ -19,6 +21,8 @@ PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
     delta_t_(delta_t),
     continuous_collision_(continuous_collision),
     max_joint_velocity_(max_joint_velocity),
+    joint_constraints_(joint_constraints),
+    enforce_constraints_(enforce_constraints),
     stretching_factor_(stretching_factor),
     planning_range_((1.0 / stretching_factor_) * std::sqrt(dim * std::pow(delta_t_ * max_joint_velocity_, 2))),  
     use_rrt_heuristic_(use_rrt_heuristic),
@@ -32,7 +36,7 @@ PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
     kinematics_(kinematics), 
     motionValidator_(new MotionValidator(si_, 
                                          kinematics_, 
-                                         obstacles_, 
+                                         obstacles_,                                         
                                          max_joint_velocity_, 
                                          delta_t_,
                                          continuous_collision)),
@@ -51,16 +55,28 @@ PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
 }
 
 void PathPlanner::setup() {
-    ompl::base::RealVectorBounds bounds(dim_);
-    
-    /** We assume that the there are no joint limits. So the range of each joint
-    *** is between -2*Pi and 2*Pi
-    */    
-    bounds.setLow(-2.0 * M_PI);
-    bounds.setHigh(2.0 * M_PI);
-    
-    /** Apply the bounds to the space */    
-    space_->as<ompl::base::RealVectorStateSpace>()->setBounds(bounds);
+	ompl::base::RealVectorBounds bounds(dim_);
+	if (enforce_constraints_) {
+		/** We assume that the there are no joint limits. So the range of each joint
+		*** is between -2*Pi and 2*Pi
+		*/   
+		for (size_t i = 0; i < dim_; i++) {			
+			bounds.setLow(i, -joint_constraints_[i]);
+			bounds.setHigh(i, joint_constraints_[i]);
+		}
+		
+		/** Apply the bounds to the space */    
+		space_->as<ompl::base::RealVectorStateSpace>()->setBounds(bounds);
+	}
+	else {
+		for (size_t i = 0; i < dim_; i++) {			
+			bounds.setLow(i, -M_PI + 0.0000001);
+			bounds.setHigh(i, M_PI + 0.0000001);
+		}
+				
+		/** Apply the bounds to the space */    
+		space_->as<ompl::base::RealVectorStateSpace>()->setBounds(bounds);
+	}
     
     /** Set the StateValidityChecker */    
     si_->setStateValidityChecker(boost::bind(&PathPlanner::isValid, this, _1)); 
@@ -261,14 +277,18 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
     std::vector<double> vals;
     std::vector<double> old_vals;
     std::vector<std::vector<double> > temp_vals;    
-    
+    const bool cont_check = true;
     for (size_t i=1; i<solution_path->getStates().size(); i++) {
        vals.clear();
        old_vals.clear();
        for (int j=0; j<dim_; j++) {
           old_vals.push_back(solution_path->getState(i-1)->as<ompl::base::RealVectorStateSpace::StateType>()->values[j]);
           vals.push_back(solution_path->getState(i)->as<ompl::base::RealVectorStateSpace::StateType>()->values[j]); 
-       }             
+       }  
+       if (!mv->checkMotion(old_vals, vals, cont_check)) {
+    	   cout << "whaaaaaaaaaaaaaaat" << endl;
+    	   sleep(20);
+       }       
        solution_vector.push_back(vals);  
        
     }   
@@ -283,7 +303,9 @@ BOOST_PYTHON_MODULE(libpath_planner) {
                                             int,                                             
                                             double,
                                             bool, 
-                                            double, 
+                                            double,
+                                            std::vector<double>,
+                                            bool,
                                             double,
                                             bool,
                                             bool,

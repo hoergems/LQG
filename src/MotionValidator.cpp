@@ -28,7 +28,7 @@ MotionValidator::MotionValidator(const ompl::base::SpaceInformationPtr &si,
 
 bool MotionValidator::checkMotion(const std::vector<double> &s1, 
                                   const std::vector<double> &s2, 
-                                  const bool &continuous_collision) const {    
+                                  const bool &continuous_collision) const {	
     std::vector<OBB> manipulator_collision_structures_goal = utils_.createManipulatorCollisionStructures(s2,
                                                                                                          link_dimensions_, 
                                                                                                          kinematics_);

@@ -38,6 +38,8 @@ namespace shared {
                         double delta_t,
                         bool continuous_collision,
                         double max_joint_velocity,
+                        std::vector<double> joint_constraints,
+                        bool enforce_constraints,
                         double stretching_factor,                                                
                         bool use_rrt_heuristic,
                         bool check_linear_path,                        
@@ -82,6 +84,10 @@ namespace shared {
             bool continuous_collision_;
             
             double max_joint_velocity_;
+            
+            std::vector<double> joint_constraints_;
+            
+            bool enforce_constraints_;
             
             double stretching_factor_;
             
