@@ -91,7 +91,9 @@ class IKSolutionGenerator:
             path = self.path_planner.plan_paths(1, 0)            
             if len(path) != 0:
                 logging.info("IKSolutionGenerator: ik solution " + str(i) + " is a valid ik solution")                
-                solutions.append(path[0][0][-1])                
+                solutions.append(path[0][0][-1])
+            else:
+                logging.warn("IKSolutionGenerator: Path has length 0")                
             n += 1
         self.path_planner = None        
         if not len(solutions) == 0: 

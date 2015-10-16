@@ -82,56 +82,37 @@ class PathPlanningInterface:
         self.goal_states = goal_states
         return True
         
-    def plan_and_evaluate_paths(self, num, sim_run, horizon, P_t, timeout):
-        jobs = collections.deque()
+    def plan_and_evaluate_paths(self, num, sim_run, horizon, P_t, timeout):        
         path_queue = Queue()
         evaluated_paths = []
-        num_paths = 0
-        timeout_reached = False
-        t0 = time.time()        
-        while True: 
-            if len(jobs) != self.num_cores - 1:           
-                p = Process(target=self.construct_and_evaluate_path, args=(self.obstacles, path_queue, self.joint_constraints, horizon, P_t,))
-                p.daemon = True
-                p.start()             
-                jobs.append(p)            
-            if len(jobs) == self.num_cores - 1:                
-                while not path_queue.qsize() == self.num_cores - 1:                                        
-                    elapsed = time.time() - t0                                       
-                    if timeout > 0.0 and elapsed > timeout:
-                        timeout_reached = True
-                        for job in jobs:
-                            job.terminate()
-                        break                                             
-                jobs.clear()
-                print "qsize " + str(path_queue.qsize())
-                while path_queue.qsize():
-                    try: 
-                        print "getting " + str(path_queue.qsize())
-                        p_e = path_queue.get(False)                       
-                        print "got"                                                                    
-                        if not len(p_e[0]) == 0:
-                            if num > 0:
-                                if not len(evaluated_paths) == num:                         
-                                    evaluated_paths.append(([[p_e[0][k].tolist() for k in xrange(len(p_e[0]))], 
-                                                             [p_e[1][k].tolist() for k in xrange(len(p_e[0]))], 
-                                                             [p_e[2][k].tolist() for k in xrange(len(p_e[0]))]], p_e[3]))
-                            else:
-                                evaluated_paths.append(([[p_e[0][k].tolist() for k in xrange(len(p_e[0]))], 
-                                                         [p_e[1][k].tolist() for k in xrange(len(p_e[0]))], 
-                                                         [p_e[2][k].tolist() for k in xrange(len(p_e[0]))]], p_e[3]))
-                        #path_queue.task_done()                        
-                    except Empty:
-                        logging.warning("PathPlanningInterface: Error while getting element from path queue. Cancelling.") 
-                                          
-                        path_queue = Queue()                        
-                        break
-                
-                if timeout_reached:
-                    break
-                if num > 0 and len(evaluated_paths) == num:
-                    break
-                
+        res_paths = collections.deque()
+        processes = [Process(target=self.construct_and_evaluate_path, 
+                             args=(self.obstacles, path_queue, 
+                                   self.joint_constraints, 
+                                   horizon, 
+                                   P_t,)) for i in xrange(self.num_cores - 1)]
+        t0 = time.time()
+        for i in xrange(len(processes)):
+            processes[i].daemon = True
+            processes[i].start()
+        while True:
+            try:
+                res_paths.append(path_queue.get_nowait())
+            except:
+                pass
+            elapsed = time.time() - t0
+            if num != 0 and len(res_paths) == num:
+                break
+            if timeout > 0.0 and elapsed > timeout:
+                break
+        for i in xrange(len(processes)):
+            processes[i].terminate()
+        for i in xrange(len(res_paths)):
+            p_e = res_paths.pop()
+            if not len(p_e[0]) == 0:
+                evaluated_paths.append(([[p_e[0][k].tolist() for k in xrange(len(p_e[0]))], 
+                                         [p_e[1][k].tolist() for k in xrange(len(p_e[0]))], 
+                                         [p_e[2][k].tolist() for k in xrange(len(p_e[0]))]], p_e[3]))
         if len(evaluated_paths) == 0:
             logging.error("PathPlanningInterface: Couldn't generate and evaluate any paths within the given planning time")
             return [], [], [], 0.0     
@@ -142,49 +123,52 @@ class PathPlanningInterface:
                 best_val = evaluated_paths[i][1]
                 best_path = evaluated_paths[i][0]                              
         return best_path[0], best_path[1], best_path[2], len(evaluated_paths), best_val
-            
         
-    def plan_paths(self, num, sim_run, timeout=0.0):          
-        jobs = collections.deque()        
+    def plan_paths(self, num, sim_run, timeout=0.0):
+        print "num " + str(num) 
         path_queue = Queue()
-        paths = []  
-        #return self.construct_path(self.obstacles, path_queue, sim_run, self.joint_constraints)      
-        for i in xrange(num):            
-            p = Process(target=self.construct_path, args=(self.obstacles, path_queue, self.joint_constraints,))
-            p.start()            
-            jobs.append(p)
-            if len(jobs) == self.num_cores - 1 or i == num - 1:
-                if i == num - 1 and not len(jobs) == self.num_cores - 1:
-                    while not path_queue.qsize() == num % (self.num_cores - 1):
-                        time.sleep(0.00001)
-                else:
-                    while not path_queue.qsize() == self.num_cores - 1:
-                        time.sleep(0.00001)
-                jobs.clear()
-                q_size = path_queue.qsize()
-                for j in xrange(q_size):
-                    p_e = path_queue.get()                    
-                    if not len(p_e[0]) == 0:                         
-                        paths.append([[p_e[0][i].tolist() for i in xrange(len(p_e[0]))], 
-                                      [p_e[1][i].tolist() for i in xrange(len(p_e[0]))], 
-                                      [p_e[2][i].tolist() for i in xrange(len(p_e[0]))]]) 
-               
+        paths = []
+        res_paths = collections.deque()
+        processes = [Process(target=self.construct_path, 
+                             args=(self.obstacles, 
+                                   path_queue, 
+                                   self.joint_constraints,)) for i in xrange(self.num_cores - 1)]
+        t0 = time.time()
+        for i in xrange(len(processes)):
+            processes[i].daemon = True
+            processes[i].start()
+        while True:
+            try:
+                res_paths.append(path_queue.get_nowait())
+            except:
+                pass
+            elapsed = time.time() - t0
+            if len(res_paths) == num:
+                break
+            if timeout > 0.0:
+                if elapsed > timeout:
+                    break
+        for i in xrange(len(processes)):
+            processes[i].terminate()        
+        for i in xrange(len(res_paths)):
+            p_e = res_paths.pop()                                
+            if not len(p_e[0]) == 0:                         
+                paths.append([[p_e[0][i].tolist() for i in xrange(len(p_e[0]))], 
+                              [p_e[1][i].tolist() for i in xrange(len(p_e[0]))], 
+                              [p_e[2][i].tolist() for i in xrange(len(p_e[0]))]])        
         return paths
     
-    def construct_and_evaluate_path(self, obstacles, queue, joint_constraints, horizon, P_t):               
-        xs, us, zs = self._construct(obstacles, joint_constraints)        
-        eval_result = self.path_evaluator.evaluate_path([xs, us, zs], P_t, horizon)
-        print "put"
-        try:
-            queue.put((xs, us, zs, eval_result[1]), False)
-        except Full:
-            print "Queue full"
-            return
-        print "Done"
+    def construct_and_evaluate_path(self, obstacles, queue, joint_constraints, horizon, P_t):
+        while True:               
+            xs, us, zs = self._construct(obstacles, joint_constraints)        
+            eval_result = self.path_evaluator.evaluate_path([xs, us, zs], P_t, horizon)        
+            queue.put((xs, us, zs, eval_result[1]))        
     
     def construct_path(self, obstacles, queue, joint_constraints,):
-        xs, us, zs = self._construct(obstacles, joint_constraints) 
-        queue.put((xs, us, zs))        
+        while True:
+            xs, us, zs = self._construct(obstacles, joint_constraints)
+            
+            queue.put((xs, us, zs))        
         
     def _construct(self, obstacles, joint_constraints):        
         path_planner2 = libpath_planner.PathPlanner(self.kinematics,
@@ -215,7 +199,7 @@ class PathPlanningInterface:
             goal_state = util.v_double()                  
             goal_state[:] = [self.goal_states[i][j] for j in xrange(len(self.goal_states[i]))]            
             if path_planner2.isValid(goal_state):                
-                gs.append(goal_state)            
+                gs.append(goal_state)                    
         if len(gs) == 0:
             return [], [], []               
         goal_states[:] = gs        
