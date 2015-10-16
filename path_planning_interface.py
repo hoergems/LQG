@@ -95,6 +95,7 @@ class PathPlanningInterface:
                 #p.daemon = True
                 p.start()                       
                 jobs.append(p)
+                p.join()
             if len(jobs) == self.num_cores - 1:                
                 while not path_queue.qsize() == self.num_cores - 1:                                        
                     elapsed = time.time() - t0                                       
