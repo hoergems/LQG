@@ -1,7 +1,7 @@
 from path_planner import PathPlanner
 from path_evaluator import *
 from multiprocessing import Process, cpu_count, Lock, Queue
-
+from Queue import Empty, Full
 import libpath_planner
 import util
 import time
@@ -48,7 +48,7 @@ class PathPlanningInterface:
         self.link_dimensions = link_dimensions
         self.workspace_dimension = workspace_dimension        
         self.num_cores = cpu_count()
-        #self.num_cores = 2         
+        #self.num_cores = 3        
         self.obstacles = obstacles        
         self.max_velocity = max_velocity
         self.delta_t = delta_t
@@ -90,12 +90,11 @@ class PathPlanningInterface:
         timeout_reached = False
         t0 = time.time()        
         while True: 
-            while len(jobs) != self.num_cores - 1:           
+            if len(jobs) != self.num_cores - 1:           
                 p = Process(target=self.construct_and_evaluate_path, args=(self.obstacles, path_queue, self.joint_constraints, horizon, P_t,))
-                #p.daemon = True
-                p.start()                       
-                jobs.append(p)
-                p.join()
+                p.daemon = True
+                p.start()             
+                jobs.append(p)            
             if len(jobs) == self.num_cores - 1:                
                 while not path_queue.qsize() == self.num_cores - 1:                                        
                     elapsed = time.time() - t0                                       
@@ -108,8 +107,8 @@ class PathPlanningInterface:
                 print "qsize " + str(path_queue.qsize())
                 while path_queue.qsize():
                     try: 
-                        print "getting " + str(path_queue.qsize())                                          
-                        p_e = path_queue.get(True, 0.01)
+                        print "getting " + str(path_queue.qsize())
+                        p_e = path_queue.get(False)                       
                         print "got"                                                                    
                         if not len(p_e[0]) == 0:
                             if num > 0:
@@ -122,9 +121,9 @@ class PathPlanningInterface:
                                                          [p_e[1][k].tolist() for k in xrange(len(p_e[0]))], 
                                                          [p_e[2][k].tolist() for k in xrange(len(p_e[0]))]], p_e[3]))
                         #path_queue.task_done()                        
-                    except Exception as e:
+                    except Empty:
                         logging.warning("PathPlanningInterface: Error while getting element from path queue. Cancelling.") 
-                        print e                         
+                                          
                         path_queue = Queue()                        
                         break
                 
@@ -172,14 +171,16 @@ class PathPlanningInterface:
                
         return paths
     
-    def construct_and_evaluate_path(self, obstacles, queue, joint_constraints, horizon, P_t):
-        print "constructingggg"              
-        xs, us, zs = self._construct(obstacles, joint_constraints)
-        print "constructed"
+    def construct_and_evaluate_path(self, obstacles, queue, joint_constraints, horizon, P_t):               
+        xs, us, zs = self._construct(obstacles, joint_constraints)        
         eval_result = self.path_evaluator.evaluate_path([xs, us, zs], P_t, horizon)
-        print "evaluated"  
-        queue.put((xs, us, zs, eval_result[1]), True, 0.01)
         print "put"
+        try:
+            queue.put((xs, us, zs, eval_result[1]), False)
+        except Full:
+            print "Queue full"
+            return
+        print "Done"
     
     def construct_path(self, obstacles, queue, joint_constraints,):
         xs, us, zs = self._construct(obstacles, joint_constraints) 
