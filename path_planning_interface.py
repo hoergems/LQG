@@ -1,6 +1,7 @@
 from path_planner import PathPlanner
 from path_evaluator import *
-from multiprocessing import Process, Queue, cpu_count, Lock
+from multiprocessing import Process, cpu_count, Lock, Queue
+
 import libpath_planner
 import util
 import time
@@ -20,6 +21,8 @@ class PathPlanningInterface:
                              workspace_dimension, 
                              sample_size, 
                              obstacles,
+                             joint_constraints,
+                             enforce_constraints,
                              w1, 
                              w2):
         self.path_evaluator.setup(A, B, C, D, H, M, N, V, W, 
@@ -27,6 +30,8 @@ class PathPlanningInterface:
                                   workspace_dimension, 
                                   sample_size, 
                                   obstacles,
+                                  joint_constraints,
+                                  enforce_constraints,
                                   w1, 
                                   w2)
     
@@ -85,7 +90,7 @@ class PathPlanningInterface:
         timeout_reached = False
         t0 = time.time()        
         while True: 
-            if len(jobs) != self.num_cores - 1:           
+            while len(jobs) != self.num_cores - 1:           
                 p = Process(target=self.construct_and_evaluate_path, args=(self.obstacles, path_queue, self.joint_constraints, horizon, P_t,))
                 #p.daemon = True
                 p.start()                       
@@ -97,11 +102,14 @@ class PathPlanningInterface:
                         timeout_reached = True
                         for job in jobs:
                             job.terminate()
-                        break                  
+                        break                                             
                 jobs.clear()
+                print "qsize " + str(path_queue.qsize())
                 while path_queue.qsize():
-                    try:                    
-                        p_e = path_queue.get(timeout=0.01)                                              
+                    try: 
+                        print "getting " + str(path_queue.qsize())                                          
+                        p_e = path_queue.get(True, 0.01)
+                        print "got"                                                                    
                         if not len(p_e[0]) == 0:
                             if num > 0:
                                 if not len(evaluated_paths) == num:                         
@@ -113,9 +121,10 @@ class PathPlanningInterface:
                                                          [p_e[1][k].tolist() for k in xrange(len(p_e[0]))], 
                                                          [p_e[2][k].tolist() for k in xrange(len(p_e[0]))]], p_e[3]))
                         #path_queue.task_done()                        
-                    except Exception as e:                        
-                        path_queue = Queue()                                                                    
-                        #logging.warning("PathPlanningInterface: Error while getting element from path queue. Canceling.")                                              
+                    except Exception as e:
+                        logging.warning("PathPlanningInterface: Error while getting element from path queue. Cancelling.") 
+                        print e                         
+                        path_queue = Queue()                        
                         break
                 
                 if timeout_reached:
@@ -132,7 +141,7 @@ class PathPlanningInterface:
             if evaluated_paths[i][1] < best_val:
                 best_val = evaluated_paths[i][1]
                 best_path = evaluated_paths[i][0]                              
-        return best_path[0], best_path[1], best_path[2], len(evaluated_paths)
+        return best_path[0], best_path[1], best_path[2], len(evaluated_paths), best_val
             
         
     def plan_paths(self, num, sim_run, timeout=0.0):          
@@ -162,14 +171,14 @@ class PathPlanningInterface:
                
         return paths
     
-    def construct_and_evaluate_path(self, obstacles, queue, joint_constraints, horizon, P_t):              
+    def construct_and_evaluate_path(self, obstacles, queue, joint_constraints, horizon, P_t):
+        print "constructingggg"              
         xs, us, zs = self._construct(obstacles, joint_constraints)
+        print "constructed"
         eval_result = self.path_evaluator.evaluate_path([xs, us, zs], P_t, horizon)
-                           
-        queue.put((xs, us, zs, eval_result[1]))           
-        #queue.put((xs, us, zs, 0.0))
-            
-        
+        print "evaluated"  
+        queue.put((xs, us, zs, eval_result[1]), True, 0.01)
+        print "put"
     
     def construct_path(self, obstacles, queue, joint_constraints,):
         xs, us, zs = self._construct(obstacles, joint_constraints) 

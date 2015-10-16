@@ -90,7 +90,8 @@ def get_goal_states(problem,
                                     "environment/env.xml",
                                     planning_algorithm)
         ik_solutions = ik_solution_generator.generate(theta_0, goal_position, workspace_dimension)
-            
+        if len(ik_solutions) == 0:
+            return None
         serializer.serialize_ik_solutions([ik_solutions[i] for i in xrange(len(ik_solutions))], path='tmp/' + problem, file='goalstates.txt')
         copyToTmp(problem)    
     else:

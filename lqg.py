@@ -146,7 +146,7 @@ class LQG:
                                      self.w1,
                                      self.w2)
                 t0 = time.time() 
-                xs, us, zs = path_evaluator.evaluate_paths(paths, P_t)
+                xs, us, zs, objective, collision_free_probability = path_evaluator.evaluate_paths(paths, P_t)
                 mean_planning_time = time_to_generate_paths + (time.time() - t0)
                 #mean_planning_times.append(time_to_generate_paths + (time.time() - t0))
                                 
@@ -214,8 +214,11 @@ class LQG:
                 except:
                     pass
                 '''
-                serializer.write_line("log.log", "tmp/lqg", "Mean num collisions per run: " + str(num_collisions / self.num_simulation_runs) + " \n")    
-                print "col " + str(num_collisions / self.num_simulation_runs)
+                serializer.write_line("log.log", "tmp/lqg", "Objective value of best path: " + str(objective) + " \n")
+                serializer.write_line("log.log", "tmp/lqg", "Collision free probability of best path: " + str(collision_free_probability) + " \n")
+                serializer.write_line("log.log", "tmp/lqg", "Mean num collisions per run: " + str(float(num_collisions) / float(self.num_simulation_runs)) + " \n")
+                print "total num collisions " + str(num_collisions)    
+                print "mean num collisions " + str(float(num_collisions) / float(self.num_simulation_runs))
                 serializer.write_line("log.log", "tmp/lqg", "Length best path: " + str(len(xs)) + " \n")
                 serializer.write_line("log.log", 
                                       "tmp/lqg", 

@@ -37,8 +37,7 @@ class PathEvaluator:
         self.joint_constraints = joint_constraints
         self.enforce_constraints = enforce_constraints
         self.sample_size = sample_size
-        self.num_cores = cpu_count() - 1
-        #self.num_cores = 2
+        self.num_cores = cpu_count() - 1     
         self.w1 = w1
         self.w2 = w2
         self.workspace_dimension = workspace_dimension
@@ -66,7 +65,7 @@ class PathEvaluator:
                 break
         return valid
 
-    def get_probability_of_collision(self, mean, cov):
+    def get_probability_of_collision_free(self, mean, cov):
         with self.mutex:
             np.random.seed()              
         samples = multivariate_normal.rvs(mean, cov, self.sample_size)        
@@ -189,6 +188,7 @@ class PathEvaluator:
         else:
             traces_sums = [evaluated_paths[i][0][1] / traces_sum for i in xrange(len(evaluated_paths))]
         best_path = evaluated_paths[0][1]
+        best_collision_probability = collision_sums[0]
         best_objective = self.w1 * collision_sums[0] + self.w2 * traces_sums[0] 
         best_cov = evaluated_paths[0][2]
         for i in xrange(1, len(collision_sums)):
@@ -196,15 +196,16 @@ class PathEvaluator:
             if val > best_objective:
                 best_objective = val
                 best_path = evaluated_paths[i][1]
+                best_collision_probability = collision_sums[i]                
+                
                 best_cov = evaluated_paths[i][2]
         logging.info("PathEvaluator: Objective value for the best path is " + str(best_objective))
-        return best_path
+        return best_path[0], best_path[1], best_path[2], best_objective, best_collision_probability
     
     def evaluate(self, index, eval_queue, path, P_t, horizon):
         xs = path[0]
         us = path[1]
-        zs = path[2]        
-            
+        zs = path[2]
         horizon_L = horizon + 1 
         if horizon == -1 or len(xs) < horizon:            
             horizon_L = len(xs)                
@@ -221,11 +222,11 @@ class PathEvaluator:
         collision_probs = []
         
         if len(self.obstacles) > 0 and np.trace(self.M) != 0.0:                               
-            probs = self.get_probability_of_collision(xs[0], P_t)
+            probs = self.get_probability_of_collision_free(xs[0], P_t)
             collision_probs.append(probs)
          
-        Cov = 0    
-        for i in xrange(1, horizon_L):                         
+        Cov = 0        
+        for i in xrange(1, horizon_L):
             P_hat_t = kalman.compute_p_hat_t(self.A, P_t, self.V, self.M)
             K_t = kalman.compute_kalman_gain(self.H, P_hat_t, self.W, self.N)
             P_t = kalman.compute_P_t(K_t, self.H, P_hat_t, len(self.link_dimensions))
@@ -253,7 +254,7 @@ class PathEvaluator:
             #EE_covariance = np.array([[EE_covariance[j, k] for k in xrange(2)] for j in xrange(2)])
             probs = 0.0
             if len(self.obstacles) > 0 and np.trace(self.M) != 0.0:                               
-                probs = self.get_probability_of_collision(xs[i], cov_state)
+                probs = self.get_probability_of_collision_free(xs[i], cov_state)
                 collision_probs.append(probs)
             else:
                 collision_probs.append(1.0)
@@ -265,7 +266,7 @@ class PathEvaluator:
                collision_sum *= collision_probs[i]  
             #collision_sum = sum(collision_probs) / len(collision_probs)       
             #collision_sum = sum(collision_probs) / float(horizon_L)
-            #collision_sum = max(collision_probs)                  
+            #collision_sum = max(collision_probs)
         tr = np.trace(EE_covariance)        
         logging.info("========================================")
         logging.info("PathEvaluator: collision sum for path " + 

@@ -274,21 +274,14 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
         cout << "Solution path has length " << solution_path->getStates().size() << endl;
     } 
     
-    std::vector<double> vals;
-    std::vector<double> old_vals;
+    std::vector<double> vals;    
     std::vector<std::vector<double> > temp_vals;    
     const bool cont_check = true;
     for (size_t i=1; i<solution_path->getStates().size(); i++) {
-       vals.clear();
-       old_vals.clear();
-       for (int j=0; j<dim_; j++) {
-          old_vals.push_back(solution_path->getState(i-1)->as<ompl::base::RealVectorStateSpace::StateType>()->values[j]);
+       vals.clear();       
+       for (int j=0; j<dim_; j++) {          
           vals.push_back(solution_path->getState(i)->as<ompl::base::RealVectorStateSpace::StateType>()->values[j]); 
-       }  
-       if (!mv->checkMotion(old_vals, vals, cont_check)) {
-    	   cout << "whaaaaaaaaaaaaaaat" << endl;
-    	   sleep(20);
-       }       
+       }     
        solution_vector.push_back(vals);  
        
     }   

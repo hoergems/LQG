@@ -63,7 +63,9 @@ class MPC:
                                            self.max_velocity, 
                                            self.delta_t, 
                                            self.use_linear_path, 
-                                           self.joint_constraints)
+                                           self.joint_constraints,
+                                           self.enforce_constraints,                                           
+                                           self.planning_algorithm)
         
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.link_dimensions)
         self.goal_states = get_goal_states("mpc", 
@@ -74,8 +76,12 @@ class MPC:
                                            self.max_velocity,
                                            self.delta_t,
                                            self.joint_constraints,
+                                           self.enforce_constraints,                                           
                                            self.theta_0,
-                                           self.goal_position)        
+                                           self.goal_position,
+                                           self.planning_algorithm)
+        if self.goal_states == None:
+            return         
         
         if check_positive_definite([C, D]):            
             m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)
@@ -154,6 +160,8 @@ class MPC:
                                                               self.workspace_dimension, 
                                                               self.sample_size, 
                                                               obstacles,
+                                                              self.joint_constraints,
+                                                              self.enforce_constraints,                                                              
                                                               self.w1,
                                                               self.w2)
             self.sim.setup_problem(A, B, C, D, H, V, W, M, N, 
@@ -162,7 +170,8 @@ class MPC:
                                    self.goal_radius, 
                                    self.link_dimensions,
                                    self.workspace_dimension, 
-                                   self.joint_constraints)            
+                                   self.joint_constraints,
+                                   self.enforce_constraints)            
             self.sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)            
             
             cartesian_coords = []            
@@ -189,16 +198,14 @@ class MPC:
                 total_reward = 0.0
                 
                 current_step = 0                
-                terminal = False                      
-                estimated_states = []
-                estimated_covariances = []             
+                terminal = False                         
                 while current_step < self.max_num_steps and not terminal:                    
                     mean_number_planning_steps += 1.0
                     t0 = time.time()                    
                     self.path_planning_interface.set_start_and_goal(x_estimate, self.goal_states)
                     
                     logging.info("MPC: Constructing paths")
-                    xs, us, zs, num_generated_paths = self.path_planning_interface.plan_and_evaluate_paths(self.num_paths, 0, horizon, P_t, self.timeout)
+                    xs, us, zs, num_generated_paths, best_val = self.path_planning_interface.plan_and_evaluate_paths(self.num_paths, 0, horizon, P_t, self.timeout)
                     
                     t_e = time.time() - t0
                     mean_planning_time_per_run += t_e  
@@ -212,6 +219,8 @@ class MPC:
                         current_step += 1                                             
                         break                         
                     logging.warn("MPC: Generated " + str(num_generated_paths) + " paths in " + str(t_e) + " seconds")
+                    logging.warn("MPC: Length of best path is " + str(len(xs)))
+                    logging.warn("MPC: Success probability of best path: " + str(best_val))
                     x_tilde = np.array([0.0 for i in xrange(len(self.link_dimensions))])
                     n_steps = self.num_execution_steps
                     if n_steps > len(xs) - 1:
@@ -242,10 +251,7 @@ class MPC:
                         successful_runs += 1
                         
                     for history_entry in history_entries:                        
-                        history_entry.serialize("tmp/mpc" + str(self.num_execution_steps), "log.log")    
-                         
-                    estimated_states.extend(estimated_s)
-                    estimated_covariances.extend(estimated_c)                   
+                        history_entry.serialize("tmp/mpc" + str(self.num_execution_steps), "log.log")         
                     logging.warn("MPC: Execution finished. True state is " + str(x_true))
                     logging.warn("MPC: Estimated state is " + str(x_estimate)) 
                     logging.warn("MPC: terminal " + str(terminal))
@@ -371,7 +377,9 @@ class MPC:
         self.horizon = config['horizon']
         self.max_num_steps = config['max_num_steps']
         self.verbose = config['verbose']
-        self.joint_constraints = [-config['joint_constraint'], config['joint_constraint']]
+        self.joint_constraints = config['joint_constraints']
+        self.enforce_constraints = config['enforce_constraints']
+        self.planning_algorithm = config['planning_algorithm']
         self.sample_size = config['sample_size']  
         self.workspace_dimension = config['workspace_dimension']
         self.w1 = config['w1']
