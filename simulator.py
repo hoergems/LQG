@@ -138,31 +138,27 @@ class Simulator:
                 
                 """
                 Kalman prediction and update
-                """                
-                x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
-                x_tilde, P_t = kalman.kalman_update(x_tilde_dash, 
-                                                    z_dash, 
-                                                    self.H, 
-                                                    P_dash, 
-                                                    self.W, 
-                                                    self.N, 
-                                                    len(self.link_dimensions))
-                x_estimate_new = x_estimate 
-                if not collided:                
+                """ 
+                if not collided:               
+                    x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
+                    x_tilde, P_t = kalman.kalman_update(x_tilde_dash, 
+                                                        z_dash, 
+                                                        self.H, 
+                                                        P_dash, 
+                                                        self.W, 
+                                                        self.N, 
+                                                        len(self.link_dimensions))
                     x_estimate_new = x_tilde + xs[i + 1]
-                '''if self.enforce_constraints:                                 
-                    x_estimate_new = self.check_constraints(x_estimate_new)'''                    
-                if not self.is_in_collision([], x_estimate_new):                                                        
-                    x_estimate = x_estimate_new
-                else:                    
-                    print "Estimate collides"
-                    print x_tilde                                    
-                        
-                estimated_states.append(x_estimate)
-                estimated_covariances.append(P_t)
-                
-                history_entries[-1].set_collided(collided)
-                history_entries[-1].set_terminal(terminal_state_reached)
+                    '''if self.enforce_constraints:                                 
+                        x_estimate_new = self.check_constraints(x_estimate_new)'''                                        
+                    if not self.is_in_collision([], x_estimate_new):                                                                                
+                        x_estimate = x_estimate_new    
+                            
+                    estimated_states.append(x_estimate)
+                    estimated_covariances.append(P_t)
+                    
+                    history_entries[-1].set_collided(collided)
+                    history_entries[-1].set_terminal(terminal_state_reached)
         return (x_true, 
                 x_tilde, 
                 x_estimate, 
@@ -184,37 +180,40 @@ class Simulator:
         return state
     
     
-    def is_in_collision(self, previous_state, state):
+    def is_in_collision(self, previous_state, state, p=False):
         """
         Is the given end effector position in collision with an obstacle?
         """
         #previous_state = []
-        if len(previous_state) == 0:                
-            joint_angles = v_double()
-            joint_angles[:] = state
-            collision_structures = self.utils.createManipulatorCollisionStructures(joint_angles,
-                                                                                   self.link_dimensions, 
-                                                                                   self.kinematics)
-            for obstacle in self.obstacles:
-                if obstacle.inCollisionDiscrete(collision_structures):                               
-                    return True
-            return False        
-        joint_angles_start = v_double()
+                    
         joint_angles_goal = v_double()
-        joint_angles_start[:] = previous_state
-        joint_angles_goal[:] = previous_state
-        
-        collision_objects_start = self.utils.createManipulatorCollisionObjects(joint_angles_start,
-                                                                               self.link_dimensions,
+        joint_angles_goal[:] = state
+        collision_structures = self.utils.createManipulatorCollisionStructures(joint_angles_goal,
+                                                                               self.link_dimensions, 
                                                                                self.kinematics)
-        collision_objects_goal = self.utils.createManipulatorCollisionObjects(joint_angles_goal,
-                                                                              self.link_dimensions,
-                                                                              self.kinematics)
         for obstacle in self.obstacles:
-            for i in xrange(len(collision_objects_start)):
-                if obstacle.inCollisionContinuous([collision_objects_start[i], collision_objects_goal[i]]):
-                    return True
-        return False
+            if obstacle.inCollisionDiscrete(collision_structures):                               
+                return True
+        return False  
+        
+        if len(previous_state) > 0:
+            """
+            Perform continuous collision checking if previous state is provided
+            """
+            joint_angles_start = v_double()        
+            joint_angles_start[:] = previous_state        
+            
+            collision_objects_start = self.utils.createManipulatorCollisionObjects(joint_angles_start,
+                                                                                   self.link_dimensions,
+                                                                                   self.kinematics)
+            collision_objects_goal = self.utils.createManipulatorCollisionObjects(joint_angles_goal,
+                                                                                  self.link_dimensions,
+                                                                                  self.kinematics)
+            for obstacle in self.obstacles:
+                for i in xrange(len(collision_objects_start)):
+                    if obstacle.inCollisionContinuous([collision_objects_start[i], collision_objects_goal[i]]):
+                        return True
+            return False
     
     def is_terminal(self, ee_position):        
         if np.linalg.norm(ee_position - self.goal_position) < self.goal_radius:                       

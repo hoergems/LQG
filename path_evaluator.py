@@ -248,8 +248,14 @@ class PathEvaluator:
                                  np.hstack((NU, L))))                  
                    
             Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))                     
-            cov_state = np.array([[Cov[j, k] for k in xrange(len(self.link_dimensions))] for j in xrange(len(self.link_dimensions))])               
-            jacobian = self.get_jacobian([l[0] for l in self.link_dimensions], xs[i])                                             
+            cov_state = np.array([[Cov[j, k] for k in xrange(len(self.link_dimensions))] for j in xrange(len(self.link_dimensions))])
+            try:               
+                jacobian = self.get_jacobian([l[0] for l in self.link_dimensions], xs[i])
+            except Exception as e:
+                print e
+                print xs
+                print "i " + str(i) 
+                sleep                                            
             EE_covariance = np.dot(np.dot(jacobian, cov_state), jacobian.T)
             #EE_covariance = np.array([[EE_covariance[j, k] for k in xrange(2)] for j in xrange(2)])
             probs = 0.0
