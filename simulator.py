@@ -27,7 +27,8 @@ class Simulator:
                       link_dimensions,                      
                       workspace_dimension,
                       joint_constraints,
-                      enforce_constraints):
+                      enforce_constraints,
+                      joint_velocity_limit):
         self.A = A
         self.B = B
         self.C = C
@@ -43,7 +44,8 @@ class Simulator:
         self.link_dimensions = link_dimensions 
         self.workspace_dimension = workspace_dimension   
         self.joint_constraints = joint_constraints 
-        self.enforce_constraints = enforce_constraints       
+        self.enforce_constraints = enforce_constraints 
+        self.joint_velocity_limit = joint_velocity_limit      
         
     def setup_reward_function(self, discount_factor, step_penalty, illegal_move_penalty, exit_reward):
         self.discount_factor = discount_factor
@@ -67,7 +69,13 @@ class Simulator:
         self.num_simulation_runs = num_simulation_runs        
         self.stop_when_terminal = stop_when_terminal
         
-    
+    def enforce_velocity_limit(self, u):        
+        for i in xrange(len(u)):
+            if u[i] < -self.joint_velocity_limit:
+                u[i] = self.joint_velocity_limit
+            elif u[i] > self.joint_velocity_limit:
+                u[i] = self.joint_velocity_limit
+        return u
     
     def simulate_n_steps(self,
                          xs, us, zs,
@@ -99,8 +107,7 @@ class Simulator:
                                                     0.0))
                                 
                 u_dash = np.dot(Ls[i], x_tilde)                
-                u = np.add(u_dash, us[i])
-                
+                u = self.enforce_velocity_limit(np.add(u_dash, us[i]))                
                 history_entries[-1].set_action(u)
                         
                 x_true_temp = self.apply_control(x_true, 

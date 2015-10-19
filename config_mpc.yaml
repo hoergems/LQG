@@ -14,7 +14,7 @@ num_simulation_runs: 2
 workspace_dimension: 2
 
 # Maximum angular velocity of the joints (in rad/sec)
-max_velocity: 2.0
+max_velocity: 1.0
 
 # The joint control rate
 control_rate: 30.0
@@ -32,7 +32,7 @@ goal_radius: 0.2
 num_bins: 201
 
 # The minimum joint state covariance
-min_covariance: 0.02
+min_covariance: 0.002
 
 # The maximum joint state covariance
 max_covariance: 0.02
@@ -73,20 +73,20 @@ stop_when_terminal: True
 
 # Number of samples drawn from the state distribution at step i 
 # in order to evaluate collision probability
-sample_size: 100
+sample_size: 50
 
 ######## MPC parameters ############
 
 # The number of steps a path gets evaluated for (-1 => Evaluate full path)
 horizon: -1
 
-max_num_steps: 200
+max_num_steps: 500
 
 # The maximum number of steps a path gets executed before replanning
 num_execution_steps: 10
 
 # Maximum allowed planning time per step
-timeout: 2.0
+timeout: 10.0
 
 
 

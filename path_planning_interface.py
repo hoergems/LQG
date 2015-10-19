@@ -168,8 +168,7 @@ class PathPlanningInterface:
     
     def construct_path(self, obstacles, queue, joint_constraints,):
         while True:
-            xs, us, zs = self._construct(obstacles, joint_constraints)
-            
+            xs, us, zs = self._construct(obstacles, joint_constraints)            
             queue.put((xs, us, zs))        
         
     def _construct(self, obstacles, joint_constraints):        
@@ -228,7 +227,7 @@ class PathPlanningInterface:
         
         new_path = []                   
         for i in xrange(len(path) - 1):
-            u = (np.array(path[i + 1]) - np.array(path[i])) / self.delta_t
+            u = (np.array(path[i + 1]) - np.array(path[i])) / self.delta_t                       
             new_path.append([path[i], u, path[i]])
         new_path.append([path[-1], np.array([0.0 for i in xrange(len(self.link_dimensions))]), path[-1]])
         xs = [np.array(new_path[i][0]) for i in xrange(len(path))]

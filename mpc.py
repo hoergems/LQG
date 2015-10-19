@@ -171,7 +171,8 @@ class MPC:
                                    self.link_dimensions,
                                    self.workspace_dimension, 
                                    self.joint_constraints,
-                                   self.enforce_constraints)            
+                                   self.enforce_constraints,
+                                   self.max_velocity)            
             self.sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)            
             
             cartesian_coords = []            
