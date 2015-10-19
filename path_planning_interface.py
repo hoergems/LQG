@@ -92,6 +92,7 @@ class PathPlanningInterface:
                                    horizon, 
                                    P_t,)) for i in xrange(self.num_cores - 1)]
         t0 = time.time()
+        print "Path planning interface: " + str(len(processes)) + " processes started"
         for i in xrange(len(processes)):
             processes[i].daemon = True
             processes[i].start()
@@ -105,6 +106,7 @@ class PathPlanningInterface:
                 break
             if timeout > 0.0 and elapsed > timeout:
                 break
+            time.sleep(0.000001)
         for i in xrange(len(processes)):
             processes[i].terminate()
         for i in xrange(len(res_paths)):
@@ -115,7 +117,7 @@ class PathPlanningInterface:
                                          [p_e[2][k].tolist() for k in xrange(len(p_e[0]))]], p_e[3]))
         if len(evaluated_paths) == 0:
             logging.error("PathPlanningInterface: Couldn't generate and evaluate any paths within the given planning time")
-            return [], [], [], 0.0     
+            return [], [], [], 0.0, 0.0    
         best_val = evaluated_paths[0][1]
         best_path = evaluated_paths[0][0]        
         for i in xrange(1, len(evaluated_paths)):

@@ -207,7 +207,7 @@ class PathEvaluator:
         us = path[1]
         zs = path[2]
         horizon_L = horizon + 1 
-        if horizon == -1 or len(xs) < horizon:            
+        if horizon == -1 or len(xs) < horizon_L:            
             horizon_L = len(xs)                
         Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, horizon_L - 1)
         NU = np.array([[0.0 for i in xrange(len(self.link_dimensions))] for i in xrange(len(self.link_dimensions))])
@@ -254,7 +254,9 @@ class PathEvaluator:
             except Exception as e:
                 print e
                 print xs
-                print "i " + str(i) 
+                print "len(xs) " + str(len(xs))
+                print "i " + str(i)
+                print "horizon_l " + str(horizon_L) 
                 sleep                                            
             EE_covariance = np.dot(np.dot(jacobian, cov_state), jacobian.T)
             #EE_covariance = np.array([[EE_covariance[j, k] for k in xrange(2)] for j in xrange(2)])

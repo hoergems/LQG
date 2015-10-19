@@ -77,8 +77,8 @@ sample_size: 50
 
 ######## MPC parameters ############
 
-# The number of steps a path gets evaluated for
-horizon: -1
+# The number of steps a path gets evaluated for (-1 => Evaluate full path)
+horizon: 5
 
 max_num_steps: 200
 
@@ -86,7 +86,7 @@ max_num_steps: 200
 num_execution_steps: 20
 
 # Maximum allowed planning time per step
-timeout: 5.0
+timeout: 1.0
 
 
 
