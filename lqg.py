@@ -159,7 +159,8 @@ class LQG:
                                   self.link_dimensions, 
                                   config['workspace_dimension'], 
                                   self.joint_constraints,
-                                  self.enforce_constraints)
+                                  self.enforce_constraints,
+                                  self.max_velocity)
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
                 
                 successes = 0
@@ -212,6 +213,10 @@ class LQG:
                 except:
                     pass
                 '''
+                serializer.write_line("log.log", "tmp/lqg", "################################# \n")
+                serializer.write_line("log.log",
+                                      "tmp/lqg",
+                                      "Process covariance: " + str(m_covs[j]) + " \n")
                 serializer.write_line("log.log", "tmp/lqg", "Objective value of best path: " + str(objective) + " \n")
                 serializer.write_line("log.log", "tmp/lqg", "Collision free probability of best path: " + str(collision_free_probability) + " \n")
                 serializer.write_line("log.log", "tmp/lqg", "Mean num collisions per run: " + str(float(num_collisions) / float(self.num_simulation_runs)) + " \n")
