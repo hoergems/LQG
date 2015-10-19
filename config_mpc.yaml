@@ -26,22 +26,22 @@ init_joint_angles: [0.0, 0.0, 0.0]
 goal_position: [-0.1, 2.5, 0.0]
 
 # The radius around the goal position to define the end effector's goal area
-goal_radius: 0.04
+goal_radius: 0.2
 
 #Number of bins for the histograms
 num_bins: 201
 
 # The minimum joint state covariance
-min_covariance: 0.0002
+min_covariance: 0.02
 
 # The maximum joint state covariance
-max_covariance: 0.002
+max_covariance: 0.02
 
 # The number of covariance steps
 covariance_steps: 1
 
 # The observation covariance
-observation_covariance: 0.0
+observation_covariance: 0.0001
 
 # Path evaluation weights
 # Weight for the collision probability
@@ -73,7 +73,7 @@ stop_when_terminal: True
 
 # Number of samples drawn from the state distribution at step i 
 # in order to evaluate collision probability
-sample_size: 50
+sample_size: 100
 
 ######## MPC parameters ############
 
@@ -83,10 +83,10 @@ horizon: -1
 max_num_steps: 200
 
 # The maximum number of steps a path gets executed before replanning
-num_execution_steps: 20
+num_execution_steps: 10
 
 # Maximum allowed planning time per step
-timeout: 1.0
+timeout: 2.0
 
 
 

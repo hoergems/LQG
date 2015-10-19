@@ -20,8 +20,13 @@ class Serializer:
             os.makedirs("tmp/" + str(alg))
         for file in glob.glob(os.path.join("tmp/" + alg, "log.log")):
             os.remove(file)
-        
-        
+            
+    def read_process_covariance(self, path, filename=None):
+        if filename == None:
+            with open(path, 'r') as f:
+                for line in f:
+                    if "Process covariance:" in line:
+                        return float(line.strip().split(": ")[1])
         
     def read_config(self, filename=None, path=""):        
         if filename == None:

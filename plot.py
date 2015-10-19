@@ -17,8 +17,63 @@ def plot_2d_three_sets(sets, axis='xy', xrange=[0.0, 1.0], yrange=[0.0, 1.0]):
     plt.xlim([xrange[0], xrange[1]])
     plt.ylim([yrange[0], yrange[1]])
     plt.show()
-    
+
 def plot_2d_n_sets(sets,
+                   circles=[], 
+                   labels=[], 
+                   xlabel='x', 
+                   ylabel='y', 
+                   axis='xy', 
+                   x_range=[0.0, 1.0], 
+                   y_range=[0.0, 1.0], 
+                   plot_type='lines', 
+                   show_legend=True,
+                   idx=None, 
+                   lw=5,
+                   color_map=[],
+                   save=False,
+                   path="",
+                   filename="emd.png"):
+    ps = []    
+    if len(labels) != len(sets):         
+        labels=['default' for i in xrange(len(sets))]
+    if len(color_map) == 0:
+        color_map = ['#000000' for i in xrange(len(sets))]
+    fig = plt.figure()   
+    if plot_type == 'lines':
+        for i in xrange(len(sets)):
+            if i == idx:                
+                p, = plt.plot(sets[i][:,0], sets[i][:,1], color_map[i], label=labels[i], linewidth=lw)
+            else:                
+                p, = plt.plot(sets[i][:,0], sets[i][:,1], color_map[i], label=labels[i])
+            ps.append(p)
+        if show_legend:
+            plt.legend(ps)
+    else:        
+        ax = fig.add_subplot(111)
+        for i in xrange(len(sets)):
+            ax.scatter(sets[i][:,0], sets[i][:,1], c=np.random.rand(3,1), label=labels[i], s=13)
+        if show_legend:
+            plt.legend(loc='upper left')            
+    for circle in circles:               
+        ax = fig.add_subplot(111)
+        circ = plt.Circle((circle[0], circle[1]), radius=circle[2], color='g', fill=True)
+        ax.add_patch(circ)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.xlim([x_range[0], x_range[1]])
+    plt.ylim([y_range[0], y_range[1]]) 
+    
+    if save:
+        for file in glob.glob(os.path.join(path, filename)):
+            os.remove(file)
+        plt.savefig(os.path.join(path, filename))
+        plt.clf()
+        return
+    plt.show()
+    plt.clf()
+    
+'''def plot_2d_n_sets(sets,
                    colors=[], 
                    labels=[], 
                    xlabel='x', 
@@ -48,8 +103,9 @@ def plot_2d_n_sets(sets,
                     p, = plt.plot(sets[i][:,0], sets[i][:,1], label=labels[i], c=colors[i], linewidth=lw)
             else:
                 if colors[i] == None:
+                    print sets[i][0]
                     p, = plt.plot(sets[i][:,0], sets[i][:,1], label=labels[i])
-                else:
+                else:                    
                     p, = plt.plot(sets[i][:,0], sets[i][:,1], c=colors[i], label=labels[i])
             ps.append(p)
         if show_legend:
@@ -86,7 +142,7 @@ def plot_2d_n_sets(sets,
             pp.close()
         return
     plt.show()
-    plt.close('all')
+    plt.close('all')'''
     
     
     

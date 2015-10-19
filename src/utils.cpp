@@ -117,13 +117,6 @@ std::vector<std::vector<double>> Utils::getLinkDimensions(const std::string &mod
                 }
             }
         }
-    } 
-    for (size_t i = 0; i < link_dimensions.size(); i++) {
-    	cout << "link " << i << " dimensions: ";
-    	for (size_t j = 0; j < link_dimensions[i].size(); j++) {
-    		cout << link_dimensions[i][j] << ", ";
-    	}
-    	cout << endl;
     }
     
     return link_dimensions;

@@ -126,8 +126,7 @@ class PathPlanningInterface:
                 best_path = evaluated_paths[i][0]                              
         return best_path[0], best_path[1], best_path[2], len(evaluated_paths), best_val
         
-    def plan_paths(self, num, sim_run, timeout=0.0):
-        print "num " + str(num) 
+    def plan_paths(self, num, sim_run, timeout=0.0):        
         path_queue = Queue()
         paths = []
         res_paths = collections.deque()
@@ -150,6 +149,7 @@ class PathPlanningInterface:
             if timeout > 0.0:
                 if elapsed > timeout:
                     break
+            time.sleep(0.0001)
         for i in xrange(len(processes)):
             processes[i].terminate()        
         for i in xrange(len(res_paths)):

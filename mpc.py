@@ -253,8 +253,11 @@ class MPC:
                     for history_entry in history_entries:                        
                         history_entry.serialize("tmp/mpc" + str(self.num_execution_steps), "log.log")         
                     logging.warn("MPC: Execution finished. True state is " + str(x_true))
-                    logging.warn("MPC: Estimated state is " + str(x_estimate)) 
+                    logging.warn("MPC: Estimated state is " + str(x_estimate))
+                    logging.warn("MPC: Executed " + str(current_step) + " steps") 
                     logging.warn("MPC: terminal " + str(terminal))
+                    if terminal:
+                        print "MPC: Final state: " + str(x_true)
                 rewards_cov.append(total_reward)
                 serializer.write_line("log.log", 
                                       "tmp/mpc" + str(self.num_execution_steps), 
@@ -273,7 +276,17 @@ class MPC:
             logging.info("MPC: Finished simulations for covariance value  " + 
                          str(m_covs[j]))
             
+            #serializer.save_stats([np.asscalar(m_covs[i]) for i in xrange(len(m_covs))], "stats/mpc" + str(self.num_execution_steps))
+            
             n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))
+            
+            serializer.write_line("log.log",
+                                  "tmp/mpc" + str(self.num_execution_steps),
+                                  "################################ \n")            
+            
+            serializer.write_line("log.log",
+                                  "tmp/mpc" + str(self.num_execution_steps),
+                                  "Process covariance: " + str(m_covs[j]) + " \n")
             
             serializer.write_line("log.log", 
                                   "tmp/mpc" + str(self.num_execution_steps), 

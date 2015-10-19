@@ -10,6 +10,7 @@ class HistoryEntry:
                  observation,
                  covariance,
                  collided,
+                 estimate_collided,
                  terminal,
                  reward):
         self.t = t        
@@ -19,6 +20,7 @@ class HistoryEntry:
         self.observation = observation
         self.covariance = covariance
         self.collided = collided
+        self.estimate_collided = estimate_collided
         self.terminal = terminal
         self.reward = reward
         
@@ -33,6 +35,9 @@ class HistoryEntry:
         
     def set_collided(self, collided):
         self.collided = collided
+        
+    def set_estimate_collided(self, collided):
+        self.estimate_collided = collided
         
     def set_terminal(self, terminal):
         self.terminal = terminal
@@ -57,21 +62,30 @@ class HistoryEntry:
                     p_str += str(self.covariance[i][j]) + " "
             f.write(p_str + " \n") 
             
-            action_str = "A: "            
-            for i in xrange(len(self.action)):
-                action_str += str(self.action[i]) + " "
-            f.write(action_str + " \n")
+            if not self.terminal:
+                action_str = "A: "            
+                for i in xrange(len(self.action)):
+                    action_str += str(self.action[i]) + " "
+                f.write(action_str + " \n")
             
-            obs_str = "O: " 
-            for i in xrange(len(self.observation)):
-                obs_str += str(self.observation[i]) + " "
-            f.write(obs_str + " \n") 
+            
+                obs_str = "O: " 
+                for i in xrange(len(self.observation)):
+                    obs_str += str(self.observation[i]) + " "
+                f.write(obs_str + " \n") 
             
             rew_str = "R: " + str(self.reward)
             f.write(rew_str + " \n")
             
             coll_string = "collided: "
             if self.collided:
+                coll_string += "true"
+            else:
+                coll_string += "false"
+            f.write(coll_string + " \n")
+            
+            coll_string = "estimate collided: "
+            if self.estimate_collided:
                 coll_string += "true"
             else:
                 coll_string += "false"

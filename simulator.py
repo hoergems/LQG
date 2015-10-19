@@ -95,6 +95,7 @@ class Simulator:
                                                     P_t,
                                                     False,
                                                     False,
+                                                    False,
                                                     0.0))
                                 
                 u_dash = np.dot(Ls[i], x_tilde)                
@@ -109,9 +110,9 @@ class Simulator:
                                                  self.V, 
                                                  self.M)                
                 discount = np.power(self.discount_factor, current_step + i)
-                collided = False                         
+                collided = False        
                 if self.is_in_collision(x_true, x_true_temp):
-                    logging.warn("Simulator: Collision detected. Setting state estimate to the previous state")
+                    logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
                     total_reward += discount * (-1.0 * self.illegal_move_penalty)
                     history_entries[-1].set_reward(-1.0 * self.illegal_move_penalty)
                     collided = True
@@ -124,13 +125,7 @@ class Simulator:
                 state[:] = x_true   
                 ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
                 ee_position = np.array([ee_position_arr[j] for j in xrange(len(ee_position_arr))])
-                logging.info("Simulator: Current end-effector position is " + str(ee_position))
-                if self.is_terminal(ee_position):
-                    terminal_state_reached = True                        
-                    total_reward += discount * self.exit_reward
-                    history_entries[-1].set_reward(self.exit_reward)
-                    success = True                      
-                    logging.info("Terminal state reached: reward = " + str(total_reward))                                  
+                logging.info("Simulator: Current end-effector position is " + str(ee_position))                                                 
                     
                 z = self.get_observation(x_true, self.H, self.N, self.W)
                 z_dash = np.subtract(z, zs[i+1])
@@ -139,26 +134,48 @@ class Simulator:
                 """
                 Kalman prediction and update
                 """ 
-                if not collided:               
-                    x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
-                    x_tilde, P_t = kalman.kalman_update(x_tilde_dash, 
-                                                        z_dash, 
-                                                        self.H, 
-                                                        P_dash, 
-                                                        self.W, 
-                                                        self.N, 
-                                                        len(self.link_dimensions))
-                    x_estimate_new = x_tilde + xs[i + 1]
-                    '''if self.enforce_constraints:                                 
-                        x_estimate_new = self.check_constraints(x_estimate_new)'''                                        
-                    if not self.is_in_collision([], x_estimate_new):                                                                                
-                        x_estimate = x_estimate_new    
+                #if not collided:               
+                x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
+                x_tilde, P_t = kalman.kalman_update(x_tilde_dash, 
+                                                    z_dash, 
+                                                    self.H, 
+                                                    P_dash, 
+                                                    self.W, 
+                                                    self.N, 
+                                                    len(self.link_dimensions))
+                x_estimate_new = x_tilde + xs[i + 1]
+                
+                if self.enforce_constraints:                                 
+                    x_estimate_new = self.check_constraints(x_estimate_new) 
+                estimate_collided = True                                       
+                if not self.is_in_collision([], x_estimate_new):                                                                                
+                    x_estimate = x_estimate_new
+                    estimate_collided = False
+                        
                             
-                    estimated_states.append(x_estimate)
-                    estimated_covariances.append(P_t)
+                estimated_states.append(x_estimate)
+                estimated_covariances.append(P_t)
+                
+                if self.is_terminal(ee_position):
+                    history_entries.append(HistoryEntry(current_step + i + 1,
+                                                        x_true, 
+                                                        x_estimate, 
+                                                        None,
+                                                        None,
+                                                        P_t,
+                                                        False,
+                                                        False,
+                                                        True,
+                                                        0.0))                    
+                    terminal_state_reached = True                        
+                    total_reward += discount * self.exit_reward
+                    history_entries[-1].set_reward(self.exit_reward)
+                    success = True                      
+                    logging.info("Terminal state reached: reward = " + str(total_reward)) 
                     
-                    history_entries[-1].set_collided(collided)
-                    history_entries[-1].set_terminal(terminal_state_reached)
+                history_entries[-1].set_collided(collided)
+                history_entries[-1].set_estimate_collided(estimate_collided)
+                history_entries[-1].set_terminal(terminal_state_reached)
         return (x_true, 
                 x_tilde, 
                 x_estimate, 

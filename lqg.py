@@ -83,10 +83,8 @@ class LQG:
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, len(self.link_dimensions))
         
         if check_positive_definite([C, D]):            
-            m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps, dtype=np.float32)
-            print "dtype " + str(m_covs.dtype)
-            m_covs = np.array([np.around(m_covs[i], 5) for i in xrange(len(m_covs))])
-            print "dtype2 " + str(m_covs.dtype)
+            m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)            
+            #m_covs = np.array([np.around(m_covs[i], 5) for i in xrange(len(m_covs))])            
             emds = []
             mean_planning_times = []
             time_to_generate_paths = 0.0
@@ -149,7 +147,7 @@ class LQG:
                 xs, us, zs, objective, collision_free_probability = path_evaluator.evaluate_paths(paths, P_t)
                 mean_planning_time = time_to_generate_paths + (time.time() - t0)
                 #mean_planning_times.append(time_to_generate_paths + (time.time() - t0))
-                                
+                print "LQG: Best objective value: " + str(objective)  
                 best_paths.append([[xs[i] for i in xrange(len(xs))], 
                                    [us[i] for i in xrange(len(us))],
                                    [zs[i] for i in xrange(len(zs))]])
