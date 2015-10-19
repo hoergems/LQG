@@ -78,7 +78,7 @@ sample_size: 50
 ######## MPC parameters ############
 
 # The number of steps a path gets evaluated for (-1 => Evaluate full path)
-horizon: 5
+horizon: -1
 
 max_num_steps: 200
 
