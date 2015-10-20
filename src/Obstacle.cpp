@@ -20,11 +20,11 @@ Obstacle::Obstacle(double pos_x, double pos_y, double pos_z, double size_x, doub
     size_x_(size_x),
     size_y_(size_y),
     size_z_(size_z),
-    collision_structure_(),
+    collision_structure_(),    
     collision_object_ptr_(),    
     terrain_(terrain) {    
-    createCollisionStructure();
-    createCollisionObject();
+    createCollisionStructure();    
+    createCollisionObject();    
 }
 
 bool Obstacle::in_collision(const std::vector<std::shared_ptr<Obstacle> > &other_obstacles) {        
@@ -37,7 +37,7 @@ bool Obstacle::in_collision(const std::vector<std::shared_ptr<Obstacle> > &other
     return false;
 }
 
-bool Obstacle::in_collision(std::vector<OBB> &other_collision_structures) {
+bool Obstacle::in_collision(std::vector<OBB> &other_collision_structures) {	
     for (size_t i = 0; i < other_collision_structures.size(); i++) {        
         if (collision_structure_.overlap(other_collision_structures[i])) {            
             return true;
@@ -69,8 +69,7 @@ bool Obstacle::in_collision_continuous(boost::python::list &ns) {
     return in_collision(collision_object_start, collision_object_goal);
 }
 
-
-bool Obstacle::in_collision(const fcl::CollisionObject &collision_object_start, const fcl::CollisionObject &collision_object_goal) {      
+bool Obstacle::in_collision(const fcl::CollisionObject &collision_object_start, const fcl::CollisionObject &collision_object_goal) { 	
     fcl::ContinuousCollisionRequest request;
     fcl::ContinuousCollisionResult result;    
     fcl::continuousCollide(&collision_object_start, 
@@ -95,12 +94,12 @@ void Obstacle::createCollisionObject() {
 }
 
 void Obstacle::createCollisionStructure() {    
-    Vec3f p1(pos_x_ - size_x_ / 2.0, 
-             pos_y_ - size_y_ / 2.0, 
-             pos_z_ - size_z_ / 2.0);
-    Vec3f p2(pos_x_ + size_x_ / 2.0, 
-             pos_y_ + size_y_ / 2.0, 
-             pos_z_ + size_z_ / 2.0);
+    Vec3f p1(pos_x_ - size_x_, 
+             pos_y_ - size_y_, 
+             pos_z_ - size_z_);
+    Vec3f p2(pos_x_ + size_x_, 
+             pos_y_ + size_y_, 
+             pos_z_ + size_z_);
     AABB collision_structure(p1, p2);
     Matrix3f rot(1.0, 0.0, 0.0,
                  0.0, 1.0, 0.0,

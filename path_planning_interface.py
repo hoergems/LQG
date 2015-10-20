@@ -8,6 +8,7 @@ import time
 import kin
 import collections
 import numpy as np
+import scipy.stats
 
 
 class PathPlanningInterface:
@@ -48,7 +49,7 @@ class PathPlanningInterface:
         self.link_dimensions = link_dimensions
         self.workspace_dimension = workspace_dimension        
         self.num_cores = cpu_count()
-        #self.num_cores = 3        
+        #self.num_cores = 2        
         self.obstacles = obstacles        
         self.max_velocity = max_velocity
         self.delta_t = delta_t
@@ -85,6 +86,8 @@ class PathPlanningInterface:
     def plan_and_evaluate_paths(self, num, sim_run, horizon, P_t, timeout):        
         path_queue = Queue()
         evaluated_paths = []
+        gen_times = []
+        eval_times = []
         res_paths = collections.deque()
         processes = [Process(target=self.construct_and_evaluate_path, 
                              args=(self.obstacles, path_queue, 
@@ -110,21 +113,35 @@ class PathPlanningInterface:
         for i in xrange(len(processes)):
             processes[i].terminate()
         for i in xrange(len(res_paths)):
-            p_e = res_paths.pop()
+            p_e = res_paths.pop()            
             if not len(p_e[0]) == 0:
+                gen_times.append(p_e[4])
+                eval_times.append(p_e[5])
                 evaluated_paths.append(([[p_e[0][k].tolist() for k in xrange(len(p_e[0]))], 
                                          [p_e[1][k].tolist() for k in xrange(len(p_e[0]))], 
                                          [p_e[2][k].tolist() for k in xrange(len(p_e[0]))]], p_e[3]))
         if len(evaluated_paths) == 0:
             logging.error("PathPlanningInterface: Couldn't generate and evaluate any paths within the given planning time")
-            return [], [], [], 0.0, 0.0    
+            return [], [], [], 0.0, 0.0, 0.0, 0.0, 0.0, 0.0    
         best_val = evaluated_paths[0][1]
         best_path = evaluated_paths[0][0]        
         for i in xrange(1, len(evaluated_paths)):
             if evaluated_paths[i][1] < best_val:
                 best_val = evaluated_paths[i][1]
-                best_path = evaluated_paths[i][0]                              
-        return best_path[0], best_path[1], best_path[2], len(evaluated_paths), best_val
+                best_path = evaluated_paths[i][0]
+        n, min_max, mean_gen_times, var, skew, kurt = scipy.stats.describe(np.array(gen_times))
+        n, min_max, mean_eval_times, var, skew, kurt = scipy.stats.describe(np.array(eval_times))
+        total_gen_times = sum(gen_times)
+        total_eval_times = sum(eval_times)                              
+        return (best_path[0], 
+                best_path[1], 
+                best_path[2], 
+                len(evaluated_paths), 
+                best_val, 
+                mean_gen_times, 
+                mean_eval_times,
+                total_gen_times,
+                total_eval_times)
         
     def plan_paths(self, num, sim_run, timeout=0.0):        
         path_queue = Queue()
@@ -161,17 +178,22 @@ class PathPlanningInterface:
         return paths
     
     def construct_and_evaluate_path(self, obstacles, queue, joint_constraints, horizon, P_t):
-        while True:               
-            xs, us, zs = self._construct(obstacles, joint_constraints)        
-            eval_result = self.path_evaluator.evaluate_path([xs, us, zs], P_t, horizon)        
-            queue.put((xs, us, zs, eval_result[1]))        
+        while True:
+            t0 = time.time()               
+            xs, us, zs = self._construct(obstacles, joint_constraints)
+            gen_time = time.time() - t0
+            if len(xs) > 1:  
+                t0 = time.time()                      
+                eval_result = self.path_evaluator.evaluate_path([xs, us, zs], P_t, horizon)
+                eval_time = time.time() - t0        
+                queue.put((xs, us, zs, eval_result[1], gen_time, eval_time))        
     
     def construct_path(self, obstacles, queue, joint_constraints,):
         while True:
             xs, us, zs = self._construct(obstacles, joint_constraints)            
             queue.put((xs, us, zs))        
         
-    def _construct(self, obstacles, joint_constraints):        
+    def _construct(self, obstacles, joint_constraints):
         path_planner2 = libpath_planner.PathPlanner(self.kinematics,
                                                     len(self.link_dimensions),
                                                     self.delta_t,
@@ -179,8 +201,7 @@ class PathPlanningInterface:
                                                     self.max_velocity,
                                                     self.joint_constraints_vec,
                                                     self.enforce_constraints,                                                    
-                                                    1.0,
-                                                    False,
+                                                    1.0,                                                    
                                                     self.use_linear_path,
                                                     self.verbose,
                                                     self.planning_algorithm)
@@ -226,9 +247,9 @@ class PathPlanningInterface:
         """    
         
         new_path = []                   
-        for i in xrange(len(path) - 1):
+        for i in xrange(len(path) - 1):                        
             u = (np.array(path[i + 1]) - np.array(path[i])) / self.delta_t                       
-            new_path.append([path[i], u, path[i]])
+            new_path.append([path[i], u, path[i]])            
         new_path.append([path[-1], np.array([0.0 for i in xrange(len(self.link_dimensions))]), path[-1]])
         xs = [np.array(new_path[i][0]) for i in xrange(len(path))]
         us = [np.array(new_path[i][1]) for i in xrange(len(path))]

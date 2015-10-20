@@ -147,7 +147,8 @@ class LQG:
                 xs, us, zs, objective, collision_free_probability = path_evaluator.evaluate_paths(paths, P_t)
                 mean_planning_time = time_to_generate_paths + (time.time() - t0)
                 #mean_planning_times.append(time_to_generate_paths + (time.time() - t0))
-                print "LQG: Best objective value: " + str(objective)  
+                print "LQG: Best objective value: " + str(objective)
+                print "LQG: Length of best path: " + str(len(xs))  
                 best_paths.append([[xs[i] for i in xrange(len(xs))], 
                                    [us[i] for i in xrange(len(us))],
                                    [zs[i] for i in xrange(len(zs))]])
@@ -292,7 +293,7 @@ class LQG:
         B = delta_t * np.identity(num_links)
         V = np.identity(num_links)
         W = np.identity(num_links)
-        C = 2.0 * np.identity(num_links)
+        C = 1.0 * np.identity(num_links)
         D = 1.0 * np.identity(num_links)
         return A, H, B, V, W, C, D
             

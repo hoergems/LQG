@@ -72,7 +72,7 @@ class Simulator:
     def enforce_velocity_limit(self, u):        
         for i in xrange(len(u)):
             if u[i] < -self.joint_velocity_limit:
-                u[i] = self.joint_velocity_limit
+                u[i] = -self.joint_velocity_limit
             elif u[i] > self.joint_velocity_limit:
                 u[i] = self.joint_velocity_limit
         return u
@@ -106,8 +106,9 @@ class Simulator:
                                                     False,
                                                     0.0))
                                 
-                u_dash = np.dot(Ls[i], x_tilde)                
-                u = self.enforce_velocity_limit(np.add(u_dash, us[i]))                
+                u_dash = np.dot(Ls[i], x_tilde) 
+                u = np.add(u_dash, us[i])               
+                #u = self.enforce_velocity_limit(np.add(u_dash, us[i]))
                 history_entries[-1].set_action(u)
                         
                 x_true_temp = self.apply_control(x_true, 
@@ -116,6 +117,7 @@ class Simulator:
                                                  self.B, 
                                                  self.V, 
                                                  self.M)                
+                
                 discount = np.power(self.discount_factor, current_step + i)
                 collided = False        
                 if self.is_in_collision(x_true, x_true_temp):
@@ -246,7 +248,7 @@ class Simulator:
     
     def apply_control(self, x_dash, u_dash, A, B, V, M):               
         m = self.get_random_joint_angles([0.0 for i in xrange(len(self.link_dimensions))], M)
-        x_new = np.add(np.add(np.dot(A, x_dash), np.dot(B, u_dash)), np.dot(V, m))
+        x_new = np.add(np.add(np.dot(A, x_dash), np.dot(B, u_dash)), np.dot(V, m))        
         if self.enforce_constraints:            
             x_new = self.check_constraints(x_new)
         return x_new

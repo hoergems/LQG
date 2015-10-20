@@ -13,6 +13,10 @@
 #include <boost/make_shared.hpp>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/geometric/planners/rrt/RRT.h>
+#include <ompl/geometric/planners/sbl/SBL.h>
+#include <ompl/geometric/planners/kpiece/BKPIECE1.h>
+#include <ompl/geometric/planners/pdst/PDST.h>
+#include <ompl/geometric/planners/stride/STRIDE.h>
 #include <ompl/base/Path.h>
 #include <ompl/base/PlannerTerminationCondition.h>
 #include <ompl/geometric/PathGeometric.h>
@@ -36,12 +40,11 @@ namespace shared {
             PathPlanner(std::shared_ptr<Kinematics> kinematics,
                         int dim,             
                         double delta_t,
-                        bool continuous_collision,
+                        bool continuous_collision,                        
                         double max_joint_velocity,
                         std::vector<double> joint_constraints,
                         bool enforce_constraints,
-                        double stretching_factor,                                                
-                        bool use_rrt_heuristic,
+                        double stretching_factor,
                         bool check_linear_path,                        
                         bool verbose,
                         std::string planner);
@@ -92,8 +95,6 @@ namespace shared {
             double stretching_factor_;
             
             double planning_range_;
-            
-            bool use_rrt_heuristic_;
             
             bool check_linear_path_;
 

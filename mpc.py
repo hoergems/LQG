@@ -185,7 +185,7 @@ class MPC:
             num_generated_paths_run = 0.0
             mean_number_planning_steps = 0.0 
             mean_number_of_steps = 0.0 
-            
+            num_collisions = 0.0
             rewards_cov = []          
             for k in xrange(self.num_simulation_runs):                  
                 serializer.write_line("log.log", 
@@ -206,7 +206,15 @@ class MPC:
                     self.path_planning_interface.set_start_and_goal(x_estimate, self.goal_states)
                     
                     logging.info("MPC: Constructing paths")
-                    xs, us, zs, num_generated_paths, best_val = self.path_planning_interface.plan_and_evaluate_paths(self.num_paths, 0, horizon, P_t, self.timeout)
+                    (xs, 
+                     us, 
+                     zs, 
+                     num_generated_paths, 
+                     best_val, 
+                     mean_gen_times, 
+                     mean_eval_times,
+                     total_gen_times,
+                     total_eval_times) = self.path_planning_interface.plan_and_evaluate_paths(self.num_paths, 0, horizon, P_t, self.timeout)
                     
                     t_e = time.time() - t0
                     mean_planning_time_per_run += t_e  
@@ -220,6 +228,10 @@ class MPC:
                         current_step += 1                                             
                         break                         
                     logging.warn("MPC: Generated " + str(num_generated_paths) + " paths in " + str(t_e) + " seconds")
+                    logging.warn("MPC: Mean time to generate paths: " + str(mean_gen_times) + " seconds")
+                    logging.warn("MPC: Mean time to evaluate_paths: " + str(mean_eval_times) + " seconds")
+                    logging.warn("MPC: Total time to generate paths: " + str(total_gen_times) + " seconds")
+                    logging.warn("MPC: Total time to evaluate_paths: " + str(total_eval_times) + " seconds")
                     logging.warn("MPC: Length of best path is " + str(len(xs)))
                     logging.warn("MPC: Success probability of best path: " + str(best_val))
                     x_tilde = np.array([0.0 for i in xrange(len(self.link_dimensions))])
@@ -252,7 +264,9 @@ class MPC:
                         successful_runs += 1
                         
                     for history_entry in history_entries:                        
-                        history_entry.serialize("tmp/mpc" + str(self.num_execution_steps), "log.log")         
+                        history_entry.serialize("tmp/mpc" + str(self.num_execution_steps), "log.log")
+                        if history_entry.collided:
+                            num_collisions += 1         
                     logging.warn("MPC: Execution finished. True state is " + str(x_true))
                     logging.warn("MPC: Estimated state is " + str(x_estimate))
                     logging.warn("MPC: Executed " + str(current_step) + " steps") 
@@ -302,6 +316,10 @@ class MPC:
             serializer.write_line("log.log", 
                                   "tmp/mpc"  + str(self.num_execution_steps), 
                                   "Num successes: " + str(successful_runs) + " \n")
+            
+            serializer.write_line("log.log", 
+                                  "tmp/mpc"  + str(self.num_execution_steps), 
+                                  "Mean num collisions per run: " + str(float(num_collisions) / float(self.num_simulation_runs)) + " \n")
             
             mean_number_planning_steps /= self.num_simulation_runs            
             serializer.write_line("log.log", 
@@ -365,7 +383,7 @@ class MPC:
         V = np.identity(len(link_dimensions))
         W = np.identity(len(link_dimensions))
         C = 2.0 * np.identity(len(link_dimensions))
-        D = 2.0 * np.identity(len(link_dimensions))
+        D = 1.0 * np.identity(len(link_dimensions))
         return A, H, B, V, W, C, D
         
     def set_params(self, config):

@@ -48,8 +48,7 @@ class Obstacle {
         
         std::vector<double> getDimensions() const; 
 
-        bool isTraversable();    
-        
+        bool isTraversable();
 
     private:   
     
@@ -62,6 +61,8 @@ class Obstacle {
         
         fcl::OBB collision_structure_;
         
+        fcl::OBB collision_structure_expanded_;
+        
         std::shared_ptr<fcl::CollisionObject> collision_object_ptr_;
                 
         const shared::Terrain terrain_;
@@ -69,7 +70,6 @@ class Obstacle {
         void createCollisionStructure();
         
         void createCollisionObject();
-
 };
 
 }

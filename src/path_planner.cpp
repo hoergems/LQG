@@ -8,12 +8,11 @@ namespace shared {
 PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
                          int dim,
                          double delta_t,
-                         bool continuous_collision,
+                         bool continuous_collision,                         
                          double max_joint_velocity,
                          std::vector<double> joint_constraints,
                          bool enforce_constraints,
-                         double stretching_factor, 
-                         bool use_rrt_heuristic,
+                         double stretching_factor,
                          bool check_linear_path,                         
                          bool verbose,
                          std::string planner):
@@ -25,8 +24,7 @@ PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
     enforce_constraints_(enforce_constraints),
     stretching_factor_(stretching_factor),
     planning_range_(delta_t_ * max_joint_velocity_),
-    //planning_range_((1.0 / stretching_factor_) * std::sqrt(dim * std::pow(delta_t_ * max_joint_velocity_, 2))),  
-    use_rrt_heuristic_(use_rrt_heuristic),
+    //planning_range_((1.0 / stretching_factor_) * std::sqrt(dim * std::pow(delta_t_ * max_joint_velocity_, 2))), 
     check_linear_path_(check_linear_path),  
     space_(new ompl::base::RealVectorStateSpace(dim_)),    
     si_(new ompl::base::SpaceInformation(space_)),    
@@ -50,8 +48,20 @@ PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
     if (planner_str_ == "RRTConnect") {
     	planner_ = boost::shared_ptr<ompl::geometric::RRTConnect>(new ompl::geometric::RRTConnect(si_));
     }
-    else {
+    else if (planner_str_ == "RRT") {
         planner_ = boost::shared_ptr<ompl::geometric::RRT>(new ompl::geometric::RRT(si_));
+    }
+    else if (planner_str_ == "SBL"){
+    	planner_ = boost::shared_ptr<ompl::geometric::SBL>(new ompl::geometric::SBL(si_));
+    }
+    else if (planner_str_ == "BKPIECE1"){
+        planner_ = boost::shared_ptr<ompl::geometric::BKPIECE1>(new ompl::geometric::BKPIECE1(si_));
+    }
+    else if (planner_str_ == "PDST"){
+        planner_ = boost::shared_ptr<ompl::geometric::PDST>(new ompl::geometric::PDST(si_));
+    }
+    else if (planner_str_ == "STRIDE"){
+        planner_ = boost::shared_ptr<ompl::geometric::STRIDE>(new ompl::geometric::STRIDE(si_));
     }
 }
 
@@ -89,14 +99,35 @@ void PathPlanner::setup() {
     planner_->setProblemDefinition(problem_definition_);
     
     /** Use RRTConnect as the planning algorithm */
-    if (planner_str_ == "RRTConnect") {   
+    if (planner_str_ == "RRT") {
+    	boost::shared_ptr<ompl::geometric::RRT> planner_ptr = boost::static_pointer_cast<ompl::geometric::RRT>(planner_);
+    	planner_ptr->setRange(planning_range_);
+    	planner_ptr->setGoalBias(0.1);
+    	
+    }
+    else if (planner_str_ == "RRTConnect") {
     	boost::shared_ptr<ompl::geometric::RRTConnect> planner_ptr = boost::static_pointer_cast<ompl::geometric::RRTConnect>(planner_);
     	planner_ptr->setRange(planning_range_);
+    } 
+    
+    else if (planner_str_ == "SBL") {
+        boost::shared_ptr<ompl::geometric::SBL> planner_ptr = boost::static_pointer_cast<ompl::geometric::SBL>(planner_);
+        planner_ptr->setRange(planning_range_);
+    } 
+    else if (planner_str_ == "BKPIECE1") {
+        boost::shared_ptr<ompl::geometric::BKPIECE1> planner_ptr = boost::static_pointer_cast<ompl::geometric::BKPIECE1>(planner_);
+        planner_ptr->setRange(planning_range_);
     }
-    else {
-        boost::shared_ptr<ompl::geometric::RRT> planner_ptr = boost::static_pointer_cast<ompl::geometric::RRT>(planner_);
-    	planner_ptr->setRange(planning_range_);
-    }          
+    else if (planner_str_ == "PDST") {
+        boost::shared_ptr<ompl::geometric::PDST> planner_ptr = boost::static_pointer_cast<ompl::geometric::PDST>(planner_);
+        //planner_ptr->setRange(planning_range_);
+        planner_ptr->setGoalBias(0.1);
+    }
+    
+    else if (planner_str_ == "STRIDE") {
+        boost::shared_ptr<ompl::geometric::STRIDE> planner_ptr = boost::static_pointer_cast<ompl::geometric::STRIDE>(planner_);
+        planner_ptr->setRange(planning_range_);
+    }
 }
 
 void PathPlanner::setObstacles(std::vector<std::shared_ptr<Obstacle> > obstacles) {
@@ -225,10 +256,8 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
         cout << endl;        
     }
     
-    if (!isValid(start_state.get())) {
-        if (verbose_) {
-            cout << "Path planner: Start state not valid" << endl;
-        }
+    if (!isValid(start_state.get())) {        
+        cout << "Path planner: ERROR: Start state not valid!" << endl;        
         return solution_vector;    
     }
     
@@ -249,7 +278,7 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
             }            
         }
     
-        if (!collides && !use_rrt_heuristic_) {            
+        if (!collides) {            
             clear();        
             if (verbose_) {
                 cout << "Linear path is a valid solution. Returning linear path of length " << linear_path.size() << endl;
@@ -296,13 +325,12 @@ BOOST_PYTHON_MODULE(libpath_planner) {
     class_<PathPlanner>("PathPlanner", init<std::shared_ptr<Kinematics>, 
                                             int,                                             
                                             double,
-                                            bool, 
+                                            bool,                                            
                                             double,
                                             std::vector<double>,
                                             bool,
                                             double,
-                                            bool,
-                                            bool,
+                                            bool,                                            
                                             bool,
                                             std::string>())
                         .def("solve", &PathPlanner::solve)

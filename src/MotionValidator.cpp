@@ -28,15 +28,22 @@ MotionValidator::MotionValidator(const ompl::base::SpaceInformationPtr &si,
 
 bool MotionValidator::checkMotion(const std::vector<double> &s1, 
                                   const std::vector<double> &s2, 
-                                  const bool &continuous_collision) const {	
+                                  const bool &continuous_collision) const {
+	for (size_t i = 0; i < s1.size(); i++) {		
+		if ((fabs((s2[i] - s1[i]) / delta_t_)) > max_joint_velocity_) {
+			return false;
+		}		
+	}
+	
     std::vector<OBB> manipulator_collision_structures_goal = utils_.createManipulatorCollisionStructures(s2,
                                                                                                          link_dimensions_, 
                                                                                                          kinematics_);
+    
     for (size_t i = 0; i < obstacles_.size(); i++) {        
-        if (!obstacles_[i]->isTraversable()) {            
-            if(obstacles_[i]->in_collision(manipulator_collision_structures_goal)) {                         
-                return false;
-            }
+        if (!obstacles_[i]->isTraversable()) {
+        	if (obstacles_[i]->in_collision(manipulator_collision_structures_goal)) {
+        		return false;
+        	}
         }        
     }
     
@@ -50,10 +57,10 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
                                                                                                                         kinematics_);
         for (size_t i = 0; i < obstacles_.size(); i++) {
             if (!obstacles_[i]->isTraversable()) {
-                for (size_t j = 0; j < manipulator_collision_objects_start.size(); j++) {
-                    if (obstacles_[i]->in_collision(manipulator_collision_objects_start[j], manipulator_collision_objects_goal[j])) {                    
-                        return false;
-                    }
+                for (size_t j = 0; j < manipulator_collision_objects_start.size(); j++) {                	
+                	if (obstacles_[i]->in_collision(manipulator_collision_objects_start[j], manipulator_collision_objects_goal[j])) {
+                		return false;
+                	}
                 }
             }
         } 
@@ -86,10 +93,10 @@ bool MotionValidator::isValid(const std::vector<double> &s1) const {
                                                                                                     link_dimensions_,
                                                                                                     kinematics_);
     for (size_t i = 0; i < obstacles_.size(); i++) {
-        if (!obstacles_[i]->getTerrain()->isTraversable()) {
-            if (obstacles_[i]->in_collision(manipulator_collision_structures)) {
-                return false;
-            }
+        if (!obstacles_[i]->getTerrain()->isTraversable()) {        	
+        	if (obstacles_[i]->in_collision(manipulator_collision_structures)) {
+        		return false;
+        	}
         }
     }
     return true;    
@@ -105,20 +112,6 @@ void MotionValidator::setObstacles(std::vector<std::shared_ptr<Obstacle> > &obst
 void MotionValidator::setLinkDimensions(std::vector<std::vector<double>> &link_dimensions) {
     for (size_t i = 0; i < link_dimensions.size(); i++) {
         link_dimensions_.push_back(link_dimensions[i]);
-    }
-
-    //set_link_aabbs();
+    }    
 }
-
-/*void MotionValidator::set_link_aabbs() const {
-    for (size_t i = 0; i < link_dimensions_.size(); i++) {
-        link_aabbs_.push_back(fcl::AABB(Vec3f(0.0, 
-                                              -link_dimensions_[i][1] / 2.0,
-                                              -link_dimensions_[i][2] / 2.0), 
-                                        Vec3f(link_dimensions_[i][0],
-                                              link_dimensions_[i][1] / 2.0,
-                                              link_dimensions_[i][2] / 2.0)));
-    }
-}*/
-
 }

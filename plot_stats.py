@@ -137,10 +137,10 @@ class PlotStats:
                 obstacles = serializer.load_environment("env.xml", path=dir + "/environment")        
                 if not obstacles == None:
                     for obstacle in obstacles:                
-                        point1 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0]
-                        point2 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0]
-                        point3 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0]
-                        point4 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0]
+                        point1 = [obstacle[0][0] - obstacle[1][0], obstacle[0][1] - obstacle[1][1]]
+                        point2 = [obstacle[0][0] - obstacle[1][0], obstacle[0][1] + obstacle[1][1]]
+                        point3 = [obstacle[0][0] + obstacle[1][0], obstacle[0][1] + obstacle[1][1]]
+                        point4 = [obstacle[0][0] + obstacle[1][0], obstacle[0][1] - obstacle[1][1]]
                         sets.append(np.array([point1, point2]))                
                         sets.append(np.array([point2, point3]))
                         sets.append(np.array([point3, point4]))
@@ -181,14 +181,14 @@ class PlotStats:
         color_map = []
         plot_particles = True
         for obstacle in environment:
-            point1 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0, obstacle[0][2] - obstacle[1][2] / 2.0]
-            point2 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0, obstacle[0][2] + obstacle[1][2] / 2.0]
-            point3 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0, obstacle[0][2] - obstacle[1][2] / 2.0]
-            point4 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0, obstacle[0][2] + obstacle[1][2] / 2.0]
-            point5 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0, obstacle[0][2] - obstacle[1][2] / 2.0]
-            point6 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0, obstacle[0][2] + obstacle[1][2] / 2.0]
-            point7 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0, obstacle[0][2] - obstacle[1][2] / 2.0]
-            point8 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0, obstacle[0][2] + obstacle[1][2] / 2.0]
+            point1 = [obstacle[0][0] - obstacle[1][0], obstacle[0][1] - obstacle[1][1], obstacle[0][2] - obstacle[1][2]]
+            point2 = [obstacle[0][0] - obstacle[1][0], obstacle[0][1] - obstacle[1][1], obstacle[0][2] + obstacle[1][2]]
+            point3 = [obstacle[0][0] - obstacle[1][0], obstacle[0][1] + obstacle[1][1], obstacle[0][2] - obstacle[1][2]]
+            point4 = [obstacle[0][0] - obstacle[1][0], obstacle[0][1] + obstacle[1][1], obstacle[0][2] + obstacle[1][2]]
+            point5 = [obstacle[0][0] + obstacle[1][0], obstacle[0][1] - obstacle[1][1], obstacle[0][2] - obstacle[1][2]]
+            point6 = [obstacle[0][0] + obstacle[1][0], obstacle[0][1] - obstacle[1][1], obstacle[0][2] + obstacle[1][2]]
+            point7 = [obstacle[0][0] + obstacle[1][0], obstacle[0][1] + obstacle[1][1], obstacle[0][2] - obstacle[1][2]]
+            point8 = [obstacle[0][0] + obstacle[1][0], obstacle[0][1] + obstacle[1][1], obstacle[0][2] + obstacle[1][2]]
             if config['workspace_dimension'] == 2:
                 sets.append(np.array([point1, point3]))
                 sets.append(np.array([point3, point7]))
@@ -330,14 +330,14 @@ class PlotStats:
         sets = [] 
         color_map = []
         for obstacle in environment:
-            point1 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0, obstacle[0][2] - obstacle[1][2] / 2.0]
-            point2 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0, obstacle[0][2] + obstacle[1][2] / 2.0]
-            point3 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0, obstacle[0][2] - obstacle[1][2] / 2.0]
-            point4 = [obstacle[0][0] - obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0, obstacle[0][2] + obstacle[1][2] / 2.0]
-            point5 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0, obstacle[0][2] - obstacle[1][2] / 2.0]
-            point6 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] - obstacle[1][1] / 2.0, obstacle[0][2] + obstacle[1][2] / 2.0]
-            point7 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0, obstacle[0][2] - obstacle[1][2] / 2.0]
-            point8 = [obstacle[0][0] + obstacle[1][0] / 2.0, obstacle[0][1] + obstacle[1][1] / 2.0, obstacle[0][2] + obstacle[1][2] / 2.0]
+            point1 = [obstacle[0][0] - obstacle[1][0], obstacle[0][1] - obstacle[1][1], obstacle[0][2] - obstacle[1][2]]
+            point2 = [obstacle[0][0] - obstacle[1][0], obstacle[0][1] - obstacle[1][1], obstacle[0][2] + obstacle[1][2]]
+            point3 = [obstacle[0][0] - obstacle[1][0], obstacle[0][1] + obstacle[1][1], obstacle[0][2] - obstacle[1][2]]
+            point4 = [obstacle[0][0] - obstacle[1][0], obstacle[0][1] + obstacle[1][1], obstacle[0][2] + obstacle[1][2]]
+            point5 = [obstacle[0][0] + obstacle[1][0], obstacle[0][1] - obstacle[1][1], obstacle[0][2] - obstacle[1][2]]
+            point6 = [obstacle[0][0] + obstacle[1][0], obstacle[0][1] - obstacle[1][1], obstacle[0][2] + obstacle[1][2]]
+            point7 = [obstacle[0][0] + obstacle[1][0], obstacle[0][1] + obstacle[1][1], obstacle[0][2] - obstacle[1][2]]
+            point8 = [obstacle[0][0] + obstacle[1][0], obstacle[0][1] + obstacle[1][1], obstacle[0][2] + obstacle[1][2]]
             if config['workspace_dimensions'] == 2:
                 sets.append(np.array([point1, point3]))
                 sets.append(np.array([point3, point7]))
