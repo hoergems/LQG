@@ -182,7 +182,7 @@ void PathPlanner::clearAll() {
 }
 
 /** Generates a linear path from point p1 to point p2 */
-std::vector<std::vector<double> > PathPlanner::genLinearPath(std::vector<double> &p1, std::vector<double> &p2) {
+std::vector<std::vector<double> > PathPlanner::genLinearPath(std::vector<double> &p1, std::vector<double> &p2) {	
     std::vector<double> vec;
     std::vector<double> vec_res;
     std::vector<std::vector<double> > solution_vector;
@@ -232,9 +232,9 @@ void PathPlanner::setLinkDimensions(std::vector<std::vector<double>> &link_dimen
 }
 
 /** Solves the motion planning problem */
-std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &start_state_vec) {
-    std::vector<double> ss_vec;
-    for (size_t i =0; i < start_state_vec.size(); i++) {
+std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &start_state_vec) {	
+    std::vector<double> ss_vec;    
+    for (size_t i =0; i < dim_; i++) {
         ss_vec.push_back(start_state_vec[i]);
     }
     
@@ -242,15 +242,14 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
     std::vector<std::vector<double> > solution_vector;
     solution_vector.push_back(ss_vec);
     
-    boost::shared_ptr<MotionValidator> mv = boost::static_pointer_cast<MotionValidator>(si_->getMotionValidator());
-    for (int i=0; i<dim_; i++) {
+    boost::shared_ptr<MotionValidator> mv = boost::static_pointer_cast<MotionValidator>(si_->getMotionValidator());    
+    for (int i=0; i<dim_; i++) {    	
         start_state[i] = ss_vec[i];       
-    }
-    
+    }    
     /** Add the start state to the problem definition */
     if (verbose_) {
         cout << "Adding start state: ";
-        for (size_t i = 0; i < start_state_vec.size(); i++) {
+        for (size_t i = 0; i < dim_; i++) {
             cout << start_state[i] << ", ";
         }
         cout << endl;        

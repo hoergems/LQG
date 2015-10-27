@@ -30,7 +30,7 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
                                   const std::vector<double> &s2, 
                                   const bool &continuous_collision) const {
 	for (size_t i = 0; i < s1.size(); i++) {		
-		if ((fabs((s2[i] - s1[i]) / delta_t_)) > max_joint_velocity_) {
+		if ((fabs((s2[i] - s1[i]) / delta_t_)) > max_joint_velocity_ + 0.00001) {
 			return false;
 		}		
 	}
