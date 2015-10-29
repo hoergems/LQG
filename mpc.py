@@ -244,7 +244,7 @@ class MPC:
                     logging.warn("MPC: Total time to generate paths: " + str(total_gen_times) + " seconds")
                     logging.warn("MPC: Total time to evaluate_paths: " + str(total_eval_times) + " seconds")
                     logging.warn("MPC: Length of best path is " + str(len(xs)))
-                    logging.warn("MPC: Estimated reward of best path: " + str(best_val))
+                    logging.warn("MPC: Expected reward of best path: " + str(best_val))
                     x_tilde = np.array([0.0 for i in xrange(len(self.link_dimensions))])
                     n_steps = self.num_execution_steps
                     if n_steps > len(xs) - 1:
