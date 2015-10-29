@@ -161,9 +161,15 @@ class MPC:
                                                               self.sample_size, 
                                                               obstacles,
                                                               self.joint_constraints,
-                                                              self.enforce_constraints,                                                              
+                                                              self.enforce_constraints, 
+                                                              self.goal_position,
+                                                              self.goal_radius,                                                             
                                                               self.w1,
                                                               self.w2)
+            self.path_planning_interface.setup_reward_function(self.step_penalty, 
+                                                               self.exit_reward, 
+                                                               self.illegal_move_penalty, 
+                                                               self.discount_factor)
             self.sim.setup_problem(A, B, C, D, H, V, W, M, N, 
                                    obstacles, 
                                    self.goal_position, 
@@ -214,7 +220,12 @@ class MPC:
                      mean_gen_times, 
                      mean_eval_times,
                      total_gen_times,
-                     total_eval_times) = self.path_planning_interface.plan_and_evaluate_paths(self.num_paths, 0, horizon, P_t, self.timeout)
+                     total_eval_times) = self.path_planning_interface.plan_and_evaluate_paths(self.num_paths, 
+                                                                                              0, 
+                                                                                              current_step, 
+                                                                                              horizon, 
+                                                                                              P_t, 
+                                                                                              self.timeout)
                     
                     t_e = time.time() - t0
                     mean_planning_time_per_run += t_e  
@@ -233,7 +244,7 @@ class MPC:
                     logging.warn("MPC: Total time to generate paths: " + str(total_gen_times) + " seconds")
                     logging.warn("MPC: Total time to evaluate_paths: " + str(total_eval_times) + " seconds")
                     logging.warn("MPC: Length of best path is " + str(len(xs)))
-                    logging.warn("MPC: Success probability of best path: " + str(best_val))
+                    logging.warn("MPC: Estimated reward of best path: " + str(best_val))
                     x_tilde = np.array([0.0 for i in xrange(len(self.link_dimensions))])
                     n_steps = self.num_execution_steps
                     if n_steps > len(xs) - 1:

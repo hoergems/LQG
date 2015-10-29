@@ -141,11 +141,16 @@ class LQG:
                                      obstacles,
                                      self.joint_constraints,
                                      self.enforce_constraints,
+                                     self.goal_position,
+                                     self.goal_radius,
                                      self.w1,
                                      self.w2)
+                path_evaluator.setup_reward_function(self.step_penalty, self.illegal_move_penalty, self.exit_reward, self.discount_factor)
                 t0 = time.time() 
-                xs, us, zs, objective, collision_free_probability = path_evaluator.evaluate_paths(paths, P_t)
-                mean_planning_time = time_to_generate_paths + (time.time() - t0)
+                xs, us, zs, objective = path_evaluator.evaluate_paths(paths, P_t, 0)
+                te = time.time() - t0
+                print "LQG: Time to evaluate " + str(len(paths)) + " paths: " + str(te) + "s"
+                mean_planning_time = time_to_generate_paths + te
                 #mean_planning_times.append(time_to_generate_paths + (time.time() - t0))
                 print "LQG: Best objective value: " + str(objective)
                 print "LQG: Length of best path: " + str(len(xs))  
@@ -218,8 +223,7 @@ class LQG:
                 serializer.write_line("log.log",
                                       "tmp/lqg",
                                       "Process covariance: " + str(m_covs[j]) + " \n")
-                serializer.write_line("log.log", "tmp/lqg", "Objective value of best path: " + str(objective) + " \n")
-                serializer.write_line("log.log", "tmp/lqg", "Collision free probability of best path: " + str(collision_free_probability) + " \n")
+                serializer.write_line("log.log", "tmp/lqg", "Objective value of best path: " + str(objective) + " \n")                
                 serializer.write_line("log.log", "tmp/lqg", "Mean num collisions per run: " + str(float(num_collisions) / float(self.num_simulation_runs)) + " \n")
                 print "total num collisions " + str(num_collisions)    
                 print "mean num collisions " + str(float(num_collisions) / float(self.num_simulation_runs))

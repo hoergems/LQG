@@ -14,7 +14,7 @@ num_simulation_runs: 1
 workspace_dimension: 2
 
 # Maximum angular velocity of the joints (in rad/sec)
-max_velocity: 3.0
+max_velocity: 4.0
 
 # The joint control rate
 control_rate: 30.0
@@ -51,7 +51,7 @@ w1: 1.0
 w2: 0.0
 
 # Reward params
-discount_factor: 1.0
+discount_factor: 0.999999
 
 # Penalty for crashing into an obstacle
 illegal_move_penalty: 100.0
@@ -74,7 +74,7 @@ stop_when_terminal: True
 
 # Number of samples drawn from the state distribution at step i 
 # in order to evaluate collision probability
-sample_size: 150
+sample_size: 100
 
 ######## MPC parameters ############
 
