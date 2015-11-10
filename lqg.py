@@ -51,7 +51,7 @@ class LQG:
         model_file = os.getcwd() + "/model/model.xml"
         if self.workspace_dimension == 3:
             model_file = os.getcwd() + "/model/model3D.xml"
-        self.link_dimensions = self.utils.getLinkDimensions(model_file)        
+        self.link_dimensions = self.utils.getLinkDimensions(model_file)                
         print "LQG: Generating goal states..."
         goal_states = get_goal_states("lqg",
                                       serializer, 
@@ -62,13 +62,15 @@ class LQG:
                                       self.delta_t,
                                       self.joint_constraints,
                                       self.enforce_constraints,
-                                      self.theta_0,
+                                      self.start_state,
                                       self.goal_position,
-                                      self.planning_algortihm)
+                                      self.goal_radius,
+                                      self.planning_algortihm,
+                                      self.dynamic_problem)
+        
         if len(goal_states) == 0:
             logging.error("LQG: Couldn't generate any goal states. Problem seems to be infeasible")
-        print "LQG: " + str(len(goal_states)) + " goal states generated" 
-        
+        print "LQG: " + str(len(goal_states)) + " goal states generated"         
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
         path_planner.setup(self.link_dimensions,
                            self.workspace_dimension,
@@ -78,8 +80,9 @@ class LQG:
                            self.use_linear_path, 
                            self.joint_constraints,
                            self.enforce_constraints,
-                           self.planning_algortihm)
-        path_planner.set_start_and_goal(self.theta_0, goal_states)         
+                           self.planning_algortihm,
+                           self.dynamic_problem)        
+        path_planner.set_start_and_goal(self.start_state, goal_states, self.goal_position, self.goal_radius)         
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, len(self.link_dimensions))
         
         if check_positive_definite([C, D]):            
@@ -312,7 +315,7 @@ class LQG:
         self.use_linear_path = config['use_linear_path']        
         self.max_velocity = config['max_velocity']
         self.delta_t = 1.0 / config['control_rate']
-        self.theta_0 = config['init_joint_angles']
+        self.start_state = config['start_state']
         self.goal_position = config['goal_position']
         self.goal_state = np.array([-np.pi / 2.0, 0.0, 0.0])
         self.goal_radius = config['goal_radius']
@@ -336,7 +339,8 @@ class LQG:
         self.w1 = config['w1']
         self.w2 = config['w2']
         self.plot_paths = config['plot_paths']
-        self.planning_algortihm = config['planning_algorithm']        
+        self.planning_algortihm = config['planning_algorithm']
+        self.dynamic_problem = config['dynamic_problem']        
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

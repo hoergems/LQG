@@ -25,7 +25,8 @@ class IKSolutionGenerator:
               enforce_constraints,
               robot_file, 
               environment_file,
-              planning_algorithm):        
+              planning_algorithm,
+              dynamic_problem):        
         """
         Generate the obstacles
         """
@@ -40,7 +41,8 @@ class IKSolutionGenerator:
                                 False, 
                                 joint_constraints,
                                 enforce_constraints,
-                                planning_algorithm)
+                                planning_algorithm,
+                                dynamic_problem)
         logging.info("IKSolutionGenerator: Create OpenRAVE environment")
         self.env = openravepy.Environment()
         self.env.StopSimulation()
@@ -52,7 +54,7 @@ class IKSolutionGenerator:
         self.robot = self.env.GetRobots()[0]
         self.robot.SetActiveManipulator("arm")   
 
-    def generate(self, start_state, goal_position, workspace_dimension):        
+    def generate(self, start_state, goal_position, goal_threshold, workspace_dimension):        
         possible_ik_solutions = []        
         if workspace_dimension == 2:
             InitOpenRAVELogging()
@@ -84,14 +86,17 @@ class IKSolutionGenerator:
         solutions = []
         n = 0
         logging.warn("IKSolutionGenerator: " + str(len(possible_ik_solutions)) + " possible ik solutions found")
-        for i in xrange(len(possible_ik_solutions)):        
+        for i in xrange(len(possible_ik_solutions)):
+            print "i " + str(i)        
             logging.info("IKSolutionGenerator: Checking ik solution " + str(i) + " for validity")            
-            ik_solution = [possible_ik_solutions[i][k] for k in xrange(len(start_state))] 
-            self.path_planner.set_start_and_goal(start_state, [ik_solution])           
-            path = self.path_planner.plan_paths(1, 0)            
+            ik_solution = [possible_ik_solutions[i][k] for k in xrange(len(start_state) / 2)]            
+            ik_solution.extend([0.0 for i in xrange(len(start_state) / 2)]) 
+            self.path_planner.set_start_and_goal(start_state, [ik_solution], goal_position, goal_threshold)           
+            path = self.path_planner.plan_paths(1, 0)
             if len(path) != 0:
                 logging.warn("IKSolutionGenerator: ik solution " + str(i) + " is a valid ik solution")                
-                solutions.append(path[0][0][-1])
+                #solutions.append(path[0][0][-1])
+                solutions.append(ik_solution)
             else:
                 logging.warn("IKSolutionGenerator: Path has length 0")                
             n += 1

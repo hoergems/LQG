@@ -9,10 +9,17 @@ using std::endl;
 namespace shared {
 
     ManipulatorGoalRegion::ManipulatorGoalRegion(const ompl::base::SpaceInformationPtr &si,                                  
-                                                 std::vector<std::vector<double>> &goal_states):
+                                                 std::vector<std::vector<double>> &goal_states,
+                                                 std::vector<double> &ee_goal_position,
+                                                 double &ee_goal_threshold,
+                                                 std::shared_ptr<Kinematics> kinematics):
         ompl::base::GoalSampleableRegion(si),
+        kinematics_(kinematics),
+        state_space_information_(si),
         state_dimension_(si->getStateDimension()),        
-        goal_states_(goal_states)          
+        goal_states_(goal_states),
+        ee_goal_position_(ee_goal_position),
+        ee_goal_threshold_(ee_goal_threshold)
     {
         
     }
@@ -63,6 +70,27 @@ namespace shared {
     unsigned int ManipulatorGoalRegion::maxSampleCount() const
     {
         return goal_states_.size();
+    }
+    
+    bool ManipulatorGoalRegion::isSatisfied(const ompl::base::State *st) const {
+    	std::vector<double> joint_angles;
+    	for (unsigned int i = 0; i < state_space_information_->getStateDimension() / 2; i++) {
+    		joint_angles.push_back(st->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
+    	}
+    	
+    	std::vector<double> ee_position = kinematics_->getEndEffectorPosition(joint_angles);
+    	double sum(0.0);
+    	for (unsigned int i = 0; i < joint_angles.size(); i++) {
+    		sum += pow(ee_position[i] - ee_goal_position_[i], 2);
+    	}
+    	
+    	sum = sqrt(sum);
+    	if (sum < ee_goal_threshold_) {
+    		return true;
+    	}
+    	
+    	return false;
+    	
     }
 }
 

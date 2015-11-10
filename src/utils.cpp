@@ -259,7 +259,7 @@ void Utils::loadTerrains(std::vector<std::shared_ptr<shared::Terrain> > *terrain
 
 std::vector<fcl::OBB> Utils::createManipulatorCollisionStructures(const std::vector<double> &joint_angles,
                                                                   const std::vector<std::vector<double>> &link_dimensions,
-                                                                  const std::shared_ptr<shared::Kinematics> &kinematics) const{
+                                                                  const std::shared_ptr<shared::Kinematics> &kinematics) const{	
     std::vector<fcl::AABB> link_aabbs;
     for (size_t i = 0; i < link_dimensions.size(); i++) {
         link_aabbs.push_back(fcl::AABB(fcl::Vec3f(0.0, -link_dimensions[i][1] / 2.0, -link_dimensions[i][2] / 2.0),

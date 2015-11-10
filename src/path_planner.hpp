@@ -73,7 +73,9 @@ namespace shared {
 
             boost::shared_ptr<ManipulatorGoalRegion> getOrCreateGoalRegion();
  
-            void setGoalStates(std::vector<std::vector<double>> &goal_states);
+            void setGoalStates(std::vector<std::vector<double>> &goal_states,
+            		           std::vector<double> &ee_goal_position,
+            		           double ee_goal_threshold);
 
             void setLinkDimensions(std::vector<std::vector<double>> &link_dimensions);
             
@@ -125,6 +127,10 @@ namespace shared {
             bool verbose_;            
 
             std::vector<std::vector<double>> goal_states_;
+            
+            std::vector<double> ee_goal_position_;
+            
+            double ee_goal_threshold_;
 
             /** Clean memory from unused states */
             void clear();
@@ -133,6 +139,8 @@ namespace shared {
             
             /** Generates a linear path from point p1 to point p2 */
             std::vector<std::vector<double> > genLinearPath(std::vector<double> &p1, std::vector<double> &p2);
+            
+            std::vector<std::vector<double>> augmentPath_(std::vector<std::vector<double>> &solution_path);
     };
 }
 

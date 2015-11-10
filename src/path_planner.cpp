@@ -30,8 +30,7 @@ PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
     si_(new ompl::base::SpaceInformation(space_)),    
     problem_definition_(new ompl::base::ProblemDefinition(si_)),
     planner_str_(planner),    
-    planner_(nullptr),
-    obstacles_(),    
+    planner_(nullptr),       
     kinematics_(kinematics), 
     motionValidator_(new MotionValidator(si_, 
                                          kinematics_, 
@@ -155,11 +154,11 @@ bool PathPlanner::isValidPy(std::vector<double> &state) {
 }
 
 bool PathPlanner::isValid(const ompl::base::State *state) {    
-    std::vector<double> angles1;
+    std::vector<double> state_vec;
     for (unsigned int i = 0; i < si_->getStateSpace()->getDimension(); i++) {
-        angles1.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);        
+        state_vec.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);        
     }
-    return static_cast<MotionValidator &>(*motionValidator_).isValid(angles1);
+    return static_cast<MotionValidator &>(*motionValidator_).isValid(state_vec);
 }
 
 void PathPlanner::clear() {
@@ -216,14 +215,23 @@ std::vector<std::vector<double> > PathPlanner::genLinearPath(std::vector<double>
 }
 
 std::vector<double> PathPlanner::sampleGoalVec() {    
-    ManipulatorGoalRegion gr(si_, goal_states_);
+    ManipulatorGoalRegion gr(si_, goal_states_, ee_goal_position_, ee_goal_threshold_, kinematics_);
     return gr.sampleGoalVec();
 }
 
-void PathPlanner::setGoalStates(std::vector<std::vector<double>> &goal_states) {
+void PathPlanner::setGoalStates(std::vector<std::vector<double>> &goal_states,
+                                std::vector<double> &ee_goal_position,
+                                double ee_goal_threshold) {
     for (size_t i = 0; i < goal_states.size(); i++) {
         goal_states_.push_back(goal_states[i]);
     }
+    
+    ee_goal_position_.clear();
+    for (size_t i = 0; i < ee_goal_position.size(); i++) {
+    	ee_goal_position_.push_back(ee_goal_position[i]);
+    }
+    
+    ee_goal_threshold_ = ee_goal_threshold;
 }
 
 void PathPlanner::setLinkDimensions(std::vector<std::vector<double>> &link_dimensions) {
@@ -256,12 +264,13 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
     }
     
     if (!isValid(start_state.get())) {        
-        cout << "Path planner: ERROR: Start state not valid!" << endl;        
+        cout << "Path planner: ERROR: Start state not valid!" << endl;
+        sleep(10);
         return solution_vector;    
     }
     
     problem_definition_->addStartState(start_state);    
-    ompl::base::GoalPtr gp(new ManipulatorGoalRegion(si_, goal_states_));
+    ompl::base::GoalPtr gp(new ManipulatorGoalRegion(si_, goal_states_, ee_goal_position_, ee_goal_threshold_, kinematics_));
     
     problem_definition_->setGoal(gp);
    
@@ -282,7 +291,7 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
             if (verbose_) {
                 cout << "Linear path is a valid solution. Returning linear path of length " << linear_path.size() << endl;
             }        
-            return linear_path;
+            return augmentPath_(linear_path);
         } 
     
     }
@@ -308,15 +317,58 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
     const bool cont_check = true;
     for (size_t i=1; i<solution_path->getStates().size(); i++) {
        vals.clear();       
-       for (int j=0; j<dim_; j++) {          
+       for (unsigned int j = 0; j < dim_ / 2; j++) {          
           vals.push_back(solution_path->getState(i)->as<ompl::base::RealVectorStateSpace::StateType>()->values[j]); 
        }     
        solution_vector.push_back(vals);  
        
     }   
     clear();       
-    return solution_vector;
+    return augmentPath_(solution_vector);
 } 
+
+std::vector<std::vector<double>> PathPlanner::augmentPath_(std::vector<std::vector<double>> &solution_path) {	
+	std::vector<std::vector<double>> augmented_path;
+	for (size_t i = 0; i < solution_path.size(); i++) {
+		std::vector<double> path_element;
+		std::vector<double> solution_element;
+		std::vector<double> next_solution_element;
+		std::vector<double> control;
+		std::vector<double> observation;
+		for (size_t j = 0; j < dim_ / 2; j++) {			
+			solution_element.push_back(solution_path[i][j]);			
+			if (i != solution_path.size() - 1) {
+				next_solution_element.push_back(solution_path[i + 1][j]);
+				control.push_back((next_solution_element[j] - solution_element[j]) / delta_t_);
+			}
+			else {
+				control.push_back(0.0);
+			}
+			observation.push_back(solution_element[j]);
+			
+		}
+		
+		for (size_t j = 0; j < dim_ / 2; j++) {
+			solution_element.push_back(0.0);
+			observation.push_back(0.0);
+		}		
+		
+		for (size_t j = 0; j < solution_element.size(); j++) {
+			path_element.push_back(solution_element[j]);			
+		}
+		
+		for (size_t j = 0; j < control.size(); j++) {
+			path_element.push_back(control[j]);
+		}
+		
+		for (size_t j = 0; j < observation.size(); j++) {
+			path_element.push_back(observation[j]);
+		}
+		
+		augmented_path.push_back(path_element);
+	}	
+	return augmented_path;
+}
 
 BOOST_PYTHON_MODULE(libpath_planner) {
     using namespace boost::python;   

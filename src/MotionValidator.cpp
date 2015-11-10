@@ -28,12 +28,12 @@ MotionValidator::MotionValidator(const ompl::base::SpaceInformationPtr &si,
 
 bool MotionValidator::checkMotion(const std::vector<double> &s1, 
                                   const std::vector<double> &s2, 
-                                  const bool &continuous_collision) const {
-	for (size_t i = 0; i < s1.size(); i++) {		
+                                  const bool &continuous_collision) const {	
+	/**for (size_t i = 0; i < s1.size(); i++) {		
 		if ((fabs((s2[i] - s1[i]) / delta_t_)) > max_joint_velocity_ + 0.00001) {
 			return false;
 		}		
-	}
+	}**/
 	
     std::vector<OBB> manipulator_collision_structures_goal = utils_.createManipulatorCollisionStructures(s2,
                                                                                                          link_dimensions_, 
@@ -73,7 +73,7 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
 bool MotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base::State *s2) const {    
     std::vector<double> angles1;
     std::vector<double> angles2;    
-    for (unsigned int i = 0; i < si_->getStateSpace()->getDimension(); i++) {
+    for (unsigned int i = 0; i < si_->getStateSpace()->getDimension() / 2; i++) {
         angles1.push_back(s1->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);        
         angles2.push_back(s2->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
     }
@@ -89,7 +89,11 @@ bool MotionValidator::checkMotion(const ompl::base::State *s1,
 }
 
 bool MotionValidator::isValid(const std::vector<double> &s1) const {
-    std::vector<OBB> manipulator_collision_structures = utils_.createManipulatorCollisionStructures(s1, 
+	std::vector<double> joint_angles;
+	for (size_t i = 0; i < s1.size() / 2; i++) {
+		joint_angles.push_back(s1[i]);
+	}
+    std::vector<OBB> manipulator_collision_structures = utils_.createManipulatorCollisionStructures(joint_angles, 
                                                                                                     link_dimensions_,
                                                                                                     kinematics_);
     for (size_t i = 0; i < obstacles_.size(); i++) {

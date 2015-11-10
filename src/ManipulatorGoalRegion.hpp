@@ -17,7 +17,10 @@ namespace shared {
     class ManipulatorGoalRegion: public ompl::base::GoalSampleableRegion {
         public:
             ManipulatorGoalRegion(const ompl::base::SpaceInformationPtr &si,                                  
-                                  std::vector<std::vector<double>> &goal_states);
+                                  std::vector<std::vector<double>> &goal_states,
+                                  std::vector<double> &ee_goal_position,
+                                  double &ee_goal_threshold,
+                                  std::shared_ptr<Kinematics> kinematics);
                                   
             //~ManipulatorGoalRegion() = default;
 
@@ -28,11 +31,22 @@ namespace shared {
             std::vector<double> sampleGoalVec() const;
 
             unsigned int maxSampleCount() const;
+            
+            virtual bool isSatisfied(const ompl::base::State *st) const;
 
         private:
+            /** Forward kinematics */
+            std::shared_ptr<Kinematics> kinematics_;
+            
+            ompl::base::SpaceInformationPtr state_space_information_;
+            
             unsigned int state_dimension_;
             
             std::vector<std::vector<double>> goal_states_;
+            
+            std::vector<double> ee_goal_position_;
+            
+            double ee_goal_threshold_;
 
     };
 
