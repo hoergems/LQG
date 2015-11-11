@@ -173,9 +173,7 @@ class PathPlanningInterface:
                 total_eval_times)
         
     def plan_paths(self, num, sim_run, timeout=0.0):               
-        path_queue = Queue()
-        '''xs, us, zs = self._construct(self.obstacles, self.joint_constraints)
-        sleep'''
+        path_queue = Queue()        
         paths = []
         res_paths = collections.deque()
         processes = [Process(target=self.construct_path, 
@@ -232,8 +230,7 @@ class PathPlanningInterface:
             queue.put((xs, us, zs))        
         
     def _construct(self, obstacles, joint_constraints):
-        path_planner2 = None
-        print "construct "
+        path_planner2 = None        
         if not self.dynamic_problem:
             path_planner2 = libpath_planner.PathPlanner(len(self.link_dimensions) * 2,
                                                         self.delta_t,
@@ -247,12 +244,11 @@ class PathPlanningInterface:
                                                         self.planning_algorithm)            
             path_planner2.setKinematics(self.kinematics)
             path_planner2.setup()
-        else:
-            print "cons " +str(self.kinematics)
-            path_planner2 = libdynamic_path_planner.DynamicPathPlanner(True)
+        else:            
+            path_planner2 = libdynamic_path_planner.DynamicPathPlanner(False)
             path_planner2.setupMotionValidator()
             path_planner2.setKinematics(self.kinematics)
-            print "setup dyn"
+            
             path_planner2.setup(self.model_file,
                                 self.simulation_step_size,
                                 False,
@@ -298,7 +294,8 @@ class PathPlanningInterface:
         for i in xrange(len(xs_temp)):
             xs.append([xs_temp[i][j] for j in xrange(0, 2 * len(self.link_dimensions))])
             us.append([xs_temp[i][j] for j in xrange(2 * len(self.link_dimensions), 3 * len(self.link_dimensions))])
-            zs.append([xs_temp[i][j] for j in xrange(3 * len(self.link_dimensions), 5 * len(self.link_dimensions))])                       
+            zs.append([xs_temp[i][j] for j in xrange(3 * len(self.link_dimensions), 5 * len(self.link_dimensions))])
+        print zs
         return xs, us, zs
     
 if __name__ == "__main__":

@@ -22,7 +22,7 @@ DynamicPathPlanner::DynamicPathPlanner(bool verbose):
     motionValidator_(nullptr),
     verbose_(verbose)
 {
-    cout << "Hello" << endl;
+    
 }
 
 
@@ -64,7 +64,7 @@ bool DynamicPathPlanner::setup(std::string model_file,
 	    cout << "Failed to load URDF model" << endl;
 	    return false;
 	}
-	cout << "Succesfully loaded URDF model" << endl;
+	
 	std::vector<OpenRAVE::KinBodyPtr> bodies;
 	env_->GetBodies(bodies);
 	env_->StopSimulation();
@@ -75,9 +75,7 @@ bool DynamicPathPlanner::setup(std::string model_file,
 	links[0]->SetStatic(true);    
 	    
 	/***** Setup OMPL *****/
-	cout << "setting up ompl" << endl;
 	setup_ompl_(robot, simulation_step_size, linear_propagation, verbose_);
-	cout << "ompl set up" << endl;
 	    
 	/***** Create the physics engine *****/
 	const std::string engine = "ode";
@@ -86,7 +84,6 @@ bool DynamicPathPlanner::setup(std::string model_file,
 	const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});    
 	physics_engine_->SetGravity(gravity);
 	env_->SetPhysicsEngine(physics_engine_);
-	cout << "setting up state propagator" << endl;
 	boost::static_pointer_cast<StatePropagator>(state_propagator_)->setupOpenRAVEEnvironment(env_, 
 	    		                                                                             robot,
 	    		                                                                             coulomb,
@@ -116,10 +113,7 @@ bool DynamicPathPlanner::setup_ompl_(OpenRAVE::RobotBasePtr &robot,
 		                             bool &verbose) {
     // The state space consists of joint angles + velocity    
     state_space_dimension_ = robot->GetDOF() * 2;
-    control_space_dimension_ = state_space_dimension_ / 2;
-    cout << "robot dof " << robot->GetDOF() << endl;
-    cout << "state space dimension " << state_space_dimension_ << endl;
-    cout << "control_space_dimension " << control_space_dimension_ << endl;
+    control_space_dimension_ = state_space_dimension_ / 2;    
     state_space_ = boost::make_shared<ompl::base::RealVectorStateSpace>(state_space_dimension_);    
     state_space_bounds_ = ompl::base::RealVectorBounds(state_space_dimension_);
     control_space_ = boost::make_shared<ControlSpace>(state_space_, control_space_dimension_);
@@ -158,8 +152,6 @@ bool DynamicPathPlanner::setup_ompl_(OpenRAVE::RobotBasePtr &robot,
         // Set the joints velocity bounds              
         state_space_bounds_.setLow(i + state_space_dimension_ / 2, -joints[i]->GetMaxVel());
         state_space_bounds_.setHigh(i + state_space_dimension_ / 2, joints[i]->GetMaxVel());
-        
-        cout << "control bound: " << joints[i]->GetMaxTorque() << endl;
         
         control_bounds.setLow(i, -joints[i]->GetMaxTorque());
         control_bounds.setHigh(i, joints[i]->GetMaxTorque());
@@ -252,7 +244,8 @@ std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<dou
 		                                                   double timeout) {
     // Set the start and goal state
 	cout << "solve" << endl;
-    ompl::base::ScopedState<> start_state(state_space_);    
+    ompl::base::ScopedState<> start_state(state_space_);
+    std::vector<std::vector<double>> solution_vector; 
     for (unsigned int i = 0; i < state_space_dimension_; i++) {
         start_state[i] = start_state_vec[i];        
     }
@@ -292,25 +285,37 @@ std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<dou
         std::vector<ompl::control::Control*> solution_controls_(solution_path_->getControls());
         for (size_t i = 0; i < solution_states_.size(); i++) {
             cout << "State: ";
+            std::vector<double> solution_state;
             for (size_t j = 0; j < state_space_dimension_; j++) {
+            	solution_state.push_back(solution_states_[i]->as<ompl::base::RealVectorStateSpace::StateType>()->values[j]);
                 cout << solution_states_[i]->as<ompl::base::RealVectorStateSpace::StateType>()->values[j] << ", ";
             }
             cout << endl;
             
-            if (i < solution_states_.size() - 1) {
-                cout << "Control: ";
-                for (size_t j = 0; j < state_space_dimension_ / 2; j++) {
+            
+            cout << "Control: ";
+            for (size_t j = 0; j < state_space_dimension_ / 2; j++) {
+            	if (i < solution_states_.size() - 1) {
+                    solution_state.push_back(solution_controls_[i]->as<ompl::control::RealVectorControlSpace::ControlType>()->values[j]);
                     cout << solution_controls_[i]->as<ompl::control::RealVectorControlSpace::ControlType>()->values[j] << ", ";
-                }
-                cout << endl;
-            }            
+            	}
+            	else {
+            		solution_state.push_back(0.0);
+            	}
+            }
+            cout << endl;
+            
+            for (size_t j = 0; j < state_space_dimension_; j++) {
+                solution_state.push_back(solution_states_[i]->as<ompl::base::RealVectorStateSpace::StateType>()->values[j]);                
+            }
+            solution_vector.push_back(solution_state);          
         }
         cout << "Solution found in " << t.elapsed() << "seconds" << endl;
         cout << "accepted " << accepted_ << endl;
-        cout << "rejected " << rejected_ << endl;
+        cout << "rejected " << rejected_ << endl;        
         //return solution_path_; 
     }
-    std::vector<std::vector<double>> solution_vector; 
+    
     return solution_vector;
 }
 

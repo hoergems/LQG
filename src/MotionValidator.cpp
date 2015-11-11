@@ -18,7 +18,7 @@ MotionValidator::MotionValidator(const ompl::base::SpaceInformationPtr &si,
     utils_(),
     link_dimensions_()
 {
-    cout << "HELLO IN MOTION VALIDATOR" << endl;
+    
 }
 
 void MotionValidator::setKinematics(std::shared_ptr<Kinematics> kinematics) {
