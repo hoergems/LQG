@@ -3,6 +3,7 @@ from path_evaluator import *
 from multiprocessing import Process, cpu_count, Lock, Queue
 from Queue import Empty, Full
 import libpath_planner
+import libdynamic_path_planner
 import libutil
 import time
 import libkinematics
@@ -47,7 +48,7 @@ class PathPlanningInterface:
                               discount_factor):
         self.path_evaluator.setup_reward_function(step_penalty, illegal_move_penalty, exit_reward, discount_factor)
     
-    def setup(self, 
+    def setup(self,              
               link_dimensions, 
               workspace_dimension,
               obstacles, 
@@ -56,8 +57,7 @@ class PathPlanningInterface:
               use_linear_path, 
               joint_constraints,
               enforce_constraints,
-              planning_algorithm,
-              dynamic_problem):
+              planning_algorithm):        
         self.link_dimensions = link_dimensions
         self.workspace_dimension = workspace_dimension        
         self.num_cores = cpu_count()
@@ -82,14 +82,27 @@ class PathPlanningInterface:
             ax2[:] = [0, 1, 0]
             
         axis[:] = [ax1, ax2, ax1]        
-        self.kinematics = Kinematics()        
-        self.kinematics.setLinksAndAxis(self.link_dimensions, axis)
+        self.kinematics = libkinematics.Kinematics()        
+        self.kinematics.setLinksAndAxis(self.link_dimensions, axis)        
         self.verbose = False 
         if(logging.getLogger().isEnabledFor(logging.INFO)):
             self.verbose = True
         self.planning_algorithm = planning_algorithm
-        self.dynamic_problem = dynamic_problem
-               
+        self.dynamic_problem = False
+        
+    def setup_dynamic_problem(self, 
+                              urdf_model, 
+                              simulation_step_size,
+                              coulomb, 
+                              viscous,
+                              control_duration):
+        self.dynamic_problem = True
+        self.model_file = urdf_model
+        self.simulation_step_size = simulation_step_size
+        self.coulomb = coulomb
+        self.viscous = viscous
+        self.control_duration = control_duration
+        
         
     def set_start_and_goal(self, start_state, goal_states, ee_goal_position, ee_goal_threshold):        
         self.start_state = start_state
@@ -159,8 +172,10 @@ class PathPlanningInterface:
                 total_gen_times,
                 total_eval_times)
         
-    def plan_paths(self, num, sim_run, timeout=0.0):        
+    def plan_paths(self, num, sim_run, timeout=0.0):               
         path_queue = Queue()
+        '''xs, us, zs = self._construct(self.obstacles, self.joint_constraints)
+        sleep'''
         paths = []
         res_paths = collections.deque()
         processes = [Process(target=self.construct_path, 
@@ -200,6 +215,7 @@ class PathPlanningInterface:
                                     current_step, 
                                     horizon, 
                                     P_t):
+        sleep
         while True:
             t0 = time.time()               
             xs, us, zs = self._construct(obstacles, joint_constraints)
@@ -210,16 +226,16 @@ class PathPlanningInterface:
                 eval_time = time.time() - t0        
                 queue.put((xs, us, zs, eval_result[1], gen_time, eval_time))        
     
-    def construct_path(self, obstacles, queue, joint_constraints,):
+    def construct_path(self, obstacles, queue, joint_constraints,):        
         while True:
             xs, us, zs = self._construct(obstacles, joint_constraints)                       
             queue.put((xs, us, zs))        
         
     def _construct(self, obstacles, joint_constraints):
         path_planner2 = None
+        print "construct "
         if not self.dynamic_problem:
-            path_planner2 = libpath_planner.PathPlanner(self.kinematics,
-                                                        len(self.link_dimensions) * 2,
+            path_planner2 = libpath_planner.PathPlanner(len(self.link_dimensions) * 2,
                                                         self.delta_t,
                                                         True,
                                                         self.max_velocity,
@@ -228,19 +244,34 @@ class PathPlanningInterface:
                                                         1.0,                                                    
                                                         self.use_linear_path,
                                                         self.verbose,
-                                                        self.planning_algorithm)
+                                                        self.planning_algorithm)            
+            path_planner2.setKinematics(self.kinematics)
+            path_planner2.setup()
         else:
-            pass        
-        path_planner2.setup()
+            print "cons " +str(self.kinematics)
+            path_planner2 = libdynamic_path_planner.DynamicPathPlanner(True)
+            path_planner2.setupMotionValidator()
+            path_planner2.setKinematics(self.kinematics)
+            print "setup dyn"
+            path_planner2.setup(self.model_file,
+                                self.simulation_step_size,
+                                False,
+                                self.coulomb,
+                                self.viscous,
+                                self.control_duration)
+        print "set obstacles"
         path_planner2.setObstacles(obstacles)
+        
         link_dimensions = libutil.v2_double()
         ld = []       
         for i in xrange(len(self.link_dimensions)):
             link_dim = libutil.v_double()            
             link_dim[:] = [self.link_dimensions[i][j] for j in xrange(len(self.link_dimensions[i]))]
             ld.append(link_dim)
-        link_dimensions[:] = ld        
-        path_planner2.setLinkDimensions(link_dimensions)         
+        link_dimensions[:] = ld
+        print "setting link dimensions"        
+        path_planner2.setLinkDimensions(link_dimensions)
+        print "set link dimensions"         
         goal_states = libutil.v2_double()
         gs = []       
         for i in xrange(len(self.goal_states)):
@@ -259,7 +290,8 @@ class PathPlanningInterface:
         start_state = libutil.v_double()
         v = [self.start_state[i] for i in xrange(len(self.start_state))]
         start_state[:] = v  
-        xs_temp = path_planner2.solve(start_state)
+        xs_temp = path_planner2.solve(start_state, 50.0)
+        
         xs = []
         us = []
         zs = []        

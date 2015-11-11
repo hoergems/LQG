@@ -32,7 +32,7 @@ namespace shared {
 
             unsigned int maxSampleCount() const;
             
-            virtual bool isSatisfied(const ompl::base::State *st) const;
+            bool isSatisfied(const ompl::base::State *st) const;
 
         private:
             /** Forward kinematics */

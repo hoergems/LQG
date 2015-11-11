@@ -25,13 +25,30 @@ namespace shared {
     }
 
     double ManipulatorGoalRegion::distanceGoal(const ompl::base::State *st) const
-    {        
+    {    
+    	
         double min_dist = 10000.0;
         std::vector<double> v1;
         double* v = st->as<ompl::base::RealVectorStateSpace::StateType>()->values;
-        for (unsigned int i = 0; i < state_dimension_; i++) {
+        for (unsigned int i = 0; i < state_dimension_ / 2; i++) {
            v1.push_back(v[i]);
         }
+        
+        std::vector<double> ee_position = kinematics_->getEndEffectorPosition(v1);
+        std::vector<double> ee_g;
+        for (size_t i = 0; i < ee_goal_position_.size(); i++) {
+        	ee_g.push_back(ee_goal_position_[i]);
+        }
+        double distance = utils::euclideanDistance(ee_position, ee_g);
+        
+        cout << "ee_posittion: ";
+        for (size_t i = 0; i < ee_position.size(); i++) {
+        	cout << ee_position[i] << ", ";
+        }
+        cout << endl;
+        cout << "distance: " << distance << endl;
+        return distance;
+        
         for (size_t i = 0; i < goal_states_.size(); i++) {
            std::vector<double> goalState = goal_states_[i];
            double d = utils::euclideanDistance(v1, goalState);
@@ -39,13 +56,14 @@ namespace shared {
                min_dist = d;
            }
         }
-        
+        cout << "distance goal " << min_dist << endl;
         return min_dist;        
     } 
 
     void ManipulatorGoalRegion::sampleGoal(ompl::base::State *st) const 
     {    
-        ompl::RNG rng; 
+        cout << "Sample goal" << endl;
+    	ompl::RNG rng; 
        
         int rd = rng.uniformInt(0, goal_states_.size() - 1);   
         double* v = st->as<ompl::base::RealVectorStateSpace::StateType>()->values;
@@ -73,6 +91,8 @@ namespace shared {
     }
     
     bool ManipulatorGoalRegion::isSatisfied(const ompl::base::State *st) const {
+    	cout << "Is satisfied????????????" << endl;
+    	sleep(10);
     	std::vector<double> joint_angles;
     	for (unsigned int i = 0; i < state_space_information_->getStateDimension() / 2; i++) {
     		joint_angles.push_back(st->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
@@ -88,7 +108,7 @@ namespace shared {
     	if (sum < ee_goal_threshold_) {
     		return true;
     	}
-    	
+    	cout << "Not satisfied" << endl;
     	return false;
     	
     }

@@ -56,7 +56,8 @@ add_library(dynamic_path_planner SHARED
             dynamic_path_planner.cpp 
             MotionValidator.cpp
             state_propagator.cpp
-            propagator.cpp            
+            propagator.cpp
+            integrate.cpp            
             ManipulatorGoalRegion.cpp
             utils.cpp
             Obstacle.cpp
@@ -110,7 +111,8 @@ target_link_libraries (dynamic_path_planner
                        boost_system
                        boost_python
                        python2.7 
-                       boost_thread)
+                       boost_thread
+                       fcl)
 
 #set_property(TARGET robot PROPERTY CXX_STANDARD 11)
                        

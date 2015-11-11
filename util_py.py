@@ -63,7 +63,7 @@ def compareEnvironmentToTmpFiles(problem, model_file):
 
 def get_goal_states(problem, 
                     serializer, 
-                    obstacles, 
+                    obstacles,                     
                     link_dimensions, 
                     workspace_dimension,
                     max_velocity,
@@ -73,8 +73,7 @@ def get_goal_states(problem,
                     start_state,
                     goal_position,
                     goal_threshold,
-                    planning_algorithm,
-                    dynamic_problem):    
+                    planning_algorithm):    
     model_file = "model.xml"
     if workspace_dimension == 3:
         model_file = "model3D.xml"
@@ -90,8 +89,7 @@ def get_goal_states(problem,
                                     enforce_constraints,
                                     model_file,
                                     "environment/env.xml",
-                                    planning_algorithm,
-                                    dynamic_problem)
+                                    planning_algorithm)
         ik_solutions = ik_solution_generator.generate(start_state, goal_position, goal_threshold, workspace_dimension)
         if len(ik_solutions) == 0:
             return None

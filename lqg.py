@@ -41,6 +41,7 @@ class LQG:
         self.utils = Utils()
         
         model_file = os.getcwd() + "/model/model.xml"
+        urdf_model_file = "test.urdf"
         if self.workspace_dimension == 3:
             model_file = os.getcwd() + "/model/model3D.xml"
         self.setup_scene("environment", "env.xml", model_file)
@@ -48,7 +49,7 @@ class LQG:
         print "LQG: Generating goal states..."
         goal_states = get_goal_states("lqg",
                                       self.serializer, 
-                                      self.obstacles,
+                                      self.obstacles,                                      
                                       self.link_dimensions,
                                       self.workspace_dimension,
                                       self.max_velocity,
@@ -58,8 +59,7 @@ class LQG:
                                       self.start_state,
                                       self.goal_position,
                                       self.goal_radius,
-                                      self.planning_algortihm,
-                                      self.dynamic_problem)
+                                      self.planning_algortihm)
         
         if len(goal_states) == 0:
             logging.error("LQG: Couldn't generate any goal states. Problem seems to be infeasible")
@@ -73,8 +73,13 @@ class LQG:
                            self.use_linear_path, 
                            self.joint_constraints,
                            self.enforce_constraints,
-                           self.planning_algortihm,
-                           self.dynamic_problem)        
+                           self.planning_algortihm)
+        if self.dynamic_problem:
+            path_planner.setup_dynamic_problem(urdf_model_file,
+                                               self.simulation_step_size,
+                                               self.coulomb,
+                                               self.viscous,
+                                               self.control_duration)       
         path_planner.set_start_and_goal(self.start_state, goal_states, self.goal_position, self.goal_radius)         
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, len(self.link_dimensions))
         
@@ -347,7 +352,11 @@ class LQG:
         self.w2 = config['w2']
         self.plot_paths = config['plot_paths']
         self.planning_algortihm = config['planning_algorithm']
-        self.dynamic_problem = config['dynamic_problem']        
+        self.dynamic_problem = config['dynamic_problem'] 
+        self.simulation_step_size = config['simulation_step_size']
+        self.coulomb = config['coulomb']
+        self.viscous = config['viscous']
+        self.control_duration = config['control_duration']       
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

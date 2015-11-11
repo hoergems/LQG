@@ -7,21 +7,22 @@ using namespace fcl;
 
 namespace shared {
 
-MotionValidator::MotionValidator(const ompl::base::SpaceInformationPtr &si,
-                                 std::shared_ptr<Kinematics> kinematics,                                 
-                                 std::vector<std::shared_ptr<Obstacle> > obstacles,
-                                 double delta_t,
+MotionValidator::MotionValidator(const ompl::base::SpaceInformationPtr &si,                                                                 
+                                 std::vector<std::shared_ptr<Obstacle> > obstacles,                                 
                                  bool continuous_collision):    
     ompl::base::MotionValidator(si),
     si_(si),
-    kinematics_(kinematics),
-    obstacles_(obstacles),
-    delta_t_(delta_t),
+    kinematics_(nullptr),
+    obstacles_(obstacles),    
     continuous_collision_(continuous_collision),    
     utils_(),
     link_dimensions_()
 {
-    
+    cout << "HELLO IN MOTION VALIDATOR" << endl;
+}
+
+void MotionValidator::setKinematics(std::shared_ptr<Kinematics> kinematics) {
+	kinematics_ = kinematics;
 }
 
 bool MotionValidator::checkMotion(const std::vector<double> &s1, 
@@ -63,7 +64,7 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
             }
         } 
     }     
-      
+    cout << "Motion is valid" << endl;
     return true;
 }
 
@@ -111,9 +112,9 @@ void MotionValidator::setObstacles(std::vector<std::shared_ptr<Obstacle> > &obst
     }    
 }
 
-void MotionValidator::setLinkDimensions(std::vector<std::vector<double>> &link_dimensions) {
-    for (size_t i = 0; i < link_dimensions.size(); i++) {
-        link_dimensions_.push_back(link_dimensions[i]);
+void MotionValidator::setLinkDimensions(std::vector<std::vector<double>> &link_dimensions) {	
+    for (size_t i = 0; i < link_dimensions.size(); i++) {    	
+        link_dimensions_.push_back(link_dimensions[i]);        
     }    
 }
 }

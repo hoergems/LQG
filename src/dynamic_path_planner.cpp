@@ -9,77 +9,89 @@ using std::endl;
 
 namespace shared {
 
-DynamicPathPlanner::DynamicPathPlanner(std::shared_ptr<Kinematics> kinematics,
-		                               std::string model_file,
-                                       double control_duration,
-                                       double simulation_step_size,
-                                       double coulomb,
-                                       double viscous,
-                                       bool linear_propagation,
-                                       bool verbose):
-    kinematics_(kinematics),
-    control_duration_(control_duration),
+DynamicPathPlanner::DynamicPathPlanner(bool verbose):        
     state_space_(nullptr),
     state_space_bounds_(1),
+	kinematics_(nullptr),
     control_space_(nullptr),
     space_information_(nullptr),
     problem_definition_(nullptr),
     planner_(nullptr),
     state_propagator_(nullptr),
     env_(nullptr),
-    motionValidator_(new MotionValidator(space_information_, 
-                                         kinematics_, 
-                                         obstacles_,
-                                         control_duration_,
-                                         true)),
+    motionValidator_(nullptr),
     verbose_(verbose)
 {
-    /***** Initialize OpenRAVE *****/
-    OpenRAVE::RaveInitialize(true);    
-    env_ = OpenRAVE::RaveCreateEnvironment();    
+    cout << "Hello" << endl;
+}
 
-    const std::string module_str("or_urdf_plugin");
-    if(!OpenRAVE::RaveLoadPlugin(module_str)) {
-        cout << "Failed to load the or_urdf_plugin." << endl;
-        return;
-    }
-    
-    OpenRAVE::ModuleBasePtr urdf_module = OpenRAVE::RaveCreateModule(env_, "URDF");
-    const std::string cmdargs("");
-    env_->AddModule(urdf_module, cmdargs);
-    std::stringstream sinput, sout;
-    sinput << "load " << model_file;
-    if (!urdf_module->SendCommand(sout,sinput)) {
-        cout << "Failed to load URDF model" << endl;
-        return;
-    }
-    cout << "Succesfully loaded URDF model" << endl;
-    std::vector<OpenRAVE::KinBodyPtr> bodies;
-    env_->GetBodies(bodies);
-    env_->StopSimulation();
-    
-    OpenRAVE::RobotBasePtr robot = getRobot();
 
-    const std::vector<OpenRAVE::KinBody::LinkPtr> links(robot->GetLinks());    
-    links[0]->SetStatic(true);    
-    
-    /***** Setup OMPL *****/
-    cout << "setting up ompl" << endl;
-    setup_ompl_(robot, simulation_step_size, linear_propagation, verbose_);
-    cout << "ompl set up" << endl;
-    
-    /***** Create the physics engine *****/
-    const std::string engine = "ode";
-    OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(env_, engine);
-    
-    const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});    
-    physics_engine_->SetGravity(gravity);
-    env_->SetPhysicsEngine(physics_engine_);
-    cout << "setting up state propagator" << endl;
-    boost::static_pointer_cast<StatePropagator>(state_propagator_)->setupOpenRAVEEnvironment(env_, 
-    		                                                                                 robot,
-    		                                                                                 coulomb,
-    		                                                                                 viscous);
+void DynamicPathPlanner::setKinematics(std::shared_ptr<Kinematics> kinematics) {
+	kinematics_ = kinematics;
+	static_cast<MotionValidator &>(*motionValidator_).setKinematics(kinematics_);
+}
+
+void DynamicPathPlanner::setupMotionValidator() {
+	motionValidator_ = boost::make_shared<MotionValidator>(space_information_,
+				                                               obstacles_,
+															   true);
+}
+
+bool DynamicPathPlanner::setup(std::string model_file,
+		                       double simulation_step_size,
+							   bool linear_propagation,
+							   double coulomb,
+							   double viscous,
+							   double control_duration) {	
+	control_duration_ = control_duration;
+	
+	/***** Initialize OpenRAVE *****/
+	OpenRAVE::RaveInitialize(true);    
+	env_ = OpenRAVE::RaveCreateEnvironment();    
+
+	const std::string module_str("or_urdf_plugin");
+	if(!OpenRAVE::RaveLoadPlugin(module_str)) {
+	    cout << "Failed to load the or_urdf_plugin." << endl;
+	    return false;
+	}
+	    
+	OpenRAVE::ModuleBasePtr urdf_module = OpenRAVE::RaveCreateModule(env_, "URDF");
+	const std::string cmdargs("");
+	env_->AddModule(urdf_module, cmdargs);
+	std::stringstream sinput, sout;
+	sinput << "load " << model_file;
+	if (!urdf_module->SendCommand(sout,sinput)) {
+	    cout << "Failed to load URDF model" << endl;
+	    return false;
+	}
+	cout << "Succesfully loaded URDF model" << endl;
+	std::vector<OpenRAVE::KinBodyPtr> bodies;
+	env_->GetBodies(bodies);
+	env_->StopSimulation();
+	    
+	OpenRAVE::RobotBasePtr robot = getRobot();
+
+	const std::vector<OpenRAVE::KinBody::LinkPtr> links(robot->GetLinks());    
+	links[0]->SetStatic(true);    
+	    
+	/***** Setup OMPL *****/
+	cout << "setting up ompl" << endl;
+	setup_ompl_(robot, simulation_step_size, linear_propagation, verbose_);
+	cout << "ompl set up" << endl;
+	    
+	/***** Create the physics engine *****/
+	const std::string engine = "ode";
+	OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(env_, engine);
+	    
+	const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});    
+	physics_engine_->SetGravity(gravity);
+	env_->SetPhysicsEngine(physics_engine_);
+	cout << "setting up state propagator" << endl;
+	boost::static_pointer_cast<StatePropagator>(state_propagator_)->setupOpenRAVEEnvironment(env_, 
+	    		                                                                             robot,
+	    		                                                                             coulomb,
+	    		                                                                             viscous);
+	return true;
 }
 
 OpenRAVE::EnvironmentBasePtr DynamicPathPlanner::getEnvironment() {
@@ -113,6 +125,7 @@ bool DynamicPathPlanner::setup_ompl_(OpenRAVE::RobotBasePtr &robot,
     control_space_ = boost::make_shared<ControlSpace>(state_space_, control_space_dimension_);
     
     space_information_ = boost::make_shared<ompl::control::SpaceInformation>(state_space_, control_space_);
+    space_information_->setMotionValidator(motionValidator_);
     space_information_->setStateValidityChecker(boost::bind(&DynamicPathPlanner::isValid, this, _1));
     space_information_->setMinMaxControlDuration(1, 1);
     space_information_->setPropagationStepSize(control_duration_);
@@ -146,6 +159,8 @@ bool DynamicPathPlanner::setup_ompl_(OpenRAVE::RobotBasePtr &robot,
         state_space_bounds_.setLow(i + state_space_dimension_ / 2, -joints[i]->GetMaxVel());
         state_space_bounds_.setHigh(i + state_space_dimension_ / 2, joints[i]->GetMaxVel());
         
+        cout << "control bound: " << joints[i]->GetMaxTorque() << endl;
+        
         control_bounds.setLow(i, -joints[i]->GetMaxTorque());
         control_bounds.setHigh(i, joints[i]->GetMaxTorque());
         //torque_bounds = torque_bounds - 0.1;
@@ -174,7 +189,12 @@ bool DynamicPathPlanner::isValid(const ompl::base::State *state) {
     return valid;
 }
 
-bool DynamicPathPlanner::solve_(double &time_limit) {
+bool DynamicPathPlanner::isValidPy(std::vector<double> &state) {
+    bool valid = static_cast<MotionValidator &>(*motionValidator_).isValid(state);
+    return valid;    
+}
+
+bool DynamicPathPlanner::solve_(double time_limit) {
     bool solved = false;
     bool hasExactSolution = false;    
     while (!solved && !hasExactSolution) {
@@ -195,7 +215,7 @@ bool DynamicPathPlanner::solve_(double &time_limit) {
 
 void DynamicPathPlanner::setGoalStates(std::vector<std::vector<double>> &goal_states,
                                        std::vector<double> &ee_goal_position,
-                                       double &ee_goal_threshold) {
+                                       double ee_goal_threshold) {
     for (size_t i = 0; i < goal_states.size(); i++) {
         goal_states_.push_back(goal_states[i]);
     }
@@ -223,11 +243,18 @@ void DynamicPathPlanner::setObstaclesPy(boost::python::list &ns) {
     static_cast<MotionValidator &>(*motionValidator_).setObstacles(obstacles_);
 }
 
-PathControlPtr DynamicPathPlanner::test(double &time_limit) {
+void DynamicPathPlanner::setLinkDimensions(std::vector<std::vector<double>> &link_dimensions) {	
+    boost::shared_ptr<MotionValidator> mv = boost::static_pointer_cast<MotionValidator>(space_information_->getMotionValidator());    
+    mv->setLinkDimensions(link_dimensions);    
+}
+
+std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<double> &start_state_vec,
+		                                                   double timeout) {
     // Set the start and goal state
+	cout << "solve" << endl;
     ompl::base::ScopedState<> start_state(state_space_);    
     for (unsigned int i = 0; i < state_space_dimension_; i++) {
-        start_state[i] = 0.0;        
+        start_state[i] = start_state_vec[i];        
     }
 
     ompl::base::GoalPtr gp(new ManipulatorGoalRegion(space_information_, 
@@ -235,7 +262,7 @@ PathControlPtr DynamicPathPlanner::test(double &time_limit) {
     		                                         ee_goal_position_, 
     		                                         ee_goal_threshold_, 
     		                                         kinematics_));
-    
+    boost::static_pointer_cast<ManipulatorGoalRegion>(gp)->setThreshold(ee_goal_threshold_);
     problem_definition_->addStartState(start_state);    
     problem_definition_->setGoal(gp);
     
@@ -244,7 +271,7 @@ PathControlPtr DynamicPathPlanner::test(double &time_limit) {
     bool solved = false;
     
     boost::timer t;
-    solved = solve_(time_limit);
+    solved = solve_(timeout);
     cout << "solved " << endl;
     cout << "Number of solutions found: " << problem_definition_->getSolutionCount() << endl;    
     
@@ -281,25 +308,24 @@ PathControlPtr DynamicPathPlanner::test(double &time_limit) {
         cout << "Solution found in " << t.elapsed() << "seconds" << endl;
         cout << "accepted " << accepted_ << endl;
         cout << "rejected " << rejected_ << endl;
-        return solution_path_; 
+        //return solution_path_; 
     }
+    std::vector<std::vector<double>> solution_vector; 
+    return solution_vector;
 }
 
 BOOST_PYTHON_MODULE(libdynamic_path_planner) {
-    using namespace boost::python;
-    
-    class_<std::vector<double> > ("v_double")
-             .def(vector_indexing_suite<std::vector<double> >());
-    
-    class_<DynamicPathPlanner>("DynamicPathPlanner", init<std::shared_ptr<Kinematics>,
-    		                                         std::string,
-    		                                         double,
-										             double,
-										             double,
-										             double,
-										             bool,
-										             bool>())
-		                       .def("setObstacles", &DynamicPathPlanner::setObstaclesPy) 
+    using namespace boost::python;    
+   
+    class_<DynamicPathPlanner>("DynamicPathPlanner", init<bool>())
+							   .def("solve", &DynamicPathPlanner::solve)
+		                       .def("setObstacles", &DynamicPathPlanner::setObstaclesPy)
+							   .def("setGoalStates", &DynamicPathPlanner::setGoalStates)
+							   .def("isValid", &DynamicPathPlanner::isValidPy)
+							   .def("setup", &DynamicPathPlanner::setup)
+							   .def("setLinkDimensions", &DynamicPathPlanner::setLinkDimensions)
+							   .def("setKinematics", &DynamicPathPlanner::setKinematics)
+							   .def("setupMotionValidator", &DynamicPathPlanner::setupMotionValidator)
 										            		 
                         //.def("doIntegration", &Integrate::do_integration)                        
                         //.def("getResult", &Integrate::getResult)

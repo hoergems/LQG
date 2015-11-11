@@ -62,11 +62,6 @@ void Propagator::propagate_nonlinear(OpenRAVE::EnvironmentBasePtr environment,
 	robot->GetDOFValues(newJointValues);
 	robot->GetDOFVelocities(newJointVelocities);
 	
-	for (size_t i = 0; i < newJointVelocities.size(); i++) {
-		cout << newJointVelocities[i] << ", ";
-	}
-	cout << endl;
-	
 	for (size_t i = 0; i < joints.size(); i++) {
 		result.push_back(newJointValues[i]);
 	}

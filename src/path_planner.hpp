@@ -37,8 +37,7 @@ namespace shared {
         public:
             
             
-            PathPlanner(std::shared_ptr<Kinematics> kinematics,
-                        int dim,             
+            PathPlanner(int dim,             
                         double delta_t,
                         bool continuous_collision,                        
                         double max_joint_velocity,
@@ -57,7 +56,7 @@ namespace shared {
             bool isValidPy(std::vector<double> &state);
             
             /** Solve the deterministic motion planning problem */
-            std::vector<std::vector<double> > solve(const std::vector<double> &start_state_vec);
+            std::vector<std::vector<double> > solve(const std::vector<double> &start_state_vec, double timeout);
 
             /** Setup OMPL. This need to be called before solving the motion planning problem*/
             void setup();
@@ -78,6 +77,8 @@ namespace shared {
             		           double ee_goal_threshold);
 
             void setLinkDimensions(std::vector<std::vector<double>> &link_dimensions);
+            
+            void setKinematics(std::shared_ptr<Kinematics> kinematics);
             
         private:        
             /** The dimension of the space we're planning in */

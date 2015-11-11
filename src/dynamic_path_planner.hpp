@@ -39,20 +39,15 @@ namespace shared {
 
     class DynamicPathPlanner {
         public:
-        		DynamicPathPlanner(std::shared_ptr<Kinematics> kinematics,
-        				           std::string model_file,
-        					       double control_duration,
-							       double simulation_step_size,
-							       double coulomb,
-							       double viscous,
-							       bool linear_propagation,
-							       bool verbose);
+        		DynamicPathPlanner(bool verbose);
                             
             	~DynamicPathPlanner() { OpenRAVE::RaveDestroy(); }
         	
             	bool isValid(const ompl::base::State *state);
+            	
+            	bool isValidPy(std::vector<double> &state);
         	
-            	PathControlPtr test(double &time_limit);
+            	std::vector<std::vector<double>> solve(const std::vector<double> &start_state_vec, double timeout);
 
                 OpenRAVE::EnvironmentBasePtr getEnvironment();
 
@@ -60,11 +55,24 @@ namespace shared {
                 
                 void setGoalStates(std::vector<std::vector<double>> &goal_states,
                            		           std::vector<double> &ee_goal_position,
-                           		           double &ee_goal_threshold);
+                           		           double ee_goal_threshold);
                 
                 void setObstacles(const std::vector<std::shared_ptr<Obstacle> > obstacles);
+                
+                void setKinematics(std::shared_ptr<Kinematics> kinematics);
+                
+                void setupMotionValidator();
 
                 void setObstaclesPy(boost::python::list &ns);
+                
+                void setLinkDimensions(std::vector<std::vector<double>> &link_dimensions);
+                
+                bool setup(std::string model_file,
+                		   double simulation_step_size,
+						   bool linear_propagation,
+						   double coulomb,
+						   double viscous,
+						   double control_duration); 
 
         private:
                 std::shared_ptr<Kinematics> kinematics_;
@@ -116,7 +124,7 @@ namespace shared {
                 double ee_goal_threshold_;
 
                 // Solve the motion planning problem
-                bool solve_(double &time_limit);
+                bool solve_(double time_limit);
                 
                 bool setup_ompl_(OpenRAVE::RobotBasePtr &robot, 
                 		         double &simulation_step_size,

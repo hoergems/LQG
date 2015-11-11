@@ -5,8 +5,7 @@ using std::endl;
 
 namespace shared {
 
-PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
-                         int dim,
+PathPlanner::PathPlanner(int dim,
                          double delta_t,
                          bool continuous_collision,                         
                          double max_joint_velocity,
@@ -31,11 +30,9 @@ PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
     problem_definition_(new ompl::base::ProblemDefinition(si_)),
     planner_str_(planner),    
     planner_(nullptr),       
-    kinematics_(kinematics), 
-    motionValidator_(new MotionValidator(si_, 
-                                         kinematics_, 
-                                         obstacles_,
-                                         delta_t_,
+    kinematics_(nullptr), 
+    motionValidator_(new MotionValidator(si_,
+                                         obstacles_,                                         
                                          continuous_collision)),
     verbose_(verbose)
 {   
@@ -61,6 +58,11 @@ PathPlanner::PathPlanner(std::shared_ptr<Kinematics> kinematics,
     else if (planner_str_ == "STRIDE"){
         planner_ = boost::shared_ptr<ompl::geometric::STRIDE>(new ompl::geometric::STRIDE(si_));
     }
+}
+
+void PathPlanner::setKinematics(std::shared_ptr<Kinematics> kinematics) {
+	kinematics_ = kinematics;
+	static_cast<MotionValidator &>(*motionValidator_).setKinematics(kinematics_);
 }
 
 void PathPlanner::setup() {
@@ -239,20 +241,19 @@ void PathPlanner::setLinkDimensions(std::vector<std::vector<double>> &link_dimen
 }
 
 /** Solves the motion planning problem */
-std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &start_state_vec) {	
-    std::vector<double> ss_vec;    
+std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &start_state_vec, double timeout) {	
+    std::vector<double> ss_vec;
+    ompl::base::ScopedState<> start_state(space_); 
     for (size_t i =0; i < dim_; i++) {
         ss_vec.push_back(start_state_vec[i]);
+        start_state[i] = ss_vec[i]; 
     }
-    
-    ompl::base::ScopedState<> start_state(space_);    
+       
     std::vector<std::vector<double> > solution_vector;
     solution_vector.push_back(ss_vec);
     
     boost::shared_ptr<MotionValidator> mv = boost::static_pointer_cast<MotionValidator>(si_->getMotionValidator());    
-    for (int i=0; i<dim_; i++) {    	
-        start_state[i] = ss_vec[i];       
-    }    
+       
     /** Add the start state to the problem definition */
     if (verbose_) {
         cout << "Adding start state: ";
@@ -300,7 +301,7 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
     boost::timer t;    
     
     while (!solved) {
-        solved = planner_->solve(10);        
+        solved = planner_->solve(timeout);        
         //solved = planner_->solve(10.0);  
     }
     
@@ -372,8 +373,7 @@ std::vector<std::vector<double>> PathPlanner::augmentPath_(std::vector<std::vect
 BOOST_PYTHON_MODULE(libpath_planner) {
     using namespace boost::python;   
     
-    class_<PathPlanner>("PathPlanner", init<std::shared_ptr<Kinematics>, 
-                                            int,                                             
+    class_<PathPlanner>("PathPlanner", init<int,                                             
                                             double,
                                             bool,                                            
                                             double,
@@ -388,7 +388,8 @@ BOOST_PYTHON_MODULE(libpath_planner) {
                         .def("setGoalStates", &PathPlanner::setGoalStates)
                         .def("isValid", &PathPlanner::isValidPy) 
                         .def("setup", &PathPlanner::setup) 
-                        .def("setLinkDimensions", &PathPlanner::setLinkDimensions)          
+                        .def("setLinkDimensions", &PathPlanner::setLinkDimensions)
+						.def("setKinematics", &PathPlanner::setKinematics)
     ;
 }
 
