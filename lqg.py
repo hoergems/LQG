@@ -3,12 +3,12 @@ import plot as Plot
 import os
 import glob
 import sys
-import util
+#import libutil
 import logging
 import scipy
-from util import *
+from libutil import *
 from serializer import Serializer
-from obstacle import *
+from libobstacle import *
 from util_py import *
 import kalman as kalman
 from path_evaluator import PathEvaluator
@@ -27,10 +27,10 @@ class LQG:
         sim = Simulator()
         path_evaluator = PathEvaluator()
         path_planner = PathPlanningInterface()
-        serializer = self.init_serializer()        
+        self.init_serializer()        
         
         """ Reading the config """
-        config = serializer.read_config("config_lqg.yaml")
+        config = self.serializer.read_config("config_lqg.yaml")
         self.set_params(config) 
         
         logging_level = logging.WARN
@@ -40,22 +40,15 @@ class LQG:
         
         self.utils = Utils()
         
-        """ Load the obstacles """ 
-        environment = serializer.load_environment(file="env.xml", path="environment")       
-        obstacles = []
-        terrain = Terrain("default", 0.0, 1.0, False)                
-        for obstacle in environment:                       
-            obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))                    
-        
-        """ Setup operations """
         model_file = os.getcwd() + "/model/model.xml"
         if self.workspace_dimension == 3:
             model_file = os.getcwd() + "/model/model3D.xml"
-        self.link_dimensions = self.utils.getLinkDimensions(model_file)                
+        self.setup_scene("environment", "env.xml", model_file)
+                        
         print "LQG: Generating goal states..."
         goal_states = get_goal_states("lqg",
-                                      serializer, 
-                                      obstacles,
+                                      self.serializer, 
+                                      self.obstacles,
                                       self.link_dimensions,
                                       self.workspace_dimension,
                                       self.max_velocity,
@@ -74,7 +67,7 @@ class LQG:
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
         path_planner.setup(self.link_dimensions,
                            self.workspace_dimension,
-                           obstacles,  
+                           self.obstacles,  
                            self.max_velocity, 
                            self.delta_t, 
                            self.use_linear_path, 
@@ -93,7 +86,7 @@ class LQG:
             time_to_generate_paths = 0.0
             if self.use_paths_from_file and len(glob.glob(os.path.join(dir, "paths.yaml"))) == 1:
                 logging.info("LQG: Loading paths from file")
-                in_paths = serializer.load_paths("paths.yaml", path=dir) 
+                in_paths = self.serializer.load_paths("paths.yaml", path=dir) 
                 paths = []               
                 for path in in_paths:
                     xs = []
@@ -111,12 +104,12 @@ class LQG:
                 time_to_generate_paths = time.time() - t0 
                 print "LQG: Time to generate paths: " + str(time_to_generate_paths) + " seconds"
                 if self.plot_paths:                
-                    serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path=dir)               
+                    self.serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path=dir)               
             
             
             """ Determine average path length """
             avg_path_length = self.get_avg_path_length(paths)            
-            serializer.save_avg_path_lengths(avg_path_length, path=dir)
+            self.serializer.save_avg_path_lengths(avg_path_length, path=dir)
                                        
             cart_coords = []  
             best_paths = []
@@ -141,7 +134,7 @@ class LQG:
                                      self.link_dimensions,
                                      config['workspace_dimension'], 
                                      self.sample_size, 
-                                     obstacles,
+                                     self.obstacles,
                                      self.joint_constraints,
                                      self.enforce_constraints,
                                      self.goal_position,
@@ -177,7 +170,7 @@ class LQG:
                 rewards_cov = []
                 print "LQG: Running " + str(self.num_simulation_runs) + " simulations..."              
                 for k in xrange(self.num_simulation_runs):
-                    serializer.write_line("log.log", "tmp/lqg", "RUN #" + str(k + 1) + " \n")
+                    self.serializer.write_line("log.log", "tmp/lqg", "RUN #" + str(k + 1) + " \n")
                     (x_true, 
                      x_tilde, 
                      x_estimate, 
@@ -203,8 +196,8 @@ class LQG:
                         history_entry.serialize("tmp/lqg", "log.log")
                         if history_entry.collided:
                             num_collisions += 1                                          
-                    serializer.write_line("log.log", "tmp/lqg", "Reward: " + str(total_reward) + " \n") 
-                    serializer.write_line("log.log", "tmp/lqg", "\n")             
+                    self.serializer.write_line("log.log", "tmp/lqg", "Reward: " + str(total_reward) + " \n") 
+                    self.serializer.write_line("log.log", "tmp/lqg", "\n")             
                                           
                 '''(cartesian_coords, 
                  rewards, 
@@ -222,27 +215,27 @@ class LQG:
                 except:
                     pass
                 '''
-                serializer.write_line("log.log", "tmp/lqg", "################################# \n")
-                serializer.write_line("log.log",
+                self.serializer.write_line("log.log", "tmp/lqg", "################################# \n")
+                self.serializer.write_line("log.log",
                                       "tmp/lqg",
                                       "Process covariance: " + str(m_covs[j]) + " \n")
-                serializer.write_line("log.log", "tmp/lqg", "Objective value of best path: " + str(objective) + " \n")                
-                serializer.write_line("log.log", "tmp/lqg", "Mean num collisions per run: " + str(float(num_collisions) / float(self.num_simulation_runs)) + " \n")
+                self.serializer.write_line("log.log", "tmp/lqg", "Objective value of best path: " + str(objective) + " \n")                
+                self.serializer.write_line("log.log", "tmp/lqg", "Mean num collisions per run: " + str(float(num_collisions) / float(self.num_simulation_runs)) + " \n")
                 print "total num collisions " + str(num_collisions)    
                 print "mean num collisions " + str(float(num_collisions) / float(self.num_simulation_runs))
-                serializer.write_line("log.log", "tmp/lqg", "Length best path: " + str(len(xs)) + " \n")
-                serializer.write_line("log.log", 
+                self.serializer.write_line("log.log", "tmp/lqg", "Length best path: " + str(len(xs)) + " \n")
+                self.serializer.write_line("log.log", 
                                       "tmp/lqg", 
                                       "Average distance to goal area: 0 \n")
-                serializer.write_line("log.log", "tmp/lqg", "Num successes: " + str(successes) + " \n")
+                self.serializer.write_line("log.log", "tmp/lqg", "Num successes: " + str(successes) + " \n")
                 print "succ " + str((100.0 / self.num_simulation_runs) * successes)
-                serializer.write_line("log.log", "tmp/lqg", "Percentage: " + str((100.0 / self.num_simulation_runs) * successes) + " \n")
-                serializer.write_line("log.log", "tmp/lqg", "Mean planning time: " + str(mean_planning_time) + " \n")
+                self.serializer.write_line("log.log", "tmp/lqg", "Percentage: " + str((100.0 / self.num_simulation_runs) * successes) + " \n")
+                self.serializer.write_line("log.log", "tmp/lqg", "Mean planning time: " + str(mean_planning_time) + " \n")
                 
                 n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))
-                serializer.write_line("log.log", "tmp/lqg", "Mean rewards: " + str(mean) + " \n")
-                serializer.write_line("log.log", "tmp/lqg", "Reward variance: " + str(var) + " \n")
-                serializer.write_line("log.log", 
+                self.serializer.write_line("log.log", "tmp/lqg", "Mean rewards: " + str(mean) + " \n")
+                self.serializer.write_line("log.log", "tmp/lqg", "Reward variance: " + str(var) + " \n")
+                self.serializer.write_line("log.log", 
                                       "tmp/lqg", 
                                       "Reward standard deviation: " + str(np.sqrt(var)) + " \n")
                 cmd = "mv tmp//lqg/log.log " + dir + "/log_lqg_" + str(m_covs[j]) + ".log"
@@ -250,8 +243,8 @@ class LQG:
                 
             
             if self.plot_paths:
-                serializer.save_paths(best_paths, 'best_paths.yaml', True, path=dir)                      
-            #serializer.save_stats(stats, path=dir)
+                self.serializer.save_paths(best_paths, 'best_paths.yaml', True, path=dir)                      
+            #self.serializer.save_stats(stats, path=dir)
             
             cmd = "cp config_lqg.yaml " + dir           
             os.system(cmd)
@@ -268,11 +261,25 @@ class LQG:
             cmd = "cp " + model_file + " " + dir + "/model"
             os.system(cmd)
         print "Done"
+        
+    def setup_scene(self, 
+                    environment_path, 
+                    environment_file, 
+                    model_file):
+        """ Load the obstacles """ 
+        environment = self.serializer.load_environment(file="env.xml", path="environment")       
+        self.obstacles = []
+        terrain = Terrain("default", 0.0, 1.0, False)                
+        for obstacle in environment:                       
+            self.obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))                    
+        
+        """ Setup operations """        
+        self.link_dimensions = self.utils.getLinkDimensions(model_file)
             
     def init_serializer(self):
-        serializer = Serializer()
-        serializer.create_temp_dir("lqg")
-        return serializer
+        self.serializer = Serializer()
+        self.serializer.create_temp_dir("lqg")
+        
             
     def clear_stats(self, dir):        
         if os.path.isdir(dir):

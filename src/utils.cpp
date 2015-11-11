@@ -323,7 +323,7 @@ bool Utils::serializeStatePath(std::vector<std::vector<double>> state_path) {
     out.close();
 }
 
-BOOST_PYTHON_MODULE(util) {
+BOOST_PYTHON_MODULE(libutil) {
     // An established convention for using boost.python.
     using namespace boost::python;
     

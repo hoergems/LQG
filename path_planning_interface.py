@@ -3,9 +3,9 @@ from path_evaluator import *
 from multiprocessing import Process, cpu_count, Lock, Queue
 from Queue import Empty, Full
 import libpath_planner
-import util
+import libutil
 import time
-import kin
+import libkinematics
 import collections
 import numpy as np
 import scipy.stats
@@ -233,18 +233,18 @@ class PathPlanningInterface:
             pass        
         path_planner2.setup()
         path_planner2.setObstacles(obstacles)
-        link_dimensions = util.v2_double()
+        link_dimensions = libutil.v2_double()
         ld = []       
         for i in xrange(len(self.link_dimensions)):
-            link_dim = util.v_double()            
+            link_dim = libutil.v_double()            
             link_dim[:] = [self.link_dimensions[i][j] for j in xrange(len(self.link_dimensions[i]))]
             ld.append(link_dim)
         link_dimensions[:] = ld        
         path_planner2.setLinkDimensions(link_dimensions)         
-        goal_states = util.v2_double()
+        goal_states = libutil.v2_double()
         gs = []       
         for i in xrange(len(self.goal_states)):
-            goal_state = util.v_double()                  
+            goal_state = libutil.v_double()                  
             goal_state[:] = [self.goal_states[i][j] for j in xrange(len(self.goal_states[i]))]            
             if path_planner2.isValid(goal_state):                
                 gs.append(goal_state)                    
@@ -252,11 +252,11 @@ class PathPlanningInterface:
             return [], [], []               
         goal_states[:] = gs 
         
-        ee_goal_position = util.v_double()
+        ee_goal_position = libutil.v_double()
         ee_goal_position[:] = self.ee_goal_position
                
         path_planner2.setGoalStates(goal_states, ee_goal_position, self.ee_goal_threshold)
-        start_state = util.v_double()
+        start_state = libutil.v_double()
         v = [self.start_state[i] for i in xrange(len(self.start_state))]
         start_state[:] = v  
         xs_temp = path_planner2.solve(start_state)

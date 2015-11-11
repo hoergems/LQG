@@ -93,7 +93,7 @@ bool Kinematics::setLinksAndAxisCalled() {
 
 
 
-BOOST_PYTHON_MODULE(kin)
+BOOST_PYTHON_MODULE(libkinematics)
 {
     using namespace boost::python;
     

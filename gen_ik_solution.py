@@ -1,11 +1,11 @@
 import openravepy
 from openravepy import *
 from openravepy.misc import InitOpenRAVELogging
-from obstacle import *
+from libobstacle import *
 from serializer import Serializer
 from path_planning_interface import *
 from gen_ik_solution import *
-from kin import *
+from libkinematics import *
 import json
 import time
 import numpy as np

@@ -4,7 +4,7 @@ import glob
 import os
 import numpy as np
 import logging
-from obstacle import Obstacle
+from libobstacle import Obstacle
 from xml.dom import minidom
 
 class Serializer:

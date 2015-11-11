@@ -3,8 +3,8 @@ import kalman as kalman
 import logging
 import time
 from scipy.stats import multivariate_normal
-from kin import *
-from util import *
+from libkinematics import *
+from libutil import *
 from history_entry import *
 
 class Simulator:

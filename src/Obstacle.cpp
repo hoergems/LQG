@@ -126,7 +126,7 @@ bool Obstacle::isTraversable() {
     return terrain_.isTraversable();
 }
 
-BOOST_PYTHON_MODULE(obstacle)
+BOOST_PYTHON_MODULE(libobstacle)
 {   
     #include "Terrain.hpp"
     bool (Obstacle::*in_collision_d)(boost::python::list&) = &Obstacle::in_collision_discrete;

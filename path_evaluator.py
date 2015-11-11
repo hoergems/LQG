@@ -2,8 +2,8 @@ import numpy as np
 import scipy
 import kalman as kalman
 from scipy.stats import multivariate_normal
-from kin import *
-from util import *
+from libkinematics import *
+from libutil import *
 from multiprocessing import Process, Queue, cpu_count
 import collections
 import time

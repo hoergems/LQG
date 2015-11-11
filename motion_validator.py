@@ -2,9 +2,9 @@ import numpy as np
 import time
 from ompl import base as ob
 from ompl import geometric as og
-from kin import *
-from util import *
-from obstacle import Obstacle
+from libkinematics import *
+from libutil import *
+from libobstacle import Obstacle
 from threading import Lock
 
 
