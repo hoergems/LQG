@@ -33,6 +33,10 @@ add_library(util SHARED
 add_library(kinematics SHARED
             Kinematics.cpp)
 
+add_library(robot SHARED robot.cpp)
+
+add_library(integrate SHARED integrate.cpp)
+
 add_library(obstacle SHARED
             Obstacle.cpp
             Terrain.cpp
@@ -73,6 +77,17 @@ target_link_libraries(obstacle
                       boost_python
                       python2.7
                       fcl)
+
+target_link_libraries (robot
+                       urdf
+                       boost_system
+                       boost_python
+                       python2.7)
+
+target_link_libraries (integrate
+                       boost_system
+                       boost_python
+                       python2.7)
 
 #set_property(TARGET robot PROPERTY CXX_STANDARD 11)
                        

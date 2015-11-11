@@ -1,0 +1,110 @@
+<?xml version="1.0" ?>
+<robot name="lbr_iiwa">
+    <link name="world" />    
+
+    <link name="link1">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.5 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0.05" ixy="0" ixz="0" iyy="0.06" iyz="0" izz="0.03"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0.5 0 0"/>
+      <geometry>
+        <box size="1 0.15 0.15"/>
+      </geometry>
+      <material name="Grey"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.5 0 0"/>
+      <geometry>
+        <box size="1 0.15 0.15"/>
+      </geometry>
+      <material name="Grey"/>
+    </collision>    
+  </link>    
+
+    <link name="link2">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.5 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0.05" ixy="0" ixz="0" iyy="0.06" iyz="0" izz="0.03"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0.5 0 0"/>
+      <geometry>
+        <box size="1 0.15 0.15"/>
+      </geometry>
+      <material name="Grey"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.5 0 0"/>
+      <geometry>
+        <box size="1 0.15 0.15"/>
+      </geometry>
+      <material name="Grey"/>
+    </collision>    
+  </link>
+
+   <link name="link3">
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.5 0 0"/>
+      <mass value="5"/>
+      <inertia ixx="0.05" ixy="0" ixz="0" iyy="0.06" iyz="0" izz="0.03"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0.5 0 0"/>
+      <geometry>
+        <box size="1 0.15 0.15"/>
+      </geometry>
+      <material name="Grey"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.5 0 0"/>
+      <geometry>
+        <box size="1 0.15 0.15"/>
+      </geometry>
+      <material name="Grey"/>
+    </collision>    
+  </link>
+
+  <link name="end_effector"/>   
+
+  <joint name="joint1" type="revolute">
+    <parent link="world"/>
+    <child link="link1"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="5" lower="-3.14159265359" upper="3.14159265359" velocity="200"/>    
+    <dynamics damping="0.5"/>
+  </joint>
+
+  <joint name="joint2" type="revolute">
+    <parent link="link1"/>
+    <child link="link2"/>
+    <origin rpy="0 0 0" xyz="1 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="5" lower="-3.14159265359" upper="3.14159265359" velocity="200"/>      
+    <dynamics damping="0.5"/>
+  </joint>
+
+  <joint name="joint3" type="fixed">
+    <parent link="link2"/>
+    <child link="link3"/>
+    <origin rpy="0 0 0" xyz="1 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="500" lower="-3.14159265359" upper="3.14159265359" velocity="200"/>     
+    <dynamics damping="0.5"/>
+  </joint>
+
+  <joint name="joint4" type="fixed">    
+    <parent link="link3"/>
+    <child link="end_effector"/>
+    <origin rpy="0 0 0" xyz="1 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10" lower="-3.14159265359" upper="3.14159265359" velocity="10"/>    
+    <dynamics damping="0.5"/>
+  </joint>
+ 
+    
+</robot>
