@@ -52,6 +52,20 @@ add_library(path_planner SHARED
             Terrain.cpp
             Obstacle.cpp)
 
+add_library(dynamic_path_planner SHARED 
+            dynamic_path_planner.cpp 
+            MotionValidator.cpp
+            state_propagator.cpp
+            propagator.cpp            
+            ManipulatorGoalRegion.cpp
+            utils.cpp
+            Obstacle.cpp
+            Terrain.cpp
+            Kinematics.cpp            
+            torque_damper.cpp
+            control_space.cpp
+            control_sampler.cpp)
+
 target_link_libraries (util
                        boost_system
                        boost_python
@@ -88,6 +102,15 @@ target_link_libraries (integrate
                        boost_system
                        boost_python
                        python2.7)
+
+target_link_libraries (dynamic_path_planner                        
+                       openrave0.9 
+                       openrave0.9-core 
+                       ompl
+                       boost_system
+                       boost_python
+                       python2.7 
+                       boost_thread)
 
 #set_property(TARGET robot PROPERTY CXX_STANDARD 11)
                        

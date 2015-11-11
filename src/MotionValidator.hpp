@@ -24,8 +24,7 @@ namespace shared {
         public:
             MotionValidator(const ompl::base::SpaceInformationPtr &si,
                             std::shared_ptr<Kinematics> kinematics,                            
-                            std::vector<std::shared_ptr<Obstacle> > obstacles,                            
-                            double max_joint_velocity,
+                            std::vector<std::shared_ptr<Obstacle> > obstacles,
                             double delta_t,
                             bool continuous_collision);
             ~MotionValidator() = default;
@@ -58,8 +57,6 @@ namespace shared {
 
             /** The obstacles in the environment */
             std::vector<std::shared_ptr<Obstacle> > obstacles_;
-            
-            double max_joint_velocity_;
             
             double delta_t_;
             

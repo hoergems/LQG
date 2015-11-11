@@ -265,8 +265,7 @@ class LQG:
     def setup_scene(self, 
                     environment_path, 
                     environment_file, 
-                    model_file,
-                    model_file_urdf):
+                    model_file):
         """ Load the obstacles """ 
         environment = self.serializer.load_environment(file="env.xml", path="environment")       
         self.obstacles = []
