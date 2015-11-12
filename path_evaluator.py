@@ -39,7 +39,8 @@ class PathEvaluator:
         self.joint_constraints = joint_constraints
         self.enforce_constraints = enforce_constraints
         self.sample_size = sample_size
-        self.num_cores = cpu_count() - 1 
+        #self.num_cores = cpu_count() - 1 
+        self.num_cores = 2
         self.goal_position = goal_position 
         self.goal_radius = goal_radius   
         self.w1 = w1
@@ -251,13 +252,16 @@ class PathEvaluator:
                                np.hstack((np.dot(K_t, np.dot(self.H, self.V)), np.dot(K_t, self.W)))))            
             """ Compute R """            
             R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))
+            print R_t
             L = np.identity(len(self.link_dimensions))
             if i != horizon_L - 1:
                 L = Ls[i]    
             Gamma_t = np.vstack((np.hstack((np.identity(len(self.link_dimensions)), NU)), 
                                  np.hstack((NU, L))))                  
-                   
-            Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))                     
+            print Gamma_t
+            Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))
+            print Cov                     
+            sleep
             cov_state = np.array([[Cov[j, k] for k in xrange(len(self.link_dimensions))] for j in xrange(len(self.link_dimensions))])
             
             if not self.w2 == 0.0:                
