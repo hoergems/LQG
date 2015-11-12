@@ -53,13 +53,14 @@ class Test:
         print "Inverting inertia matrix..."
         t0 = time.time()
         M_inv = M.inv()
+        #f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho, self.zeta)
         print "Inversion took " + str(time.time() - t0) + " seconds"        
         #f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho, self.zeta)
         print "Build taylor approximation" 
         steady_states = self.get_steady_states()
         print "Get partial derivatives"           
-        #A, B, V = self.partial_derivatives2(f)        
         A, B, V = self.partial_derivatives(M_inv, C, N)        
+        #f, A, B, V = self.partial_derivatives2(f, M_inv, C, N)        
         
         '''if self.simplifying:
             A = simplify(A)
@@ -73,13 +74,11 @@ class Test:
         print "Gen cpp code"
         self.gen_cpp_code_steady_states(steady_states, header_src, imple_src) 
         print "Steady states code generated"
-        print "Generate cpp code for linearized model..."
-        self.initial = [0.0, 0.0, 0.0, 0.0]
-        self.input = [1.0, 0.0]   
+        print "Generate cpp code for linearized model..."        
         for i in xrange(len(steady_states)):
             A, B, V = self.substitude_steady_states2(A, B, V, steady_states[i])            
             #self.test_ode(A, B, steady_states[i]) 
-            #self.test_int(A, B, steady_states[i])
+            #self.test_int(A, B, steady_states[i])            
             self.gen_cpp_code2(A, "A" + str(i), header_src, imple_src)
             self.gen_cpp_code2(B, "B" + str(i), header_src, imple_src)
             self.gen_cpp_code2(V, "V" + str(i), header_src, imple_src)
@@ -333,16 +332,18 @@ class Test:
         self.rho = []
         self.rhostar = []
         self.zeta = []
+        self.zetastar = []
         for i in xrange(len(self.joint_names)):
             #if self.joint_types[i] == "revolute":            
             
             symb_string_q = "x[" + str(i) + "]"
             symb_string_q_dot = "x[" + str(i + len(self.joint_names) - 1) + "]"
-            symb_string_q_star = "thetas_star_[" + str(i) + "]"
-            symb_string_q_dot_star = "dot_thetas_star_[" + str(i) + "]"
+            symb_string_q_star = "xstar[" + str(i) + "]"
+            symb_string_q_dot_star = "xstar[" + str(i + len(self.joint_names) - 1) + "]"
             symb_string_r = "rho[" + str(i) + "]"
-            symb_string_r_star = "rhos_star_[" + str(i) + "]" 
-            symb_zeta = "zeta[" + str(i) + "]"          
+            symb_string_r_star = "rhostar[" + str(i) + "]" 
+            symb_zeta = "zeta[" + str(i) + "]"
+            symb_zeta_star = "zetastar[" + str(i) + "]"          
             
             
             self.q.append(symbols(symb_string_q))
@@ -352,6 +353,7 @@ class Test:
             self.qdotstar.append(symbols(symb_string_q_dot_star))
             self.rhostar.append(symbols(symb_string_r_star))
             self.zeta.append(symbols(symb_zeta))
+            self.zetastar.append(symbols(symb_zeta_star))
         inertia_pose = v2_double()
         robot.getLinkInertialPose(link_names, inertia_pose)
         self.inertial_poses = [[inertia_pose[i][j] for j in xrange(len(inertia_pose[i]))] for i in xrange(len(inertia_pose))]
@@ -494,7 +496,7 @@ class Test:
             temp_lines.append("VectorXd m(" + str(Matr.shape[0]) + "); \n")        
         for i in xrange(Matr.shape[0]):
             for j in xrange(Matr.shape[1]):
-                temp_lines.append("m(" + str(i) + ", " + str(j) + ") = " + str(ccode(Matr[i, j])) + "; \n")        
+                temp_lines.append("m(" + str(i) + ", " + str(j) + ") = " + str(ccode(Matr[i, j])) + "; \n")
         temp_lines.append("return m; \n")
         idx1 = -1
         idx2 = -1
@@ -586,6 +588,57 @@ class Test:
         B = B.col_join(C1)
         return f, A, B
     
+    def partial_derivatives2(self, f, M_inv, C, N):
+        r = Matrix([[self.rho[i]] for i in xrange(len(self.rho) - 1)])
+        x1 = Matrix([[self.q[i]] for i in xrange(len(self.q) - 1)])
+        x2 = Matrix([[self.qdot[i]] for i in xrange(len(self.qdot) - 1)])
+        z = Matrix([[self.zeta[i]] for i in xrange(len(self.zeta) - 1)])        
+        A1 = M_inv * r
+        A2 = M_inv * z
+        A3 = M_inv * (-C * x2)
+        A4 = M_inv * (-N)
+        
+        A1_x1 = A1.jacobian([self.q[i] for i in xrange(len(self.q) - 1)])
+        A2_x1 = A2.jacobian([self.q[i] for i in xrange(len(self.q) - 1)])
+        A3_x1 = A3.jacobian([self.q[i] for i in xrange(len(self.q) - 1)])
+        A4_x1 = A4.jacobian([self.q[i] for i in xrange(len(self.q) - 1)])        
+        
+        A3_x2 = A3.jacobian([self.qdot[i] for i in xrange(len(self.qdot) - 1)])
+        A4_x2 = A4.jacobian([self.qdot[i] for i in xrange(len(self.qdot) - 1)])
+        
+        A1_r = A1.jacobian([self.rho[i] for i in xrange(len(self.rho) - 1)])
+        A2_z = A2.jacobian([self.zeta[i] for i in xrange(len(self.rho) - 1)])
+        
+        A = zeros(len(self.q) - 1).col_join(A1_x1 + A2_x1 + A3_x1 + A4_x1)
+        B = eye(len(self.q) - 1).col_join(A3_x2 + A4_x2)
+        A = A.row_join(B)
+        
+        B = zeros(len(self.q) - 1).col_join(A1_r)
+        C = zeros(len(self.q) - 1).col_join(A2_z)        
+        for i in xrange(len(self.q) - 1):
+            f = f.subs(self.q[i], self.qstar[i])
+            A = A.subs(self.q[i], self.qstar[i])
+            B = B.subs(self.q[i], self.qstar[i])
+            C = C.subs(self.q[i], self.qstar[i])
+            
+            f = f.subs(self.qdot[i], self.qdotstar[i])
+            A = A.subs(self.qdot[i], self.qdotstar[i])
+            B = B.subs(self.qdot[i], self.qdotstar[i])
+            C = C.subs(self.qdot[i], self.qdotstar[i])
+            
+            f = f.subs(self.rho[i], self.rhostar[i])
+            A = A.subs(self.rho[i], self.rhostar[i])
+            B = B.subs(self.rho[i], self.rhostar[i])
+            C = C.subs(self.rho[i], self.rhostar[i])
+            
+            f = f.subs(self.zeta[i], 0)
+            A = A.subs(self.zeta[i], 0)
+            B = B.subs(self.zeta[i], 0)
+            C = C.subs(self.zeta[i], 0)
+        
+        
+        return f, A, B, C
+    
     def partial_derivatives(self, M_inv, C, N):        
         r = Matrix([[self.rho[i]] for i in xrange(len(self.rho) - 1)])
         x1 = Matrix([[self.q[i]] for i in xrange(len(self.q) - 1)])
@@ -614,19 +667,6 @@ class Test:
         B = zeros(len(self.q) - 1).col_join(A1_r)
         C = zeros(len(self.q) - 1).col_join(A2_z)
         return A, B, C
-    
-    def partial_derivatives2(self,
-                             f):
-        A = f.jacobian([self.q[i] for i in xrange(len(self.q) - 1)]) 
-        print "Calculated A"
-        B = f.jacobian([self.qdot[i] for i in xrange(len(self.qdot) - 1)])
-        print "Calculated B"
-        C = f.jacobian([self.rho[i] for i in xrange(len(self.rho) - 1)])
-        print "Calculated C"
-        D = f.jacobian([self.zeta[i] for i in xrange(len(self.zeta) - 1)])
-        print "Calculated D"       
-        A_r = A.row_join(B)        
-        return A_r, C, D
         
     def calc_generalized_forces(self, 
                                 thetas, 

@@ -28,10 +28,21 @@ def compute_P_t(K_t, H, P_hat_t, num_links):
     
 def compute_gain(A, B, C, D, l):
     S = np.copy(C)
-    Ls = []        
+    A = A[0:l][::-1]
+    B = B[0:l][::-1]    
+    Ls = []
     for i in xrange(l):
-        L = -np.dot(linalg.pinv(np.add(np.dot(np.dot(np.transpose(B), S), B), D)), np.dot(np.dot(np.transpose(B), S), A))
+        '''L = -np.dot(linalg.pinv(np.add(np.dot(np.dot(np.transpose(B), S), B), D)), np.dot(np.dot(np.transpose(B), S), A))
         Ls.append(L)
-        S = np.add(C, np.add(np.dot(np.dot(np.transpose(A), S), A), np.dot(np.dot(np.dot(np.transpose(A), S), B), L)))    
+        S = np.add(C, np.add(np.dot(np.dot(np.transpose(A), S), A), np.dot(np.dot(np.dot(np.transpose(A), S), B), L)))'''
+        print "S " + str(S)
+        print "B " + str(B[i])
+        print "D " + str(D)
+        print "A " + str(A[i])
+        print "1 " + str(np.dot(np.transpose(B[i]), S))
+        print "2 " + str(np.dot(np.dot(np.transpose(B[i]), S), B[i]))
+        L = -np.dot(linalg.pinv(np.add(np.dot(np.dot(np.transpose(B[i]), S), B[i]), D)), np.dot(np.dot(np.transpose(B[i]), S), A[i]))
+        Ls.append(L)
+        S = np.add(C, np.add(np.dot(np.dot(np.transpose(A[i]), S), A[i]), np.dot(np.dot(np.dot(np.transpose(A[i]), S), B[i]), L)))    
     Ls = Ls[::-1]       
     return Ls

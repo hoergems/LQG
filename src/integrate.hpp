@@ -28,7 +28,7 @@ namespace shared {
     			            std::vector<double> &control,
     			            std::vector<double> &int_times) const;
     	
-    	std::vector<double> getProcessMatrices(std::vector<double> &x) const;
+    	std::vector<double> getProcessMatrices(std::vector<double> &x, double t_e) const;
     	
     	void ode(const state_type &x , state_type &dxdt , double t) const;
     	
@@ -56,6 +56,10 @@ MatrixXd getA0(const state_type &x) const;
     	std::pair<Integrate::AB_funct, std::pair<Integrate::AB_funct, Integrate::AB_funct>> getClosestSteadyStateFunctions(int &idx) const;
     	
     	mutable std::vector<double> rho;
+    	
+    	mutable std::vector<double> xstar;
+    	
+    	mutable std::vector<double> rhostar;
     	
     	mutable std::vector<double> result_;
     	

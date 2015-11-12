@@ -46,8 +46,7 @@ std::vector<double> Integrate::getResult() {
 	return result_;
 }
 
-std::vector<double> Integrate::getProcessMatrices(std::vector<double> &x) const {
-	double t = 0.3;
+std::vector<double> Integrate::getProcessMatrices(std::vector<double> &x, double t_e) const {	
 	std::pair<int, std::vector<double>> closest_steady_state = getClosestSteadyState(x);	
 	for (size_t i = 0; i < closest_steady_state.second.size(); i++) {
 		if (closest_steady_state.second[i] == -1) {
@@ -62,9 +61,28 @@ std::vector<double> Integrate::getProcessMatrices(std::vector<double> &x) const 
 	MatrixXd AMatrix = (this->*A)(closest_steady_state.second);
 	MatrixXd BMatrix = (this->*B)(closest_steady_state.second);	
 	MatrixXd VMatrix = (this->*V)(closest_steady_state.second);	
-	MatrixXd A_matrx1 = (t * AMatrix).exp();	
-	MatrixXd integral = power_series_(AMatrix, t, 20);	
+	MatrixXd A_matrx1 = (t_e * AMatrix).exp();	
+	MatrixXd integral = power_series_(AMatrix, t_e, 20);	
 	MatrixXd B_matrx = A_matrx1 * integral * BMatrix;
+	MatrixXd B_matrx_temp;
+	std::vector<double> zeros;
+	for (size_t i = 0; i < x.size() / 2; i++) {
+		zeros.push_back(0.0);
+	}
+	B_matrx.conservativeResize(NoChange, B_matrx.cols() * 2);
+	VMatrix.conservativeResize(NoChange, VMatrix.cols() * 2);
+	for (size_t i = 0; i < x.size()/ 2; i++) {
+		for (size_t j = 0; j < x.size(); j++) {
+		    B_matrx(j, i + x.size() / 2) = 0.0;
+		    VMatrix(j, i + x.size() / 2) = 0.0;
+		}
+	}
+	
+	cout << A_matrx1 << endl;
+	cout << B_matrx << endl;
+	cout << VMatrix << endl;
+	
+	//cout << B_matrx_temp << endl;
 	std::vector<double> res;
 	for (size_t i = 0; i < A_matrx1.size(); i++) {
 		res.push_back(A_matrx1(i));

@@ -146,6 +146,8 @@ class LQG:
                                      self.goal_radius,
                                      self.w1,
                                      self.w2)
+                if self.dynamic_problem:
+                    path_evaluator.setup_dynamic_problem(self.control_duration)
                 path_evaluator.setup_reward_function(self.step_penalty, self.illegal_move_penalty, self.exit_reward, self.discount_factor)
                 t0 = time.time() 
                 xs, us, zs, objective = path_evaluator.evaluate_paths(paths, P_t, 0)
@@ -307,13 +309,18 @@ class LQG:
         return np.asscalar(avg_dist) / len(cartesian_coords)          
             
     def problem_setup(self, delta_t, num_links):
-        A = np.identity(num_links)
-        H = np.identity(num_links)
-        B = delta_t * np.identity(num_links)
-        V = np.identity(num_links)
-        W = np.identity(num_links)
-        C = 1.0 * np.identity(num_links)
-        D = 1.0 * np.identity(num_links)
+        A = np.identity(num_links * 2)
+        H = np.identity(num_links * 2)
+        B = delta_t * np.identity(num_links * 2)
+        #B = np.vstack((B, np.zeros((num_links, num_links))))        
+        V = np.identity(num_links * 2)
+        W = np.identity(num_links * 2)
+        C = 1.0 * np.identity(num_links * 2)
+        
+        D = 1.0 * np.identity(2.0 * num_links)
+        #D  = np.vstack((D, np.zeros((num_links, num_links))))
+        
+        #D = 1.0 * np.identity(num_links * 2)
         return A, H, B, V, W, C, D
             
     def get_avg_path_length(self, paths):

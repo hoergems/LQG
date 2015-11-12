@@ -4,6 +4,7 @@ import kalman as kalman
 from scipy.stats import multivariate_normal
 from libkinematics import *
 from libutil import *
+from libintegrate import *
 from multiprocessing import Process, Queue, cpu_count
 import collections
 import time
@@ -24,7 +25,7 @@ class PathEvaluator:
               goal_position,
               goal_radius,
               w1, 
-              w2):        
+              w2):       
         self.A = A
         self.B = B
         self.C = C
@@ -39,7 +40,8 @@ class PathEvaluator:
         self.joint_constraints = joint_constraints
         self.enforce_constraints = enforce_constraints
         self.sample_size = sample_size
-        self.num_cores = cpu_count() - 1 
+        #self.num_cores = cpu_count() - 1
+        self.num_cores = 2 
         self.goal_position = goal_position 
         self.goal_radius = goal_radius   
         self.w1 = w1
@@ -59,6 +61,12 @@ class PathEvaluator:
         self.kinematics = Kinematics()
         self.kinematics.setLinksAndAxis(self.link_dimensions, axis)
         self.utils = Utils()
+        self.integrate = Integrate()
+        self.dynamic_problem = False
+        
+    def setup_dynamic_problem(self, control_duration):
+        self.dynamic_problem = True
+        self.control_duration = control_duration
         
     def setup_reward_function(self, step_penalty, collision_penalty, exit_reward, discount):
         self.step_penalty = step_penalty
@@ -214,14 +222,70 @@ class PathEvaluator:
         logging.info("PathEvaluator: Objective value for the best path is " + str(best_objective))
         return best_path[0], best_path[1], best_path[2], best_objective
     
+    def get_linear_model_matrices(self, state_path, control_path):
+        As = []
+        Bs = []
+        Vs = []
+        Ms = []
+        Hs = []
+        Ws = []
+        Ns = []
+        if self.dynamic_problem:
+            for i in xrange(len(state_path)):
+                state = v_double()
+                state[:] = state_path[i]
+                controls = control_path[i]
+                
+                t0 = time.time()
+                A = self.integrate.getProcessMatrices(state, self.control_duration)
+                print "got process matrices in " + str(time.time()- t0)
+                Matr_list = [A[i] for i in xrange(len(A))]
+                A_list = np.array([Matr_list[i] for i in xrange(len(state)**2)])
+                B_list = np.array([Matr_list[i] for i in xrange(len(state)**2, 2 * len(state)**2)])
+                V_list = np.array([Matr_list[i] for i in xrange(2 * len(state)**2, 
+                                                                3 * len(state)**2)])
+                A_Matr = A_list.reshape(len(state), len(state)).T
+                B_Matr = B_list.reshape(len(state), len(state)).T
+                V_Matr = V_list.reshape(len(state), len(state)).T
+                
+                print A_Matr
+                print B_Matr
+                print V_Matr
+                sleep
+                
+                As.append(A_Matr)
+                Bs.append(B_Matr)
+                Vs.append(V_Matr)
+                
+                Ms.append(self.M)
+                Hs.append(self.H)
+                Ws.append(self.W)
+                Ns.append(self.N)
+        else:
+            for i in xrange(len(state_path)):
+                As.append(self.A)
+                Bs.append(self.B)
+                Vs.append(self.V)
+                Ms.append(self.M)
+                Ws.append(self.W)
+                Ns.append(self.N)
+            
+        return As, Bs, Vs, Ms, Hs, Ws, Ns
+    
     def evaluate(self, index, path, P_t, current_step, horizon, eval_queue=None):
         xs = path[0]
         us = path[1]
         zs = path[2]
         horizon_L = horizon + 1 
         if horizon == -1 or len(xs) < horizon_L:            
-            horizon_L = len(xs)                
-        Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, horizon_L - 1)
+            horizon_L = len(xs) 
+        As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, us)        
+        
+        #Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, horizon_L - 1)
+        Ls = kalman.compute_gain(As, Bs, self.C, self.D, horizon_L - 1)
+        print Ls[0]
+        
+        sleep
         NU = np.array([[0.0 for i in xrange(len(self.link_dimensions))] for i in xrange(len(self.link_dimensions))])
                 
         Q_t = np.vstack((np.hstack((self.M, NU)), 
