@@ -65,10 +65,7 @@ std::vector<double> Integrate::getProcessMatrices(std::vector<double> &x, double
 	MatrixXd integral = power_series_(AMatrix, t_e, 20);	
 	MatrixXd B_matrx = A_matrx1 * integral * BMatrix;
 	MatrixXd B_matrx_temp;
-	std::vector<double> zeros;
-	for (size_t i = 0; i < x.size() / 2; i++) {
-		zeros.push_back(0.0);
-	}
+	
 	B_matrx.conservativeResize(NoChange, B_matrx.cols() * 2);
 	VMatrix.conservativeResize(NoChange, VMatrix.cols() * 2);
 	for (size_t i = 0; i < x.size()/ 2; i++) {
@@ -78,11 +75,6 @@ std::vector<double> Integrate::getProcessMatrices(std::vector<double> &x, double
 		}
 	}
 	
-	cout << A_matrx1 << endl;
-	cout << B_matrx << endl;
-	cout << VMatrix << endl;
-	
-	//cout << B_matrx_temp << endl;
 	std::vector<double> res;
 	for (size_t i = 0; i < A_matrx1.size(); i++) {
 		res.push_back(A_matrx1(i));

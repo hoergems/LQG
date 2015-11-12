@@ -237,8 +237,7 @@ class PathEvaluator:
                 controls = control_path[i]
                 
                 t0 = time.time()
-                A = self.integrate.getProcessMatrices(state, self.control_duration)
-                print "got process matrices in " + str(time.time()- t0)
+                A = self.integrate.getProcessMatrices(state, self.control_duration)                
                 Matr_list = [A[i] for i in xrange(len(A))]
                 A_list = np.array([Matr_list[i] for i in xrange(len(state)**2)])
                 B_list = np.array([Matr_list[i] for i in xrange(len(state)**2, 2 * len(state)**2)])
