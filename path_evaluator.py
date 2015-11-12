@@ -223,6 +223,7 @@ class PathEvaluator:
         if horizon == -1 or len(xs) < horizon_L:            
             horizon_L = len(xs)                
         Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, horizon_L - 1)
+        print "Ls[0] " + str(Ls[0])
         NU = np.array([[0.0 for i in xrange(len(self.link_dimensions))] for i in xrange(len(self.link_dimensions))])
                 
         Q_t = np.vstack((np.hstack((self.M, NU)), 
@@ -252,15 +253,15 @@ class PathEvaluator:
                                np.hstack((np.dot(K_t, np.dot(self.H, self.V)), np.dot(K_t, self.W)))))            
             """ Compute R """            
             R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))
-            print R_t
+            print "R_t " + str(R_t)
             L = np.identity(len(self.link_dimensions))
             if i != horizon_L - 1:
                 L = Ls[i]    
             Gamma_t = np.vstack((np.hstack((np.identity(len(self.link_dimensions)), NU)), 
                                  np.hstack((NU, L))))                  
-            print Gamma_t
+            print "Gamma_t " + str(Gamma_t)
             Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))
-            print Cov                     
+            print "Cov " + str(Cov)                   
             sleep
             cov_state = np.array([[Cov[j, k] for k in xrange(len(self.link_dimensions))] for j in xrange(len(self.link_dimensions))])
             
