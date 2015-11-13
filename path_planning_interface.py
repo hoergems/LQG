@@ -60,8 +60,7 @@ class PathPlanningInterface:
               planning_algorithm):        
         self.link_dimensions = link_dimensions
         self.workspace_dimension = workspace_dimension        
-        self.num_cores = cpu_count()
-        self.num_cores = 2        
+        self.num_cores = cpu_count()        
         self.obstacles = obstacles        
         self.max_velocity = max_velocity
         self.delta_t = delta_t
@@ -89,7 +88,7 @@ class PathPlanningInterface:
             self.verbose = True
         self.planning_algorithm = planning_algorithm
         self.dynamic_problem = False
-        self.can_print = False
+        
         
     def setup_dynamic_problem(self, 
                               urdf_model, 
@@ -189,12 +188,8 @@ class PathPlanningInterface:
             try:
                 res_paths.append(path_queue.get_nowait())                
             except:
-                if self.can_print:
-                    print path_queue.qsize()         
                 pass
-            elapsed = time.time() - t0
-            if len(res_paths) > 0:
-                print "OKEY"            
+            elapsed = time.time() - t0                    
             if len(res_paths) == num:
                 break
             if timeout > 0.0:
@@ -231,9 +226,7 @@ class PathPlanningInterface:
     
     def construct_path(self, obstacles, queue, joint_constraints,):        
         while True:
-            xs, us, zs = self._construct(obstacles, joint_constraints)
-            print "put"  
-            self.can_print = True                           
+            xs, us, zs = self._construct(obstacles, joint_constraints)                
             queue.put((xs, us, zs))
             
         

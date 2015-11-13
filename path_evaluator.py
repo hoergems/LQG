@@ -40,8 +40,8 @@ class PathEvaluator:
         self.joint_constraints = joint_constraints
         self.enforce_constraints = enforce_constraints
         self.sample_size = sample_size
-        #self.num_cores = cpu_count() - 1
-        self.num_cores = 2 
+        self.num_cores = cpu_count() - 1
+        #self.num_cores = 2 
         self.goal_position = goal_position 
         self.goal_radius = goal_radius   
         self.w1 = w1
