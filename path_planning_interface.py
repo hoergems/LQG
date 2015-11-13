@@ -293,9 +293,9 @@ class PathPlanningInterface:
         zs = []        
         for i in xrange(len(xs_temp)):
             xs.append([xs_temp[i][j] for j in xrange(0, 2 * len(self.link_dimensions))])
-            us.append([xs_temp[i][j] for j in xrange(2 * len(self.link_dimensions), 3 * len(self.link_dimensions))])
-            zs.append([xs_temp[i][j] for j in xrange(3 * len(self.link_dimensions), 5 * len(self.link_dimensions))])
-        print zs
+            us.append([xs_temp[i][j] for j in xrange(2 * len(self.link_dimensions), 4 * len(self.link_dimensions))])
+            zs.append([xs_temp[i][j] for j in xrange(4 * len(self.link_dimensions), 6 * len(self.link_dimensions))])
+        
         return xs, us, zs
     
 if __name__ == "__main__":

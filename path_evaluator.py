@@ -282,10 +282,8 @@ class PathEvaluator:
         
         #Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, horizon_L - 1)
         Ls = kalman.compute_gain(As, Bs, self.C, self.D, horizon_L - 1)
-        print Ls[0]
         
-        sleep
-        NU = np.array([[0.0 for i in xrange(len(self.link_dimensions))] for i in xrange(len(self.link_dimensions))])
+        NU = np.array([[0.0 for i in xrange(2 * len(self.link_dimensions))] for i in xrange(2 * len(self.link_dimensions))])
                 
         Q_t = np.vstack((np.hstack((self.M, NU)), 
                          np.hstack((NU, self.N))))
@@ -302,7 +300,7 @@ class PathEvaluator:
         for i in xrange(1, horizon_L):            
             P_hat_t = kalman.compute_p_hat_t(self.A, P_t, self.V, self.M)
             K_t = kalman.compute_kalman_gain(self.H, P_hat_t, self.W, self.N)
-            P_t = kalman.compute_P_t(K_t, self.H, P_hat_t, len(self.link_dimensions))
+            P_t = kalman.compute_P_t(K_t, self.H, P_hat_t, 2 * len(self.link_dimensions))
             
             F_0 = np.hstack((self.A, np.dot(self.B, Ls[i-1])))            
             F_1 = np.hstack((np.dot(K_t, np.dot(self.H, self.A)), 
@@ -314,14 +312,16 @@ class PathEvaluator:
                                np.hstack((np.dot(K_t, np.dot(self.H, self.V)), np.dot(K_t, self.W)))))            
             """ Compute R """            
             R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))
-            L = np.identity(len(self.link_dimensions))
+            L = np.identity(2 * len(self.link_dimensions))
             if i != horizon_L - 1:
                 L = Ls[i]    
-            Gamma_t = np.vstack((np.hstack((np.identity(len(self.link_dimensions)), NU)), 
+            Gamma_t = np.vstack((np.hstack((np.identity(2 * len(self.link_dimensions)), NU)), 
                                  np.hstack((NU, L))))                  
                    
             Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))                     
-            cov_state = np.array([[Cov[j, k] for k in xrange(len(self.link_dimensions))] for j in xrange(len(self.link_dimensions))])
+            cov_state = np.array([[Cov[j, k] for k in xrange(2 * len(self.link_dimensions))] for j in xrange(2 * len(self.link_dimensions))])
+            print "cov " + str(cov_state)
+            
             
             if not self.w2 == 0.0:                
                 try:               

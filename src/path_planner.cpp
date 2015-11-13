@@ -347,6 +347,9 @@ std::vector<std::vector<double>> PathPlanner::augmentPath_(std::vector<std::vect
 			observation.push_back(solution_element[j]);
 			
 		}
+		for (size_t j = 0; j < dim_/2; j++) {
+			control.push_back(0.0);
+		}
 		
 		for (size_t j = 0; j < dim_ / 2; j++) {
 			solution_element.push_back(0.0);

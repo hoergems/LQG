@@ -126,14 +126,14 @@ class LQG:
                 """
                 The process noise covariance matrix
                 """
-                M = m_covs[j] * np.identity(len(self.link_dimensions))
+                M = m_covs[j] * np.identity(2 * len(self.link_dimensions))
                 
-                P_t = np.array([[0.0 for k in xrange(len(self.link_dimensions))] for l in xrange(len(self.link_dimensions))]) 
+                P_t = np.array([[0.0 for k in xrange(2 * len(self.link_dimensions))] for l in xrange(2 * len(self.link_dimensions))]) 
                 
                 """
                 The observation noise covariance matrix
                 """
-                N = self.observation_covariance * np.identity(len(self.link_dimensions))
+                N = self.observation_covariance * np.identity(2 * len(self.link_dimensions))
                 
                 path_evaluator.setup(A, B, C, D, H, M, N, V, W, 
                                      self.link_dimensions,
