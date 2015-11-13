@@ -8,7 +8,7 @@ num_generated_paths: 1
 use_linear_path: False
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 1000
+num_simulation_runs: 200
 
 # Dimension of the workspace (2 = 2D, 3 = 3D)
 workspace_dimension: 2
@@ -32,7 +32,7 @@ goal_radius: 0.2
 num_bins: 201
 
 # The minimum joint state covariance
-min_covariance: 0.01
+min_covariance: 0.02
 
 # The maximum joint state covariance
 max_covariance: 0.02
