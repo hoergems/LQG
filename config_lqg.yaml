@@ -26,7 +26,7 @@ init_joint_angles: [0.0, 0.0, 0.0]
 goal_position: [0.0, 3.0, 0.0]
 
 # The radius around the goal position to define the end effector's goal area
-goal_radius: 0.2
+goal_radius: 0.4
 
 #Number of bins for the histograms
 num_bins: 201
