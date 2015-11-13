@@ -266,6 +266,7 @@ class PathEvaluator:
                 Bs.append(self.B)
                 Vs.append(self.V)
                 Ms.append(self.M)
+                Hs.append(self.H)
                 Ws.append(self.W)
                 Ns.append(self.N)
             
@@ -294,38 +295,35 @@ class PathEvaluator:
         ee_approx_distr = []
         collision_probs = []
         path_rewards = []
-        path_rewards.append(np.power(self.discount, current_step) * self.get_expected_state_reward(xs[0], P_t))
-         
+        path_rewards.append(np.power(self.discount, current_step) * self.get_expected_state_reward(xs[0], P_t))        
+        #sleep
         Cov = 0         
-        for i in xrange(1, horizon_L):            
-            P_hat_t = kalman.compute_p_hat_t(self.A, P_t, self.V, self.M)
-            K_t = kalman.compute_kalman_gain(self.H, P_hat_t, self.W, self.N)
-            P_t = kalman.compute_P_t(K_t, self.H, P_hat_t, 2 * len(self.link_dimensions))
+        for i in xrange(0, horizon_L - 1):                   
+            P_hat_t = kalman.compute_p_hat_t(As[i], P_t, Vs[i], Ms[i])
+            K_t = kalman.compute_kalman_gain(Hs[i+1], P_hat_t, Ws[i+1], Ns[i+1])
+            P_t = kalman.compute_P_t(K_t, Hs[i+1], P_hat_t, 2 * len(self.link_dimensions))
             
-            F_0 = np.hstack((self.A, np.dot(self.B, Ls[i-1])))            
-            F_1 = np.hstack((np.dot(K_t, np.dot(self.H, self.A)), 
-                             np.add(self.A, np.subtract(np.dot(self.B, Ls[i-1]), np.dot(K_t, np.dot(self.H, self.A))))))            
+            F_0 = np.hstack((As[i], np.dot(Bs[i], Ls[i])))            
+            F_1 = np.hstack((np.dot(K_t, np.dot(Hs[i+1], As[i])), 
+                             np.add(As[i], np.subtract(np.dot(Bs[i], Ls[i]), np.dot(K_t, np.dot(Hs[i+1], As[i]))))))            
             F_t = np.vstack((F_0, F_1))                              
-            G_t = np.vstack((np.hstack((self.V, NU)), 
-                             np.hstack((np.dot(np.dot(K_t, self.H), self.V), np.dot(K_t, self.W)))))
-            G_t_1 = np.vstack((np.hstack((self.V, NU)),
-                               np.hstack((np.dot(K_t, np.dot(self.H, self.V)), np.dot(K_t, self.W)))))            
+            G_t = np.vstack((np.hstack((Vs[i], NU)), 
+                             np.hstack((np.dot(np.dot(K_t, Hs[i+1]), Vs[i]), np.dot(K_t, Ws[i+1])))))
+            G_t_1 = np.vstack((np.hstack((Vs[i], NU)),
+                               np.hstack((np.dot(K_t, np.dot(Hs[i+1], Vs[i])), np.dot(K_t, Ws[i+1])))))            
             """ Compute R """            
             R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))
-            L = np.identity(2 * len(self.link_dimensions))
+            ''''L = np.identity(2 * len(self.link_dimensions))
             if i != horizon_L - 1:
-                L = Ls[i]    
+                L = Ls[i]'''    
             Gamma_t = np.vstack((np.hstack((np.identity(2 * len(self.link_dimensions)), NU)), 
-                                 np.hstack((NU, L))))                  
+                                 np.hstack((NU, Ls[i]))))                  
                    
             Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))                     
             cov_state = np.array([[Cov[j, k] for k in xrange(2 * len(self.link_dimensions))] for j in xrange(2 * len(self.link_dimensions))])
-            print "cov " + str(cov_state)
-            
-            
             if not self.w2 == 0.0:                
                 try:               
-                    jacobian = self.get_jacobian([l[0] for l in self.link_dimensions], xs[i])
+                    jacobian = self.get_jacobian([l[0] for l in self.link_dimensions], xs[i + 1])
                 except Exception as e:
                     print e
                     print xs
@@ -335,8 +333,9 @@ class PathEvaluator:
                     sleep                                            
                 EE_covariance = np.dot(np.dot(jacobian, cov_state), jacobian.T)
             
-            #EE_covariance = np.array([[EE_covariance[j, k] for k in xrange(2)] for j in xrange(2)])            
-            path_rewards.append(np.power(self.discount, current_step + i) * self.get_expected_state_reward(xs[i], cov_state))             
+            #EE_covariance = np.array([[EE_covariance[j, k] for k in xrange(2)] for j in xrange(2)])
+                     
+            path_rewards.append(np.power(self.discount, current_step + i + 1) * self.get_expected_state_reward(xs[i + 1], cov_state))             
         path_reward = sum(path_rewards)               
         logging.info("========================================")
         logging.info("PathEvaluator: reward for path " + 

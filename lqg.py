@@ -162,7 +162,7 @@ class LQG:
                                    [zs[i] for i in xrange(len(zs))]])
                 
                 sim.setup_problem(A, B, C, D, H, V, W, M, N, 
-                                  obstacles, 
+                                  self.obstacles, 
                                   self.goal_position, 
                                   self.goal_radius, 
                                   self.link_dimensions, 
@@ -171,6 +171,8 @@ class LQG:
                                   self.enforce_constraints,
                                   self.max_velocity)
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
+                if self.dynamic_problem:
+                    sim.setup_dynamic_problem(self.control_duration)
                 
                 successes = 0
                 num_collisions = 0 
@@ -190,9 +192,9 @@ class LQG:
                      estimated_c,                     
                      history_entries) = sim.simulate_n_steps(xs, us, zs,
                                                              xs[0],
-                                                             np.array([0.0 for i in xrange(len(self.link_dimensions))]),
+                                                             np.array([0.0 for i in xrange(2 * len(self.link_dimensions))]),
                                                              xs[0],
-                                                             np.array([[0.0 for k in xrange(len(self.link_dimensions))] for l in xrange(len(self.link_dimensions))]),
+                                                             np.array([[0.0 for k in xrange(2 * len(self.link_dimensions))] for l in xrange(2 * len(self.link_dimensions))]),
                                                              0.0,                                                           
                                                              0,
                                                              len(xs) - 1)

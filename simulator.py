@@ -45,7 +45,12 @@ class Simulator:
         self.workspace_dimension = workspace_dimension   
         self.joint_constraints = joint_constraints 
         self.enforce_constraints = enforce_constraints 
-        self.joint_velocity_limit = joint_velocity_limit      
+        self.joint_velocity_limit = joint_velocity_limit
+        self.dynamic_problem = False
+        
+    def setup_dynamic_problem(self, control_duration):
+        self.dynamic_problem = True
+        self.control_duration = control_duration     
         
     def setup_reward_function(self, discount_factor, step_penalty, illegal_move_penalty, exit_reward):
         self.discount_factor = discount_factor
@@ -77,6 +82,56 @@ class Simulator:
                 u[i] = self.joint_velocity_limit
         return u
     
+    def get_linear_model_matrices(self, state_path, control_path):
+        As = []
+        Bs = []
+        Vs = []
+        Ms = []
+        Hs = []
+        Ws = []
+        Ns = []
+        if self.dynamic_problem:
+            for i in xrange(len(state_path)):
+                state = v_double()
+                state[:] = state_path[i]
+                controls = control_path[i]
+                
+                t0 = time.time()
+                A = self.integrate.getProcessMatrices(state, self.control_duration)                
+                Matr_list = [A[i] for i in xrange(len(A))]
+                A_list = np.array([Matr_list[i] for i in xrange(len(state)**2)])
+                B_list = np.array([Matr_list[i] for i in xrange(len(state)**2, 2 * len(state)**2)])
+                V_list = np.array([Matr_list[i] for i in xrange(2 * len(state)**2, 
+                                                                3 * len(state)**2)])
+                A_Matr = A_list.reshape(len(state), len(state)).T
+                B_Matr = B_list.reshape(len(state), len(state)).T
+                V_Matr = V_list.reshape(len(state), len(state)).T
+                
+                print A_Matr
+                print B_Matr
+                print V_Matr
+                sleep
+                
+                As.append(A_Matr)
+                Bs.append(B_Matr)
+                Vs.append(V_Matr)
+                
+                Ms.append(self.M)
+                Hs.append(self.H)
+                Ws.append(self.W)
+                Ns.append(self.N)
+        else:
+            for i in xrange(len(state_path)):
+                As.append(self.A)
+                Bs.append(self.B)
+                Vs.append(self.V)
+                Ms.append(self.M)
+                Hs.append(self.H)
+                Ws.append(self.W)
+                Ns.append(self.N)
+            
+        return As, Bs, Vs, Ms, Hs, Ws, Ns
+    
     def simulate_n_steps(self,
                          xs, us, zs,
                          x_true,                         
@@ -89,10 +144,12 @@ class Simulator:
         history_entries = []        
         terminal_state_reached = False
         success = False
-        Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, len(xs) - 1)
+        
+        As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, us)
+        Ls = kalman.compute_gain(As, Bs, self.C, self.D, len(xs) - 1)
         logging.info("Simulator: Executing for " + str(n_steps) + " steps") 
         estimated_states = []
-        estimated_covariances = []        
+        estimated_covariances = []                
         for i in xrange(n_steps):                        
             if not (terminal_state_reached and self.stop_when_terminal):                
                 history_entries.append(HistoryEntry(current_step + i,
@@ -113,10 +170,10 @@ class Simulator:
                         
                 x_true_temp = self.apply_control(x_true, 
                                                  u, 
-                                                 self.A, 
-                                                 self.B, 
-                                                 self.V, 
-                                                 self.M)                
+                                                 As[i], 
+                                                 Bs[i], 
+                                                 Vs[i], 
+                                                 Ms[i])                
                 
                 discount = np.power(self.discount_factor, current_step + i)
                 collided = False        
@@ -134,9 +191,9 @@ class Simulator:
                 state[:] = x_true   
                 ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
                 ee_position = np.array([ee_position_arr[j] for j in xrange(len(ee_position_arr))])
-                logging.info("Simulator: Current end-effector position is " + str(ee_position))                                                 
-                    
-                z = self.get_observation(x_true, self.H, self.N, self.W)
+                logging.info("Simulator: Current end-effector position is " + str(ee_position))                                                
+                
+                z = self.get_observation(x_true, Hs[i + 1], Ns[i + 1], Ws[i + 1])
                 z_dash = np.subtract(z, zs[i+1])
                 history_entries[-1].set_observation(z)
                 
@@ -144,14 +201,14 @@ class Simulator:
                 Kalman prediction and update
                 """ 
                 #if not collided:               
-                x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u_dash, self.A, self.B, P_t, self.V, self.M)
+                x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u_dash, As[i], Bs[i], P_t, Vs[i], Ms[i])
                 x_tilde, P_t = kalman.kalman_update(x_tilde_dash, 
                                                     z_dash, 
-                                                    self.H, 
+                                                    Hs[i], 
                                                     P_dash, 
-                                                    self.W, 
-                                                    self.N, 
-                                                    len(self.link_dimensions))
+                                                    Ws[i], 
+                                                    Ns[i], 
+                                                    2 * len(self.link_dimensions))
                 x_estimate_new = x_tilde + xs[i + 1]
                 
                 if self.enforce_constraints:                                 
@@ -198,7 +255,7 @@ class Simulator:
                 history_entries)
     
     def check_constraints(self, state):
-        for i in xrange(len(state)):                          
+        for i in xrange(len(state) / 2):                          
             if state[i] < -self.joint_constraints[i]:
                 state[i] = -self.joint_constraints[i] + 0.00001
             if state[i] > self.joint_constraints[i]:
@@ -246,11 +303,15 @@ class Simulator:
             return True
         return False
     
-    def apply_control(self, x_dash, u_dash, A, B, V, M):               
-        m = self.get_random_joint_angles([0.0 for i in xrange(len(self.link_dimensions))], M)
-        x_new = np.add(np.add(np.dot(A, x_dash), np.dot(B, u_dash)), np.dot(V, m))        
-        if self.enforce_constraints:            
-            x_new = self.check_constraints(x_new)
+    def apply_control(self, x_dash, u_dash, A, B, V, M):
+        x_new = None
+        if self.dynamic_problem:
+            pass
+        else:               
+            m = self.get_random_joint_angles([0.0 for i in xrange(2 * len(self.link_dimensions))], M)
+            x_new = np.add(np.add(np.dot(A, x_dash), np.dot(B, u_dash)), np.dot(V, m))
+            if self.enforce_constraints:            
+                x_new = self.check_constraints(x_new)
         return x_new
     
     def get_random_joint_angles(self, mu, cov):        
@@ -264,7 +325,7 @@ class Simulator:
     
     def get_observation(self, true_theta, H, N, W):
         return np.add(np.dot(H, true_theta), 
-                      np.dot(W, self.get_random_joint_angles([0.0 for i in xrange(len(self.link_dimensions))], N)))
+                      np.dot(W, self.get_random_joint_angles([0.0 for i in xrange(2 * len(self.link_dimensions))], N)))
     
 if __name__ == "__main__":
     Simulator()
