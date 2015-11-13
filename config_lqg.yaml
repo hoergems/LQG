@@ -38,7 +38,7 @@ min_covariance: 0.02
 max_covariance: 0.02
 
 # The number of covariance steps
-covariance_steps: 20
+covariance_steps: 1
 
 # The observation covariance
 observation_covariance: 0.0001
