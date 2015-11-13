@@ -172,7 +172,11 @@ class LQG:
                                   self.max_velocity)
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
                 if self.dynamic_problem:
-                    sim.setup_dynamic_problem(self.control_duration)
+                    sim.setup_dynamic_problem(urdf_model_file,
+                                              self.coulomb,
+                                              self.viscous,
+                                              self.control_duration,
+                                              self.simulation_step_size)
                 
                 successes = 0
                 num_collisions = 0 

@@ -89,6 +89,7 @@ class PathPlanningInterface:
             self.verbose = True
         self.planning_algorithm = planning_algorithm
         self.dynamic_problem = False
+        self.can_print = False
         
     def setup_dynamic_problem(self, 
                               urdf_model, 
@@ -131,7 +132,7 @@ class PathPlanningInterface:
         while True:
             try:
                 res_paths.append(path_queue.get_nowait())
-            except:
+            except:                
                 pass
             elapsed = time.time() - t0
             if num != 0 and len(res_paths) == num:
@@ -187,9 +188,13 @@ class PathPlanningInterface:
         while True:
             try:
                 res_paths.append(path_queue.get_nowait())                
-            except:                
+            except:
+                if self.can_print:
+                    print path_queue.qsize()         
                 pass
-            elapsed = time.time() - t0            
+            elapsed = time.time() - t0
+            if len(res_paths) > 0:
+                print "OKEY"            
             if len(res_paths) == num:
                 break
             if timeout > 0.0:
@@ -226,8 +231,11 @@ class PathPlanningInterface:
     
     def construct_path(self, obstacles, queue, joint_constraints,):        
         while True:
-            xs, us, zs = self._construct(obstacles, joint_constraints)                       
-            queue.put((xs, us, zs))        
+            xs, us, zs = self._construct(obstacles, joint_constraints)
+            print "put"  
+            self.can_print = True                           
+            queue.put((xs, us, zs))
+            
         
     def _construct(self, obstacles, joint_constraints):
         path_planner2 = None        
@@ -245,7 +253,8 @@ class PathPlanningInterface:
             path_planner2.setKinematics(self.kinematics)
             path_planner2.setup()
         else:            
-            path_planner2 = libdynamic_path_planner.DynamicPathPlanner(False)
+            path_planner2 = libdynamic_path_planner.DynamicPathPlanner(len(self.link_dimensions) * 2,
+                                                                       False)
             path_planner2.setupMotionValidator()
             path_planner2.setKinematics(self.kinematics)
             
@@ -294,8 +303,8 @@ class PathPlanningInterface:
         for i in xrange(len(xs_temp)):
             xs.append([xs_temp[i][j] for j in xrange(0, 2 * len(self.link_dimensions))])
             us.append([xs_temp[i][j] for j in xrange(2 * len(self.link_dimensions), 4 * len(self.link_dimensions))])
-            zs.append([xs_temp[i][j] for j in xrange(4 * len(self.link_dimensions), 6 * len(self.link_dimensions))])
-        
+            zs.append([xs_temp[i][j] for j in xrange(4 * len(self.link_dimensions), 6 * len(self.link_dimensions))]) 
+        print "xs"       
         return xs, us, zs
     
 if __name__ == "__main__":

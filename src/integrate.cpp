@@ -64,28 +64,28 @@ std::vector<double> Integrate::getProcessMatrices(std::vector<double> &x, double
 	MatrixXd A_matrx1 = (t_e * AMatrix).exp();	
 	MatrixXd integral = power_series_(AMatrix, t_e, 20);	
 	MatrixXd B_matrx = A_matrx1 * integral * BMatrix;
-	MatrixXd B_matrx_temp;
 	
-	B_matrx.conservativeResize(NoChange, B_matrx.cols() * 2);
-	VMatrix.conservativeResize(NoChange, VMatrix.cols() * 2);
-	for (size_t i = 0; i < x.size()/ 2; i++) {
-		for (size_t j = 0; j < x.size(); j++) {
-		    B_matrx(j, i + x.size() / 2) = 0.0;
-		    VMatrix(j, i + x.size() / 2) = 0.0;
+	MatrixXd B_matrx_temp = MatrixXd::Identity(B_matrx.rows(), B_matrx.cols() * 2);
+	MatrixXd V_matrx_temp = MatrixXd::Identity(VMatrix.rows(), VMatrix.cols() * 2);
+	
+	for (size_t i = 0; i < B_matrx.rows(); i++) {
+		for (size_t j = 0; j < B_matrx.cols(); j++) {
+			B_matrx_temp(i, j) = B_matrx(i, j);
+			V_matrx_temp(i, j) = VMatrix(i, j);
 		}
-	}
+	}	
 	
 	std::vector<double> res;
 	for (size_t i = 0; i < A_matrx1.size(); i++) {
 		res.push_back(A_matrx1(i));
 	}
 	
-	for (size_t i = 0; i < B_matrx.size(); i++) {
-		res.push_back(B_matrx(i));
+	for (size_t i = 0; i < B_matrx_temp.size(); i++) {
+		res.push_back(B_matrx_temp(i));
 	}
 	
-	for (size_t i = 0; i < VMatrix.size(); i++) {
-		res.push_back(VMatrix(i));
+	for (size_t i = 0; i < V_matrx_temp.size(); i++) {
+		res.push_back(V_matrx_temp(i));
 	}
 	return res;
 }

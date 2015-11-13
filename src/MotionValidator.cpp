@@ -7,16 +7,15 @@ using namespace fcl;
 
 namespace shared {
 
-MotionValidator::MotionValidator(const ompl::base::SpaceInformationPtr &si,                                                                 
-                                 std::vector<std::shared_ptr<Obstacle> > obstacles,                                 
+MotionValidator::MotionValidator(const ompl::base::SpaceInformationPtr &si,
                                  bool continuous_collision):    
     ompl::base::MotionValidator(si),
     si_(si),
-    kinematics_(nullptr),
-    obstacles_(obstacles),    
+    kinematics_(nullptr),     
     continuous_collision_(continuous_collision),    
     utils_(),
-    link_dimensions_()
+    link_dimensions_(),
+    obstacles_()
 {
     
 }
@@ -33,7 +32,6 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
 			return false;
 		}		
 	}**/
-	
     std::vector<OBB> manipulator_collision_structures_goal = utils_.createManipulatorCollisionStructures(s2,
                                                                                                          link_dimensions_, 
                                                                                                          kinematics_);
@@ -64,12 +62,12 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
             }
         } 
     }     
-    cout << "Motion is valid" << endl;
+    
     return true;
 }
 
 /** Check if a motion between two states is valid. This assumes that state s1 is valid */
-bool MotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base::State *s2) const {    
+bool MotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base::State *s2) const {
     std::vector<double> angles1;
     std::vector<double> angles2;    
     for (unsigned int i = 0; i < si_->getStateSpace()->getDimension() / 2; i++) {
@@ -83,7 +81,7 @@ bool MotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base:
 /** Check if a motion between two states is valid. This assumes that state s1 is valid */
 bool MotionValidator::checkMotion(const ompl::base::State *s1, 
                                   const ompl::base::State *s2, 
-                                  std::pair< ompl::base::State *, double > &/*lastValid*/) const {    
+                                  std::pair< ompl::base::State *, double > &/*lastValid*/) const {
     return checkMotion(s1, s2);
 }
 

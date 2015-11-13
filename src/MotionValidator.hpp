@@ -22,8 +22,7 @@ namespace shared {
 
     class MotionValidator: public ompl::base::MotionValidator {
         public:
-            MotionValidator(const ompl::base::SpaceInformationPtr &si,                                                        
-                            std::vector<std::shared_ptr<Obstacle> > obstacles,
+            MotionValidator(const ompl::base::SpaceInformationPtr &si,
                             bool continuous_collision);
             ~MotionValidator() = default;
 
@@ -45,7 +44,7 @@ namespace shared {
 
             void setLinkDimensions(std::vector<std::vector<double>> &link_dimensions);  
             
-            void setKinematics(std::shared_ptr<Kinematics> kinematics); 
+            void setKinematics(std::shared_ptr<Kinematics> kinematics);
 
         private:
             const ompl::base::SpaceInformationPtr si_;

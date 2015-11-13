@@ -39,7 +39,7 @@ namespace shared {
 
     class DynamicPathPlanner {
         public:
-        		DynamicPathPlanner(bool verbose);
+        		DynamicPathPlanner(int dim, bool verbose);
                             
             	~DynamicPathPlanner() { OpenRAVE::RaveDestroy(); }
         	

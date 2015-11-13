@@ -4,6 +4,8 @@ import logging
 import time
 from scipy.stats import multivariate_normal
 from libkinematics import *
+from libpropagator import *
+from libintegrate import *
 from libutil import *
 from history_entry import *
 
@@ -47,10 +49,23 @@ class Simulator:
         self.enforce_constraints = enforce_constraints 
         self.joint_velocity_limit = joint_velocity_limit
         self.dynamic_problem = False
+        self.integrate = Integrate()
         
-    def setup_dynamic_problem(self, control_duration):
+    def setup_dynamic_problem(self, 
+                              model_file,
+                              coulomb,
+                              viscous,
+                              control_duration,
+                              simulation_step_size):
         self.dynamic_problem = True
-        self.control_duration = control_duration     
+        self.control_duration = control_duration
+        
+        self.propagator = Propagator()        
+        self.propagator.setup(model_file,
+                              coulomb,
+                              viscous)
+        self.simulation_step_size = simulation_step_size 
+        self.control_duration = control_duration
         
     def setup_reward_function(self, discount_factor, step_penalty, illegal_move_penalty, exit_reward):
         self.discount_factor = discount_factor
@@ -99,18 +114,18 @@ class Simulator:
                 t0 = time.time()
                 A = self.integrate.getProcessMatrices(state, self.control_duration)                
                 Matr_list = [A[i] for i in xrange(len(A))]
+                
                 A_list = np.array([Matr_list[i] for i in xrange(len(state)**2)])
+                           
                 B_list = np.array([Matr_list[i] for i in xrange(len(state)**2, 2 * len(state)**2)])
+                              
                 V_list = np.array([Matr_list[i] for i in xrange(2 * len(state)**2, 
                                                                 3 * len(state)**2)])
+               
                 A_Matr = A_list.reshape(len(state), len(state)).T
-                B_Matr = B_list.reshape(len(state), len(state)).T
                 V_Matr = V_list.reshape(len(state), len(state)).T
+                B_Matr = B_list.reshape(len(state), len(state)).T  
                 
-                print A_Matr
-                print B_Matr
-                print V_Matr
-                sleep
                 
                 As.append(A_Matr)
                 Bs.append(B_Matr)
@@ -173,11 +188,14 @@ class Simulator:
                                                  As[i], 
                                                  Bs[i], 
                                                  Vs[i], 
-                                                 Ms[i])                
+                                                 Ms[i])
                 
                 discount = np.power(self.discount_factor, current_step + i)
                 collided = False        
                 if self.is_in_collision(x_true, x_true_temp):
+                    print x_true_temp
+                    print xs[i + 1]
+                    sleep
                     logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
                     total_reward += discount * (-1.0 * self.illegal_move_penalty)
                     history_entries[-1].set_reward(-1.0 * self.illegal_move_penalty)
@@ -210,8 +228,10 @@ class Simulator:
                                                     Ns[i], 
                                                     2 * len(self.link_dimensions))
                 x_estimate_new = x_tilde + xs[i + 1]
+                #print "x_estimate " + str(x_estimate_new)
+                #sleep
                 
-                if self.enforce_constraints:                                 
+                if self.enforce_constraints:     
                     x_estimate_new = self.check_constraints(x_estimate_new) 
                 estimate_collided = True                                       
                 if not self.is_in_collision([], x_estimate_new):                                                                                
@@ -270,7 +290,7 @@ class Simulator:
         #previous_state = []
                     
         joint_angles_goal = v_double()
-        joint_angles_goal[:] = state
+        joint_angles_goal[:] = [state[i] for i in xrange(len(self.link_dimensions))]
         collision_structures = self.utils.createManipulatorCollisionStructures(joint_angles_goal,
                                                                                self.link_dimensions, 
                                                                                self.kinematics)
@@ -306,13 +326,42 @@ class Simulator:
     def apply_control(self, x_dash, u_dash, A, B, V, M):
         x_new = None
         if self.dynamic_problem:
-            pass
+            current_joint_values = v_double()
+            current_joint_velocities = v_double()
+            
+            current_joint_values[:] = [x_dash[i] for i in xrange(len(self.link_dimensions))]
+            current_joint_velocities[:] = [x_dash[i + len(self.link_dimensions)] for i in xrange(len(self.link_dimensions))]
+            
+            control = v_double()
+            control[:] = u_dash
+            
+            control_error = v_double()
+            control_error[:] = self.sample_control_error(M)
+            
+            result = v_double()
+            self.propagator.propagate(current_joint_values,
+                                      current_joint_velocities,
+                                      control,
+                                      control_error,
+                                      self.simulation_step_size,
+                                      self.control_duration,
+                                      result)
+            
+            x_new = [result[i] for i in xrange(len(result))]
+            '''print "x_dash " + str(x_dash)
+            print "u_dash " + str(u_dash)
+            print "propagation_result " + str(x_new)            
+            sleep'''
         else:               
             m = self.get_random_joint_angles([0.0 for i in xrange(2 * len(self.link_dimensions))], M)
             x_new = np.add(np.add(np.dot(A, x_dash), np.dot(B, u_dash)), np.dot(V, m))
             if self.enforce_constraints:            
                 x_new = self.check_constraints(x_new)
         return x_new
+    
+    def sample_control_error(self, M):
+        mu = np.array([0.0 for i in xrange(2 * len(self.link_dimensions))])
+        return np.random.multivariate_normal(mu, M)
     
     def get_random_joint_angles(self, mu, cov):        
         #with self.lock:

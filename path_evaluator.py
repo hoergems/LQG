@@ -108,7 +108,7 @@ class PathEvaluator:
             terminal = False
             if self.is_terminal(joint_angles):
                 expected_reward += pdf[i] * self.exit_reward
-                terminal = True
+                terminal = True                
             if not terminal:
                 collision_structures = self.utils.createManipulatorCollisionStructures(joint_angles, 
                                                                                        self.link_dimensions,
@@ -239,18 +239,18 @@ class PathEvaluator:
                 t0 = time.time()
                 A = self.integrate.getProcessMatrices(state, self.control_duration)                
                 Matr_list = [A[i] for i in xrange(len(A))]
+                
                 A_list = np.array([Matr_list[i] for i in xrange(len(state)**2)])
+                           
                 B_list = np.array([Matr_list[i] for i in xrange(len(state)**2, 2 * len(state)**2)])
+                              
                 V_list = np.array([Matr_list[i] for i in xrange(2 * len(state)**2, 
                                                                 3 * len(state)**2)])
+               
                 A_Matr = A_list.reshape(len(state), len(state)).T
-                B_Matr = B_list.reshape(len(state), len(state)).T
                 V_Matr = V_list.reshape(len(state), len(state)).T
+                B_Matr = B_list.reshape(len(state), len(state)).T  
                 
-                print A_Matr
-                print B_Matr
-                print V_Matr
-                sleep
                 
                 As.append(A_Matr)
                 Bs.append(B_Matr)
@@ -275,7 +275,7 @@ class PathEvaluator:
     def evaluate(self, index, path, P_t, current_step, horizon, eval_queue=None):
         xs = path[0]
         us = path[1]
-        zs = path[2]
+        zs = path[2]        
         horizon_L = horizon + 1 
         if horizon == -1 or len(xs) < horizon_L:            
             horizon_L = len(xs) 

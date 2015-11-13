@@ -37,6 +37,10 @@ add_library(robot SHARED robot.cpp)
 
 add_library(integrate SHARED integrate.cpp)
 
+add_library(propagator SHARED 
+            propagator.cpp
+            torque_damper.cpp)
+
 add_library(obstacle SHARED
             Obstacle.cpp
             Terrain.cpp
@@ -103,6 +107,13 @@ target_link_libraries (integrate
                        boost_system
                        boost_python
                        python2.7)
+                       
+target_link_libraries (propagator
+                       boost_system
+                       boost_python
+                       python2.7
+                       openrave0.9
+                       openrave0.9-core)
 
 target_link_libraries (dynamic_path_planner                        
                        openrave0.9 

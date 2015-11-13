@@ -31,8 +31,7 @@ PathPlanner::PathPlanner(int dim,
     planner_str_(planner),    
     planner_(nullptr),       
     kinematics_(nullptr), 
-    motionValidator_(new MotionValidator(si_,
-                                         obstacles_,                                         
+    motionValidator_(new MotionValidator(si_,                                   
                                          continuous_collision)),
     verbose_(verbose)
 {   
