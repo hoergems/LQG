@@ -65,6 +65,7 @@ void PathPlanner::setKinematics(std::shared_ptr<Kinematics> kinematics) {
 }
 
 void PathPlanner::setup() {
+	cout << "Planning range: " << planning_range_ << endl;
 	ompl::base::RealVectorBounds bounds(dim_);
 	if (enforce_constraints_) {
 		/** We assume that the there are no joint limits. So the range of each joint
@@ -101,7 +102,7 @@ void PathPlanner::setup() {
     if (planner_str_ == "RRT") {
     	boost::shared_ptr<ompl::geometric::RRT> planner_ptr = boost::static_pointer_cast<ompl::geometric::RRT>(planner_);
     	planner_ptr->setRange(planning_range_);
-    	planner_ptr->setGoalBias(0.1);
+    	//planner_ptr->setGoalBias(0.1);
     	
     }
     else if (planner_str_ == "RRTConnect") {

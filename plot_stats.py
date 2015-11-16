@@ -7,10 +7,11 @@ import os
 import logging
 from serializer import Serializer
 from scipy.stats import multivariate_normal
-from kin import *
-from util import *
+from libkinematics import *
+from libutil import *
 from EMD import *
 import sets
+import random
 
 class PlotStats:
     def __init__(self, save, algorithm):
@@ -32,19 +33,16 @@ class PlotStats:
         self.plot_paths(serializer, best_paths=True, dir=dir)
         
         logging.info("PlotStats: plotting average distance to goal")
-        self.plot_average_dist_to_goal(serializer, dir=dir)
+        self.plot_stat("Average distance to goal area", "avg_distance", dir=dir)
         logging.info("PlotStats: plotting mean rewards")
-        self.plot_rewards(serializer, dir=dir, show_legend=True)
+        self.plot_stat("Mean rewards", "mean_rewards", dir=dir)
         logging.info("PlotStats: plotting % successful runs")
-        self.plot_num_successes(serializer, dir=dir)
-        self.plot_sample_variances(serializer, dir=dir, show_legend=True)
-        self.plot_sample_standard_deviations(serializer, dir=dir, show_legend=True)        
+        self.plot_stat("Num success", "succesful_runs", dir=dir)
+        self.plot_stat("Reward variance", "sample_variances", dir=dir)
+        self.plot_stat("Reward standard deviation", "reward_standand_deviation", dir=dir)        
         logging.info("PlotStats: plotting mean planning times")
-        self.plot_mean_planning_times(serializer, dir=dir) 
-        self.plot_mean_planning_times(serializer, 
-                                      dir, 
-                                      filename="mean_planning_times_per_run*.yaml",
-                                      output="mean_planning_times_per_run.pdf")
+        self.plot_stat("Mean planning time", "mean_planning_time", dir=dir) 
+        self.plot_stat("Mean num collisions per run", "mean_num_collision_per_run", dir=dir)
         logging.info("PlotStats: plotting mean number of generated paths")
         self.plot_mean_num_generated_paths(serializer,
                                            dir,
@@ -228,20 +226,21 @@ class PlotStats:
                                 step_num = -1                 
                             elif "S:" in line:
                                 line_arr = line.split(":")[1].strip().split(" ")
-                                state = [float(line_arr[j]) for j in xrange(len(line_arr))] 
+                                state = [float(line_arr[j]) for j in xrange(len(link_dimensions))] 
                             elif "S_ESTIMATED:" in line:
                                 line_arr = line.split(":")[1].strip().split(" ")
-                                estimated_state = [float(line_arr[j]) for j in xrange(len(line_arr))]                           
+                                estimated_state = [float(line_arr[j]) for j in xrange(len(link_dimensions))]                           
                             elif "COVARIANCE:" in line:
                                 temp_sets = []
                                 color_map_temp = []
                                 step_num += 1  
                                 if plot_particles:
                                     covariance = line.split(":")[1].strip().split(" ")
+                                    
                                     covariance = [float(cov) for cov in covariance]
                                     covariance = np.array([[covariance[0], covariance[1], covariance[2]],
-                                                           [covariance[3], covariance[4], covariance[5]],
-                                                           [covariance[6], covariance[7], covariance[8]]])                                    
+                                                           [covariance[6], covariance[7], covariance[8]],
+                                                           [covariance[12], covariance[13], covariance[14]]])                                    
                                     particles = self.draw_particles(estimated_state, covariance, 50)                                    
                                     for particle in particles:
                                         angles = v_double()
@@ -425,206 +424,63 @@ class PlotStats:
                                                 show_legend=False, 
                                                 save=self.save, 
                                                 path="stats", 
-                                                filename="particles" + str(i) + "_" + str(j) + "_" + str(k) + ".png")   
-            
-    def plot_average_dist_to_goal(self, serializer, dir="stats"):
-        config = serializer.read_config(path=dir)
-        goal_position = np.array(config['goal_position'])        
-        utils = Utils()
-        model_file = "model.xml" 
-        if config['workspace_dimension'] == 3:
-            model_file = "model3D.xml"
-        link_dimensions = utils.getLinkDimensions(os.getcwd() + "/" + dir + "/model/" + model_file)
-        sets = []
-        labels = ["bla", "bla2"]
-        data = []
-        max_avg_distance = 0.0
-        for process_covariance in self.process_covariances:
-            final_states = []
-            for file in glob.glob(dir + "/*.log"):
-                if str(process_covariance) in file:
-                    with open(file, 'r') as f:
-                        final_state = []
-                        for line in f:
-                            if "S: " in line:
-                                s = line.strip().split(":")[1].split()
-                                final_state = [float(si) for si in s]                                                   
-                            if "RUN #" in line or "##############" in line:
-                                if not len(final_state) == 0:
-                                    final_states.append(final_state)
-            dists = []
-            for state in final_states:
-                state_v = v_double()
-                state_v[:] = state
-                path_coords_v = self.kinematics.getEndEffectorPosition(state_v)
-                path_coords_elem = np.array([path_coords_v[i] for i in xrange(len(path_coords_v))])
-                dists.append(np.linalg.norm(path_coords_elem - goal_position))
-            n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(dists))
-            if mean > max_avg_distance:
-                max_avg_distance = mean
-            data.append(np.array([process_covariance, mean]))
-        sets.append(np.array(data))
-                     
-        if len(sets) > 0:    
-            Plot.plot_2d_n_sets(sets,
-                                labels=[],
-                                xlabel="joint covariance",
-                                ylabel="average distance to goal",
-                                x_range=[self.process_covariances[0], self.process_covariances[-1]],
-                                y_range=[0, max_avg_distance],
-                                show_legend=True,
-                                save=self.save,
-                                filename=dir + "/avg_distance.pdf")
-        
-    def plot_num_successes(self, serializer, dir="stats"):
-        config = serializer.read_config(path=dir)    
-        stats = serializer.load_stats('stats.yaml', path=dir)
-        m_cov = stats['m_cov']    
-        filename = glob.glob(os.path.join(dir, "num_successes_*.yaml"))[0]
-        
-        files = glob.glob(os.path.join(os.path.join(dir, "num_successes*.yaml")))      
+                                                filename="particles" + str(i) + "_" + str(j) + "_" + str(k) + ".png")
+    
+    def plot_stat(self, stat_str, output_file_str, dir="stats"):
+        files = glob.glob(os.path.join(os.path.join(dir, "*.log")))     
         num_succ_runs = [] 
         num_succ_runs_sets = [] 
         labels = []
+        m_covs = []
+        data = []
+        color_map = []
+        d = dict()
         for file in sorted(files):
-            file_str = file
-            try:
-                file_str = file.split("/")[-1].split(".")[0]
-                #file_str = file.split("/")[1].split(".")[0].split("_")[1]                
-            except Exception as e:
-                logging.error("PlotStats: " + str(e))   
-            
-            num_succ_runs.append(serializer.load_stats(file))            
-            data = []
-            for k in xrange(len(m_cov)):
-                data.append(np.array([m_cov[k], num_succ_runs[-1][k]]))
-            num_succ_runs_sets.append(np.array(data))            
-            labels.append(file.split("/")[-1].split(".")[0].split("_")[2])
-        min_m = [min(m) for m in num_succ_runs]
-        max_m = [max(m) for m in num_succ_runs]
-               
+            file_str = file.split("/")[2].split("_")[1]
+            if not file_str in d:
+                d[file_str] = []                 
+            m_cov = 0.0
+            succ = 0
+            with open(file, "r") as f:                
+                for line in f:
+                    if "Process covariance:" in line:
+                        m_cov = float(line.split(" ")[2])
+                    elif stat_str in line:
+                        float_found = False                        
+                        succ_l = line.split(" ")
+                        for s in succ_l:
+                            if not float_found:
+                                try:
+                                    succ = float(s)
+                                    float_found = True
+                                except:
+                                    pass
+            m_covs.append(m_cov)
+            num_succ_runs.append(succ)
+            d[file_str].append(np.array([m_cov, succ]))        
+        for key in d:
+            color_map.append(self.gen_random_color())
+            num_succ_runs_sets.append(np.array(d[key]))
+            labels.append(key)        
+        
+        min_m = min(num_succ_runs) 
+        max_m = max(num_succ_runs) 
+        min_cov = min(m_covs)
+        max_cov = max(m_covs)
         Plot.plot_2d_n_sets(num_succ_runs_sets,
                             labels=labels,
                             xlabel="joint covariance",
-                            ylabel="% successful runs",
-                            x_range=[m_cov[0], m_cov[-1]],
-                            y_range=[min(min_m), max(max_m) * 1.05],
+                            ylabel=stat_str,
+                            x_range=[min(m_covs), max(m_covs)],
+                            y_range=[min_m, max_m * 1.05],
                             show_legend=True,
+                            lw=2,
+                            color_map=color_map,
                             save=self.save,
-                            filename=dir + "/successful_runs.pdf")
-           
+                            filename=dir + "/" + output_file_str + ".pdf")
         
-        
-    def plot_sample_variances(self, serializer, dir="stats", show_legend=False):
-        stats = serializer.load_stats('stats.yaml', path=dir)
-        m_cov = stats['m_cov']
-        sample_variances_sets = []
-        labels = []
-        sample_variances = []
-        files = glob.glob(os.path.join(os.path.join(dir, "sample_variances*.yaml")))
-        for file in sorted(files):
-            file_str = file
-            try:
-                file_str = file.split("/")[-1].split(".")[0]
-                #file_str = file.split("/")[1].split(".")[0].split("_")[1]                
-            except Exception as e:
-                logging.error("PlotStats: " + str(e))   
-            
-            sample_variances.append(serializer.load_stats(file))            
-            data = []
-            for k in xrange(len(m_cov)):
-                data.append(np.array([m_cov[k], sample_variances[-1][k]]))
-            sample_variances_sets.append(np.array(data))            
-            labels.append(file_str.split("_")[2])        
-        min_m = [min(m) for m in sample_variances]
-        max_m = [max(m) for m in sample_variances]        
-        Plot.plot_2d_n_sets(sample_variances_sets,
-                            labels=labels,
-                            xlabel="joint covariance",
-                            ylabel="sample variance",
-                            x_range=[m_cov[0], m_cov[-1]],
-                            y_range=[min(min_m), max(max_m) * 1.05],
-                            show_legend=show_legend,
-                            save=self.save,
-                            filename=dir + "/sample_variance.pdf")
-        
-    def plot_sample_standard_deviations(self, serializer, dir="stats", show_legend=False):
-        stats = serializer.load_stats('stats.yaml', path=dir)
-        m_cov = stats['m_cov']
-        sample_deviations_sets = []
-        labels = []
-        sample_deviations = []
-        files = glob.glob(os.path.join(os.path.join(dir, "sample_standard_deviations*.yaml")))
-        for file in sorted(files):
-            file_str = file
-            try:
-                file_str = file.split("/")[-1].split(".")[0]
-                #file_str = file.split("/")[1].split(".")[0].split("_")[1]                
-            except Exception as e:
-                logging.error("PlotStats: " + str(e))   
-            
-            sample_deviations.append(serializer.load_stats(file))            
-            data = []
-            for k in xrange(len(m_cov)):
-                data.append(np.array([m_cov[k], sample_deviations[-1][k]]))
-            sample_deviations_sets.append(np.array(data))            
-            labels.append(file_str.split("_")[3])        
-        min_m = [min(m) for m in sample_deviations]
-        max_m = [max(m) for m in sample_deviations]        
-        Plot.plot_2d_n_sets(sample_deviations_sets,
-                            labels=labels,
-                            xlabel="joint covariance",
-                            ylabel="sample standard deviation",
-                            x_range=[m_cov[0], m_cov[-1]],
-                            y_range=[min(min_m), max(max_m) * 1.05],
-                            show_legend=show_legend,
-                            save=self.save,
-                            filename=dir + "/sample_standard_deviations.pdf")
-        
-            
-    def plot_rewards(self, serializer, dir="stats", show_legend=False):
-        mean_rewards_sets = []
-        labels = []
-        mean_rewards = []
-        
-        files = glob.glob(os.path.join(os.path.join(dir, "*.log")))        
-        data = []
-        sets = []
-        min_m = np.inf
-        max_m = -np.inf
-        min_p_covariance = np.inf
-        max_p_covariance = -np.inf
-        for file in sorted(files):
-            file_str = file
-            p_covariance = 0.0
-            mean_reward = 0.0
-            with open(file, 'r') as f:
-                for line in f:
-                    if "Process covariance:" in line:
-                        p_covariance = float(line.split(":")[1].strip())    
-                    if "Mean rewards:" in line:
-                        print line
-                        mean_reward = float(line.split(":")[1].strip())
-            data.append(np.array([p_covariance, mean_reward]))
-            sets.append(np.array(data))
-            if mean_reward < min_m:
-                min_m = mean_reward
-            if mean_reward > max_m:
-                max_m = mean_reward 
-                
-            if p_covariance < min_p_covariance:
-                min_p_covariance = p_covariance
-            if p_covariance > max_p_covariance:
-                max_p_covariance = p_covariance                  
-        Plot.plot_2d_n_sets(sets,
-                            labels=labels,
-                            xlabel="joint covariance",
-                            ylabel="mean reward",
-                            x_range=[min_p_covariance, max_p_covariance],
-                            y_range=[min_m, max_m],
-                            show_legend=show_legend,
-                            save=self.save,
-                            filename=dir + "/mean_rewards.pdf")
+    def gen_random_color(self):
+        return "#%06x" % random.randint(0, 0xFFFFFF)
         
     def plot_mean_num_steps(self, serializer, dir="stats", filename="", output=""):
         if filename == "":
@@ -696,43 +552,6 @@ class PlotStats:
                                 labels=labels,
                                 xlabel="joint covariance",
                                 ylabel="mean num generated paths",
-                                x_range=[m_cov[0], m_cov[-1]],
-                                y_range=[min(min_m)*0.95, max(max_m) * 1.05],
-                                show_legend=True,
-                                save=self.save,
-                                filename=dir + "/" + output)
-        
-    def plot_mean_planning_times(self, serializer, dir="stats", filename="", output=""): 
-        if filename == "":
-            filename = "mean_planning_times_per_step*.yaml"
-        if output == "":
-            output = "mean_planning_times_per_step.pdf"       
-        stats = serializer.load_stats('stats.yaml', path=dir)
-        m_cov = stats['m_cov']
-        sets = []
-        labels = []
-        mean_planning_times = []
-        for file in glob.glob(os.path.join(os.path.join(dir, filename))):
-            file_str = file
-            try:
-                file_str = file.split("/")[2].split(".")[0].split("_")[-1]
-            except:
-                pass
-                   
-            #mean_rewards = serializer.load_stats('rewards.yaml', path="stats")
-            mean_planning_times.append(serializer.load_stats(file))            
-            data = []
-            for k in xrange(len(m_cov)):
-                data.append(np.array([m_cov[k], mean_planning_times[-1][k]]))
-            sets.append(np.array(data))            
-            labels.append(file_str)        
-        if not len(mean_planning_times) == 0:
-            min_m = [min(m) for m in mean_planning_times]
-            max_m = [max(m) for m in mean_planning_times]
-            Plot.plot_2d_n_sets(sets,
-                                labels=labels,
-                                xlabel="joint covariance",
-                                ylabel="mean planning times (seconds)",
                                 x_range=[m_cov[0], m_cov[-1]],
                                 y_range=[min(min_m)*0.95, max(max_m) * 1.05],
                                 show_legend=True,

@@ -42,7 +42,7 @@ def plot_2d_n_sets(sets,
     fig = plt.figure()   
     if plot_type == 'lines':
         for i in xrange(len(sets)):
-            if i == idx:                
+            if i == idx or idx == None:                
                 p, = plt.plot(sets[i][:,0], sets[i][:,1], color_map[i], label=labels[i], linewidth=lw)
             else:                
                 p, = plt.plot(sets[i][:,0], sets[i][:,1], color_map[i], label=labels[i])

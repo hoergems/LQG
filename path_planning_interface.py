@@ -60,7 +60,8 @@ class PathPlanningInterface:
               planning_algorithm):        
         self.link_dimensions = link_dimensions
         self.workspace_dimension = workspace_dimension        
-        self.num_cores = cpu_count()        
+        self.num_cores = cpu_count() 
+        #self.num_cores = 2       
         self.obstacles = obstacles        
         self.max_velocity = max_velocity
         self.delta_t = delta_t
@@ -88,7 +89,6 @@ class PathPlanningInterface:
             self.verbose = True
         self.planning_algorithm = planning_algorithm
         self.dynamic_problem = False
-        
         
     def setup_dynamic_problem(self, 
                               urdf_model, 
@@ -131,14 +131,14 @@ class PathPlanningInterface:
         while True:
             try:
                 res_paths.append(path_queue.get_nowait())
-            except:                
+            except:      
                 pass
             elapsed = time.time() - t0
             if num != 0 and len(res_paths) == num:
                 break
             if timeout > 0.0 and elapsed > timeout:
                 break
-            time.sleep(0.000001)
+            time.sleep(0.0001)
         for i in xrange(len(processes)):
             processes[i].terminate()
         for i in xrange(len(res_paths)):
@@ -180,14 +180,14 @@ class PathPlanningInterface:
                              args=(self.obstacles, 
                                    path_queue, 
                                    self.joint_constraints,)) for i in xrange(self.num_cores - 1)]
-        t0 = time.time()
+        t0 = time.time() 
         for i in xrange(len(processes)):
             processes[i].daemon = True
             processes[i].start()
         while True:
             try:
                 res_paths.append(path_queue.get_nowait())                
-            except:
+            except:                
                 pass
             elapsed = time.time() - t0                    
             if len(res_paths) == num:
@@ -195,7 +195,7 @@ class PathPlanningInterface:
             if timeout > 0.0:
                 if elapsed > timeout:
                     break
-            time.sleep(0.0001)        
+            time.sleep(0.00001)        
         for i in xrange(len(processes)):
             processes[i].terminate()        
         for i in xrange(len(res_paths)):
@@ -226,9 +226,8 @@ class PathPlanningInterface:
     
     def construct_path(self, obstacles, queue, joint_constraints,):        
         while True:
-            xs, us, zs = self._construct(obstacles, joint_constraints)                
+            xs, us, zs = self._construct(obstacles, joint_constraints)            
             queue.put((xs, us, zs))
-            
         
     def _construct(self, obstacles, joint_constraints):
         path_planner2 = None        
@@ -256,8 +255,7 @@ class PathPlanningInterface:
                                 False,
                                 self.coulomb,
                                 self.viscous,
-                                self.control_duration)
-        print "set obstacles"
+                                self.control_duration)        
         path_planner2.setObstacles(obstacles)
         
         link_dimensions = libutil.v2_double()
@@ -266,10 +264,8 @@ class PathPlanningInterface:
             link_dim = libutil.v_double()            
             link_dim[:] = [self.link_dimensions[i][j] for j in xrange(len(self.link_dimensions[i]))]
             ld.append(link_dim)
-        link_dimensions[:] = ld
-        print "setting link dimensions"        
-        path_planner2.setLinkDimensions(link_dimensions)
-        print "set link dimensions"         
+        link_dimensions[:] = ld               
+        path_planner2.setLinkDimensions(link_dimensions)              
         goal_states = libutil.v2_double()
         gs = []       
         for i in xrange(len(self.goal_states)):
@@ -297,7 +293,7 @@ class PathPlanningInterface:
             xs.append([xs_temp[i][j] for j in xrange(0, 2 * len(self.link_dimensions))])
             us.append([xs_temp[i][j] for j in xrange(2 * len(self.link_dimensions), 4 * len(self.link_dimensions))])
             zs.append([xs_temp[i][j] for j in xrange(4 * len(self.link_dimensions), 6 * len(self.link_dimensions))]) 
-        print "xs"       
+             
         return xs, us, zs
     
 if __name__ == "__main__":

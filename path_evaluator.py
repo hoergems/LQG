@@ -120,8 +120,8 @@ class PathEvaluator:
                         collides = True
                         break
                 if not collides:
-                    expected_reward -= pdf[i] * self.step_penalty
-        return expected_reward    
+                    expected_reward -= pdf[i] * self.step_penalty        
+        return (expected_reward, terminal)    
     
     def get_jacobian(self, links, state):
         s0 = np.sin(state[0])
@@ -295,7 +295,7 @@ class PathEvaluator:
         ee_approx_distr = []
         collision_probs = []
         path_rewards = []
-        path_rewards.append(np.power(self.discount, current_step) * self.get_expected_state_reward(xs[0], P_t))        
+        path_rewards.append(np.power(self.discount, current_step) * self.get_expected_state_reward(xs[0], P_t)[0])        
         #sleep
         Cov = 0         
         for i in xrange(0, horizon_L - 1):                   
@@ -321,7 +321,7 @@ class PathEvaluator:
                    
             Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))                     
             cov_state = np.array([[Cov[j, k] for k in xrange(2 * len(self.link_dimensions))] for j in xrange(2 * len(self.link_dimensions))])
-            if not self.w2 == 0.0:                
+            '''if not self.w2 == 0.0:                
                 try:               
                     jacobian = self.get_jacobian([l[0] for l in self.link_dimensions], xs[i + 1])
                 except Exception as e:
@@ -333,9 +333,11 @@ class PathEvaluator:
                     sleep                                            
                 EE_covariance = np.dot(np.dot(jacobian, cov_state), jacobian.T)
             
-            #EE_covariance = np.array([[EE_covariance[j, k] for k in xrange(2)] for j in xrange(2)])
-                     
-            path_rewards.append(np.power(self.discount, current_step + i + 1) * self.get_expected_state_reward(xs[i + 1], cov_state))             
+            #EE_covariance = np.array([[EE_covariance[j, k] for k in xrange(2)] for j in xrange(2)])'''
+            (state_reward, terminal) = self.get_expected_state_reward(xs[i + 1], cov_state)
+            path_rewards.append(np.power(self.discount, current_step + i + 1) * state_reward)
+            if terminal:
+                break             
         path_reward = sum(path_rewards)               
         logging.info("========================================")
         logging.info("PathEvaluator: reward for path " + 

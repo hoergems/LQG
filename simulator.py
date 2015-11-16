@@ -193,9 +193,9 @@ class Simulator:
                 discount = np.power(self.discount_factor, current_step + i)
                 collided = False        
                 if self.is_in_collision(x_true, x_true_temp):
-                    print x_true_temp
-                    print xs[i + 1]
-                    sleep
+                    #print x_true_temp
+                    #print xs[i + 1]
+                    #sleep
                     logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
                     total_reward += discount * (-1.0 * self.illegal_move_penalty)
                     history_entries[-1].set_reward(-1.0 * self.illegal_move_penalty)

@@ -19,6 +19,7 @@ from xml.dom import minidom
 from gen_ik_solution import *
 from history_entry import *
 
+
 class LQG:
     def __init__(self, plot):
         np.set_printoptions(precision=16)

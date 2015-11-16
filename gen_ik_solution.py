@@ -62,10 +62,10 @@ class IKSolutionGenerator:
                 ikmodel.autogenerate()
                 
             #robot.SetDOFValues(joint_start, robot.GetManipulator('arm').GetArmIndices())
-            target=ikmodel.manip.GetTransform()[0:2,3]
-            logging.info("IKSolutionGenerator: target " + str(target))
+            target=ikmodel.manip.GetTransform()[0:2,3]            
             target[0] = goal_position[0]
             target[1] = goal_position[1]
+            logging.info("IKSolutionGenerator: target " + str(target))
             
             possible_ik_solutions = ikmodel.manip.FindIKSolutions(IkParameterization(target,IkParameterization.Type.TranslationXY2D), False)            
             
@@ -88,12 +88,11 @@ class IKSolutionGenerator:
             print "i " + str(i)        
             logging.info("IKSolutionGenerator: Checking ik solution " + str(i) + " for validity")            
             ik_solution = [possible_ik_solutions[i][k] for k in xrange(len(start_state) / 2)]            
-            ik_solution.extend([0.0 for i in xrange(len(start_state) / 2)]) 
+            ik_solution.extend([0.0 for j in xrange(len(start_state) / 2)]) 
             self.path_planner.set_start_and_goal(start_state, [ik_solution], goal_position, goal_threshold)           
             path = self.path_planner.plan_paths(1, 0)
             if len(path) != 0:
-                logging.warn("IKSolutionGenerator: ik solution " + str(i) + " is a valid ik solution")                
-                #solutions.append(path[0][0][-1])
+                logging.warn("IKSolutionGenerator: ik solution " + str(i) + " is a valid ik solution")
                 solutions.append(ik_solution)
             else:
                 logging.warn("IKSolutionGenerator: Path has length 0")                
