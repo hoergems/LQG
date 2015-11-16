@@ -8,7 +8,7 @@ num_generated_paths: 1
 use_linear_path: False
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 200
+num_simulation_runs: 100
 
 # Dimension of the workspace (2 = 2D, 3 = 3D)
 workspace_dimension: 2
@@ -23,22 +23,22 @@ control_rate: 30.0
 init_joint_angles: [0.0, 0.0, 0.0]
 
 # The goal position of the end effector. If set to None, a random goal position will be generated
-goal_position: [0.0, 3.0, 0.0]
+goal_position: [-0.1, 2.5, 0.0]
 
 # The radius around the goal position to define the end effector's goal area
-goal_radius: 0.4
+goal_radius: 0.3
 
 #Number of bins for the histograms
 num_bins: 201
 
 # The minimum joint state covariance
-min_covariance: 0.02
+min_covariance: 0.0
 
 # The maximum joint state covariance
-max_covariance: 0.02
+max_covariance: 0.01
 
 # The number of covariance steps
-covariance_steps: 1
+covariance_steps: 2
 
 # The observation covariance
 observation_covariance: 0.0001
@@ -79,7 +79,7 @@ stop_when_terminal: True
 plot_paths: True
 
 #Planning algorithm
-planning_algorithm: RRTConnect
+planning_algorithm: RRT
 
 
 
