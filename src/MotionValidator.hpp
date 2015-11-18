@@ -46,7 +46,7 @@ namespace shared {
             void setLinkDimensions(std::vector<std::vector<double>> &link_dimensions);  
             
             void setKinematics(std::shared_ptr<Kinematics> kinematics);
-
+            
         private:
             const ompl::base::SpaceInformationPtr si_;
             

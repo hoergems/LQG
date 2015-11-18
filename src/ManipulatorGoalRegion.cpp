@@ -12,23 +12,26 @@ namespace shared {
                                                  std::vector<std::vector<double>> &goal_states,
                                                  std::vector<double> &ee_goal_position,
                                                  double &ee_goal_threshold,
-                                                 std::shared_ptr<Kinematics> kinematics):
+                                                 std::shared_ptr<Kinematics> kinematics,
+                                                 bool dynamics):
         ompl::base::GoalSampleableRegion(si),
         kinematics_(kinematics),
         state_space_information_(si),
         state_dimension_(si->getStateDimension()),        
         goal_states_(goal_states),
         ee_goal_position_(ee_goal_position),
-        ee_goal_threshold_(ee_goal_threshold)
+        ee_goal_threshold_(ee_goal_threshold)        
     {
-        
+        if (dynamics) {
+        	state_dimension_ = si->getStateDimension() / 2;
+        }
     }
 
     double ManipulatorGoalRegion::distanceGoal(const ompl::base::State *st) const
     { 
         std::vector<double> v1;
         double* v = st->as<ompl::base::RealVectorStateSpace::StateType>()->values;
-        for (unsigned int i = 0; i < state_dimension_ / 2; i++) {
+        for (unsigned int i = 0; i < state_dimension_; i++) {
            v1.push_back(v[i]);
         }
         
@@ -37,13 +40,20 @@ namespace shared {
         for (size_t i = 0; i < ee_goal_position_.size(); i++) {
         	ee_g.push_back(ee_goal_position_[i]);
         }
-        double distance = utils::euclideanDistance(ee_position, ee_g);
+        double distance = utils::euclideanDistance(ee_position, ee_g);        
         return distance;             
     } 
+    
+    double ManipulatorGoalRegion::getThreshold() const {
+    	cout << "GETTING THRESHOLD" << endl;
+    	sleep(10);
+    	return ee_goal_threshold_;
+    }
 
     void ManipulatorGoalRegion::sampleGoal(ompl::base::State *st) const 
     {   
     	ompl::RNG rng;
+    	
         int rd = rng.uniformInt(0, goal_states_.size() - 1);   
         double* v = st->as<ompl::base::RealVectorStateSpace::StateType>()->values;
         for (unsigned int i = 0; i < state_dimension_; i++) {
@@ -69,10 +79,9 @@ namespace shared {
         return goal_states_.size();
     }
     
-    bool ManipulatorGoalRegion::isSatisfied(const ompl::base::State *st) const { 
-    	cout << "is satisfied" << endl;
-    	std::vector<double> joint_angles;
-    	for (unsigned int i = 0; i < state_space_information_->getStateDimension() / 2; i++) {
+    bool ManipulatorGoalRegion::isSatisfied(const ompl::base::State *st) const {
+    	std::vector<double> joint_angles;    	
+    	for (unsigned int i = 0; i < state_dimension_; i++) {
     		joint_angles.push_back(st->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
     	}
     	
@@ -82,7 +91,7 @@ namespace shared {
     		sum += pow(ee_position[i] - ee_goal_position_[i], 2);
     	}
     	
-    	sum = sqrt(sum);
+    	sum = sqrt(sum);    	
     	if (sum < ee_goal_threshold_) {
     		return true;
     	}

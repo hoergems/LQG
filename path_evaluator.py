@@ -41,7 +41,7 @@ class PathEvaluator:
         self.enforce_constraints = enforce_constraints
         self.sample_size = sample_size
         self.num_cores = cpu_count() - 1
-        self.num_cores = 2 
+        #self.num_cores = 2 
         self.goal_position = goal_position 
         self.goal_radius = goal_radius   
         self.w1 = w1
@@ -106,21 +106,23 @@ class PathEvaluator:
             joint_angles[:] = vec
             collides = False
             terminal = False
-            if self.is_terminal(joint_angles):
-                expected_reward += pdf[i] * self.exit_reward
-                terminal = True                
-            if not terminal:
-                collision_structures = self.utils.createManipulatorCollisionStructures(joint_angles, 
-                                                                                       self.link_dimensions,
-                                                                                       self.kinematics)
+            
+            collision_structures = self.utils.createManipulatorCollisionStructures(joint_angles, 
+                                                                                   self.link_dimensions,
+                                                                                   self.kinematics)
                 
-                for obstacle in self.obstacles:
-                    if obstacle.inCollisionDiscrete(collision_structures):                                            
-                        expected_reward -= pdf[i] * self.collision_penalty                        
-                        collides = True
-                        break
-                if not collides:
-                    expected_reward -= pdf[i] * self.step_penalty        
+            for obstacle in self.obstacles:
+                if obstacle.inCollisionDiscrete(collision_structures):                                            
+                    expected_reward -= pdf[i] * self.collision_penalty                        
+                    collides = True
+                    break
+            if not collides:
+                if self.is_terminal(joint_angles):
+                    expected_reward += pdf[i] * self.exit_reward
+                    terminal = True
+                else:
+                    expected_reward -= pdf[i] * self.step_penalty
+                       
         return (expected_reward, terminal)    
     
     def get_jacobian(self, links, state):
@@ -261,7 +263,7 @@ class PathEvaluator:
                 Ws.append(self.W)
                 Ns.append(self.N)
         else:
-            for i in xrange(len(state_path)):
+            for i in xrange(len(state_path) + 1):
                 As.append(self.A)
                 Bs.append(self.B)
                 Vs.append(self.V)
@@ -278,7 +280,8 @@ class PathEvaluator:
         zs = path[2]        
         horizon_L = horizon + 1 
         if horizon == -1 or len(xs) < horizon_L:            
-            horizon_L = len(xs) 
+            horizon_L = len(xs)
+        
         As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, us)        
         
         #Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, horizon_L - 1)
@@ -297,47 +300,37 @@ class PathEvaluator:
         path_rewards = []
         path_rewards.append(np.power(self.discount, current_step) * self.get_expected_state_reward(xs[0], P_t)[0])        
         #sleep
-        Cov = 0         
-        for i in xrange(0, horizon_L - 1):                   
+        Cov = 0                
+        for i in xrange(1, horizon_L):                              
             P_hat_t = kalman.compute_p_hat_t(As[i], P_t, Vs[i], Ms[i])
-            K_t = kalman.compute_kalman_gain(Hs[i+1], P_hat_t, Ws[i+1], Ns[i+1])
-            P_t = kalman.compute_P_t(K_t, Hs[i+1], P_hat_t, 2 * len(self.link_dimensions))
+            K_t = kalman.compute_kalman_gain(Hs[i], P_hat_t, Ws[i], Ns[i])
+            P_t = kalman.compute_P_t(K_t, Hs[i], P_hat_t, 2 * len(self.link_dimensions))
             
-            F_0 = np.hstack((As[i], np.dot(Bs[i], Ls[i])))            
-            F_1 = np.hstack((np.dot(K_t, np.dot(Hs[i+1], As[i])), 
-                             np.add(As[i], np.subtract(np.dot(Bs[i], Ls[i]), np.dot(K_t, np.dot(Hs[i+1], As[i]))))))            
+            F_0 = np.hstack((As[i], np.dot(Bs[i], Ls[i - 1])))
+            F_1 = np.hstack((np.dot(K_t, np.dot(Hs[i], As[i])), 
+                             As[i] + np.dot(Bs[i], Ls[i - 1]) - np.dot(K_t, np.dot(Hs[i], As[i]))))            
             F_t = np.vstack((F_0, F_1))                              
             G_t = np.vstack((np.hstack((Vs[i], NU)), 
-                             np.hstack((np.dot(np.dot(K_t, Hs[i+1]), Vs[i]), np.dot(K_t, Ws[i+1])))))
+                             np.hstack((np.dot(np.dot(K_t, Hs[i]), Vs[i]), np.dot(K_t, Ws[i])))))
             G_t_1 = np.vstack((np.hstack((Vs[i], NU)),
-                               np.hstack((np.dot(K_t, np.dot(Hs[i+1], Vs[i])), np.dot(K_t, Ws[i+1])))))            
-            """ Compute R """            
-            R_t = np.add(np.dot(np.dot(F_t, R_t), np.transpose(F_t)), np.dot(G_t, np.dot(Q_t, np.transpose(G_t))))
-            ''''L = np.identity(2 * len(self.link_dimensions))
+                               np.hstack((np.dot(K_t, np.dot(Hs[i], Vs[i])), np.dot(K_t, Ws[i])))))            
+            """ Compute R """    
+            R_t = np.dot(F_t, np.dot(R_t, F_t.T)) + np.dot(G_t, np.dot(Q_t, G_t.T)) 
+            L = np.identity(2 * len(self.link_dimensions))
             if i != horizon_L - 1:
-                L = Ls[i]'''    
+                L = Ls[i]
+                
             Gamma_t = np.vstack((np.hstack((np.identity(2 * len(self.link_dimensions)), NU)), 
-                                 np.hstack((NU, Ls[i]))))                  
-                   
-            Cov = np.dot(np.dot(Gamma_t, R_t), np.transpose(Gamma_t))                     
+                                 np.hstack((NU, L))))
+                             
+            Cov = np.dot(Gamma_t, np.dot(R_t, Gamma_t.T))                       
             cov_state = np.array([[Cov[j, k] for k in xrange(2 * len(self.link_dimensions))] for j in xrange(2 * len(self.link_dimensions))])
-            '''if not self.w2 == 0.0:                
-                try:               
-                    jacobian = self.get_jacobian([l[0] for l in self.link_dimensions], xs[i + 1])
-                except Exception as e:
-                    print e
-                    print xs
-                    print "len(xs) " + str(len(xs))
-                    print "i " + str(i)
-                    print "horizon_l " + str(horizon_L) 
-                    sleep                                            
-                EE_covariance = np.dot(np.dot(jacobian, cov_state), jacobian.T)
             
-            #EE_covariance = np.array([[EE_covariance[j, k] for k in xrange(2)] for j in xrange(2)])'''
-            (state_reward, terminal) = self.get_expected_state_reward(xs[i + 1], cov_state)
-            path_rewards.append(np.power(self.discount, current_step + i + 1) * state_reward)
-            if terminal:
-                break             
+            
+            (state_reward, terminal) = self.get_expected_state_reward(xs[i], cov_state)
+            path_rewards.append(np.power(self.discount, current_step + i) * state_reward)
+            '''if terminal:
+                break'''             
         path_reward = sum(path_rewards)               
         logging.info("========================================")
         logging.info("PathEvaluator: reward for path " + 

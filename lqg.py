@@ -120,8 +120,7 @@ class LQG:
             cart_coords = []  
             best_paths = []
             all_rewards = []
-            successes = []
-                    
+            successes = []                   
             for j in xrange(len(m_covs)):
                 print "LQG: Evaluating paths for covariance value " + str(m_covs[j]) + "..."
                 """
@@ -243,7 +242,7 @@ class LQG:
                                       "Average distance to goal area: 0 \n")
                 self.serializer.write_line("log.log", "tmp/lqg", "Num successes: " + str(successes) + " \n")
                 print "succ " + str((100.0 / self.num_simulation_runs) * successes)
-                self.serializer.write_line("log.log", "tmp/lqg", "Percentage: " + str((100.0 / self.num_simulation_runs) * successes) + " \n")
+                self.serializer.write_line("log.log", "tmp/lqg", "Percentage of successful runs: " + str((100.0 / self.num_simulation_runs) * successes) + " \n")
                 self.serializer.write_line("log.log", "tmp/lqg", "Mean planning time: " + str(mean_planning_time) + " \n")
                 
                 n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))
@@ -322,7 +321,7 @@ class LQG:
         #B = np.vstack((B, np.zeros((num_links, num_links))))        
         V = np.identity(num_links * 2)
         W = np.identity(num_links * 2)
-        C = 1.0 * np.identity(num_links * 2)
+        C = 2.0 * np.identity(num_links * 2)
         
         D = 1.0 * np.identity(2.0 * num_links)
         #D  = np.vstack((D, np.zeros((num_links, num_links))))

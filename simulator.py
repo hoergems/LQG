@@ -179,8 +179,7 @@ class Simulator:
                                                     0.0))
                                 
                 u_dash = np.dot(Ls[i], x_tilde) 
-                u = np.add(u_dash, us[i])               
-                #u = self.enforce_velocity_limit(np.add(u_dash, us[i]))
+                u = u_dash + us[i]                           
                 history_entries[-1].set_action(u)
                         
                 x_true_temp = self.apply_control(x_true, 
@@ -192,10 +191,7 @@ class Simulator:
                 
                 discount = np.power(self.discount_factor, current_step + i)
                 collided = False        
-                if self.is_in_collision(x_true, x_true_temp):
-                    #print x_true_temp
-                    #print xs[i + 1]
-                    #sleep
+                if self.is_in_collision(x_true, x_true_temp):                   
                     logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
                     total_reward += discount * (-1.0 * self.illegal_move_penalty)
                     history_entries[-1].set_reward(-1.0 * self.illegal_move_penalty)
@@ -226,7 +222,7 @@ class Simulator:
                                                     P_dash, 
                                                     Ws[i], 
                                                     Ns[i], 
-                                                    2 * len(self.link_dimensions))
+                                                    2 * len(self.link_dimensions))                
                 x_estimate_new = x_tilde + xs[i + 1]
                 #print "x_estimate " + str(x_estimate_new)
                 #sleep
@@ -354,7 +350,7 @@ class Simulator:
             sleep'''
         else:               
             m = self.get_random_joint_angles([0.0 for i in xrange(2 * len(self.link_dimensions))], M)
-            x_new = np.add(np.add(np.dot(A, x_dash), np.dot(B, u_dash)), np.dot(V, m))
+            x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, m)
             if self.enforce_constraints:            
                 x_new = self.check_constraints(x_new)
         return x_new

@@ -99,10 +99,10 @@ void PathPlanner::setup() {
     planner_->setProblemDefinition(problem_definition_);
     
     /** Use RRTConnect as the planning algorithm */
-    if (planner_str_ == "RRT") {
+    if (planner_str_ == "RRT") {    	
     	boost::shared_ptr<ompl::geometric::RRT> planner_ptr = boost::static_pointer_cast<ompl::geometric::RRT>(planner_);
     	planner_ptr->setRange(planning_range_);
-    	//planner_ptr->setGoalBias(0.1);
+    	planner_ptr->setGoalBias(0.1);
     	
     }
     else if (planner_str_ == "RRTConnect") {
@@ -216,7 +216,7 @@ std::vector<std::vector<double> > PathPlanner::genLinearPath(std::vector<double>
 }
 
 std::vector<double> PathPlanner::sampleGoalVec() {    
-    ManipulatorGoalRegion gr(si_, goal_states_, ee_goal_position_, ee_goal_threshold_, kinematics_);
+    ManipulatorGoalRegion gr(si_, goal_states_, ee_goal_position_, ee_goal_threshold_, kinematics_, false);
     return gr.sampleGoalVec();
 }
 
@@ -238,6 +238,25 @@ void PathPlanner::setGoalStates(std::vector<std::vector<double>> &goal_states,
 void PathPlanner::setLinkDimensions(std::vector<std::vector<double>> &link_dimensions) {
     boost::shared_ptr<MotionValidator> mv = boost::static_pointer_cast<MotionValidator>(si_->getMotionValidator());
     mv->setLinkDimensions(link_dimensions);
+}
+
+bool PathPlanner::solve_(double time_limit) {
+    bool solved = false;
+    bool hasExactSolution = false;    
+    
+    solved = planner_->solve(time_limit);
+        
+    // Get all the solutions
+    std::vector<ompl::base::PlannerSolution> solutions = problem_definition_->getSolutions();
+    for (size_t i = 0; i < solutions.size(); i++) {
+        if (!solutions[i].approximate_) {
+            return true;
+            
+        }
+    }
+        // Check if there's an exact solution
+       
+    return false;
 }
 
 /** Solves the motion planning problem */
@@ -267,8 +286,8 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
     }
     
     problem_definition_->addStartState(start_state);    
-    ompl::base::GoalPtr gp(new ManipulatorGoalRegion(si_, goal_states_, ee_goal_position_, ee_goal_threshold_, kinematics_));
-    
+    ompl::base::GoalPtr gp(new ManipulatorGoalRegion(si_, goal_states_, ee_goal_position_, ee_goal_threshold_, kinematics_, false));
+    boost::dynamic_pointer_cast<ompl::base::GoalRegion>(gp)->setThreshold(ee_goal_threshold_); 
     problem_definition_->setGoal(gp);
    
     if (check_linear_path_) {    	
@@ -296,10 +315,25 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
     /** Solve the planning problem with a maximum of *timeout* seconds per attempt */    
     bool solved = false;
     boost::timer t;    
+    bool approximate_solution = true;
     
-    while (!solved) {
-        solved = planner_->solve(timeout);        
-        //solved = planner_->solve(10.0);  
+    /**while (!solved || approximate_solution) {
+        solved = planner_->solve(4.0);        
+        //solved = planner_->solve(10.0);
+        if (t.elapsed() > timeout) {
+        	cout << "Timeout reached." << endl;
+        	return solution_vector;
+        }
+        for (auto &solution : problem_definition_->getSolutions()) {
+        	
+        	cout << "diff " << solution.difference_ << endl;
+        	approximate_solution = false;
+        	
+        }
+    }**/
+    solved = solve_(timeout);
+    if (!solved) {
+    	return solution_vector;
     }
     
     solution_vector.push_back(ss_vec);    
@@ -318,8 +352,7 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
        for (unsigned int j = 0; j < dim_; j++) {          
           vals.push_back(solution_path->getState(i)->as<ompl::base::RealVectorStateSpace::StateType>()->values[j]); 
        }     
-       solution_vector.push_back(vals);  
-       
+       solution_vector.push_back(vals);
     }   
     clear();       
     return augmentPath_(solution_vector);

@@ -261,7 +261,8 @@ std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<dou
     		                                         goal_states_, 
     		                                         ee_goal_position_, 
     		                                         ee_goal_threshold_, 
-    		                                         kinematics_));
+    		                                         kinematics_,
+    		                                         true));
     boost::static_pointer_cast<ManipulatorGoalRegion>(gp)->setThreshold(ee_goal_threshold_);
     problem_definition_->addStartState(start_state);    
     problem_definition_->setGoal(gp);

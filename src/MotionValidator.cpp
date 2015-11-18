@@ -37,17 +37,18 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
 		}		
 	}*/
 	/**for (size_t i = 0; i < s1.size(); i++) {		
-			if ((fabs((s2[i] - s1[i]) / 0.033333)) > 4.0 + 0.00001) {
-				return false;
-			}		
-		}*/
+	    if ((fabs((s2[i] - s1[i]) / 0.033333)) > 4.0 + 0.00001) {	    	
+			return false;
+	    }		
+	}*/
     std::vector<OBB> manipulator_collision_structures_goal = utils_.createManipulatorCollisionStructures(s2,
                                                                                                          link_dimensions_, 
                                                                                                          kinematics_);
     
+    
     for (size_t i = 0; i < obstacles_.size(); i++) {        
         if (!obstacles_[i]->isTraversable()) {
-        	if (obstacles_[i]->in_collision(manipulator_collision_structures_goal)) {
+        	if (obstacles_[i]->in_collision(manipulator_collision_structures_goal)) {        		
         		return false;
         	}
         }        
@@ -64,7 +65,7 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
         for (size_t i = 0; i < obstacles_.size(); i++) {
             if (!obstacles_[i]->isTraversable()) {
                 for (size_t j = 0; j < manipulator_collision_objects_start.size(); j++) {                	
-                	if (obstacles_[i]->in_collision(manipulator_collision_objects_start[j], manipulator_collision_objects_goal[j])) {
+                	if (obstacles_[i]->in_collision(manipulator_collision_objects_start[j], manipulator_collision_objects_goal[j])) {                		
                 		return false;
                 	}
                 }
@@ -77,6 +78,9 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
 
 /** Check if a motion between two states is valid. This assumes that state s1 is valid */
 bool MotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base::State *s2) const {
+	/**if (boost::dynamic_pointer_cast<ManipulatorGoalRegion>(goal_region_)->isSatisfied(s2)) {
+		cout << "WER TEHERE" << endl;		
+	}*/
     std::vector<double> angles1;
     std::vector<double> angles2;    
     for (unsigned int i = 0; i < dim_; i++) {
@@ -104,7 +108,7 @@ bool MotionValidator::isValid(const std::vector<double> &s1) const {
                                                                                                     kinematics_);
     for (size_t i = 0; i < obstacles_.size(); i++) {
         if (!obstacles_[i]->getTerrain()->isTraversable()) {        	
-        	if (obstacles_[i]->in_collision(manipulator_collision_structures)) {
+        	if (obstacles_[i]->in_collision(manipulator_collision_structures)) {        		
         		return false;
         	}
         }

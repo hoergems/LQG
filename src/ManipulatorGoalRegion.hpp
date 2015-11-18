@@ -20,13 +20,16 @@ namespace shared {
                                   std::vector<std::vector<double>> &goal_states,
                                   std::vector<double> &ee_goal_position,
                                   double &ee_goal_threshold,
-                                  std::shared_ptr<Kinematics> kinematics);
+                                  std::shared_ptr<Kinematics> kinematics,
+                                  bool dynamics);
                                   
             //~ManipulatorGoalRegion() = default;
 
             double distanceGoal(const ompl::base::State *st) const;
 
             void sampleGoal(ompl::base::State *st) const;
+            
+            double getThreshold() const;
             
             std::vector<double> sampleGoalVec() const;
 
@@ -47,7 +50,6 @@ namespace shared {
             std::vector<double> ee_goal_position_;
             
             double ee_goal_threshold_;
-
     };
 
 }

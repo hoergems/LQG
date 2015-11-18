@@ -138,6 +138,8 @@ namespace shared {
             
             void clearAll();
             
+            bool solve_(double time_limit);
+            
             /** Generates a linear path from point p1 to point p2 */
             std::vector<std::vector<double> > genLinearPath(std::vector<double> &p1, std::vector<double> &p2);
             
