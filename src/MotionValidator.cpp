@@ -32,11 +32,11 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
 			return false;
 		}		
 	}*/
-	for (size_t i = 0; i < s1.size(); i++) {		
+	/**for (size_t i = 0; i < s1.size(); i++) {		
 			if ((fabs((s2[i] - s1[i]) / 0.033333)) > 4.0 + 0.00001) {
 				return false;
 			}		
-		}
+		}*/
     std::vector<OBB> manipulator_collision_structures_goal = utils_.createManipulatorCollisionStructures(s2,
                                                                                                          link_dimensions_, 
                                                                                                          kinematics_);

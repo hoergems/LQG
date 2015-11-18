@@ -66,23 +66,37 @@ void PathPlanner::setKinematics(std::shared_ptr<Kinematics> kinematics) {
 
 void PathPlanner::setup() {
 	cout << "Planning range: " << planning_range_ << endl;
+	cout << "Dim " << dim_ << endl; 
 	ompl::base::RealVectorBounds bounds(dim_);
 	if (enforce_constraints_) {
 		/** We assume that the there are no joint limits. So the range of each joint
 		*** is between -2*Pi and 2*Pi
 		*/   
-		for (size_t i = 0; i < dim_; i++) {			
-			bounds.setLow(i, -joint_constraints_[i]);
-			bounds.setHigh(i, joint_constraints_[i]);
+		for (size_t i = 0; i < dim_; i++) {	
+			if (i >= dim_ / 2) {
+				bounds.setLow(i, 0.0);
+				bounds.setHigh(i, 0.0);
+			}
+			else {
+				bounds.setLow(i, -joint_constraints_[i]);
+				bounds.setHigh(i, joint_constraints_[i]);
+			}
+			
 		}
 		
 		/** Apply the bounds to the space */    
 		space_->as<ompl::base::RealVectorStateSpace>()->setBounds(bounds);
 	}
 	else {
-		for (size_t i = 0; i < dim_; i++) {			
-			bounds.setLow(i, -M_PI + 0.0000001);
-			bounds.setHigh(i, M_PI + 0.0000001);
+		for (size_t i = 0; i < dim_; i++) {	
+			if (i >= dim_ / 2) {
+				bounds.setLow(i, 0.0);
+				bounds.setHigh(i, 0.0);
+			}
+			else {
+			    bounds.setLow(i, -M_PI + 0.0000001);
+			    bounds.setHigh(i, M_PI + 0.0000001);
+			}
 		}
 				
 		/** Apply the bounds to the space */    
@@ -250,8 +264,6 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
     }
        
     std::vector<std::vector<double> > solution_vector;
-    solution_vector.push_back(ss_vec);
-    
     boost::shared_ptr<MotionValidator> mv = boost::static_pointer_cast<MotionValidator>(si_->getMotionValidator());    
        
     /** Add the start state to the problem definition */
@@ -264,8 +276,7 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
     }
     
     if (!isValid(start_state.get())) {        
-        cout << "Path planner: ERROR: Start state not valid!" << endl;
-        sleep(10);
+        cout << "Path planner: ERROR: Start state not valid!" << endl;        
         return solution_vector;    
     }
     
@@ -296,7 +307,7 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
     
     }
     
-    /** Solve the planning problem with a maximum of 10 seconds per attempt */    
+    /** Solve the planning problem with a maximum of *timeout* seconds per attempt */    
     bool solved = false;
     boost::timer t;    
     
@@ -305,6 +316,7 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
         //solved = planner_->solve(10.0);  
     }
     
+    solution_vector.push_back(ss_vec);    
     /** We found a solution, so get the solution path */
     boost::shared_ptr<ompl::geometric::PathGeometric> solution_path = boost::static_pointer_cast<ompl::geometric::PathGeometric>(problem_definition_->getSolutionPath());    
     if (verbose_) {

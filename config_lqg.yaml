@@ -31,6 +31,10 @@ goal_radius: 0.3
 #Number of bins for the histograms
 num_bins: 201
 
+
+#################################################
+## Uncertainty parameters
+#################################################
 # The minimum joint state covariance
 min_covariance: 0.0
 
@@ -38,10 +42,12 @@ min_covariance: 0.0
 max_covariance: 0.01
 
 # The number of covariance steps
-covariance_steps: 2
+covariance_steps: 5
 
 # The observation covariance
 observation_covariance: 0.0001
+
+###################################################
 
 use_paths_from_file: False
 
@@ -54,17 +60,23 @@ w1: 1.0
 # Weight for the end effector covariance trace
 w2: 0.0
 
+################################################
+## Reward parameters
+################################################
+
 # Reward params
 discount_factor: 0.999999
 
 # Penalty for crashing into an obstacle
-illegal_move_penalty: 100.0
+illegal_move_penalty: 5.0
 
 # Penalty for taking a step
 step_penalty: 1.0
 
 # Reward for reaching a terminal state
 exit_reward: 1000.0
+
+################################################
 
 # The number of samples drawn from the distribution at each state to check a path for collision
 sample_size: 200

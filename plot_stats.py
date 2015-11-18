@@ -24,13 +24,13 @@ class PlotStats:
         for logfile in glob.glob(dir + "/*.log"):
             self.process_covariances.append(serializer.read_process_covariance(logfile))
         self.setup_kinematics(serializer, dir=dir)        
-        self.create_video(serializer, dir)
+        #self.create_video(serializer, dir)
         print "Setting up Kinematics"
         
         print "Kinematics setup"
         logging.info("PlotStats: plotting paths")    
-        self.plot_paths(serializer, dir=dir)
-        self.plot_paths(serializer, best_paths=True, dir=dir)
+        #self.plot_paths(serializer, dir=dir)
+        #self.plot_paths(serializer, best_paths=True, dir=dir)
         
         logging.info("PlotStats: plotting average distance to goal")
         self.plot_stat("Average distance to goal area", "avg_distance", dir=dir)
@@ -38,6 +38,7 @@ class PlotStats:
         self.plot_stat("Mean rewards", "mean_rewards", dir=dir)
         logging.info("PlotStats: plotting % successful runs")
         self.plot_stat("Num success", "succesful_runs", dir=dir)
+        self.plot_stat("Percentage of successful runs", "percentage_succesful_runs", dir=dir, y_label="Succesful runs in %")
         self.plot_stat("Reward variance", "sample_variances", dir=dir)
         self.plot_stat("Reward standard deviation", "reward_standand_deviation", dir=dir)        
         logging.info("PlotStats: plotting mean planning times")
@@ -426,7 +427,9 @@ class PlotStats:
                                                 path="stats", 
                                                 filename="particles" + str(i) + "_" + str(j) + "_" + str(k) + ".png")
     
-    def plot_stat(self, stat_str, output_file_str, dir="stats"):
+    def plot_stat(self, stat_str, output_file_str, dir="stats", y_label=""):
+        if y_label == "":
+            y_label = stat_str
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))     
         num_succ_runs = [] 
         num_succ_runs_sets = [] 
@@ -463,18 +466,22 @@ class PlotStats:
             num_succ_runs_sets.append(np.array(d[key]))
             labels.append(key)        
         
-        min_m = min(num_succ_runs) 
+        min_m = min(num_succ_runs)
+        if min_m > 0:
+            min_m = 0.0
+        else:
+            min_m -= -0.1 * min_m 
         max_m = max(num_succ_runs) 
         min_cov = min(m_covs)
         max_cov = max(m_covs)
         Plot.plot_2d_n_sets(num_succ_runs_sets,
                             labels=labels,
                             xlabel="joint covariance",
-                            ylabel=stat_str,
+                            ylabel=y_label,
                             x_range=[min(m_covs), max(m_covs)],
                             y_range=[min_m, max_m * 1.05],
-                            show_legend=True,
-                            lw=2,
+                            show_legend=False,
+                            lw=3,
                             color_map=color_map,
                             save=self.save,
                             filename=dir + "/" + output_file_str + ".pdf")

@@ -42,10 +42,10 @@ def plot_2d_n_sets(sets,
     fig = plt.figure()   
     if plot_type == 'lines':
         for i in xrange(len(sets)):
-            if i == idx or idx == None:                
+            if i == idx:                
                 p, = plt.plot(sets[i][:,0], sets[i][:,1], color_map[i], label=labels[i], linewidth=lw)
             else:                
-                p, = plt.plot(sets[i][:,0], sets[i][:,1], color_map[i], label=labels[i])
+                p, = plt.plot(sets[i][:,0], sets[i][:,1], color_map[i], label=labels[i], linewidth=lw)
             ps.append(p)
         if show_legend:
             plt.legend(ps)
