@@ -8,16 +8,20 @@ using namespace fcl;
 namespace shared {
 
 MotionValidator::MotionValidator(const ompl::base::SpaceInformationPtr &si,
-                                 bool continuous_collision):    
+                                 bool continuous_collision,
+                                 bool dynamics):    
     ompl::base::MotionValidator(si),
     si_(si),
     kinematics_(nullptr),     
     continuous_collision_(continuous_collision),    
     utils_(),
     link_dimensions_(),
-    obstacles_()
+    obstacles_(),
+    dim_(si_->getStateSpace()->getDimension())
 {
-    
+    if (dynamics) {
+    	dim_ = si_->getStateSpace()->getDimension() / 2;
+    }
 }
 
 void MotionValidator::setKinematics(std::shared_ptr<Kinematics> kinematics) {
@@ -75,7 +79,7 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
 bool MotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base::State *s2) const {
     std::vector<double> angles1;
     std::vector<double> angles2;    
-    for (unsigned int i = 0; i < si_->getStateSpace()->getDimension(); i++) {
+    for (unsigned int i = 0; i < dim_; i++) {
         angles1.push_back(s1->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);        
         angles2.push_back(s2->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
     }
@@ -92,7 +96,7 @@ bool MotionValidator::checkMotion(const ompl::base::State *s1,
 
 bool MotionValidator::isValid(const std::vector<double> &s1) const {
 	std::vector<double> joint_angles;
-	for (size_t i = 0; i < s1.size(); i++) {
+	for (size_t i = 0; i < dim_; i++) {
 		joint_angles.push_back(s1[i]);
 	}
     std::vector<OBB> manipulator_collision_structures = utils_.createManipulatorCollisionStructures(joint_angles, 

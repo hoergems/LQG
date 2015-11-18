@@ -23,7 +23,8 @@ namespace shared {
     class MotionValidator: public ompl::base::MotionValidator {
         public:
             MotionValidator(const ompl::base::SpaceInformationPtr &si,
-                            bool continuous_collision);
+                            bool continuous_collision,
+                            bool dynamics);
             ~MotionValidator() = default;
 
             /** Check if a motion between two states is valid. This assumes that state s1 is valid */
@@ -58,6 +59,8 @@ namespace shared {
             std::vector<std::shared_ptr<Obstacle> > obstacles_;
             
             bool continuous_collision_;
+            
+            unsigned int dim_;
             
             //std::vector<fcl::AABB> link_aabbs_;
 

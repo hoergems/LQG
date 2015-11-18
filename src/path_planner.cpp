@@ -32,7 +32,8 @@ PathPlanner::PathPlanner(int dim,
     planner_(nullptr),       
     kinematics_(nullptr), 
     motionValidator_(new MotionValidator(si_,                                   
-                                         continuous_collision)),
+                                         continuous_collision,
+                                         false)),
     verbose_(verbose)
 {   
     if (!verbose_) {        

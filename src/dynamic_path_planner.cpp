@@ -34,6 +34,7 @@ void DynamicPathPlanner::setKinematics(std::shared_ptr<Kinematics> kinematics) {
 void DynamicPathPlanner::setupMotionValidator() {
 	cout << "setup motion validator" << endl;
 	motionValidator_ = boost::make_shared<MotionValidator>(space_information_,				                                           
+														   true,
 														   true);
 }
 
