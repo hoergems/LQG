@@ -64,39 +64,24 @@ void PathPlanner::setKinematics(std::shared_ptr<Kinematics> kinematics) {
 	static_cast<MotionValidator &>(*motionValidator_).setKinematics(kinematics_);
 }
 
-void PathPlanner::setup() {
-	cout << "Planning range: " << planning_range_ << endl;
-	cout << "Dim " << dim_ << endl; 
+void PathPlanner::setup() {	
 	ompl::base::RealVectorBounds bounds(dim_);
 	if (enforce_constraints_) {
 		/** We assume that the there are no joint limits. So the range of each joint
 		*** is between -2*Pi and 2*Pi
 		*/   
-		for (size_t i = 0; i < dim_; i++) {	
-			if (i >= dim_ / 2) {
-				bounds.setLow(i, 0.0);
-				bounds.setHigh(i, 0.0);
-			}
-			else {
-				bounds.setLow(i, -joint_constraints_[i]);
-				bounds.setHigh(i, joint_constraints_[i]);
-			}
-			
+		for (size_t i = 0; i < dim_; i++) {				
+			bounds.setLow(i, -joint_constraints_[i]);
+			bounds.setHigh(i, joint_constraints_[i]);
 		}
 		
 		/** Apply the bounds to the space */    
 		space_->as<ompl::base::RealVectorStateSpace>()->setBounds(bounds);
 	}
 	else {
-		for (size_t i = 0; i < dim_; i++) {	
-			if (i >= dim_ / 2) {
-				bounds.setLow(i, 0.0);
-				bounds.setHigh(i, 0.0);
-			}
-			else {
-			    bounds.setLow(i, -M_PI + 0.0000001);
-			    bounds.setHigh(i, M_PI + 0.0000001);
-			}
+		for (size_t i = 0; i < dim_; i++) {
+			bounds.setLow(i, -M_PI + 0.0000001);
+			bounds.setHigh(i, M_PI + 0.0000001);			
 		}
 				
 		/** Apply the bounds to the space */    
@@ -329,7 +314,7 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
     const bool cont_check = true;
     for (size_t i=1; i<solution_path->getStates().size(); i++) {
        vals.clear();       
-       for (unsigned int j = 0; j < dim_ / 2; j++) {          
+       for (unsigned int j = 0; j < dim_; j++) {          
           vals.push_back(solution_path->getState(i)->as<ompl::base::RealVectorStateSpace::StateType>()->values[j]); 
        }     
        solution_vector.push_back(vals);  
@@ -347,7 +332,7 @@ std::vector<std::vector<double>> PathPlanner::augmentPath_(std::vector<std::vect
 		std::vector<double> next_solution_element;
 		std::vector<double> control;
 		std::vector<double> observation;
-		for (size_t j = 0; j < dim_ / 2; j++) {			
+		for (size_t j = 0; j < dim_; j++) {			
 			solution_element.push_back(solution_path[i][j]);			
 			if (i != solution_path.size() - 1) {
 				next_solution_element.push_back(solution_path[i + 1][j]);
@@ -359,11 +344,11 @@ std::vector<std::vector<double>> PathPlanner::augmentPath_(std::vector<std::vect
 			observation.push_back(solution_element[j]);
 			
 		}
-		for (size_t j = 0; j < dim_/2; j++) {
+		for (size_t j = 0; j < dim_; j++) {
 			control.push_back(0.0);
 		}
 		
-		for (size_t j = 0; j < dim_ / 2; j++) {
+		for (size_t j = 0; j < dim_; j++) {
 			solution_element.push_back(0.0);
 			observation.push_back(0.0);
 		}		

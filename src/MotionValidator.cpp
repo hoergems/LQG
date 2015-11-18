@@ -75,7 +75,7 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
 bool MotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base::State *s2) const {
     std::vector<double> angles1;
     std::vector<double> angles2;    
-    for (unsigned int i = 0; i < si_->getStateSpace()->getDimension() / 2; i++) {
+    for (unsigned int i = 0; i < si_->getStateSpace()->getDimension(); i++) {
         angles1.push_back(s1->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);        
         angles2.push_back(s2->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
     }
@@ -92,7 +92,7 @@ bool MotionValidator::checkMotion(const ompl::base::State *s1,
 
 bool MotionValidator::isValid(const std::vector<double> &s1) const {
 	std::vector<double> joint_angles;
-	for (size_t i = 0; i < s1.size() / 2; i++) {
+	for (size_t i = 0; i < s1.size(); i++) {
 		joint_angles.push_back(s1[i]);
 	}
     std::vector<OBB> manipulator_collision_structures = utils_.createManipulatorCollisionStructures(joint_angles, 

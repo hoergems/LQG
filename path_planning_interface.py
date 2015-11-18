@@ -61,7 +61,7 @@ class PathPlanningInterface:
         self.link_dimensions = link_dimensions
         self.workspace_dimension = workspace_dimension        
         self.num_cores = cpu_count() 
-        #self.num_cores = 2       
+        self.num_cores = 2       
         self.obstacles = obstacles        
         self.max_velocity = max_velocity
         self.delta_t = delta_t
@@ -232,7 +232,7 @@ class PathPlanningInterface:
     def _construct(self, obstacles, joint_constraints):
         path_planner2 = None        
         if not self.dynamic_problem:
-            path_planner2 = libpath_planner.PathPlanner(len(self.link_dimensions) * 2,
+            path_planner2 = libpath_planner.PathPlanner(len(self.link_dimensions),
                                                         self.delta_t,
                                                         True,
                                                         self.max_velocity,
@@ -285,7 +285,6 @@ class PathPlanningInterface:
         v = [self.start_state[i] for i in xrange(len(self.start_state))]
         start_state[:] = v  
         xs_temp = path_planner2.solve(start_state, 50.0)
-        
         xs = []
         us = []
         zs = []        
@@ -293,7 +292,7 @@ class PathPlanningInterface:
             xs.append([xs_temp[i][j] for j in xrange(0, 2 * len(self.link_dimensions))])
             us.append([xs_temp[i][j] for j in xrange(2 * len(self.link_dimensions), 4 * len(self.link_dimensions))])
             zs.append([xs_temp[i][j] for j in xrange(4 * len(self.link_dimensions), 6 * len(self.link_dimensions))]) 
-             
+        
         return xs, us, zs
     
 if __name__ == "__main__":
