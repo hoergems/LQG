@@ -480,7 +480,7 @@ class PlotStats:
                             ylabel=y_label,
                             x_range=[min(m_covs), max(m_covs)],
                             y_range=[min_m, max_m * 1.05],
-                            show_legend=False,
+                            show_legend=True,
                             lw=3,
                             color_map=color_map,
                             save=self.save,
