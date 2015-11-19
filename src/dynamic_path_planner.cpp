@@ -9,12 +9,14 @@ using std::endl;
 
 namespace shared {
 
-DynamicPathPlanner::DynamicPathPlanner(int dim, bool verbose):        
-    state_space_(nullptr),
+DynamicPathPlanner::DynamicPathPlanner(int dim, bool verbose):
+	state_space_dimension_(dim),
+	control_space_dimension_(dim / 2),
+    state_space_(new ompl::base::RealVectorStateSpace(state_space_dimension_)),
     state_space_bounds_(1),
 	kinematics_(nullptr),
-    control_space_(nullptr),
-    space_information_(nullptr),
+    control_space_(new ControlSpace(state_space_, control_space_dimension_)),
+    space_information_(new ompl::control::SpaceInformation(state_space_, control_space_)),
     problem_definition_(nullptr),
     planner_(nullptr),
     state_propagator_(nullptr),
@@ -29,6 +31,7 @@ DynamicPathPlanner::DynamicPathPlanner(int dim, bool verbose):
 void DynamicPathPlanner::setKinematics(std::shared_ptr<Kinematics> kinematics) {
 	kinematics_ = kinematics;
 	static_cast<MotionValidator &>(*motionValidator_).setKinematics(kinematics_);
+	cout << "Kinematics in motion validator set" << endl;
 }
 
 void DynamicPathPlanner::setupMotionValidator() {
@@ -36,6 +39,7 @@ void DynamicPathPlanner::setupMotionValidator() {
 	motionValidator_ = boost::make_shared<MotionValidator>(space_information_,				                                           
 														   true,
 														   true);
+	cout << "Motion validator setup" << endl;
 }
 
 bool DynamicPathPlanner::setup(std::string model_file,
@@ -113,13 +117,13 @@ bool DynamicPathPlanner::setup_ompl_(OpenRAVE::RobotBasePtr &robot,
 		                             bool &linear_propagation,
 		                             bool &verbose) {
     // The state space consists of joint angles + velocity    
-    state_space_dimension_ = robot->GetDOF() * 2;
-    control_space_dimension_ = state_space_dimension_ / 2;    
-    state_space_ = boost::make_shared<ompl::base::RealVectorStateSpace>(state_space_dimension_);    
+    //state_space_dimension_ = robot->GetDOF() * 2;
+    //control_space_dimension_ = state_space_dimension_ / 2;    
+    //state_space_ = boost::make_shared<ompl::base::RealVectorStateSpace>(state_space_dimension_);    
     state_space_bounds_ = ompl::base::RealVectorBounds(state_space_dimension_);
-    control_space_ = boost::make_shared<ControlSpace>(state_space_, control_space_dimension_);
+    //control_space_ = boost::make_shared<ControlSpace>(state_space_, control_space_dimension_);
     
-    space_information_ = boost::make_shared<ompl::control::SpaceInformation>(state_space_, control_space_);    
+    //space_information_ = boost::make_shared<ompl::control::SpaceInformation>(state_space_, control_space_);    
     space_information_->setStateValidityChecker(boost::bind(&DynamicPathPlanner::isValid, this, _1));
     space_information_->setMotionValidator(motionValidator_);
     space_information_->setMinMaxControlDuration(1, 1);

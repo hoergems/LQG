@@ -232,7 +232,14 @@ class PathEvaluator:
         Hs = []
         Ws = []
         Ns = []
-        if self.dynamic_problem:
+        if self.dynamic_problem:            
+            As.append(np.identity((len(state_path[0]))))
+            Bs.append(np.identity((len(state_path[0]))))
+            Vs.append(np.identity((len(state_path[0]))))
+            Ms.append(np.identity((len(state_path[0]))))
+            Hs.append(np.identity((len(state_path[0]))))
+            Ws.append(np.identity((len(state_path[0]))))
+            Ns.append(np.identity((len(state_path[0]))))
             for i in xrange(len(state_path)):
                 state = v_double()
                 state[:] = state_path[i]

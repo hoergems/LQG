@@ -61,7 +61,7 @@ class PathPlanningInterface:
         self.link_dimensions = link_dimensions
         self.workspace_dimension = workspace_dimension        
         self.num_cores = cpu_count() 
-        #self.num_cores = 2       
+        self.num_cores = 2       
         self.obstacles = obstacles        
         self.max_velocity = max_velocity
         self.delta_t = delta_t
@@ -248,14 +248,17 @@ class PathPlanningInterface:
             path_planner2 = libdynamic_path_planner.DynamicPathPlanner(len(self.link_dimensions) * 2,
                                                                        False)
             path_planner2.setupMotionValidator()
+            print "set up motion validator"
+            print self.kinematics
             path_planner2.setKinematics(self.kinematics)
-            
+            print "set kinematics"
             path_planner2.setup(self.model_file,
                                 self.simulation_step_size,
                                 False,
                                 self.coulomb,
                                 self.viscous,
-                                self.control_duration)        
+                                self.control_duration)
+            print "setup"        
         path_planner2.setObstacles(obstacles)
         
         link_dimensions = libutil.v2_double()

@@ -480,11 +480,11 @@ class PlotStats:
                             ylabel=y_label,
                             x_range=[min(m_covs), max(m_covs)],
                             y_range=[min_m, max_m * 1.05],
-                            show_legend=True,
+                            show_legend=False,
                             lw=3,
                             color_map=color_map,
                             save=self.save,
-                            filename=dir + "/" + output_file_str + ".pdf")
+                            filename=dir + "/" + output_file_str + ".png")
         
     def gen_random_color(self):
         return "#%06x" % random.randint(0, 0xFFFFFF)
