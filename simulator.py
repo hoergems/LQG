@@ -180,14 +180,17 @@ class Simulator:
                                 
                 u_dash = np.dot(Ls[i], x_tilde) 
                 u = u_dash + us[i]                           
-                history_entries[-1].set_action(u)
-                        
+                history_entries[-1].set_action(u)                
+                print "x_true " + str(x_true)
                 x_true_temp = self.apply_control(x_true, 
                                                  u, 
                                                  As[i], 
                                                  Bs[i], 
                                                  Vs[i], 
                                                  Ms[i])
+                print "xs[i] " + str(xs[i + 1])
+                print "x_true_temp " + str(x_true_temp)
+                print "===================================== "
                 
                 discount = np.power(self.discount_factor, current_step + i)
                 collided = False        
@@ -258,6 +261,7 @@ class Simulator:
                 history_entries[-1].set_collided(collided)
                 history_entries[-1].set_estimate_collided(estimate_collided)
                 history_entries[-1].set_terminal(terminal_state_reached)
+                time.sleep(1)
         return (x_true, 
                 x_tilde, 
                 x_estimate, 
@@ -332,8 +336,9 @@ class Simulator:
             control[:] = u_dash
             
             control_error = v_double()
-            control_error[:] = self.sample_control_error(M)
+            ce = self.sample_control_error(M)
             
+            control_error[:] = ce           
             result = v_double()
             self.propagator.propagate(current_joint_values,
                                       current_joint_velocities,
@@ -343,7 +348,7 @@ class Simulator:
                                       self.control_duration,
                                       result)
             
-            x_new = [result[i] for i in xrange(len(result))]
+            x_new = [result[i] for i in xrange(len(result))]            
             '''print "x_dash " + str(x_dash)
             print "u_dash " + str(u_dash)
             print "propagation_result " + str(x_new)            

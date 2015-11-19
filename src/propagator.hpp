@@ -34,14 +34,15 @@ namespace shared {
 		                           const double duration,
 		                           std::vector<double> &result);
 	   
-	   void propagate_nonlinear(OpenRAVE::EnvironmentBasePtr environment,
-		         OpenRAVE::RobotBasePtr robot,
-		         const std::vector<double> &current_joint_values,
+	   void propagate_nonlinear(const std::vector<double> &current_joint_values,
 		         const std::vector<double> &current_joint_velocities,
 		         std::vector<double> &control,
+		         std::vector<double> &control_error_vec,
 		         const double simulation_step_size,
 		         const double duration,
-		         std::vector<double> &result) const;
+		         std::vector<double> &result,		         
+		         OpenRAVE::EnvironmentBasePtr environment,
+		         OpenRAVE::RobotBasePtr robot);
 	   
    private:
 	   OpenRAVE::RobotBasePtr getRobot();

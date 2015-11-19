@@ -295,6 +295,12 @@ std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<dou
         cout << "Length of solution path " << solution_path_->length() << endl << endl;
         std::vector<ompl::base::State*> solution_states_(solution_path_->getStates());
         std::vector<ompl::control::Control*> solution_controls_(solution_path_->getControls());
+        std::vector<double> control_durations(solution_path_->getControlDurations());
+        cout << "durations: ";
+        for (auto &k: control_durations) {
+        	cout << k << ", ";
+        }
+        cout << endl;
         for (size_t i = 0; i < solution_states_.size(); i++) {
             cout << "State: ";
             std::vector<double> solution_state;

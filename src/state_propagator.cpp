@@ -104,12 +104,13 @@ void StatePropagator::propagate(const ompl::base::State *state,
                                 
     std::vector<OpenRAVE::dReal> current_joint_values;
     std::vector<OpenRAVE::dReal> current_joint_velocities;
-    std::vector<double> input_torque;
-    
+    std::vector<OpenRAVE::dReal> control_error_vec;
+    std::vector<double> input_torque;    
     for (unsigned int i = 0; i < dim; i++) {
     	current_joint_values.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
     	current_joint_velocities.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i + dim]);
     	input_torque.push_back(control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i]);
+    	control_error_vec.push_back(0.0);
     	//input_torque.push_back(1.0);
     }
     
@@ -117,14 +118,15 @@ void StatePropagator::propagate(const ompl::base::State *state,
     current_joint_velocities.push_back(0.0);
     
     std::vector<double> propagation_result;
-    propagator_->propagate_nonlinear(environment_,
-    		                         robot_,
-    		                         current_joint_values,
+    propagator_->propagate_nonlinear(current_joint_values,
     		                         current_joint_velocities,
     		                         input_torque,
+    		                         control_error_vec,
     		                         simulation_step_size_,
     		                         duration,
-    		                         propagation_result);
+    		                         propagation_result,
+    		                         environment_,
+    		                         robot_);
     if (verbose_) {
 		cout << "Propagation result: ";
 		for (size_t i = 0; i < propagation_result.size(); i++) {
