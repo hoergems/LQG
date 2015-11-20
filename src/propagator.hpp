@@ -24,6 +24,7 @@ namespace shared {
 	   //void propagate_linear() const;
 	   
 	   bool setup_py(std::string model_file,
+			         std::string environment_file,
 			         double coulomb, 
 	                 double viscous,
 	                 bool show_viewer);

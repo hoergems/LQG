@@ -25,7 +25,8 @@ class IKSolutionGenerator:
               enforce_constraints,
               robot_file, 
               environment_file,
-              planning_algorithm):        
+              planning_algorithm,
+              path_timeout):        
         """
         Generate the obstacles
         """
@@ -40,7 +41,8 @@ class IKSolutionGenerator:
                                 False, 
                                 joint_constraints,
                                 enforce_constraints,
-                                planning_algorithm)
+                                planning_algorithm,
+                                path_timeout)
         logging.info("IKSolutionGenerator: Create OpenRAVE environment")
         self.env = openravepy.Environment()
         self.env.StopSimulation()

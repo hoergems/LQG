@@ -101,10 +101,14 @@ OpenRAVE::EnvironmentBasePtr DynamicPathPlanner::getEnvironment() {
 }
 
 OpenRAVE::RobotBasePtr DynamicPathPlanner::getRobot() {
-    std::vector<OpenRAVE::KinBodyPtr> bodies;
-    env_->GetBodies(bodies);
-    OpenRAVE::RobotBasePtr robot = boost::static_pointer_cast<OpenRAVE::RobotBase>(bodies[0]);
-    return robot;
+	std::vector<OpenRAVE::KinBodyPtr> bodies;
+	env_->GetBodies(bodies);
+	for (auto &body: bodies) {
+	    if (body->GetDOF() > 0) {
+	        OpenRAVE::RobotBasePtr robot = boost::static_pointer_cast<OpenRAVE::RobotBase>(body);
+	    	return robot;
+	    }    	
+	}  
 }
 
 ompl::control::ControlSamplerPtr DynamicPathPlanner::allocUniformControlSampler_(const ompl::control::ControlSpace *control_space) {	

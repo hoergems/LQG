@@ -55,6 +55,7 @@ class Simulator:
         
     def setup_dynamic_problem(self, 
                               model_file,
+                              environment_file,
                               coulomb,
                               viscous,
                               control_duration,
@@ -66,6 +67,7 @@ class Simulator:
         
         self.propagator = Propagator()        
         self.propagator.setup(model_file,
+                              environment_file,
                               coulomb,
                               viscous,
                               show_viewer)
@@ -361,8 +363,9 @@ class Simulator:
                                           result)                    
                 x_new = [result[i] for i in xrange(len(result))]                
                 vec.append(np.array(x_new))                
-            n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(vec))            
-            return [np.asscalar(mean[i]) for i in xrange(len(mean))]            
+            n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(vec))  
+            res = [np.asscalar(mean[i]) for i in xrange(len(mean))]            
+            return res   
         else:               
             m = self.get_random_joint_angles([0.0 for i in xrange(2 * len(self.link_dimensions))], M)
             x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, m)

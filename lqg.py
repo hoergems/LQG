@@ -43,6 +43,9 @@ class LQG:
         
         model_file = os.getcwd() + "/model/model.xml"
         urdf_model_file = "test.urdf"
+        #environment_file = "env.xml"
+        environment_file = os.path.join("environment", "env.xml")
+        
         if self.workspace_dimension == 3:
             model_file = os.getcwd() + "/model/model3D.xml"
         self.setup_scene("environment", "env.xml", model_file)
@@ -60,7 +63,8 @@ class LQG:
                                       self.start_state,
                                       self.goal_position,
                                       self.goal_radius,
-                                      self.planning_algortihm)
+                                      self.planning_algortihm,
+                                      self.path_timeout)
         
         if len(goal_states) == 0:
             logging.error("LQG: Couldn't generate any goal states. Problem seems to be infeasible")
@@ -176,6 +180,7 @@ class LQG:
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
                 if self.dynamic_problem:
                     sim.setup_dynamic_problem(urdf_model_file,
+                                              environment_file,
                                               self.coulomb,
                                               self.viscous,
                                               self.delta_t,

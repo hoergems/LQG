@@ -118,6 +118,8 @@ class PathEvaluator:
                     break
             if not collides:
                 if self.is_terminal(joint_angles):
+                    print "IS TERMINAL!!!!!!!!!!!!!"
+                    
                     expected_reward += pdf[i] * self.exit_reward
                     terminal = True
                 else:

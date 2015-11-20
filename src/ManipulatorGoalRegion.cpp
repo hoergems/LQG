@@ -80,6 +80,7 @@ namespace shared {
     }
     
     bool ManipulatorGoalRegion::isSatisfied(const ompl::base::State *st) const {
+    	cout << "IS SATISFIED" << endl;
     	std::vector<double> joint_angles;    	
     	for (unsigned int i = 0; i < state_dimension_; i++) {
     		joint_angles.push_back(st->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);

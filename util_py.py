@@ -73,7 +73,8 @@ def get_goal_states(problem,
                     start_state,
                     goal_position,
                     goal_threshold,
-                    planning_algorithm):    
+                    planning_algorithm,
+                    path_timeout):    
     model_file = "model.xml"
     if workspace_dimension == 3:
         model_file = "model3D.xml"
@@ -89,7 +90,8 @@ def get_goal_states(problem,
                                     enforce_constraints,
                                     model_file,
                                     "environment/env.xml",
-                                    planning_algorithm)
+                                    planning_algorithm,
+                                    path_timeout)
         ik_solutions = ik_solution_generator.generate(start_state, goal_position, goal_threshold, workspace_dimension)
         if len(ik_solutions) == 0:
             return None

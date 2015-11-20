@@ -250,14 +250,32 @@ class Serializer:
         except Exception as e:
             logging.error("Serializer: " + str(e))
             return None         
-        obst_name_objects = xmldoc.getElementsByTagName("KinBody")
-        obstacle_names = [obst_name_objects[i].attributes["name"].value for i in xrange(len(obst_name_objects))]
+        obst_name_objects = xmldoc.getElementsByTagName("KinBody")        
+        obstacles = []
+        for i in xrange(len(obst_name_objects)):
+            obstacle_name = obst_name_objects[i].attributes["name"].value
+            if not obstacle_name == "GoalArea":
+                translation_elements_node = obst_name_objects[i].childNodes[i].childNodes[1].getElementsByTagName("Translation")
+                extention_elements_node = obst_name_objects[i].childNodes[i].childNodes[1].getElementsByTagName("extents")
+                if len(translation_elements_node) > 1 or len(translation_elements_node) == 0:
+                    print "Serializer: Failed to get translation of obstacles"
+                    return []
+                if len(extention_elements_node) > 1 or len(extention_elements_node) == 0:
+                    print "Serializer: Failed to get dimension of obstacles"
+                    return []
+                trans = [float(k) for k in translation_elements_node[0].childNodes[0].nodeValue.split(" ")]
+                dim = [float(k) for k in extention_elements_node[0].childNodes[0].nodeValue.split(" ")]
+                obstacles.append([trans, dim])
+        return obstacles                
+        sleep
+            
         
         obstacle_translations = xmldoc.getElementsByTagName('Translation')
         obstacle_dimensions = xmldoc.getElementsByTagName('extents')
-        obstacles = []
+         
         for i in xrange(len(obstacle_translations)):
             if not obstacle_names[i] == "GoalArea":
+                print i
                 trans = [float(k) for k in obstacle_translations[i].childNodes[0].nodeValue.split(" ")]
                 dim =  [float(k) for k in obstacle_dimensions[i].childNodes[0].nodeValue.split(" ")] 
                 obstacles.append([trans, dim])           

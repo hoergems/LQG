@@ -28,14 +28,16 @@ void Propagator::setup(double coulomb,
 }
 
 bool Propagator::setup_py(std::string model_file,
+		                  std::string environment_file,
 		                  double coulomb, 
                           double viscous,
                           bool show_viewer) {
 	damper_ = std::make_shared<TorqueDamper>(coulomb, viscous);
 	
     OpenRAVE::RaveInitialize(true);    
-    env_ = OpenRAVE::RaveCreateEnvironment();    
-
+    env_ = OpenRAVE::RaveCreateEnvironment();
+    env_->Load(environment_file);
+    
     const std::string module_str("or_urdf_plugin");
     if(!OpenRAVE::RaveLoadPlugin(module_str)) {
     	cout << "Failed to load the or_urdf_plugin." << endl;
@@ -100,8 +102,12 @@ void Propagator::createPhysicsEngine(OpenRAVE::EnvironmentBasePtr env) {
 OpenRAVE::RobotBasePtr Propagator::getRobot() {
     std::vector<OpenRAVE::KinBodyPtr> bodies;
     env_->GetBodies(bodies);
-    OpenRAVE::RobotBasePtr robot = boost::static_pointer_cast<OpenRAVE::RobotBase>(bodies[0]);
-    return robot;
+    for (auto &body: bodies) {
+    	if (body->GetDOF() > 0) {
+    		OpenRAVE::RobotBasePtr robot = boost::static_pointer_cast<OpenRAVE::RobotBase>(body);
+    		return robot;
+    	}    	
+    }   
 }
 	
 void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_values,
