@@ -8,7 +8,8 @@ namespace shared {
 Propagator::Propagator():
 	damper_(nullptr),
 	env_(nullptr),
-	robot_(nullptr){	
+	robot_(nullptr),
+	show_viewer_(false){	
 }
 
 void Propagator::setup(double coulomb, 
@@ -28,7 +29,8 @@ void Propagator::setup(double coulomb,
 
 bool Propagator::setup_py(std::string model_file,
 		                  double coulomb, 
-                          double viscous) {
+                          double viscous,
+                          bool show_viewer) {
 	damper_ = std::make_shared<TorqueDamper>(coulomb, viscous);
 	
     OpenRAVE::RaveInitialize(true);    
@@ -76,6 +78,12 @@ bool Propagator::setup_py(std::string model_file,
     	
     	jointsLowerVelocityLimit_.push_back(-joints[i]->GetMaxTorque());
     	jointsUpperVelocityLimit_.push_back(joints[i]->GetMaxTorque());
+    }
+    
+    if (show_viewer) {
+    	show_viewer_ = true;
+    	shared::RaveViewer viewer;
+    	viewer.testView(env_);
     }
     return true;
 }
@@ -168,6 +176,9 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	    
 	    env_to_use->StepSimulation(simulation_step_size);
 	    env_to_use->StopSimulation();
+	    if (show_viewer_) {
+	    	usleep(1000000 * simulation_step_size);
+	    }
 	}
 	
 	

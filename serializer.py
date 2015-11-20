@@ -249,12 +249,16 @@ class Serializer:
             xmldoc = minidom.parse(os.path.join(path, file)) 
         except Exception as e:
             logging.error("Serializer: " + str(e))
-            return None            
+            return None         
+        obst_name_objects = xmldoc.getElementsByTagName("KinBody")
+        obstacle_names = [obst_name_objects[i].attributes["name"].value for i in xrange(len(obst_name_objects))]
+        
         obstacle_translations = xmldoc.getElementsByTagName('Translation')
         obstacle_dimensions = xmldoc.getElementsByTagName('extents')
         obstacles = []
         for i in xrange(len(obstacle_translations)):
-            trans = [float(k) for k in obstacle_translations[i].childNodes[0].nodeValue.split(" ")]
-            dim =  [float(k) for k in obstacle_dimensions[i].childNodes[0].nodeValue.split(" ")] 
-            obstacles.append([trans, dim])        
+            if not obstacle_names[i] == "GoalArea":
+                trans = [float(k) for k in obstacle_translations[i].childNodes[0].nodeValue.split(" ")]
+                dim =  [float(k) for k in obstacle_dimensions[i].childNodes[0].nodeValue.split(" ")] 
+                obstacles.append([trans, dim])           
         return obstacles 

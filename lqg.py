@@ -179,7 +179,8 @@ class LQG:
                                               self.coulomb,
                                               self.viscous,
                                               self.delta_t,
-                                              self.simulation_step_size)
+                                              self.simulation_step_size,
+                                              True)
                 
                 successes = 0
                 num_collisions = 0 

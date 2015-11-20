@@ -58,14 +58,17 @@ class Simulator:
                               coulomb,
                               viscous,
                               control_duration,
-                              simulation_step_size):
+                              simulation_step_size,
+                              show_viewer):
         self.dynamic_problem = True
+        self.show_viewer = show_viewer
         self.control_duration = control_duration
         
         self.propagator = Propagator()        
         self.propagator.setup(model_file,
                               coulomb,
-                              viscous)
+                              viscous,
+                              show_viewer)
         self.simulation_step_size = simulation_step_size        
         
     def setup_reward_function(self, discount_factor, step_penalty, illegal_move_penalty, exit_reward):
@@ -345,7 +348,7 @@ class Simulator:
             control_error[:] = ce 
             result = v_double()
             vec = []
-            for i in xrange(10):          
+            for i in xrange(1):          
                 result = v_double()
                 cjv = [current_joint_values[j] for j in xrange(len(current_joint_values))]
                 cjv.extend([current_joint_velocities[j] for j in xrange(len(current_joint_velocities))])
@@ -355,7 +358,7 @@ class Simulator:
                                           control_error,
                                           self.simulation_step_size,
                                           self.control_duration,
-                                          result)                
+                                          result)                    
                 x_new = [result[i] for i in xrange(len(result))]                
                 vec.append(np.array(x_new))                
             n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(vec))            

@@ -39,7 +39,8 @@ add_library(integrate SHARED integrate.cpp)
 
 add_library(propagator SHARED 
             propagator.cpp
-            torque_damper.cpp)
+            torque_damper.cpp
+            viewer.cpp)
 
 add_library(obstacle SHARED
             Obstacle.cpp
@@ -61,6 +62,7 @@ add_library(dynamic_path_planner SHARED
             MotionValidator.cpp
             state_propagator.cpp
             propagator.cpp
+            viewer.cpp
             integrate.cpp            
             ManipulatorGoalRegion.cpp
             utils.cpp

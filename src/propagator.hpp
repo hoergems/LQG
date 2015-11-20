@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include "torque_damper.hpp"
+#include "viewer.hpp"
 
 namespace shared {
 
@@ -24,7 +25,8 @@ namespace shared {
 	   
 	   bool setup_py(std::string model_file,
 			         double coulomb, 
-	                 double viscous);
+	                 double viscous,
+	                 bool show_viewer);
 	   
 	   void propagate_nonlinear_py(const std::vector<double> &current_joint_values,
 		                           const std::vector<double> &current_joint_velocities,
@@ -59,8 +61,7 @@ namespace shared {
 	   OpenRAVE::EnvironmentBasePtr env_;
 	   OpenRAVE::RobotBasePtr robot_;
 	   
-	   
-	   
+	   bool show_viewer_;
    };
 
 }
