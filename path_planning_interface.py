@@ -57,11 +57,12 @@ class PathPlanningInterface:
               use_linear_path, 
               joint_constraints,
               enforce_constraints,
-              planning_algorithm):        
+              planning_algorithm,
+              path_timeout):        
         self.link_dimensions = link_dimensions
         self.workspace_dimension = workspace_dimension        
         self.num_cores = cpu_count() 
-        self.num_cores = 2       
+        #self.num_cores = 2       
         self.obstacles = obstacles        
         self.max_velocity = max_velocity
         self.delta_t = delta_t
@@ -89,20 +90,18 @@ class PathPlanningInterface:
             self.verbose = True
         self.planning_algorithm = planning_algorithm
         self.dynamic_problem = False
+        self.path_timeout = path_timeout
         
     def setup_dynamic_problem(self, 
                               urdf_model, 
                               simulation_step_size,
                               coulomb, 
-                              viscous,
-                              control_duration):
+                              viscous):
         self.dynamic_problem = True
         self.model_file = urdf_model
         self.simulation_step_size = simulation_step_size
         self.coulomb = coulomb
         self.viscous = viscous
-        self.control_duration = control_duration
-        
         
     def set_start_and_goal(self, start_state, goal_states, ee_goal_position, ee_goal_threshold):        
         self.start_state = start_state
@@ -203,7 +202,7 @@ class PathPlanningInterface:
             if not len(p_e[0]) == 0:                                      
                 paths.append([[p_e[0][i] for i in xrange(len(p_e[0]))], 
                               [p_e[1][i] for i in xrange(len(p_e[0]))], 
-                              [p_e[2][i] for i in xrange(len(p_e[0]))]])        
+                              [p_e[2][i] for i in xrange(len(p_e[0]))]])           
         return paths
     
     def construct_and_evaluate_path(self, 
@@ -257,7 +256,7 @@ class PathPlanningInterface:
                                 False,
                                 self.coulomb,
                                 self.viscous,
-                                self.control_duration)
+                                self.delta_t)
             print "setup"        
         path_planner2.setObstacles(obstacles)
         
@@ -287,15 +286,14 @@ class PathPlanningInterface:
         start_state = libutil.v_double()
         v = [self.start_state[i] for i in xrange(len(self.start_state))]
         start_state[:] = v  
-        xs_temp = path_planner2.solve(start_state, 50.0)
+        xs_temp = path_planner2.solve(start_state, self.path_timeout)
         xs = []
         us = []
         zs = []        
         for i in xrange(len(xs_temp)):
             xs.append([xs_temp[i][j] for j in xrange(0, 2 * len(self.link_dimensions))])
             us.append([xs_temp[i][j] for j in xrange(2 * len(self.link_dimensions), 4 * len(self.link_dimensions))])
-            zs.append([xs_temp[i][j] for j in xrange(4 * len(self.link_dimensions), 6 * len(self.link_dimensions))]) 
-        
+            zs.append([xs_temp[i][j] for j in xrange(4 * len(self.link_dimensions), 6 * len(self.link_dimensions))])
         return xs, us, zs
     
 if __name__ == "__main__":

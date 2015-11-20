@@ -74,13 +74,13 @@ class LQG:
                            self.use_linear_path, 
                            self.joint_constraints,
                            self.enforce_constraints,
-                           self.planning_algortihm)
+                           self.planning_algortihm,
+                           self.path_timeout)
         if self.dynamic_problem:
             path_planner.setup_dynamic_problem(urdf_model_file,
                                                self.simulation_step_size,
                                                self.coulomb,
-                                               self.viscous,
-                                               self.control_duration)       
+                                               self.viscous)       
         path_planner.set_start_and_goal(self.start_state, goal_states, self.goal_position, self.goal_radius)         
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, len(self.link_dimensions))
         
@@ -107,6 +107,9 @@ class LQG:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
                 t0 = time.time()
                 paths = path_planner.plan_paths(self.num_paths, 0)
+                if len(paths) == 0:
+                    logging.error("LQG: Couldn't create any paths within the given time.")
+                    return
                 time_to_generate_paths = time.time() - t0 
                 print "LQG: Time to generate paths: " + str(time_to_generate_paths) + " seconds"
                 if self.plot_paths:                
@@ -147,7 +150,7 @@ class LQG:
                                      self.w1,
                                      self.w2)
                 if self.dynamic_problem:
-                    path_evaluator.setup_dynamic_problem(self.control_duration)
+                    path_evaluator.setup_dynamic_problem(self.delta_t)
                 path_evaluator.setup_reward_function(self.step_penalty, self.illegal_move_penalty, self.exit_reward, self.discount_factor)
                 t0 = time.time() 
                 xs, us, zs, objective = path_evaluator.evaluate_paths(paths, P_t, 0)
@@ -175,7 +178,7 @@ class LQG:
                     sim.setup_dynamic_problem(urdf_model_file,
                                               self.coulomb,
                                               self.viscous,
-                                              self.control_duration,
+                                              self.delta_t,
                                               self.simulation_step_size)
                 
                 successes = 0
@@ -273,7 +276,7 @@ class LQG:
                 
             cmd = "cp " + model_file + " " + dir + "/model"
             os.system(cmd)
-        print "Done"
+        print "Done"        
         
     def setup_scene(self, 
                     environment_path, 
@@ -369,7 +372,7 @@ class LQG:
         self.simulation_step_size = config['simulation_step_size']
         self.coulomb = config['coulomb']
         self.viscous = config['viscous']
-        self.control_duration = config['control_duration']       
+        self.path_timeout = config['path_timeout']          
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

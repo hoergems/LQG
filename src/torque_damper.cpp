@@ -24,7 +24,8 @@ void TorqueDamper::damp_torques(std::vector<OpenRAVE::dReal> &current_velocities
         else {
         	torques[i] = 0.0;
         }
-    }                                 
+    }  
+    
 }
 
 }

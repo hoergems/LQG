@@ -47,6 +47,8 @@ namespace shared {
    private:
 	   OpenRAVE::RobotBasePtr getRobot();
 	   
+	   void createPhysicsEngine(OpenRAVE::EnvironmentBasePtr env);
+	   
 	   std::shared_ptr<TorqueDamper> damper_;
 	   
 	   std::vector<double> jointsLowerPositionLimit_; 

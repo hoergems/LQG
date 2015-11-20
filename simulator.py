@@ -1,4 +1,5 @@
 import numpy as np
+import scipy
 import kalman as kalman
 import logging
 import time
@@ -8,6 +9,7 @@ from libpropagator import *
 from libintegrate import *
 from libutil import *
 from history_entry import *
+
 
 class Simulator:
     def __init__(self):
@@ -64,8 +66,7 @@ class Simulator:
         self.propagator.setup(model_file,
                               coulomb,
                               viscous)
-        self.simulation_step_size = simulation_step_size 
-        self.control_duration = control_duration
+        self.simulation_step_size = simulation_step_size        
         
     def setup_reward_function(self, discount_factor, step_penalty, illegal_move_penalty, exit_reward):
         self.discount_factor = discount_factor
@@ -180,17 +181,20 @@ class Simulator:
                                 
                 u_dash = np.dot(Ls[i], x_tilde) 
                 u = u_dash + us[i]                           
-                history_entries[-1].set_action(u)                
-                print "x_true " + str(x_true)
+                history_entries[-1].set_action(u)
+                t0 = time.time()
                 x_true_temp = self.apply_control(x_true, 
                                                  u, 
                                                  As[i], 
                                                  Bs[i], 
                                                  Vs[i], 
                                                  Ms[i])
-                print "xs[i] " + str(xs[i + 1])
-                print "x_true_temp " + str(x_true_temp)
-                print "===================================== "
+                t_e = time.time() - t0
+                #print "xs[i] " + str(xs[i + 1])
+                #print "x_true_temp " + str(x_true_temp)
+                #rint "integrating took " + str(t_e) + " seconds"
+                #rint "===================================== "
+                
                 
                 discount = np.power(self.discount_factor, current_step + i)
                 collided = False        
@@ -261,7 +265,7 @@ class Simulator:
                 history_entries[-1].set_collided(collided)
                 history_entries[-1].set_estimate_collided(estimate_collided)
                 history_entries[-1].set_terminal(terminal_state_reached)
-                time.sleep(1)
+        
         return (x_true, 
                 x_tilde, 
                 x_estimate, 
@@ -338,21 +342,24 @@ class Simulator:
             control_error = v_double()
             ce = self.sample_control_error(M)
             
-            control_error[:] = ce           
+            control_error[:] = ce 
             result = v_double()
-            self.propagator.propagate(current_joint_values,
-                                      current_joint_velocities,
-                                      control,
-                                      control_error,
-                                      self.simulation_step_size,
-                                      self.control_duration,
-                                      result)
-            
-            x_new = [result[i] for i in xrange(len(result))]            
-            '''print "x_dash " + str(x_dash)
-            print "u_dash " + str(u_dash)
-            print "propagation_result " + str(x_new)            
-            sleep'''
+            vec = []
+            for i in xrange(10):          
+                result = v_double()
+                cjv = [current_joint_values[j] for j in xrange(len(current_joint_values))]
+                cjv.extend([current_joint_velocities[j] for j in xrange(len(current_joint_velocities))])
+                self.propagator.propagate(current_joint_values,
+                                          current_joint_velocities,
+                                          control,
+                                          control_error,
+                                          self.simulation_step_size,
+                                          self.control_duration,
+                                          result)                
+                x_new = [result[i] for i in xrange(len(result))]                
+                vec.append(np.array(x_new))                
+            n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(vec))            
+            return [np.asscalar(mean[i]) for i in xrange(len(mean))]            
         else:               
             m = self.get_random_joint_angles([0.0 for i in xrange(2 * len(self.link_dimensions))], M)
             x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, m)

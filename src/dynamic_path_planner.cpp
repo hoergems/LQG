@@ -48,7 +48,7 @@ bool DynamicPathPlanner::setup(std::string model_file,
 							   double coulomb,
 							   double viscous,
 							   double control_duration) {	
-	control_duration_ = control_duration;
+	control_duration_ = control_duration;	
 	
 	/***** Initialize OpenRAVE *****/
 	OpenRAVE::RaveInitialize(true);    
@@ -131,8 +131,8 @@ bool DynamicPathPlanner::setup_ompl_(OpenRAVE::RobotBasePtr &robot,
      
     problem_definition_ = boost::make_shared<ompl::base::ProblemDefinition>(space_information_);
     planner_ = boost::make_shared<ompl::control::RRT>(space_information_);
-    planner_->as<ompl::control::RRT>()->setIntermediateStates(true);
-    planner_->as<ompl::control::RRT>()->setGoalBias(0.1);
+    planner_->as<ompl::control::RRT>()->setIntermediateStates(false);
+    //planner_->as<ompl::control::RRT>()->setGoalBias(0.1);
     planner_->setProblemDefinition(problem_definition_);   
     
     state_propagator_ = boost::make_shared<StatePropagator>(space_information_, 
@@ -207,13 +207,13 @@ bool DynamicPathPlanner::solve_(double time_limit) {
         std::vector<ompl::base::PlannerSolution> solutions = problem_definition_->getSolutions();
         for (size_t i = 0; i < solutions.size(); i++) {
             if (!solutions[i].approximate_) {
-                hasExactSolution = true;
+                hasExactSolution = true;                
                 break;
             }
         }
         // Check if there's an exact solution
-    }   
-    return true;
+    }    
+    return hasExactSolution;
 }
 
 void DynamicPathPlanner::setGoalStates(std::vector<std::vector<double>> &goal_states,
@@ -276,9 +276,7 @@ std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<dou
     bool solved = false;
     
     boost::timer t;
-    solved = solve_(timeout);
-    cout << "solved " << endl;
-    cout << "Number of solutions found: " << problem_definition_->getSolutionCount() << endl;    
+    solved = solve_(timeout);    
     
     if (solved) {
         ompl::base::PlannerSolution planner_solution(problem_definition_->getSolutionPath());

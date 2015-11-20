@@ -65,8 +65,8 @@ class PathEvaluator:
         self.dynamic_problem = False
         
     def setup_dynamic_problem(self, control_duration):
-        self.dynamic_problem = True
-        self.control_duration = control_duration
+        self.dynamic_problem = True 
+        self.control_duration = control_duration       
         
     def setup_reward_function(self, step_penalty, collision_penalty, exit_reward, discount):
         self.step_penalty = step_penalty

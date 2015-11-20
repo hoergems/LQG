@@ -60,12 +60,7 @@ bool Propagator::setup_py(std::string model_file,
     links[0]->SetStatic(true); 
     
     /***** Create the physics engine *****/
-    const std::string engine = "ode";
-    OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(env_, engine);
-    	    
-    const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});    
-    physics_engine_->SetGravity(gravity);
-    env_->SetPhysicsEngine(physics_engine_);
+    createPhysicsEngine(env_);
     
     /**
      * Set the joint limits
@@ -83,6 +78,15 @@ bool Propagator::setup_py(std::string model_file,
     	jointsUpperVelocityLimit_.push_back(joints[i]->GetMaxTorque());
     }
     return true;
+}
+
+void Propagator::createPhysicsEngine(OpenRAVE::EnvironmentBasePtr env) {
+	const std::string engine = "ode";
+	OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(env, engine);
+	    	    
+	const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});    
+	physics_engine_->SetGravity(gravity);
+	env->SetPhysicsEngine(physics_engine_);
 }
 
 OpenRAVE::RobotBasePtr Propagator::getRobot() {
@@ -121,6 +125,8 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 		return;	
 	}
 	
+	//createPhysicsEngine(env_to_use);
+	
 	std::vector<double> current_vel;
 	const std::vector<OpenRAVE::KinBody::JointPtr> joints(robot_to_use->GetJoints());
 	std::vector<OpenRAVE::dReal> input_torques(control);
@@ -129,29 +135,56 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	
 	
 	const std::vector<OpenRAVE::dReal> currentJointValues(current_joint_values);
-	const std::vector<OpenRAVE::dReal> currentJointVelocities(current_joint_velocities);	    
+	const std::vector<OpenRAVE::dReal> currentJointVelocities(current_joint_velocities);
+	
+	
+	/**cout << "Input: ";
+	for (auto &k: current_joint_values) {
+		cout << k << ", ";
+	}
+	for (auto &k: current_joint_velocities) {
+		cout << k << ", ";
+    }
+	cout << endl;
+	
+	cout << "Control: ";
+	for (auto &k: input_torques) {
+		cout << k << ", ";
+	}
+	cout << endl;*/
 	    
 	robot_to_use->SetDOFValues(current_joint_values);
-	robot_to_use->SetDOFVelocities(current_joint_velocities);
-	
+	robot_to_use->SetDOFVelocities(current_joint_velocities);	
 	int num_steps = duration / simulation_step_size;	
 	for (unsigned int i = 0; i < num_steps; i++) {
 	    robot_to_use->GetDOFVelocities(current_vel);
 	    damper_->damp_torques(current_vel,
-	                          damped_torques);
+	                          damped_torques);	    
 	    for (size_t k = 0; k < joints.size(); k++) {
 	        input_torques[k] = input_torques[k] + damped_torques[k] + torque_error[k];
-	        const std::vector<OpenRAVE::dReal> torques({input_torques[k]});
+	        const std::vector<OpenRAVE::dReal> torques({input_torques[k]});	        
 	        joints[k]->AddTorque(torques);
-	    }        
+	    }
+	    
 	    env_to_use->StepSimulation(simulation_step_size);
 	    env_to_use->StopSimulation();
 	}
+	
 	
 	std::vector<OpenRAVE::dReal> newJointValues;
 	std::vector<OpenRAVE::dReal> newJointVelocities;	    
 	robot_to_use->GetDOFValues(newJointValues);
 	robot_to_use->GetDOFVelocities(newJointVelocities);
+	
+	/**cout << "res: ";
+	for (auto &k: newJointValues) {
+		cout << k << ", ";
+	}
+		
+	for (auto &k: newJointVelocities) {
+		cout << k << ", ";
+	}
+	cout << endl;*/
 	
 	//Enforce position and velocity limits
 	for (unsigned int i = 0; i < joints.size(); i++) {
@@ -171,6 +204,7 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 		        
 	}
 	
+	
 	for (size_t i = 0; i < joints.size(); i++) {
 		result.push_back(newJointValues[i]);
 	}
@@ -180,7 +214,7 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	}
 	
 	
-	
+	//env_to_use->SetPhysicsEngine(nullptr);
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(propagate_overload, propagate_nonlinear, 7, 9);
