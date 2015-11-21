@@ -94,7 +94,7 @@ void Propagator::createPhysicsEngine(OpenRAVE::EnvironmentBasePtr env) {
 	const std::string engine = "ode";
 	OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(env, engine);
 	    	    
-	const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});    
+	const OpenRAVE::Vector gravity({0.0, 0.0, 0.0});    
 	physics_engine_->SetGravity(gravity);
 	env->SetPhysicsEngine(physics_engine_);
 }

@@ -83,10 +83,11 @@ class PathEvaluator:
                 break
         return valid
     
-    def is_terminal(self, state):        
+    def is_terminal(self, state):                       
         ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
         ee_position = np.array([ee_position_arr[j] for j in xrange(len(ee_position_arr))])        
-        if np.linalg.norm(ee_position - self.goal_position) < self.goal_radius:                           
+        if np.linalg.norm(ee_position - self.goal_position) < self.goal_radius:
+            print "TERMINAL STATE " + str([state[i] for i in xrange(len(state))])                           
             return True        
         return False        
     
@@ -118,8 +119,6 @@ class PathEvaluator:
                     break
             if not collides:
                 if self.is_terminal(joint_angles):
-                    print "IS TERMINAL!!!!!!!!!!!!!"
-                    
                     expected_reward += pdf[i] * self.exit_reward
                     terminal = True
                 else:

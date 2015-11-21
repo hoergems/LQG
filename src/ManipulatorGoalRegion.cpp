@@ -28,9 +28,9 @@ namespace shared {
     }
 
     double ManipulatorGoalRegion::distanceGoal(const ompl::base::State *st) const
-    { 
+    {	
         std::vector<double> v1;
-        double* v = st->as<ompl::base::RealVectorStateSpace::StateType>()->values;
+        double* v = st->as<ompl::base::RealVectorStateSpace::StateType>()->values;        
         for (unsigned int i = 0; i < state_dimension_; i++) {
            v1.push_back(v[i]);
         }
@@ -40,7 +40,10 @@ namespace shared {
         for (size_t i = 0; i < ee_goal_position_.size(); i++) {
         	ee_g.push_back(ee_goal_position_[i]);
         }
-        double distance = utils::euclideanDistance(ee_position, ee_g);        
+        double distance = utils::euclideanDistance(ee_position, ee_g); 
+        if (distance <= ee_goal_threshold_) {
+        	cout << "Goal threshold reached!!!!" << endl;
+        }
         return distance;             
     } 
     

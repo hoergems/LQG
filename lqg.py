@@ -82,9 +82,11 @@ class LQG:
                            self.path_timeout)
         if self.dynamic_problem:
             path_planner.setup_dynamic_problem(urdf_model_file,
+                                               environment_file,
                                                self.simulation_step_size,
                                                self.coulomb,
-                                               self.viscous)       
+                                               self.viscous,
+                                               self.continuous_collision)       
         path_planner.set_start_and_goal(self.start_state, goal_states, self.goal_position, self.goal_radius)         
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, len(self.link_dimensions))
         
@@ -185,7 +187,7 @@ class LQG:
                                               self.viscous,
                                               self.delta_t,
                                               self.simulation_step_size,
-                                              True)
+                                              False)
                 
                 successes = 0
                 num_collisions = 0 
@@ -378,7 +380,8 @@ class LQG:
         self.simulation_step_size = config['simulation_step_size']
         self.coulomb = config['coulomb']
         self.viscous = config['viscous']
-        self.path_timeout = config['path_timeout']          
+        self.path_timeout = config['path_timeout'] 
+        self.continuous_collision = config['continuous_collision_check']         
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

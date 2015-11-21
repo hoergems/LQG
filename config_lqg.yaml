@@ -5,7 +5,7 @@ verbose: False
 num_generated_paths: 1
 
 # Timeout to generate 1 path
-path_timeout: 20.0
+path_timeout: 120.0
 
 # For the simplest toy problem. Use a linear path between the start and goal state
 use_linear_path: False
@@ -95,6 +95,8 @@ plot_paths: True
 
 #Planning algorithm
 planning_algorithm: RRTConnect
+
+continuous_collision_check: True
 
 #########################################
 # Dynamic problem and parameters

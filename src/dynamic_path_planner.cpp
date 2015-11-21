@@ -34,15 +34,16 @@ void DynamicPathPlanner::setKinematics(std::shared_ptr<Kinematics> kinematics) {
 	cout << "Kinematics in motion validator set" << endl;
 }
 
-void DynamicPathPlanner::setupMotionValidator() {
+void DynamicPathPlanner::setupMotionValidator(bool continuous_collision) {
 	cout << "setup motion validator" << endl;
 	motionValidator_ = boost::make_shared<MotionValidator>(space_information_,				                                           
-														   true,
+														   continuous_collision,
 														   true);
 	cout << "Motion validator setup" << endl;
 }
 
 bool DynamicPathPlanner::setup(std::string model_file,
+		                       std::string environment_file,
 		                       double simulation_step_size,
 							   bool linear_propagation,
 							   double coulomb,
@@ -53,7 +54,7 @@ bool DynamicPathPlanner::setup(std::string model_file,
 	/***** Initialize OpenRAVE *****/
 	OpenRAVE::RaveInitialize(true);    
 	env_ = OpenRAVE::RaveCreateEnvironment();    
-
+	env_->Load(environment_file);
 	const std::string module_str("or_urdf_plugin");
 	if(!OpenRAVE::RaveLoadPlugin(module_str)) {
 	    cout << "Failed to load the or_urdf_plugin." << endl;
@@ -74,7 +75,7 @@ bool DynamicPathPlanner::setup(std::string model_file,
 	env_->GetBodies(bodies);
 	env_->StopSimulation();
 	    
-	OpenRAVE::RobotBasePtr robot = getRobot();
+	OpenRAVE::RobotBasePtr robot = getRobot();	
 
 	const std::vector<OpenRAVE::KinBody::LinkPtr> links(robot->GetLinks());    
 	links[0]->SetStatic(true);    
@@ -86,7 +87,7 @@ bool DynamicPathPlanner::setup(std::string model_file,
 	const std::string engine = "ode";
 	OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(env_, engine);
 	    
-	const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});    
+	const OpenRAVE::Vector gravity({0.0, 0.0, 0.0});    
 	physics_engine_->SetGravity(gravity);
 	env_->SetPhysicsEngine(physics_engine_);
 	boost::static_pointer_cast<StatePropagator>(state_propagator_)->setupOpenRAVEEnvironment(env_, 

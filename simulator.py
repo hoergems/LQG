@@ -195,10 +195,10 @@ class Simulator:
                                                  Vs[i], 
                                                  Ms[i])
                 t_e = time.time() - t0
-                #print "xs[i] " + str(xs[i + 1])
-                #print "x_true_temp " + str(x_true_temp)
-                #rint "integrating took " + str(t_e) + " seconds"
-                #rint "===================================== "
+                print "xs[i] " + str(xs[i + 1])
+                print "x_true_temp " + str(x_true_temp)
+                #print "integrating took " + str(t_e) + " seconds"
+                print "===================================== "
                 
                 
                 discount = np.power(self.discount_factor, current_step + i)
@@ -214,7 +214,7 @@ class Simulator:
                     x_true = x_true_temp               
                 x_dash = np.subtract(x_true, xs[i + 1])
                 state = v_double()
-                state[:] = x_true   
+                state[:] = [x_true[i] for i in xrange(len(x_true) / 2)]                  
                 ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
                 ee_position = np.array([ee_position_arr[j] for j in xrange(len(ee_position_arr))])
                 logging.info("Simulator: Current end-effector position is " + str(ee_position))                                                
@@ -251,6 +251,7 @@ class Simulator:
                 estimated_covariances.append(P_t)
                 
                 if self.is_terminal(ee_position):
+                    print "IS TERMINAL!!!!!!!!!!!!!!!!!"
                     history_entries.append(HistoryEntry(current_step + i + 1,
                                                         x_true, 
                                                         x_estimate, 
@@ -270,7 +271,10 @@ class Simulator:
                 history_entries[-1].set_collided(collided)
                 history_entries[-1].set_estimate_collided(estimate_collided)
                 history_entries[-1].set_terminal(terminal_state_reached)
-        
+                time.sleep(1)
+        print "========================================"
+        print "======= Simulation done"
+        print "========================================"
         return (x_true, 
                 x_tilde, 
                 x_estimate, 
@@ -350,7 +354,7 @@ class Simulator:
             control_error[:] = ce 
             result = v_double()
             vec = []
-            for i in xrange(1):          
+            for i in xrange(10):          
                 result = v_double()
                 cjv = [current_joint_values[j] for j in xrange(len(current_joint_values))]
                 cjv.extend([current_joint_velocities[j] for j in xrange(len(current_joint_velocities))])

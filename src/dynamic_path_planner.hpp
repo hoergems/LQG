@@ -61,13 +61,14 @@ namespace shared {
                 
                 void setKinematics(std::shared_ptr<Kinematics> kinematics);
                 
-                void setupMotionValidator();
+                void setupMotionValidator(bool continuous_collision);
 
                 void setObstaclesPy(boost::python::list &ns);
                 
                 void setLinkDimensions(std::vector<std::vector<double>> &link_dimensions);
                 
                 bool setup(std::string model_file,
+                		   std::string environment_file,
                 		   double simulation_step_size,
 						   bool linear_propagation,
 						   double coulomb,

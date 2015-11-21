@@ -23,6 +23,7 @@ MotionValidator::MotionValidator(const ompl::base::SpaceInformationPtr &si,
     	dim_ = si_->getStateSpace()->getDimension() / 2;
     }
     cout << "Motion Validator initialized" << endl;
+    cout << "Continuous collision check: " << continuous_collision << endl;
 }
 
 void MotionValidator::setKinematics(std::shared_ptr<Kinematics> kinematics) {
