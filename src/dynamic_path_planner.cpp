@@ -87,7 +87,7 @@ bool DynamicPathPlanner::setup(std::string model_file,
 	const std::string engine = "ode";
 	OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(env_, engine);
 	    
-	const OpenRAVE::Vector gravity({0.0, 0.0, 0.0});    
+	const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});    
 	physics_engine_->SetGravity(gravity);
 	env_->SetPhysicsEngine(physics_engine_);
 	boost::static_pointer_cast<StatePropagator>(state_propagator_)->setupOpenRAVEEnvironment(env_, 

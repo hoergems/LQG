@@ -166,6 +166,24 @@ class Simulator:
         terminal_state_reached = False
         success = False
         
+        '''t_state1 = [2.5682342444639845, -1.5329856012320175, 0.0696156786090998]
+        t_state2 = [2.568234769257803, -1.5330883128644996, 0.06953418224489541]
+        tsv1 = v_double()
+        tsv2 = v_double()
+        
+        tsv1[:] = t_state1
+        tsv2[:] = t_state2
+        
+                
+        ee_position_arr1 = self.kinematics.getEndEffectorPosition(tsv1)
+        ee_position_arr2 = self.kinematics.getEndEffectorPosition(tsv2)                
+        ee_position1 = np.array([ee_position_arr1[j] for j in xrange(len(ee_position_arr1))])
+        ee_position2 = np.array([ee_position_arr2[j] for j in xrange(len(ee_position_arr2))])
+        
+        print "terminal1 " + str(self.is_terminal(ee_position1))
+        print "terminal2 " + str(self.is_terminal(ee_position2))
+        sleep'''
+        
         As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, us)
         Ls = kalman.compute_gain(As, Bs, self.C, self.D, len(xs) - 1)
         logging.info("Simulator: Executing for " + str(n_steps) + " steps") 
@@ -331,8 +349,10 @@ class Simulator:
                         return True
             return False
     
-    def is_terminal(self, ee_position):        
-        if np.linalg.norm(ee_position - self.goal_position) < self.goal_radius:                       
+    def is_terminal(self, ee_position):
+        norm = np.linalg.norm(ee_position - self.goal_position)
+        print "dist " + str(norm)        
+        if norm - 0.01 <= self.goal_radius:                       
             return True
         return False
     
@@ -354,7 +374,7 @@ class Simulator:
             control_error[:] = ce 
             result = v_double()
             vec = []
-            num_prop_runs = 10
+            num_prop_runs = 1
             if self.show_viewer:
                 num_prop_runs = 1
             for i in xrange(num_prop_runs):          
@@ -370,7 +390,7 @@ class Simulator:
                                           result)                    
                 x_new = [result[i] for i in xrange(len(result))]                
                 vec.append(np.array(x_new))                
-            n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(vec))  
+            n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(vec))            
             res = [np.asscalar(mean[i]) for i in xrange(len(mean))]            
             return res   
         else:               
