@@ -271,7 +271,7 @@ class Simulator:
                 history_entries[-1].set_collided(collided)
                 history_entries[-1].set_estimate_collided(estimate_collided)
                 history_entries[-1].set_terminal(terminal_state_reached)
-                time.sleep(1)
+                #time.sleep(1)
         print "========================================"
         print "======= Simulation done"
         print "========================================"
@@ -354,7 +354,10 @@ class Simulator:
             control_error[:] = ce 
             result = v_double()
             vec = []
-            for i in xrange(10):          
+            num_prop_runs = 10
+            if self.show_viewer:
+                num_prop_runs = 1
+            for i in xrange(num_prop_runs):          
                 result = v_double()
                 cjv = [current_joint_values[j] for j in xrange(len(current_joint_values))]
                 cjv.extend([current_joint_velocities[j] for j in xrange(len(current_joint_velocities))])

@@ -136,7 +136,7 @@ bool DynamicPathPlanner::setup_ompl_(OpenRAVE::RobotBasePtr &robot,
      
     problem_definition_ = boost::make_shared<ompl::base::ProblemDefinition>(space_information_);
     planner_ = boost::make_shared<ompl::control::RRT>(space_information_);
-    planner_->as<ompl::control::RRT>()->setIntermediateStates(false);
+    //planner_->as<ompl::control::EST>()->setIntermediateStates(false);
     //planner_->as<ompl::control::RRT>()->setGoalBias(0.1);
     planner_->setProblemDefinition(problem_definition_);   
     

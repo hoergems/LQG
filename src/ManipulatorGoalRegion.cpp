@@ -96,7 +96,7 @@ namespace shared {
     	}
     	
     	sum = sqrt(sum);    	
-    	if (sum < ee_goal_threshold_) {
+    	if (sum < ee_goal_threshold_ - 0.01) {
     		return true;
     	}
     	

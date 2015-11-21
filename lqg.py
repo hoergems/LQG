@@ -187,7 +187,7 @@ class LQG:
                                               self.viscous,
                                               self.delta_t,
                                               self.simulation_step_size,
-                                              False)
+                                              self.show_viewer)
                 
                 successes = 0
                 num_collisions = 0 
@@ -381,7 +381,8 @@ class LQG:
         self.coulomb = config['coulomb']
         self.viscous = config['viscous']
         self.path_timeout = config['path_timeout'] 
-        self.continuous_collision = config['continuous_collision_check']         
+        self.continuous_collision = config['continuous_collision_check']
+        self.show_viewer = config['show_viewer']         
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
