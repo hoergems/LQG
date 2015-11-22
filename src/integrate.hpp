@@ -28,19 +28,23 @@ namespace shared {
     			            std::vector<double> &control,
     			            std::vector<double> &int_times) const;
     	
-    	std::vector<double> getProcessMatrices(std::vector<double> &x, double t_e) const;
+    	std::vector<double> getProcessMatricesSteadyStates(std::vector<double> &x, double t_e) const;
+    	
+    	std::vector<double> getProcessMatrices(std::vector<double> &x, 
+    			                                          std::vector<double> &rho, 
+    													  double t_e) const;
     	
     	void ode(const state_type &x , state_type &dxdt , double t) const;
     	
     	std::vector<double> getResult();
     	
     private:
-MatrixXd getV0(const state_type &x) const; 
-MatrixXd getB0(const state_type &x) const; 
-MatrixXd getA0(const state_type &x) const; 
+MatrixXd getV0(const state_type &x, const state_type &rho) const; 
+MatrixXd getB0(const state_type &x, const state_type &rho) const; 
+MatrixXd getA0(const state_type &x, const state_type &rho) const; 
     	
     	// A fuction type of he form MatrixXd function(const state_type&) const
-        typedef MatrixXd ABFuncType(const state_type&) const; 
+        typedef MatrixXd ABFuncType(const state_type&, const state_type&) const; 
         
         // A member function pointer for the above declared member function type
     	typedef ABFuncType Integrate::* AB_funct;
@@ -74,6 +78,8 @@ MatrixXd getA0(const state_type &x) const;
     	mutable std::map<int, AB_funct> v_map_; 
     	
     	mutable std::pair<AB_funct, std::pair<AB_funct, AB_funct>> ab_functions_;
+    	
+    	mutable bool steady_states_setup_;
     	
     };
 

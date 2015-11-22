@@ -14,7 +14,7 @@ from sympy.integrals.trigonometry import trigintegrate
 from gi.overrides.keysyms import R10
 
 class Test:
-    def __init__(self, model, simplifying, buildcpp):
+    def __init__(self, model, simplifying, buildcpp, lin_steady_states):        
         self.simplifying = simplifying
         self.parse_urdf(model)
         g = Matrix([[0],
@@ -72,16 +72,22 @@ class Test:
         
         self.clean_cpp_code(header_src, imple_src)
         print "Gen cpp code"
-        self.gen_cpp_code_steady_states(steady_states, header_src, imple_src) 
-        print "Steady states code generated"
-        print "Generate cpp code for linearized model..."        
-        for i in xrange(len(steady_states)):
-            A, B, V = self.substitude_steady_states2(A, B, V, steady_states[i])            
-            #self.test_ode(A, B, steady_states[i]) 
-            #self.test_int(A, B, steady_states[i])            
-            self.gen_cpp_code2(A, "A" + str(i), header_src, imple_src)
-            self.gen_cpp_code2(B, "B" + str(i), header_src, imple_src)
-            self.gen_cpp_code2(V, "V" + str(i), header_src, imple_src)
+        if lin_steady_states:
+            self.gen_cpp_code_steady_states(steady_states, header_src, imple_src) 
+            print "Steady states code generated"
+        print "Generate cpp code for linearized model..." 
+        if lin_steady_states:       
+            for i in xrange(len(steady_states)):
+                A, B, V = self.substitude_steady_states2(A, B, V, steady_states[i])            
+                #self.test_ode(A, B, steady_states[i]) 
+                #self.test_int(A, B, steady_states[i])            
+                self.gen_cpp_code2(A, "A" + str(i), header_src, imple_src)
+                self.gen_cpp_code2(B, "B" + str(i), header_src, imple_src)
+                self.gen_cpp_code2(V, "V" + str(i), header_src, imple_src)
+        else:
+            self.gen_cpp_code2(A, "A0", header_src, imple_src)
+            self.gen_cpp_code2(B, "B0", header_src, imple_src)
+            self.gen_cpp_code2(V, "V0", header_src, imple_src)
         print "Building model took " + str(time.time() - t_start) + " seconds"  
         if buildcpp:
             print "Build c++ code..."
@@ -307,24 +313,24 @@ class Test:
         link_names = v_string()
         robot.getLinkNames(link_names)
         self.link_names = [link_names[i] for i in xrange(len(link_names))]
-        
+        print "Got link names"
         joint_names = v_string()
         robot.getJointNames(joint_names)
         self.joint_names = [joint_names[i] for i in xrange(len(joint_names))]                 
-        
+        print "got joint names"
         joint_type = v_string()
         robot.getJointType(joint_names, joint_type)
         self.joint_types = [joint_type[i] for i in xrange(len(joint_type))]
-        
+        print "got jopint types"
         joint_origins = v2_double()
         robot.getJointOrigin(joint_names, joint_origins)
         self.joint_origins = [Matrix([[joint_origins[i][j]] for j in xrange(len(joint_origins[i]))]) 
                               for i in xrange(len(joint_origins))]               
-        
+        print "got joint origins"
         joint_axis = v2_double()
         robot.getJointAxis(joint_names, joint_axis)
         self.joint_axis = [Matrix([[joint_axis[i][j]] for j in xrange(len(joint_axis[i]))]) for i in xrange(len(joint_axis))]
-        
+        print "got joint axis"
         self.q = []
         self.qdot = []
         self.qstar = []
@@ -355,13 +361,14 @@ class Test:
             self.zeta.append(symbols(symb_zeta))
             self.zetastar.append(symbols(symb_zeta_star))
         inertia_pose = v2_double()
+        print "get link inertial poses"
         robot.getLinkInertialPose(link_names, inertia_pose)
         self.inertial_poses = [[inertia_pose[i][j] for j in xrange(len(inertia_pose[i]))] for i in xrange(len(inertia_pose))]
-        
+        print "got link inertial poses"
         masses = v_double()
         robot.getLinkMasses(link_names, masses)        
         self.link_masses = [masses[i] for i in xrange(len(masses))]
-        
+        print "got link masses"
         link_inertias = v2_double()
         robot.getLinkInertias(link_names, link_inertias)        
         self.link_inertias = [Matrix([[link_inertias[i][0], link_inertias[i][1], link_inertias[i][2]],
@@ -406,7 +413,8 @@ class Test:
             line += "a_map_.insert(std::make_pair(" + str(i) + ", &Integrate::getA" + str(i) + ")); \n"
             line += "b_map_.insert(std::make_pair(" + str(i) + ", &Integrate::getB" + str(i) + ")); \n"
             line += "v_map_.insert(std::make_pair(" + str(i) + ", &Integrate::getV" + str(i) + ")); \n"
-            temp_lines.append(line)        
+            temp_lines.append(line) 
+        temp_lines.append("steady_states_setup_ = true; \n")       
         del lines[idx1:idx2]
         idx = -1
         for i in xrange(len(lines)):
@@ -502,7 +510,7 @@ class Test:
         idx2 = -1
         breaking = False    
         for i in xrange(len(lines)):
-            if "Integrate::get" + name + "(const state_type &x) const{" in lines[i]:                
+            if "Integrate::get" + name + "(const state_type &x, const state_type &rho) const{" in lines[i]:                
                 idx1 = i + 1               
                 breaking = True
             elif "}" in lines[i]:
@@ -510,7 +518,7 @@ class Test:
                 if breaking:
                     break        
         if idx1 == -1:            
-            temp_lines.insert(0, "MatrixXd Integrate::get" + name + "(const state_type &x) const{ \n") 
+            temp_lines.insert(0, "MatrixXd Integrate::get" + name + "(const state_type &x, const state_type &rho) const{ \n") 
             temp_lines.append("\n")
             temp_lines.append("} \n \n")                     
             lines[len(lines) - 2:len(lines) - 1] = temp_lines            
@@ -520,7 +528,7 @@ class Test:
             for i in xrange(len(lines_header)):
                 if "private:" in lines_header[i]:                    
                     idx = i
-            temp_lines_header.append("MatrixXd get" + str(name) + "(const state_type &x) const; \n")
+            temp_lines_header.append("MatrixXd get" + str(name) + "(const state_type &x, const state_type &rho) const; \n")
             lines_header[idx+1:idx+1] = temp_lines_header
                 
         else:                  
@@ -666,6 +674,12 @@ class Test:
         
         B = zeros(len(self.q) - 1).col_join(A1_r)
         C = zeros(len(self.q) - 1).col_join(A2_z)
+        
+        for i in xrange(len(self.zeta)):
+            A = A.subs(self.zeta[i], 0.0)
+            B = B.subs(self.zeta[i], 0.0)
+            C = C.subs(self.zeta[i], 0.0)
+        
         return A, B, C
         
     def calc_generalized_forces(self, 
@@ -850,6 +864,9 @@ if __name__ == "__main__":
     parser.add_argument("-b", "--buildcpp", 
                         help="Compile the c++ code after generating it", 
                         action="store_true")
+    parser.add_argument("-ss", "--steady_states",
+                        help="Linearize about steady states",
+                        action="store_true")
     parser.add_argument("-m", "--model", help="Path to the robot model file")
     args = parser.parse_args()
-    Test(args.model, args.simplifying, args.buildcpp)
+    Test(args.model, args.simplifying, args.buildcpp, args.steady_states)
