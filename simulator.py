@@ -364,12 +364,17 @@ class Simulator:
         x = x_dash + x_star 
         u = u_dash + u_star
         
-        
+        print " "
+        print "x " + str(x)
+        print " "
+        print "x_dash " + str(x_dash)
+        print ""
+        print "u " + str(u)
         current_joint_values = v_double()
         current_joint_velocities = v_double()
         
-        current_joint_values[:] = [x_dash[i] for i in xrange(len(self.link_dimensions))]
-        current_joint_velocities[:] = [x_dash[i + len(self.link_dimensions)] for i in xrange(len(self.link_dimensions))]
+        current_joint_values[:] = [x[i] for i in xrange(len(self.link_dimensions))]
+        current_joint_velocities[:] = [x[i + len(self.link_dimensions)] for i in xrange(len(self.link_dimensions))]
         control = v_double()
         control[:] = u
         control_error = v_double()
@@ -406,6 +411,10 @@ class Simulator:
         print ""
         print "x_new2 " + str(x_new_2)
         print " " 
+        sum = 0.0
+        for i in xrange(len(res)):
+            sum += np.square(res[i] - x_new_2[i])
+        print "dist " + str(np.sqrt(sum))
         
        
     def apply_control(self, x_dash, u_dash, A, B, V, M):
