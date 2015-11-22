@@ -25,12 +25,6 @@ control_rate: 40.0
 # The initial joint angles (has to be consistent with the number of links)
 start_state: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
-# The goal position of the end effector. If set to None, a random goal position will be generated
-goal_position: [-0.1, 2.5, 0.0]
-
-# The radius around the goal position to define the end effector's goal area
-goal_radius: 0.3
-
 #Number of bins for the histograms
 num_bins: 201
 
@@ -113,6 +107,6 @@ viscous: 1.0
 #########################################
 # Visualization
 #########################################
-show_viewer: False
+show_viewer: True
 
 

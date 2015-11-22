@@ -30,6 +30,9 @@ add_library(util SHARED
             Obstacle.cpp
             Kinematics.cpp)
 
+add_library(area SHARED
+            Area.cpp)
+
 add_library(kinematics SHARED
             Kinematics.cpp)
 
@@ -78,6 +81,11 @@ target_link_libraries (util
                        boost_python
                        python2.7                      
                        fcl)
+
+target_link_libraries(area
+                      boost_system
+                      boost_python
+                      python2.7)
 
 target_link_libraries(kinematics
                       boost_system

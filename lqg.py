@@ -48,7 +48,8 @@ class LQG:
         
         if self.workspace_dimension == 3:
             model_file = os.getcwd() + "/model/model3D.xml"
-        self.setup_scene("environment", "env.xml", model_file)
+        if not self.setup_scene("environment", "env.xml", model_file):
+            return
                         
         print "LQG: Generating goal states..."
         goal_states = get_goal_states("lqg",
@@ -291,7 +292,16 @@ class LQG:
                     environment_file, 
                     model_file):
         """ Load the obstacles """ 
-        environment = self.serializer.load_environment(file="env.xml", path="environment")       
+        environment, goal_area = self.serializer.load_environment(file="env.xml", path="environment") 
+        if goal_area == None:
+            print "ERROR: Your environment file doesn't define a goal area"
+            return False 
+        
+        goal_position = goal_area.getLocation()
+        
+        self.goal_position = [goal_position[i] for i in xrange(len(goal_position))]
+        self.goal_radius = goal_area.getRadius()
+             
         self.obstacles = []
         terrain = Terrain("default", 0.0, 1.0, False)                
         for obstacle in environment:                       
@@ -299,6 +309,7 @@ class LQG:
         
         """ Setup operations """        
         self.link_dimensions = self.utils.getLinkDimensions(model_file)
+        return True
             
     def init_serializer(self):
         self.serializer = Serializer()
@@ -351,10 +362,7 @@ class LQG:
         self.use_linear_path = config['use_linear_path']        
         self.max_velocity = config['max_velocity']
         self.delta_t = 1.0 / config['control_rate']
-        self.start_state = config['start_state']
-        self.goal_position = config['goal_position']
-        self.goal_state = np.array([-np.pi / 2.0, 0.0, 0.0])
-        self.goal_radius = config['goal_radius']
+        self.start_state = config['start_state']        
         self.num_simulation_runs = config['num_simulation_runs']
         self.num_bins = config['num_bins']
         self.min_covariance = config['min_covariance']
