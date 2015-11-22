@@ -243,11 +243,12 @@ class PathEvaluator:
             Ns.append(np.identity((len(state_path[0]))))
             for i in xrange(len(state_path)):
                 state = v_double()
+                control = v_double()
                 state[:] = state_path[i]
-                controls = control_path[i]
+                control[:] = control_path[i]
                 
                 t0 = time.time()
-                A = self.integrate.getProcessMatrices(state, self.control_duration)                
+                A = self.integrate.getProcessMatrices(state, control, self.control_duration)                
                 Matr_list = [A[i] for i in xrange(len(A))]
                 
                 A_list = np.array([Matr_list[i] for i in xrange(len(state)**2)])

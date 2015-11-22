@@ -54,7 +54,7 @@ class Test:
         t0 = time.time()
         M_inv = M.inv()
         #f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho, self.zeta)
-        print "Inversion took " + str(time.time() - t0) + " seconds"        
+        print "Inverting took " + str(time.time() - t0) + " seconds"        
         #f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho, self.zeta)
         print "Build taylor approximation" 
         steady_states = self.get_steady_states()
@@ -78,9 +78,7 @@ class Test:
         print "Generate cpp code for linearized model..." 
         if lin_steady_states:       
             for i in xrange(len(steady_states)):
-                A, B, V = self.substitude_steady_states2(A, B, V, steady_states[i])            
-                #self.test_ode(A, B, steady_states[i]) 
-                #self.test_int(A, B, steady_states[i])            
+                A, B, V = self.substitude_steady_states2(A, B, V, steady_states[i])
                 self.gen_cpp_code2(A, "A" + str(i), header_src, imple_src)
                 self.gen_cpp_code2(B, "B" + str(i), header_src, imple_src)
                 self.gen_cpp_code2(V, "V" + str(i), header_src, imple_src)
@@ -91,119 +89,9 @@ class Test:
         print "Building model took " + str(time.time() - t_start) + " seconds"  
         if buildcpp:
             print "Build c++ code..."
-            cmd = "cd build && cmake .. && make -j8"           
+            cmd = "cd src/build && cmake .. && make -j8"           
             os.system(cmd)
         print "Done"
-        
-    def su(self, A1, A2):
-        for i in xrange(len(self.q) - 1):
-            A1 = A1.subs(self.q[i], 0.0)
-            A2 = A2.subs(self.q[i], 0.0)
-            
-            A1 = A1.subs(self.qdot[i], 0.0)
-            A2 = A2.subs(self.qdot[i], 0.0)
-        print A1
-        print "=============="
-        print A2
-        sleep
-        
-    def test_ode(self, A, B, steady_state):
-        self.A = A
-        self.B = B
-        self.steady_state = steady_state
-        t = np.linspace(0.0, 0.03, 2)
-        eq = odeint(self.funct, self.initial, t)
-        #print "calc took " + str(time.time() - t0) + " seconds"
-        print "================="
-        print eq
-        sleep
-        
-    def funct(self, x, t):        
-        x1 = Matrix([[self.q[i]] for i in xrange(len(self.q) - 1)])
-        x2 = Matrix([[self.qdot[i]] for i in xrange(len(self.qdot) - 1)])        
-        x_star = x1.col_join(x2)
-        x = Matrix([[x[0]],
-                    [x[1]],
-                    [x[2]],
-                    [x[3]]])
-        
-        
-        
-        rho = Matrix([[self.input[i]] for i in xrange(len(self.input))])
-        rho_star = Matrix([[0.0] for i in xrange(len(self.input))])
-        for key in self.steady_state.keys():
-            x_star = x_star.subs(key, self.steady_state[key])
-        
-        x_star = x_star.subs(self.q[0], self.initial[0])
-        x_star = x_star.subs(self.q[1], self.initial[1])
-        
-        A = self.A.subs(self.q[0], x_star[0])
-        A = self.A.subs(self.q[1], x_star[1])
-        B = self.B.subs(self.q[0], x_star[0])
-        B = self.B.subs(self.q[1], x_star[1])
-                
-        delta_x = x - x_star
-        delta_rho = rho - rho_star
-        sol = A * delta_x + B * rho
-        print "state " + str(x) 
-        print "A " + str(A)
-        print "B " + str(B)
-        
-        #sleep
-        
-        return [sol[i] for i in xrange(len(sol))]
-    
-    def test_power_series(self, A, T, depth=15):
-        A_t = -A * T
-        A_i = A_t
-        series = eye(4)                
-        for i in xrange(1, depth):
-            print i
-            series = series + A_i / mp.factorial(i + 1)
-            A_i = A_i * A_t        
-        return T * series        
-        
-    def test_int(self, A, B, steady_state):        
-        x_0 = Matrix([[self.initial[i]] for i in xrange(len(self.initial))])
-        rho = Matrix([[self.input[i]] for i in xrange(len(self.input))])
-        t = symbols("t") 
-        t_e = 0.3        
-        print "Calc matrix exponentials"
-        
-        
-        A = A.subs([(self.q[i], self.initial[i]) for i in xrange(len(self.q) - 1)])
-        A = A.subs([(self.qdot[i], self.initial[i + len(self.qdot) - 1]) for i in xrange(len(self.qdot) - 1)])
-        B = B.subs([(self.q[i], self.initial[i]) for i in xrange(len(self.q) - 1)])
-        B = B.subs([(self.qdot[i], self.initial[i + len(self.qdot) - 1]) for i in xrange(len(self.qdot) - 1)])
-        
-        print "A:" 
-        print A
-        print "B:"
-        print N(B)
-        
-        
-        A_exp1 = exp(t_e * A)        
-        A_exp2 = exp(-t * A)        
-        
-        #A_exp1 = A_exp1.subs([(self.q[i], self.initial[i]) for i in xrange(len(self.q))])
-        #A_exp1 = A_exp1.subs([(self.qdot[i], self.initial[i + len(self.qdot)]) for i in xrange(len(self.qdot))])
-        #A_exp2 = A_exp2.subs([(self.q[i], self.initial[i]) for i in xrange(len(self.q))])
-        #A_exp2 = A_exp2.subs([(self.qdot[i], self.initial[i + len(self.qdot)]) for i in xrange(len(self.qdot))])
-        
-        print "calculate integral"
-        #integral = integrate(A_exp2, (t, 0, t_e))
-        t0 = time.time()
-        integral = self.test_power_series(A, t_e, 15)
-        print "Integration took " + str(time.time() - t0) + " seconds"
-        #print integral
-        print "===================="
-        print "integral " + str(integral)
-        f = A_exp1 * x_0 + A_exp1 * integral * B * rho
-        f = f.subs(t, t_e)    
-        print f
-        print N(f)
-        print "factorial " + str(mp.factorial(4))
-        sleep       
         
     def get_steady_states(self):
         steady_states = []             
