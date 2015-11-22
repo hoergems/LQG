@@ -343,7 +343,7 @@ class LQG:
         #B = np.vstack((B, np.zeros((num_links, num_links))))        
         V = np.identity(num_links * 2)
         W = np.identity(num_links * 2)
-        C = 5000.0 * np.identity(num_links * 2)
+        C = 50.0 * np.identity(num_links * 2)
         
         D = 1.0 * np.identity(num_links * 2)
         #D  = np.vstack((D, np.zeros((num_links, num_links))))

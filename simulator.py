@@ -114,11 +114,12 @@ class Simulator:
         if self.dynamic_problem:
             for i in xrange(len(state_path)):
                 state = v_double()
+                control = v_double()
                 state[:] = state_path[i]
-                controls = control_path[i]
+                control[:] = control_path[i]
                 
                 t0 = time.time()
-                A = self.integrate.getProcessMatrices(state, self.control_duration)                
+                A = self.integrate.getProcessMatrices(state, control, self.control_duration)                
                 Matr_list = [A[i] for i in xrange(len(A))]
                 
                 A_list = np.array([Matr_list[i] for i in xrange(len(state)**2)])
@@ -128,10 +129,9 @@ class Simulator:
                 V_list = np.array([Matr_list[i] for i in xrange(2 * len(state)**2, 
                                                                 3 * len(state)**2)])
                
-                A_Matr = A_list.reshape(len(state), len(state)).T
+                A_Matr = A_list.reshape(len(state), len(state)).T                
                 V_Matr = V_list.reshape(len(state), len(state)).T
-                B_Matr = B_list.reshape(len(state), len(state)).T  
-                
+                B_Matr = B_list.reshape(len(state), len(state)).T
                 
                 As.append(A_Matr)
                 Bs.append(B_Matr)
@@ -165,6 +165,7 @@ class Simulator:
         history_entries = []        
         terminal_state_reached = False
         success = False
+        x_dash = np.copy(x_tilde)
         
         '''t_state1 = [2.5682342444639845, -1.5329856012320175, 0.0696156786090998]
         t_state2 = [2.568234769257803, -1.5330883128644996, 0.06953418224489541]
@@ -212,7 +213,10 @@ class Simulator:
                                                  Bs[i], 
                                                  Vs[i], 
                                                  Ms[i])
+                self.apply_control2(x_dash, u_dash, xs[i], xs[i+1], us[i], As[i], Bs[i], Vs[i], Ms[i])
                 t_e = time.time() - t0
+                print "u " + str(u)
+                print "us[i] " + str(us[i])
                 print "xs[i] " + str(xs[i + 1])
                 print "x_true_temp " + str(x_true_temp)
                 #print "integrating took " + str(t_e) + " seconds"
@@ -356,6 +360,54 @@ class Simulator:
             return True
         return False
     
+    def apply_control2(self, x_dash, u_dash, x_star, x_star2, u_star, A, B, V, M):
+        x = x_dash + x_star 
+        u = u_dash + u_star
+        
+        
+        current_joint_values = v_double()
+        current_joint_velocities = v_double()
+        
+        current_joint_values[:] = [x_dash[i] for i in xrange(len(self.link_dimensions))]
+        current_joint_velocities[:] = [x_dash[i + len(self.link_dimensions)] for i in xrange(len(self.link_dimensions))]
+        control = v_double()
+        control[:] = u
+        control_error = v_double()
+        ce = self.sample_control_error(M)
+            
+        control_error[:] = ce 
+        result = v_double()
+        vec = []
+        num_prop_runs = 10
+        for i in xrange(num_prop_runs):          
+            result = v_double()
+            cjv = [current_joint_values[j] for j in xrange(len(current_joint_values))]
+            cjv.extend([current_joint_velocities[j] for j in xrange(len(current_joint_velocities))])
+            self.propagator.propagate(current_joint_values,
+                                      current_joint_velocities,
+                                      control,
+                                      control_error,
+                                      self.simulation_step_size,
+                                      self.control_duration,
+                                      result)                    
+            x_new = [result[i] for i in xrange(len(result))]                
+            vec.append(np.array(x_new))                
+            n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(vec))            
+            res = [np.asscalar(mean[i]) for i in xrange(len(mean))]
+        
+        delta_x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, ce)
+        x_new_2 = delta_x_new + x_star2
+        
+        
+        print ""
+        print "u_dash " + str(u_dash)
+        print ""        
+        print "x_new1 " + str(res)
+        print ""
+        print "x_new2 " + str(x_new_2)
+        print " " 
+        
+       
     def apply_control(self, x_dash, u_dash, A, B, V, M):
         x_new = None
         if self.dynamic_problem:
@@ -374,7 +426,7 @@ class Simulator:
             control_error[:] = ce 
             result = v_double()
             vec = []
-            num_prop_runs = 1
+            num_prop_runs = 10
             if self.show_viewer:
                 num_prop_runs = 1
             for i in xrange(num_prop_runs):          
