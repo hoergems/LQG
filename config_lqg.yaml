@@ -20,7 +20,7 @@ workspace_dimension: 2
 max_velocity: 4.0
 
 # The joint control rate
-control_rate: 40.0
+control_rate: 50.0
 
 # The initial joint angles (has to be consistent with the number of links)
 start_state: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -100,7 +100,7 @@ lazy_collision_check: False
 # Dynamic problem and parameters
 #########################################
 dynamic_problem: True
-simulation_step_size: 0.00005
+simulation_step_size: 0.0001
 coulomb: 0.0
 viscous: 1.0
 

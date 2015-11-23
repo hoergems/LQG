@@ -95,7 +95,7 @@ void Propagator::createPhysicsEngine(OpenRAVE::EnvironmentBasePtr env) {
 	const std::string engine = "ode";
 	OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(env, engine);
 	    	    
-	const OpenRAVE::Vector gravity({0.0, 0.0, 0.0});    
+	const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});    
 	physics_engine_->SetGravity(gravity);
 	env->SetPhysicsEngine(physics_engine_);
 }
@@ -206,6 +206,7 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	std::vector<double> current_vel;
 	const std::vector<OpenRAVE::KinBody::JointPtr> joints(robot_to_use->GetJoints());
 	std::vector<OpenRAVE::dReal> input_torques(control);
+	std::vector<OpenRAVE::dReal> input_torques2(control);
 	std::vector<OpenRAVE::dReal> damped_torques(control);
 	std::vector<OpenRAVE::dReal> torque_error(control_error_vec);
 	const std::vector<OpenRAVE::dReal> currentJointValues(current_joint_values);
@@ -214,19 +215,28 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	robot_to_use->SetDOFVelocities(current_joint_velocities);	
 	int num_steps = duration / simulation_step_size;
 	boost::timer t;
-	//robot_to_use->GetDOFVelocities(current_vel);		 
+	
+	/**robot_to_use->GetDOFVelocities(current_vel);
+	damper_->damp_torques(current_vel,
+		    		      damped_torques);*/
+	
+	for (size_t i = 0; i < input_torques.size(); i++) {
+		input_torques2[i] = 1.0;
+	}
 	for (unsigned int i = 0; i < num_steps; i++) {
 	    robot_to_use->GetDOFVelocities(current_vel);
-	    /**damper_->damp_torques(current_vel,
-	    		    		  damped_torques);*/
+	    damper_->damp_torques(current_vel,
+	    		    		  damped_torques);		
 	    for (size_t k = 0; k < joints.size(); k++) {
-	        input_torques[k] = input_torques[k]; //+ damped_torques[k] + torque_error[k];
+	        input_torques[k] = input_torques2[k];// + damped_torques[k]; //+ torque_error[k];
+	        
 	        const std::vector<OpenRAVE::dReal> torques({input_torques[k]});	        
 	        joints[k]->AddTorque(torques);
 	    }
 	    
+	    
 	    env_to_use->StepSimulation(simulation_step_size);
-	    env_to_use->StopSimulation();
+	    //env_to_use->StopSimulation();
 	    if (show_viewer_) {
 	    	usleep(1000000 * simulation_step_size);
 	    }	    
@@ -263,15 +273,15 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	cout << endl;
 	
 	cout << "control: ";
-	for (auto &k: control) {
+	for (auto &k: input_torques2) {
 		cout << k << ", ";
 	}
 	cout << endl;
 	
 	std::vector<double> ress;
-	std::vector<double> inte_times({0.0, duration, 0.0005});
+	std::vector<double> inte_times({0.0, duration, simulation_step_size});
 	boost::timer t2;
-	integrator_->do_integration(state, control, inte_times, ress);
+	integrator_->do_integration(state, input_torques2, inte_times, ress);
 	cout << "elapsed2 " << t2.elapsed() << endl;
 	
 	cout << "res1: ";

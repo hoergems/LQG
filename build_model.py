@@ -19,7 +19,7 @@ class Test:
         self.parse_urdf(model)
         g = Matrix([[0],
                     [0],
-                    [0]])       
+                    [9.81]])       
         """
         Get the Jacobians of the links expressed in the robot's base frame
         """        
@@ -60,7 +60,7 @@ class Test:
         steady_states = self.get_steady_states()
         print "Get partial derivatives"           
         f, A, B, V = self.partial_derivatives(f, M_inv, C, N)
-        print f
+        
           
         print "Clean cpp code"
         header_src = "src/integrate.hpp"
@@ -590,7 +590,7 @@ class Test:
             N = Matrix([[trigsimp(diff(V, thetas[i]))] for i in xrange(len(thetas) - 1)]) 
         else:
             N = Matrix([[diff(V, thetas[i])] for i in xrange(len(thetas) - 1)])        
-        K = N #+ Matrix([[viscous * dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
+        K = N + Matrix([[viscous * dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
         return K      
         
     def calc_coriolis_matrix(self, thetas, dot_thetas, M):        
