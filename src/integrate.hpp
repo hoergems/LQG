@@ -26,19 +26,28 @@ namespace shared {
     	
     	void do_integration(std::vector<double> &x,
     			            std::vector<double> &control,
-    			            std::vector<double> &int_times) const;
+    			            std::vector<double> &int_times,
+    			            std::vector<double> &result) const;
     	
-    	std::vector<double> getProcessMatricesSteadyStates(std::vector<double> &x, double t_e) const;
+    	void getProcessMatrices(std::vector<double> &x, 
+    			                std::vector<double> &rho, 
+    			                double t_e,
+    			                std::vector<MatrixXd> &matrices) const;
     	
-    	std::vector<double> getProcessMatrices(std::vector<double> &x, 
-    			                                          std::vector<double> &rho, 
-    													  double t_e) const;
+    	MatrixXd get_F(const state_type &x, const state_type &rho) const;
+    	
+    	std::vector<double> getProcessMatricesSteadyStatesVec(std::vector<double> &x, double t_e) const;
+    	
+    	std::vector<double> getProcessMatricesVec(std::vector<double> &x, 
+    			                                  std::vector<double> &rho, 
+    										      double t_e) const;
     	
     	void ode(const state_type &x , state_type &dxdt , double t) const;
     	
     	std::vector<double> getResult();
     	
     private:
+MatrixXd getF0(const state_type &x, const state_type &rho) const; 
 MatrixXd getV0(const state_type &x, const state_type &rho) const; 
 MatrixXd getB0(const state_type &x, const state_type &rho) const; 
 MatrixXd getA0(const state_type &x, const state_type &rho) const; 

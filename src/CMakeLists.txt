@@ -43,7 +43,8 @@ add_library(integrate SHARED integrate.cpp)
 add_library(propagator SHARED 
             propagator.cpp
             torque_damper.cpp
-            viewer.cpp)
+            viewer.cpp
+            integrate.cpp)
 
 add_library(obstacle SHARED
             Obstacle.cpp

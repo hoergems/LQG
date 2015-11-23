@@ -16,7 +16,6 @@
 #include <openrave/environment.h>
 
 #include "propagator.hpp"
-#include "integrate.hpp"
 
 namespace RBD = RigidBodyDynamics;
 
@@ -67,8 +66,6 @@ namespace shared {
             
             // Determines is a linear model has to be used for state propagation
             bool linear_propagation_;
-            
-            Integrate linear_integrator_;
             
             bool verbose_;              
     };

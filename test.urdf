@@ -81,8 +81,8 @@
     <child link="link1"/>
     <origin rpy="0 0 0" xyz="0 0 0"/>
     <axis xyz="0 0 1"/>
-    <limit effort="300" lower="-3.14159265359" upper="3.14159265359" velocity="200"/>    
-    <dynamics damping="0.5"/>
+    <limit effort="40" lower="-3.14159265359" upper="3.14159265359" velocity="200"/>    
+    <!--dynamics damping="0.5"/-->
   </joint>
 
   <joint name="joint2" type="revolute">
@@ -90,8 +90,8 @@
     <child link="link2"/>
     <origin rpy="0 0 0" xyz="1 0 0"/>
     <axis xyz="0 0 1"/>
-    <limit effort="100" lower="-3.14159265359" upper="3.14159265359" velocity="200"/>      
-    <dynamics damping="0.5"/>
+    <limit effort="10" lower="-3.14159265359" upper="3.14159265359" velocity="200"/>      
+    <!--dynamics damping="0.5"/-->
   </joint>
 
   <joint name="joint3" type="revolute">
@@ -99,8 +99,8 @@
     <child link="link3"/>
     <origin rpy="0 0 0" xyz="1 0 0"/>
     <axis xyz="0 0 1"/>
-    <limit effort="100" lower="-3.14159265359" upper="3.14159265359" velocity="200"/>     
-    <dynamics damping="0.5"/>
+    <limit effort="10" lower="-3.14159265359" upper="3.14159265359" velocity="200"/>     
+    <!--dynamics damping="0.5"/-->
   </joint>
 
   <joint name="joint4" type="fixed">    
@@ -108,8 +108,8 @@
     <child link="end_effector"/>
     <origin rpy="0 0 0" xyz="1 0 0"/>
     <axis xyz="0 0 1"/>
-    <limit effort="200" lower="-3.14159265359" upper="3.14159265359" velocity="1"/>    
-    <dynamics damping="0.5"/>
+    <limit effort="20" lower="-3.14159265359" upper="3.14159265359" velocity="1"/>    
+    <!--dynamics damping="0.5"/-->
   </joint>
  
     

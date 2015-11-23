@@ -19,7 +19,7 @@ class Test:
         self.parse_urdf(model)
         g = Matrix([[0],
                     [0],
-                    [9.81]])       
+                    [0]])       
         """
         Get the Jacobians of the links expressed in the robot's base frame
         """        
@@ -52,20 +52,16 @@ class Test:
             N = trigsimp(N)        
         print "Inverting inertia matrix..."
         t0 = time.time()
-        M_inv = M.inv()
-        #f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho, self.zeta)
+        #M_inv = M.inv()
+        f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho, self.zeta)
         print "Inverting took " + str(time.time() - t0) + " seconds"        
-        #f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho, self.zeta)
+        
         print "Build taylor approximation" 
         steady_states = self.get_steady_states()
         print "Get partial derivatives"           
-        A, B, V = self.partial_derivatives(M_inv, C, N)        
-        #f, A, B, V = self.partial_derivatives2(f, M_inv, C, N)        
-        
-        '''if self.simplifying:
-            A = simplify(A)
-            B = simplify(B)
-            V = simplify(V)'''       
+        f, A, B, V = self.partial_derivatives(f, M_inv, C, N)
+        print f
+          
         print "Clean cpp code"
         header_src = "src/integrate.hpp"
         imple_src = "src/integrate.cpp"
@@ -86,6 +82,7 @@ class Test:
             self.gen_cpp_code2(A, "A0", header_src, imple_src)
             self.gen_cpp_code2(B, "B0", header_src, imple_src)
             self.gen_cpp_code2(V, "V0", header_src, imple_src)
+            self.gen_cpp_code2(f, "F0", header_src, imple_src)
         print "Building model took " + str(time.time() - t_start) + " seconds"  
         if buildcpp:
             print "Build c++ code..."
@@ -324,7 +321,10 @@ class Test:
         idx2 = -1
         breaking = False
         for i in xrange(len(lines)):
-            if "MatrixXd Integrate::getA" in lines[i] or "MatrixXd Integrate::getB" in lines[i] or "MatrixXd Integrate::getV" in lines[i]:
+            if ("MatrixXd Integrate::getA" in lines[i] or 
+                "MatrixXd Integrate::getB" in lines[i] or 
+                "MatrixXd Integrate::getV" in lines[i] or
+                "MatrixXd Integrate::getF" in lines[i]):
                 idx1 = i                
                 breaking = True
             if "}" in lines[i] and breaking:
@@ -347,7 +347,10 @@ class Test:
         tmp_lines = []
         idxs = []
         for i in xrange(len(lines_header)):
-            if "MatrixXd getA" in lines_header[i] or "MatrixXd getB" in lines_header[i] or "MatrixXd getV" in lines_header[i]:
+            if ("MatrixXd getA" in lines_header[i] or 
+                "MatrixXd getB" in lines_header[i] or 
+                "MatrixXd getV" in lines_header[i] or
+                "MatrixXd getF" in lines_header[i]):
                 idxs.append(i)
         for i in xrange(len(lines_header)):
             app = True
@@ -535,7 +538,7 @@ class Test:
         
         return f, A, B, C
     
-    def partial_derivatives(self, M_inv, C, N):        
+    def partial_derivatives(self, f, M_inv, C, N):        
         r = Matrix([[self.rho[i]] for i in xrange(len(self.rho) - 1)])
         x1 = Matrix([[self.q[i]] for i in xrange(len(self.q) - 1)])
         x2 = Matrix([[self.qdot[i]] for i in xrange(len(self.qdot) - 1)])
@@ -567,8 +570,9 @@ class Test:
             A = A.subs(self.zeta[i], 0.0)
             B = B.subs(self.zeta[i], 0.0)
             C = C.subs(self.zeta[i], 0.0)
+            f = f.subs(self.zeta[i], 0.0)
         
-        return A, B, C
+        return f, A, B, C
         
     def calc_generalized_forces(self, 
                                 thetas, 
@@ -586,7 +590,7 @@ class Test:
             N = Matrix([[trigsimp(diff(V, thetas[i]))] for i in xrange(len(thetas) - 1)]) 
         else:
             N = Matrix([[diff(V, thetas[i])] for i in xrange(len(thetas) - 1)])        
-        K = N + Matrix([[viscous * dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
+        K = N #+ Matrix([[viscous * dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
         return K      
         
     def calc_coriolis_matrix(self, thetas, dot_thetas, M):        

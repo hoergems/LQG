@@ -364,26 +364,41 @@ class Simulator:
         x = x_dash + x_star 
         u = u_dash + u_star
         
-        print " "
-        print "x " + str(x)
-        print " "
-        print "x_dash " + str(x_dash)
-        print ""
-        print "u " + str(u)
+        state = v_double()
+        control = v_double()
+        state[:] = [x[i] for i in xrange(len(x))]
+        control[:] = [u[i] for i in xrange(len(u))]
+                
+        t0 = time.time()
+        A = self.integrate.getProcessMatrices(state, control, self.control_duration)                
+        Matr_list = [A[i] for i in xrange(len(A))]
+                
+        A_list = np.array([Matr_list[i] for i in xrange(len(state)**2)])
+                           
+        B_list = np.array([Matr_list[i] for i in xrange(len(state)**2, 2 * len(state)**2)])
+                              
+        V_list = np.array([Matr_list[i] for i in xrange(2 * len(state)**2, 
+                                                                3 * len(state)**2)])
+               
+        A = A_list.reshape(len(state), len(state)).T                
+        V = V_list.reshape(len(state), len(state)).T
+        B = B_list.reshape(len(state), len(state)).T
+        print "Got linear matrices in " + str(time.time() - t0) + " seconds"
+        
         current_joint_values = v_double()
         current_joint_velocities = v_double()
         
         current_joint_values[:] = [x[i] for i in xrange(len(self.link_dimensions))]
-        current_joint_velocities[:] = [x[i + len(self.link_dimensions)] for i in xrange(len(self.link_dimensions))]
-        control = v_double()
-        control[:] = u
+        current_joint_velocities[:] = [x[i + len(self.link_dimensions)] for i in xrange(len(self.link_dimensions))]        
         control_error = v_double()
         ce = self.sample_control_error(M)
             
         control_error[:] = ce 
+        t0 = time.time()
         result = v_double()
         vec = []
-        num_prop_runs = 10
+        num_prop_runs = 1
+        #self.control_duration = 0.00001
         for i in xrange(num_prop_runs):          
             result = v_double()
             cjv = [current_joint_values[j] for j in xrange(len(current_joint_values))]
@@ -399,22 +414,43 @@ class Simulator:
             vec.append(np.array(x_new))                
             n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(vec))            
             res = [np.asscalar(mean[i]) for i in xrange(len(mean))]
+            
+        inte_res = v_double()
+        int_times = v_double()
+        int_times[:] = [0.0, self.control_duration, 0.000001]
+        self.integrate.doIntegration(state, control, int_times, inte_res) 
+        inte_ress = [inte_res[i] for i in xrange(len(inte_res))]   
         
+        print "Propagated in " + str(time.time() - t0) + " seconds"
         delta_x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, ce)
         x_new_2 = delta_x_new + x_star2
         
+        result_lin = v_double()
+        self.propagator.propagateLinear(state,
+                                        control,
+                                        control_error,
+                                        self.control_duration,
+                                        result_lin)
+        res_lin = [result_lin[i] for i in xrange(len(result_lin))]
         
         print ""
+        print "x_dash " + str(x_dash)
+        print ""
         print "u_dash " + str(u_dash)
-        print ""        
+        print ""
         print "x_new1 " + str(res)
         print ""
+        print "delta_x_new " + str(delta_x_new)
+        print ""
         print "x_new2 " + str(x_new_2)
-        print " " 
+        print ""
+        print "x_new3 " + str(inte_ress)
+        print " "
         sum = 0.0
         for i in xrange(len(res)):
             sum += np.square(res[i] - x_new_2[i])
         print "dist " + str(np.sqrt(sum))
+        time.sleep(0.5)
         
        
     def apply_control(self, x_dash, u_dash, A, B, V, M):

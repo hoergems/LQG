@@ -62,7 +62,7 @@ class PathPlanningInterface:
         self.link_dimensions = link_dimensions
         self.workspace_dimension = workspace_dimension        
         self.num_cores = cpu_count() 
-        #self.num_cores = 2       
+        self.num_cores = 2       
         self.obstacles = obstacles        
         self.max_velocity = max_velocity
         self.delta_t = delta_t

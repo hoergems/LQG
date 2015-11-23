@@ -100,13 +100,13 @@ lazy_collision_check: False
 # Dynamic problem and parameters
 #########################################
 dynamic_problem: True
-simulation_step_size: 0.0005
+simulation_step_size: 0.00005
 coulomb: 0.0
 viscous: 1.0
 
 #########################################
 # Visualization
 #########################################
-show_viewer: True
+show_viewer: False
 
 

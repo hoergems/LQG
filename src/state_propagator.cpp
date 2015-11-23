@@ -19,8 +19,7 @@ StatePropagator::StatePropagator(const ompl::control::SpaceInformationPtr &si,
     robot_(nullptr),
     propagator_(new Propagator()),
     simulation_step_size_(simulation_step_size),    
-    linear_propagation_(linear_propagation),
-    linear_integrator_(),
+    linear_propagation_(linear_propagation),    
     verbose_(verbose)
 {
     
@@ -44,7 +43,7 @@ void StatePropagator::propagate(const ompl::base::State *state,
     	}  	
     	
     	//boost::timer t;
-    	linear_integrator_.do_integration(state_vec, control_vec, integration_times);
+    	//linear_integrator_.do_integration(state_vec, control_vec, integration_times);
     	//cout << "Integrated in " << t.elapsed() << "seconds" << endl;
     	if (verbose_) {
 			cout << "start state: ";

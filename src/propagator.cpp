@@ -9,7 +9,8 @@ Propagator::Propagator():
 	damper_(nullptr),
 	env_(nullptr),
 	robot_(nullptr),
-	show_viewer_(false){	
+	show_viewer_(false),
+	integrator_(new Integrate()){	
 }
 
 void Propagator::setup(double coulomb, 
@@ -94,7 +95,7 @@ void Propagator::createPhysicsEngine(OpenRAVE::EnvironmentBasePtr env) {
 	const std::string engine = "ode";
 	OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(env, engine);
 	    	    
-	const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});    
+	const OpenRAVE::Vector gravity({0.0, 0.0, 0.0});    
 	physics_engine_->SetGravity(gravity);
 	env->SetPhysicsEngine(physics_engine_);
 }
@@ -108,6 +109,69 @@ OpenRAVE::RobotBasePtr Propagator::getRobot() {
     		return robot;
     	}    	
     }   
+}
+
+void Propagator::propagate_linear(const std::vector<double> &current_state,
+           std::vector<double> &control,
+           std::vector<double> &control_error_vec,	   		                 
+           const double duration,
+           std::vector<double> &result,
+           OpenRAVE::EnvironmentBasePtr environment=nullptr,
+           OpenRAVE::RobotBasePtr robot=nullptr) {
+	
+	OpenRAVE::EnvironmentBasePtr env_to_use(nullptr);
+	OpenRAVE::RobotBasePtr robot_to_use(nullptr);
+	if (environment == nullptr) {
+		env_to_use = env_;
+	}
+	else {
+		env_to_use = environment;
+	}
+		
+	if (robot == nullptr) {
+		robot_to_use = getRobot();
+	}
+	else {
+		robot_to_use = robot;
+	}
+	if (env_to_use == nullptr || robot_to_use == nullptr) {
+		cout << "Propagator: Error: Environment or robot has not been initialized or passed as argument. Can't propagate the state" << endl;
+		return;	
+	}
+	
+	std::vector<double> state_vec;
+	std::vector<double> control_vec;
+	for (auto &k: current_state) {
+		state_vec.push_back(k);
+	}
+	for (auto &k: control) {
+		control_vec.push_back(k);
+	}
+	
+	MatrixXd f = integrator_->get_F(state_vec, control_vec);	
+	std::vector<MatrixXd> ABV;
+	integrator_->getProcessMatrices(state_vec, control_vec, duration, ABV);	
+	VectorXd state_eigen_vec(state_vec.size());
+	VectorXd control_eigen_vec(control_vec.size());
+	
+	VectorXd zeta_eigen_vec(state_vec.size());
+	VectorXd res(state_vec.size());
+	for (size_t i = 0; i < state_eigen_vec.size(); i++) {
+		state_eigen_vec[i] = state_vec[i];
+		zeta_eigen_vec[i] = 0;
+	}
+	
+	for (size_t i = 0; i < control_eigen_vec.size(); i++) {
+		control_eigen_vec[i] = control_vec[i];
+	}
+	
+    //res = f + ABV[0] * state_eigen_vec + ABV[1] * control_eigen_vec + ABV[2] * zeta_eigen_vec;
+	res = f + ABV[0] * state_eigen_vec + ABV[1] * control_eigen_vec + ABV[2] * zeta_eigen_vec;
+	
+	for (size_t i = 0; i < res.size(); i++) {
+		result.push_back(res[i]);
+	}
+	
 }
 	
 void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_values,
@@ -139,43 +203,24 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 		return;	
 	}
 	
-	//createPhysicsEngine(env_to_use);
-	
 	std::vector<double> current_vel;
 	const std::vector<OpenRAVE::KinBody::JointPtr> joints(robot_to_use->GetJoints());
 	std::vector<OpenRAVE::dReal> input_torques(control);
 	std::vector<OpenRAVE::dReal> damped_torques(control);
 	std::vector<OpenRAVE::dReal> torque_error(control_error_vec);
-	
-	
 	const std::vector<OpenRAVE::dReal> currentJointValues(current_joint_values);
 	const std::vector<OpenRAVE::dReal> currentJointVelocities(current_joint_velocities);
-	
-	
-	/**cout << "Input: ";
-	for (auto &k: current_joint_values) {
-		cout << k << ", ";
-	}
-	for (auto &k: current_joint_velocities) {
-		cout << k << ", ";
-    }
-	cout << endl;
-	
-	cout << "Control: ";
-	for (auto &k: input_torques) {
-		cout << k << ", ";
-	}
-	cout << endl;*/
-	    
 	robot_to_use->SetDOFValues(current_joint_values);
 	robot_to_use->SetDOFVelocities(current_joint_velocities);	
-	int num_steps = duration / simulation_step_size;	
+	int num_steps = duration / simulation_step_size;
+	boost::timer t;
+	//robot_to_use->GetDOFVelocities(current_vel);		 
 	for (unsigned int i = 0; i < num_steps; i++) {
 	    robot_to_use->GetDOFVelocities(current_vel);
-	    damper_->damp_torques(current_vel,
-	                          damped_torques);	    
+	    /**damper_->damp_torques(current_vel,
+	    		    		  damped_torques);*/
 	    for (size_t k = 0; k < joints.size(); k++) {
-	        input_torques[k] = input_torques[k] + damped_torques[k] + torque_error[k];
+	        input_torques[k] = input_torques[k]; //+ damped_torques[k] + torque_error[k];
 	        const std::vector<OpenRAVE::dReal> torques({input_torques[k]});	        
 	        joints[k]->AddTorque(torques);
 	    }
@@ -184,24 +229,67 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	    env_to_use->StopSimulation();
 	    if (show_viewer_) {
 	    	usleep(1000000 * simulation_step_size);
-	    }
+	    }	    
 	}
-	
+	cout << "elapsed1 " << t.elapsed() << endl;
 	
 	std::vector<OpenRAVE::dReal> newJointValues;
-	std::vector<OpenRAVE::dReal> newJointVelocities;	    
+	std::vector<OpenRAVE::dReal> newJointVelocities;	
 	robot_to_use->GetDOFValues(newJointValues);
 	robot_to_use->GetDOFVelocities(newJointVelocities);
 	
-	/**cout << "res: ";
+	std::vector<double> state;
+	
+	for (size_t i = 0; i < current_joint_values.size()-1; i++) {
+		state.push_back(current_joint_values[i]);
+	}
+	for (size_t i = 0; i < current_joint_values.size()-1; i++) {
+		state.push_back(current_joint_velocities[i]);
+	}
+	
+	
+	cout << "current joint values: ";
+	for (auto &k: current_joint_values) {
+		cout << k << ", ";
+	}
+	cout <<endl;
+	
+	cout << current_joint_values.size() << endl;
+	cout << current_joint_velocities.size() << endl;
+	cout << "state: ";
+	for (auto &k: state) {
+		cout << k << ", ";
+	}
+	cout << endl;
+	
+	cout << "control: ";
+	for (auto &k: control) {
+		cout << k << ", ";
+	}
+	cout << endl;
+	
+	std::vector<double> ress;
+	std::vector<double> inte_times({0.0, duration, 0.0005});
+	boost::timer t2;
+	integrator_->do_integration(state, control, inte_times, ress);
+	cout << "elapsed2 " << t2.elapsed() << endl;
+	
+	cout << "res1: ";
 	for (auto &k: newJointValues) {
 		cout << k << ", ";
 	}
-		
+	
 	for (auto &k: newJointVelocities) {
 		cout << k << ", ";
 	}
-	cout << endl;*/
+	cout << endl;
+	
+	cout << "res2: ";
+	for (auto &k: ress) {
+		cout << k << ", ";
+	}
+	cout << endl;
+	sleep(1.0);
 	
 	//Enforce position and velocity limits
 	for (unsigned int i = 0; i < joints.size(); i++) {
@@ -221,20 +309,17 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 		        
 	}
 	
-	
 	for (size_t i = 0; i < joints.size(); i++) {
 		result.push_back(newJointValues[i]);
 	}
 	
 	for (size_t i = 0; i < joints.size(); i++) {
 		result.push_back(newJointVelocities[i]);
-	}
-	
-	
-	//env_to_use->SetPhysicsEngine(nullptr);
+	}	
 }
 
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(propagate_overload, propagate_nonlinear, 7, 9);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(propagate_nonlinear_overload, propagate_nonlinear, 7, 9);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(propagate_linear_overload, propagate_linear, 5, 7);
 
 BOOST_PYTHON_MODULE(libpropagator) {
     using namespace boost::python;
@@ -243,7 +328,8 @@ BOOST_PYTHON_MODULE(libpropagator) {
    
     class_<Propagator>("Propagator", init<>())
 							   .def("setup", &Propagator::setup_py)
-							   .def("propagate", &Propagator::propagate_nonlinear, propagate_overload())
+							   .def("propagate", &Propagator::propagate_nonlinear, propagate_nonlinear_overload())
+							   .def("propagateLinear", &Propagator::propagate_linear, propagate_linear_overload())
 		                       
 										            		 
                         //.def("doIntegration", &Integrate::do_integration)                        

@@ -248,7 +248,9 @@ class PathEvaluator:
                 control[:] = control_path[i]
                 
                 t0 = time.time()
-                A = self.integrate.getProcessMatrices(state, control, self.control_duration)                
+                
+                A = self.integrate.getProcessMatrices(state, control, self.control_duration)  
+                         
                 Matr_list = [A[i] for i in xrange(len(A))]
                 
                 A_list = np.array([Matr_list[i] for i in xrange(len(state)**2)])
@@ -260,8 +262,7 @@ class PathEvaluator:
                
                 A_Matr = A_list.reshape(len(state), len(state)).T
                 V_Matr = V_list.reshape(len(state), len(state)).T
-                B_Matr = B_list.reshape(len(state), len(state)).T  
-                
+                B_Matr = B_list.reshape(len(state), len(state)).T 
                 
                 As.append(A_Matr)
                 Bs.append(B_Matr)
