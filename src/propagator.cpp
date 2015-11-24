@@ -319,8 +319,10 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 		result.push_back(newJointVelocities[i]);
 	}
 	
-	robot_to_use->SetDOFValues(newJointValues);
-	robot_to_use->SetDOFVelocities(newJointVelocities);
+	if (show_viewer_) {
+	    robot_to_use->SetDOFValues(newJointValues);
+	    robot_to_use->SetDOFVelocities(newJointVelocities);
+	}
 	//if (show_viewer_) {
     //    usleep(1000000 * duration);
     //}

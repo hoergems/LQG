@@ -136,7 +136,7 @@ bool DynamicPathPlanner::setup_ompl_(OpenRAVE::RobotBasePtr &robot,
      
     problem_definition_ = boost::make_shared<ompl::base::ProblemDefinition>(space_information_);
     planner_ = boost::make_shared<ompl::control::RRT>(space_information_);
-    //planner_->as<ompl::control::EST>()->setIntermediateStates(false);
+    planner_->as<ompl::control::RRT>()->setIntermediateStates(false);
     //planner_->as<ompl::control::RRT>()->setGoalBias(0.1);
     planner_->setProblemDefinition(problem_definition_);   
     
@@ -187,14 +187,7 @@ bool DynamicPathPlanner::isValid(const ompl::base::State *state) {
         state_vec.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);        
     }
     return static_cast<MotionValidator &>(*motionValidator_).isValid(state_vec);
-    if (verbose_) {
-		cout << "state: ";
-		for (size_t i = 0; i < space_information_->getStateSpace()->getDimension(); i++) {
-			cout << state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i] << " ";
-		}
-		cout << "valid " << valid << endl;
-    }
-    return valid;
+    
 }
 
 bool DynamicPathPlanner::isValidPy(std::vector<double> &state) {

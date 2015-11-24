@@ -414,25 +414,13 @@ class Simulator:
             x_new = [result[i] for i in xrange(len(result))]                
             vec.append(np.array(x_new))                
             n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(vec))            
-            res = [np.asscalar(mean[i]) for i in xrange(len(mean))]
-            
-        inte_res = v_double()
-        int_times = v_double()
-        int_times[:] = [0.0, self.control_duration, 0.000001]
-        self.integrate.doIntegration(state, control, int_times, inte_res) 
-        inte_ress = [inte_res[i] for i in xrange(len(inte_res))]   
+            res = [np.asscalar(mean[i]) for i in xrange(len(mean))]           
+        
         
         print "Propagated in " + str(time.time() - t0) + " seconds"
         delta_x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, ce)
-        x_new_2 = delta_x_new + x_star2
+        x_new_2 = delta_x_new + x_star2        
         
-        result_lin = v_double()
-        self.propagator.propagateLinear(state,
-                                        control,
-                                        control_error,
-                                        self.control_duration,
-                                        result_lin)
-        res_lin = [result_lin[i] for i in xrange(len(result_lin))]
         
         print ""
         print "x_dash " + str(x_dash)
@@ -443,10 +431,7 @@ class Simulator:
         print ""
         print "delta_x_new " + str(delta_x_new)
         print ""
-        print "x_new2 " + str(x_new_2)
-        print ""
-        print "x_new3 " + str(inte_ress)
-        print " "
+        print "x_new2 " + str(x_new_2)       
         sum = 0.0
         for i in xrange(len(res)):
             sum += np.square(res[i] - x_new_2[i])

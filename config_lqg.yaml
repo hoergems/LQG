@@ -33,10 +33,10 @@ num_bins: 201
 ## Uncertainty parameters
 #################################################
 # The minimum joint state covariance
-min_covariance: 0.00001
+min_covariance: 0.0
 
 # The maximum joint state covariance
-max_covariance: 0.00001
+max_covariance: 0.0
 
 # The number of covariance steps
 covariance_steps: 1
@@ -90,7 +90,7 @@ plot_paths: True
 #Planning algorithm
 planning_algorithm: RRTConnect
 
-continuous_collision_check: True
+continuous_collision_check: False
 
 # Determines if a path has to be generated first before doing continuous
 # collision checking. Has no effect when continuous_collision_check is False
