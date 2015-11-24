@@ -78,7 +78,14 @@ bool DynamicPathPlanner::setup(std::string model_file,
 	OpenRAVE::RobotBasePtr robot = getRobot();	
 
 	const std::vector<OpenRAVE::KinBody::LinkPtr> links(robot->GetLinks());    
-	links[0]->SetStatic(true);    
+	for (size_t i = 0; i < links.size(); i++) {
+	    if (links[i]->GetName() == "world") {
+	    	links[i]->SetStatic(true);
+	    }
+	    else if (links[i]->GetName() == "end_effector") {
+	    	links[i]->Enable(false);
+	    }
+	}
 	    
 	/***** Setup OMPL *****/
 	setup_ompl_(robot, simulation_step_size, linear_propagation, verbose_);

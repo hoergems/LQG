@@ -61,8 +61,17 @@ bool Propagator::setup_py(std::string model_file,
     
     OpenRAVE::RobotBasePtr robot = getRobot();
     
-    const std::vector<OpenRAVE::KinBody::LinkPtr> links(robot->GetLinks());    
-    links[0]->SetStatic(true); 
+    const std::vector<OpenRAVE::KinBody::LinkPtr> links(robot->GetLinks()); 
+    for (size_t i = 0; i < links.size(); i++) {
+    	if (links[i]->GetName() == "world") {
+    		links[i]->SetStatic(true);
+    	}
+    	else if (links[i]->GetName() == "end_effector") {
+    		links[i]->Enable(false);
+    	}
+    }
+    
+    
     
     /***** Create the physics engine *****/
     createPhysicsEngine(env_);
@@ -203,6 +212,19 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 		return;	
 	}
 	
+	/**for (size_t i = 0; i < links.size(); i++) {
+		cout << links[i]->GetName() << ": " << endl;
+		cout << links[i]->GetLocalInertia() << endl;		
+		cout << links[i]->GetLocalMassFrame() << endl;
+		cout << "=================" << endl;
+		cout << "global com: " << links[i]->GetGlobalCOM() << endl;
+		cout << "mass: " << links[i]->GetInfo()._mass << endl;
+		cout << "static: " << links[i]->GetInfo()._bStatic << endl;
+		cout << "enabled: " << links[i]->GetInfo()._bIsEnabled << endl;
+		cout << "=================" << endl;		
+	}
+	sleep(10);*/
+	
 	std::vector<double> current_vel;
 	const std::vector<OpenRAVE::KinBody::JointPtr> joints(robot_to_use->GetJoints());
 	std::vector<OpenRAVE::dReal> input_torques(control);
@@ -295,12 +317,12 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	
 	//Enforce position and velocity limits
 	for (unsigned int i = 0; i < joints.size(); i++) {
-	    if (newJointValues[i] < jointsLowerPositionLimit_[i]) {
+	    /**if (newJointValues[i] < jointsLowerPositionLimit_[i]) {
 		    newJointValues[i] = jointsLowerPositionLimit_[i];
 		}
 		else if (newJointValues[i] > jointsUpperPositionLimit_[i]) {
 		    newJointValues[i] = jointsUpperPositionLimit_[i];
-		}
+		}*/
 
 		if (newJointVelocities[i] < jointsLowerVelocityLimit_[i]) {
 		    newJointVelocities[i] = jointsLowerVelocityLimit_[i];
