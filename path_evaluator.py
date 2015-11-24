@@ -86,8 +86,7 @@ class PathEvaluator:
     def is_terminal(self, state):                       
         ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
         ee_position = np.array([ee_position_arr[j] for j in xrange(len(ee_position_arr))])        
-        if np.linalg.norm(ee_position - self.goal_position) < self.goal_radius:
-            print "TERMINAL STATE " + str([state[i] for i in xrange(len(state))])                           
+        if np.linalg.norm(ee_position - self.goal_position) < self.goal_radius:                                   
             return True        
         return False        
     
@@ -246,6 +245,7 @@ class PathEvaluator:
                 control = v_double()
                 state[:] = state_path[i]
                 control[:] = control_path[i]
+                
                 
                 t0 = time.time()
                 

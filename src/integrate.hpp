@@ -28,6 +28,7 @@ namespace shared {
     	
     	void do_integration(std::vector<double> &x,
     			            std::vector<double> &control,
+    			            std::vector<double> &control_error,
     			            std::vector<double> &int_times,
     			            std::vector<double> &result) const;
     	
@@ -36,7 +37,7 @@ namespace shared {
     			                double t_e,
     			                std::vector<MatrixXd> &matrices) const;
     	
-    	MatrixXd get_F(const state_type &x, const state_type &rho) const;
+    	MatrixXd get_F(const state_type &x, const state_type &rho, const state_type &zeta) const;
     	
     	std::vector<double> getProcessMatricesSteadyStatesVec(std::vector<double> &x, double t_e) const;
     	
@@ -49,13 +50,13 @@ namespace shared {
     	std::vector<double> getResult();
     	
     private:
-MatrixXd getF0(const state_type &x, const state_type &rho) const; 
-MatrixXd getV0(const state_type &x, const state_type &rho) const; 
-MatrixXd getB0(const state_type &x, const state_type &rho) const; 
-MatrixXd getA0(const state_type &x, const state_type &rho) const; 
+MatrixXd getF0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
+MatrixXd getV0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
+MatrixXd getB0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
+MatrixXd getA0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
     	
     	// A fuction type of he form MatrixXd function(const state_type&) const
-        typedef MatrixXd ABFuncType(const state_type&, const state_type&) const; 
+        typedef MatrixXd ABFuncType(const state_type&, const state_type&, const state_type&) const; 
         
         // A member function pointer for the above declared member function type
     	typedef ABFuncType Integrate::* AB_funct;
@@ -70,7 +71,9 @@ MatrixXd getA0(const state_type &x, const state_type &rho) const;
     	
     	std::pair<Integrate::AB_funct, std::pair<Integrate::AB_funct, Integrate::AB_funct>> getClosestSteadyStateFunctions(int &idx) const;
     	
-    	mutable std::vector<double> rho;
+    	mutable std::vector<double> rho_;
+    	
+    	mutable std::vector<double> zeta_;
     	
     	mutable std::vector<double> xstar;
     	

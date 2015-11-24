@@ -49,18 +49,15 @@ class Test:
                                          g,
                                          viscous)        
         if self.simplifying:      
-            N = trigsimp(N)        
-        print "Inverting inertia matrix..."
+            N = trigsimp(N)
         t0 = time.time()
-        #M_inv = M.inv()
         f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho, self.zeta)
-        print "Inverting took " + str(time.time() - t0) + " seconds"        
-        
         print "Build taylor approximation" 
         steady_states = self.get_steady_states()
-        print "Get partial derivatives"           
+        print "Get partial derivatives"
+        t0 = time.time()           
         f, A, B, V = self.partial_derivatives(f, M_inv, C, N)
-        
+        print "t1 " + str(time.time() - t0)
           
         print "Clean cpp code"
         header_src = "src/integrate.hpp"
@@ -89,6 +86,31 @@ class Test:
             cmd = "cd src/build && cmake .. && make -j8"           
             os.system(cmd)
         print "Done"
+        
+    def test(self, A1, A2, B1, B2):
+        for i in xrange(len(self.q)):
+            A1 = A1.subs(self.q[i], 1.0)
+            A2 = A2.subs(self.q[i], 1.0)
+            B1 = B1.subs(self.q[i], 1.0)
+            B2 = B2.subs(self.q[i], 1.0)
+        for i in xrange(len(self.qdot)):
+            A1 = A1.subs(self.qdot[i], 1.0)
+            A2 = A2.subs(self.qdot[i], 1.0)
+            B1 = B1.subs(self.qdot[i], 1.0)
+            B2 = B2.subs(self.qdot[i], 1.0)
+        for i in xrange(len(self.rho)):
+            A1 = A1.subs(self.rho[i], 1.0)
+            A2 = A2.subs(self.rho[i], 1.0)
+            B1 = B1.subs(self.rho[i], 1.0)
+            B2 = B2.subs(self.rho[i], 1.0)
+        for i in xrange(len(self.zeta)):
+            A1 = A1.subs(self.zeta[i], 1.0)
+            A2 = A2.subs(self.zeta[i], 1.0)
+            B1 = B1.subs(self.zeta[i], 1.0)
+            B2 = B2.subs(self.zeta[i], 1.0)
+        print A1
+        print "================"
+        print A2
         
     def get_steady_states(self):
         steady_states = []             
@@ -401,7 +423,7 @@ class Test:
         idx2 = -1
         breaking = False    
         for i in xrange(len(lines)):
-            if "Integrate::get" + name + "(const state_type &x, const state_type &rho) const{" in lines[i]:                
+            if "Integrate::get" + name + "(const state_type &x, const state_type &rho, const state_type &zeta) const{" in lines[i]:                
                 idx1 = i + 1               
                 breaking = True
             elif "}" in lines[i]:
@@ -409,7 +431,7 @@ class Test:
                 if breaking:
                     break        
         if idx1 == -1:            
-            temp_lines.insert(0, "MatrixXd Integrate::get" + name + "(const state_type &x, const state_type &rho) const{ \n") 
+            temp_lines.insert(0, "MatrixXd Integrate::get" + name + "(const state_type &x, const state_type &rho, const state_type &zeta) const{ \n") 
             temp_lines.append("\n")
             temp_lines.append("} \n \n")                     
             lines[len(lines) - 2:len(lines) - 1] = temp_lines            
@@ -419,7 +441,7 @@ class Test:
             for i in xrange(len(lines_header)):
                 if "private:" in lines_header[i]:                    
                     idx = i
-            temp_lines_header.append("MatrixXd get" + str(name) + "(const state_type &x, const state_type &rho) const; \n")
+            temp_lines_header.append("MatrixXd get" + str(name) + "(const state_type &x, const state_type &rho, const state_type &zeta) const; \n")
             lines_header[idx+1:idx+1] = temp_lines_header
                 
         else:                  
@@ -487,56 +509,19 @@ class Test:
         B = B.col_join(C1)
         return f, A, B
     
-    def partial_derivatives2(self, f, M_inv, C, N):
-        r = Matrix([[self.rho[i]] for i in xrange(len(self.rho) - 1)])
-        x1 = Matrix([[self.q[i]] for i in xrange(len(self.q) - 1)])
-        x2 = Matrix([[self.qdot[i]] for i in xrange(len(self.qdot) - 1)])
-        z = Matrix([[self.zeta[i]] for i in xrange(len(self.zeta) - 1)])        
-        A1 = M_inv * r
-        A2 = M_inv * z
-        A3 = M_inv * (-C * x2)
-        A4 = M_inv * (-N)
+    def partial_derivatives3(self, f):
+        A1 = f.jacobian([self.q[i] for i in xrange(len(self.q) - 1)])
+        A2 = f.jacobian([self.qdot[i] for i in xrange(len(self.qdot) - 1)])
+        B = f.jacobian([self.rho[i] for i in xrange(len(self.rho) - 1)])
+        C = f.jacobian([self.zeta[i] for i in xrange(len(self.rho) - 1)])
         
-        A1_x1 = A1.jacobian([self.q[i] for i in xrange(len(self.q) - 1)])
-        A2_x1 = A2.jacobian([self.q[i] for i in xrange(len(self.q) - 1)])
-        A3_x1 = A3.jacobian([self.q[i] for i in xrange(len(self.q) - 1)])
-        A4_x1 = A4.jacobian([self.q[i] for i in xrange(len(self.q) - 1)])        
-        
-        A3_x2 = A3.jacobian([self.qdot[i] for i in xrange(len(self.qdot) - 1)])
-        A4_x2 = A4.jacobian([self.qdot[i] for i in xrange(len(self.qdot) - 1)])
-        
-        A1_r = A1.jacobian([self.rho[i] for i in xrange(len(self.rho) - 1)])
-        A2_z = A2.jacobian([self.zeta[i] for i in xrange(len(self.rho) - 1)])
-        
-        A = zeros(len(self.q) - 1).col_join(A1_x1 + A2_x1 + A3_x1 + A4_x1)
-        B = eye(len(self.q) - 1).col_join(A3_x2 + A4_x2)
-        A = A.row_join(B)
-        
-        B = zeros(len(self.q) - 1).col_join(A1_r)
-        C = zeros(len(self.q) - 1).col_join(A2_z)        
-        for i in xrange(len(self.q) - 1):
-            f = f.subs(self.q[i], self.qstar[i])
-            A = A.subs(self.q[i], self.qstar[i])
-            B = B.subs(self.q[i], self.qstar[i])
-            C = C.subs(self.q[i], self.qstar[i])
-            
-            f = f.subs(self.qdot[i], self.qdotstar[i])
-            A = A.subs(self.qdot[i], self.qdotstar[i])
-            B = B.subs(self.qdot[i], self.qdotstar[i])
-            C = C.subs(self.qdot[i], self.qdotstar[i])
-            
-            f = f.subs(self.rho[i], self.rhostar[i])
-            A = A.subs(self.rho[i], self.rhostar[i])
-            B = B.subs(self.rho[i], self.rhostar[i])
-            C = C.subs(self.rho[i], self.rhostar[i])
-            
-            f = f.subs(self.zeta[i], 0)
-            A = A.subs(self.zeta[i], 0)
-            B = B.subs(self.zeta[i], 0)
-            C = C.subs(self.zeta[i], 0)
-        
-        
+        A = A1.row_join(A2)
+        for i in xrange(len(self.zeta)):
+            A = A.subs(self.zeta[i], 0.0)
+            B = B.subs(self.zeta[i], 0.0)
+            C = C.subs(self.zeta[i], 0.0)
         return f, A, B, C
+        
     
     def partial_derivatives(self, f, M_inv, C, N):        
         r = Matrix([[self.rho[i]] for i in xrange(len(self.rho) - 1)])
@@ -569,8 +554,7 @@ class Test:
         for i in xrange(len(self.zeta)):
             A = A.subs(self.zeta[i], 0.0)
             B = B.subs(self.zeta[i], 0.0)
-            C = C.subs(self.zeta[i], 0.0)
-            f = f.subs(self.zeta[i], 0.0)
+            C = C.subs(self.zeta[i], 0.0)            
         
         return f, A, B, C
         
@@ -584,7 +568,8 @@ class Test:
         V = 0.0                          
         for i in xrange(len(Ocs)):            
             el = ms[i + 1] * g.transpose() * Ocs[i]                                                
-            V += el[0]               
+            V += el[0]
+        print V               
         N = 0
         if self.simplifying:    
             N = Matrix([[trigsimp(diff(V, thetas[i]))] for i in xrange(len(thetas) - 1)]) 

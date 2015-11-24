@@ -213,7 +213,7 @@ class Simulator:
                                                  Bs[i], 
                                                  Vs[i], 
                                                  Ms[i])
-                self.apply_control2(x_dash, u_dash, xs[i], xs[i+1], us[i], As[i], Bs[i], Vs[i], Ms[i])
+                #self.apply_control2(x_dash, u_dash, xs[i], xs[i+1], us[i], As[i], Bs[i], Vs[i], Ms[i])
                 t_e = time.time() - t0
                 print "u " + str(u)
                 print "us[i] " + str(us[i])
@@ -297,6 +297,7 @@ class Simulator:
         print "========================================"
         print "======= Simulation done"
         print "========================================"
+        
         return (x_true, 
                 x_tilde, 
                 x_estimate, 
@@ -471,7 +472,7 @@ class Simulator:
             control_error[:] = ce 
             result = v_double()
             vec = []
-            num_prop_runs = 10
+            num_prop_runs = 1
             if self.show_viewer:
                 num_prop_runs = 1
             for i in xrange(num_prop_runs):          
@@ -484,7 +485,8 @@ class Simulator:
                                           control_error,
                                           self.simulation_step_size,
                                           self.control_duration,
-                                          result)                    
+                                          result)
+                time.sleep(self.control_duration)                    
                 x_new = [result[i] for i in xrange(len(result))]                
                 vec.append(np.array(x_new))                
             n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(vec))            

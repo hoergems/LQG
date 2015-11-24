@@ -113,9 +113,6 @@ void StatePropagator::propagate(const ompl::base::State *state,
     	//input_torque.push_back(1.0);
     }
     
-    current_joint_values.push_back(0.0);
-    current_joint_velocities.push_back(0.0);
-    
     std::vector<double> propagation_result;
     propagator_->propagate_nonlinear(current_joint_values,
     		                         current_joint_velocities,

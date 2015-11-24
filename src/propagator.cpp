@@ -79,8 +79,8 @@ bool Propagator::setup_py(std::string model_file,
     	jointsLowerPositionLimit_.push_back(lower_limit[0]);
     	jointsUpperPositionLimit_.push_back(upper_limit[0]);
     	
-    	jointsLowerVelocityLimit_.push_back(-joints[i]->GetMaxTorque());
-    	jointsUpperVelocityLimit_.push_back(joints[i]->GetMaxTorque());
+    	jointsLowerVelocityLimit_.push_back(-joints[i]->GetMaxVel());
+    	jointsUpperVelocityLimit_.push_back(joints[i]->GetMaxVel());
     }
     
     if (show_viewer) {
@@ -148,7 +148,7 @@ void Propagator::propagate_linear(const std::vector<double> &current_state,
 		control_vec.push_back(k);
 	}
 	
-	MatrixXd f = integrator_->get_F(state_vec, control_vec);	
+	MatrixXd f = integrator_->get_F(state_vec, control_vec, control_error_vec);	
 	std::vector<MatrixXd> ABV;
 	integrator_->getProcessMatrices(state_vec, control_vec, duration, ABV);	
 	VectorXd state_eigen_vec(state_vec.size());
@@ -216,11 +216,14 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	int num_steps = duration / simulation_step_size;
 	boost::timer t;
 	
+	/**for (size_t i = 0; i < input_torques.size(); i++) {
+		input_torques2[i] = 1.0;
+	}*/
 	/**robot_to_use->GetDOFVelocities(current_vel);
 	damper_->damp_torques(current_vel,
 		    		      damped_torques);*/
 	
-	for (size_t i = 0; i < input_torques.size(); i++) {
+	/**for (size_t i = 0; i < input_torques.size(); i++) {
 		input_torques2[i] = 1.0;
 	}
 	for (unsigned int i = 0; i < num_steps; i++) {
@@ -241,32 +244,23 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	    	usleep(1000000 * simulation_step_size);
 	    }	    
 	}
-	cout << "elapsed1 " << t.elapsed() << endl;
+	cout << "elapsed1 " << t.elapsed() << endl; */
 	
 	std::vector<OpenRAVE::dReal> newJointValues;
 	std::vector<OpenRAVE::dReal> newJointVelocities;	
-	robot_to_use->GetDOFValues(newJointValues);
-	robot_to_use->GetDOFVelocities(newJointVelocities);
+	//robot_to_use->GetDOFValues(newJointValues);
+	//robot_to_use->GetDOFVelocities(newJointVelocities);
 	
 	std::vector<double> state;
 	
-	for (size_t i = 0; i < current_joint_values.size()-1; i++) {
+	for (size_t i = 0; i < current_joint_values.size(); i++) {
 		state.push_back(current_joint_values[i]);
 	}
-	for (size_t i = 0; i < current_joint_values.size()-1; i++) {
+	for (size_t i = 0; i < current_joint_values.size(); i++) {
 		state.push_back(current_joint_velocities[i]);
 	}
 	
-	
-	cout << "current joint values: ";
-	for (auto &k: current_joint_values) {
-		cout << k << ", ";
-	}
-	cout <<endl;
-	
-	cout << current_joint_values.size() << endl;
-	cout << current_joint_velocities.size() << endl;
-	cout << "state: ";
+	/**cout << "state: ";
 	for (auto &k: state) {
 		cout << k << ", ";
 	}
@@ -278,28 +272,26 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	}
 	cout << endl;
 	
+	cout << "control error: ";
+	for (auto &k: control_error_vec) {
+		cout << k << ", ";
+	}
+	cout << endl;*/
+	
 	std::vector<double> ress;
-	std::vector<double> inte_times({0.0, duration, simulation_step_size});
-	boost::timer t2;
-	integrator_->do_integration(state, input_torques2, inte_times, ress);
-	cout << "elapsed2 " << t2.elapsed() << endl;
+	std::vector<double> inte_times({0.0, duration, simulation_step_size});	
+	integrator_->do_integration(state, input_torques2, control_error_vec, inte_times, ress);
 	
-	cout << "res1: ";
-	for (auto &k: newJointValues) {
-		cout << k << ", ";
+	
+	for (size_t i = 0; i < ress.size() / 2; i++) {
+		newJointValues.push_back(ress[i]);		
 	}
 	
-	for (auto &k: newJointVelocities) {
-		cout << k << ", ";
+	for (size_t i = ress.size() / 2; i < ress.size(); i++) {
+		newJointVelocities.push_back(ress[i]);		
 	}
-	cout << endl;
-	
-	cout << "res2: ";
-	for (auto &k: ress) {
-		cout << k << ", ";
-	}
-	cout << endl;
-	sleep(1.0);
+	newJointValues.push_back(0);
+	newJointVelocities.push_back(0);
 	
 	//Enforce position and velocity limits
 	for (unsigned int i = 0; i < joints.size(); i++) {
@@ -325,7 +317,13 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	
 	for (size_t i = 0; i < joints.size(); i++) {
 		result.push_back(newJointVelocities[i]);
-	}	
+	}
+	
+	robot_to_use->SetDOFValues(newJointValues);
+	robot_to_use->SetDOFVelocities(newJointVelocities);
+	//if (show_viewer_) {
+    //    usleep(1000000 * duration);
+    //}
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(propagate_nonlinear_overload, propagate_nonlinear, 7, 9);
