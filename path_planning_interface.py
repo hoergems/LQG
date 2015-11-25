@@ -187,12 +187,16 @@ class PathPlanningInterface:
         for i in xrange(len(processes)):
             processes[i].daemon = True
             processes[i].start()
+        curr_len = 0
         while True:
             try:
                 res_paths.append(path_queue.get_nowait())                
             except:                
                 pass
-            elapsed = time.time() - t0                    
+            elapsed = time.time() - t0 
+            if len(res_paths) != curr_len:
+                curr_len = len(res_paths)
+                print "GOT ONEEEEEEEEEEEEEEEEEEEEE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                   
             if len(res_paths) == num:
                 break
             if timeout > 0.0:
@@ -230,7 +234,8 @@ class PathPlanningInterface:
     def construct_path(self, obstacles, queue, joint_constraints,):        
         while True:
             xs, us, zs = self._construct(obstacles, joint_constraints)
-            if not len(xs) == 0:            
+            if not len(xs) == 0: 
+                print "PUTTTTT"           
                 queue.put((xs, us, zs))
         
     def _construct(self, obstacles, joint_constraints):
