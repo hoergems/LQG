@@ -11,7 +11,7 @@ path_timeout: 1000.0
 use_linear_path: False
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 50000
+num_simulation_runs: 100
 
 # Dimension of the workspace (2 = 2D, 3 = 3D)
 workspace_dimension: 2
@@ -33,16 +33,16 @@ num_bins: 201
 ## Uncertainty parameters
 #################################################
 # The minimum joint state covariance
-min_covariance: 0.1
+min_covariance: 1.0
 
 # The maximum joint state covariance
-max_covariance: 0.1
+max_covariance: 1.0
 
 # The number of covariance steps
 covariance_steps: 1
 
 # The observation covariance
-observation_covariance: 0.0000001
+observation_covariance: 0.00001
 
 ###################################################
 

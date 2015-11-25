@@ -179,16 +179,16 @@ class LQG:
                                   config['workspace_dimension'], 
                                   self.joint_constraints,
                                   self.enforce_constraints,
-                                  self.max_velocity)
+                                  self.max_velocity,
+                                  self.delta_t,
+                                  self.show_viewer,
+                                  urdf_model_file,
+                                  environment_file,
+                                  self.coulomb,
+                                  self.viscous)
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
                 if self.dynamic_problem:
-                    sim.setup_dynamic_problem(urdf_model_file,
-                                              environment_file,
-                                              self.coulomb,
-                                              self.viscous,
-                                              self.delta_t,
-                                              self.simulation_step_size,
-                                              self.show_viewer)
+                    sim.setup_dynamic_problem(self.simulation_step_size)
                 
                 successes = 0
                 num_collisions = 0 
@@ -343,9 +343,9 @@ class LQG:
         #B = np.vstack((B, np.zeros((num_links, num_links))))        
         V = np.identity(num_links * 2)
         W = np.identity(num_links * 2)
-        C = 200.0 * np.identity(num_links * 2)
+        C = 5000.0 * np.identity(num_links * 2)
         
-        D = 2.0 * np.identity(num_links * 2)
+        D = 1.0 * np.identity(num_links * 2)
         #D  = np.vstack((D, np.zeros((num_links, num_links))))
         
         #D = 1.0 * np.identity(num_links * 2)

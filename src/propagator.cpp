@@ -120,6 +120,41 @@ OpenRAVE::RobotBasePtr Propagator::getRobot() {
     }   
 }
 
+
+void Propagator::update_robot_values(const std::vector<double> &current_joint_values,
+		                             const std::vector<double> &current_joint_velocities,									 
+									 OpenRAVE::RobotBasePtr robot=nullptr) {
+	OpenRAVE::RobotBasePtr robot_to_use(nullptr);
+			
+	if (robot == nullptr) {
+		robot_to_use = getRobot();
+	}
+	else {
+		robot_to_use = robot;
+	}
+	if (robot_to_use == nullptr) {
+		cout << "Propagator: Error: Environment or robot has not been initialized or passed as argument. Can't propagate the state" << endl;
+		return;	
+	}
+	
+	std::vector<OpenRAVE::dReal> newJointValues;
+		
+	std::vector<OpenRAVE::dReal> newJointVelocities;
+	for (size_t i = 0; i < current_joint_values.size(); i++) {
+		newJointValues.push_back(current_joint_values[i]);		
+	}
+		
+	for (size_t i = 0; i < current_joint_velocities.size(); i++) {
+		newJointVelocities.push_back(current_joint_velocities[i]);		
+	}
+	
+	newJointValues.push_back(0);
+	newJointVelocities.push_back(0);
+	
+	robot_to_use->SetDOFValues(newJointValues);
+    robot_to_use->SetDOFVelocities(newJointVelocities);	
+}
+
 void Propagator::propagate_linear(const std::vector<double> &x_dash,
                                   const std::vector<double> &u_dash,
 								  const std::vector<double> &x_star_current,
@@ -131,32 +166,10 @@ void Propagator::propagate_linear(const std::vector<double> &x_dash,
                                   OpenRAVE::EnvironmentBasePtr environment=nullptr,
                                   OpenRAVE::RobotBasePtr robot=nullptr) {
 	
-	OpenRAVE::EnvironmentBasePtr env_to_use(nullptr);
-	OpenRAVE::RobotBasePtr robot_to_use(nullptr);
-	if (environment == nullptr) {
-		env_to_use = env_;
-	}
-	else {
-		env_to_use = environment;
-	}
-		
-	if (robot == nullptr) {
-		robot_to_use = getRobot();
-	}
-	else {
-		robot_to_use = robot;
-	}
-	if (env_to_use == nullptr || robot_to_use == nullptr) {
-		cout << "Propagator: Error: Environment or robot has not been initialized or passed as argument. Can't propagate the state" << endl;
-		return;	
-	}
-	
 	std::vector<double> x_dash_vec;
 	std::vector<double> u_dash_vec;
 	std::vector<double> x_star_vec;
 	std::vector<double> u_star_vec;
-	
-	
 	
 	for (auto &k: x_dash) {
 		x_dash_vec.push_back(k);
@@ -386,6 +399,7 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(propagate_nonlinear_overload, propagate_nonlinear, 7, 9);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(propagate_linear_overload, propagate_linear, 8, 10);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(update_robot_values_overload, update_robot_values, 2, 3);
 
 BOOST_PYTHON_MODULE(libpropagator) {
     using namespace boost::python;
@@ -396,6 +410,7 @@ BOOST_PYTHON_MODULE(libpropagator) {
 							   .def("setup", &Propagator::setup_py)
 							   .def("propagate", &Propagator::propagate_nonlinear, propagate_nonlinear_overload())
 							   .def("propagateLinear", &Propagator::propagate_linear, propagate_linear_overload())
+							   .def("updateRobotValues", &Propagator::update_robot_values, update_robot_values_overload())
 		                       
 										            		 
                         //.def("doIntegration", &Integrate::do_integration)                        

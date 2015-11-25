@@ -195,8 +195,7 @@ class PathPlanningInterface:
                 pass
             elapsed = time.time() - t0 
             if len(res_paths) != curr_len:
-                curr_len = len(res_paths)
-                print "GOT ONEEEEEEEEEEEEEEEEEEEEE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                   
+                curr_len = len(res_paths)                                   
             if len(res_paths) == num:
                 break
             if timeout > 0.0:
@@ -234,10 +233,8 @@ class PathPlanningInterface:
     def construct_path(self, obstacles, queue, joint_constraints,):        
         while True:
             xs, us, zs = self._construct(obstacles, joint_constraints)
-            if not len(xs) == 0: 
-                print "PUTTTTTING"                           
+            if not len(xs) == 0:          
                 queue.put((xs, us, zs))
-                print "PUT" 
         
     def _construct(self, obstacles, joint_constraints):
         path_planner2 = None        

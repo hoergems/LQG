@@ -32,7 +32,13 @@ class Simulator:
                       workspace_dimension,
                       joint_constraints,
                       enforce_constraints,
-                      joint_velocity_limit):
+                      joint_velocity_limit,
+                      control_duration,
+                      show_viewer,
+                      model_file,
+                      env_file,
+                      coulomb,
+                      viscous):
         self.A = A
         self.B = B
         self.C = C
@@ -52,25 +58,18 @@ class Simulator:
         self.joint_velocity_limit = joint_velocity_limit
         self.dynamic_problem = False
         self.integrate = Integrate()
-        
-    def setup_dynamic_problem(self, 
-                              model_file,
-                              environment_file,
-                              coulomb,
-                              viscous,
-                              control_duration,
-                              simulation_step_size,
-                              show_viewer):
-        self.dynamic_problem = True
         self.show_viewer = show_viewer
-        self.control_duration = control_duration
-        
         self.propagator = Propagator()        
         self.propagator.setup(model_file,
-                              environment_file,
+                              env_file,
                               coulomb,
                               viscous,
                               show_viewer)
+        self.control_duration = control_duration
+        
+    def setup_dynamic_problem(self,                           
+                              simulation_step_size):
+        self.dynamic_problem = True        
         self.simulation_step_size = simulation_step_size        
         
     def setup_reward_function(self, discount_factor, step_penalty, illegal_move_penalty, exit_reward):
@@ -213,7 +212,7 @@ class Simulator:
                                                  Bs[i], 
                                                  Vs[i], 
                                                  Ms[i])
-                self.apply_control2(x_dash, u_dash, xs[i], xs[i+1], us[i], As[i], Bs[i], Vs[i], Ms[i])
+                #self.apply_control2(x_dash, u_dash, xs[i], xs[i+1], us[i], As[i], Bs[i], Vs[i], Ms[i])
                 t_e = time.time() - t0
                 
                 discount = np.power(self.discount_factor, current_step + i)
@@ -262,8 +261,7 @@ class Simulator:
                 estimated_states.append(x_estimate)
                 estimated_covariances.append(P_t)
                 
-                if self.is_terminal(ee_position):
-                    print "IS TERMINAL!!!!!!!!!!!!!!!!!"
+                if self.is_terminal(ee_position):                    
                     history_entries.append(HistoryEntry(current_step + i + 1,
                                                         x_true, 
                                                         x_estimate, 
@@ -284,9 +282,9 @@ class Simulator:
                 history_entries[-1].set_estimate_collided(estimate_collided)
                 history_entries[-1].set_terminal(terminal_state_reached)
                 #time.sleep(1)
-        print "========================================"
-        print "======= Simulation done"
-        print "========================================"
+        #print "========================================"
+        #print "======= Simulation done"
+        #print "========================================"
         
         return (x_true, 
                 x_tilde, 
@@ -476,17 +474,22 @@ class Simulator:
                                       control_error,
                                       self.simulation_step_size,
                                       self.control_duration,
-                                      result)
-            if self.show_viewer:
-                time.sleep(self.control_duration)                    
-            x_new = np.array([result[i] for i in xrange(len(result))])                
-                        
-            return x_new  
+                                      result)                               
+            x_new = np.array([result[i] for i in xrange(len(result))])
         else:               
             m = self.get_random_joint_angles([0.0 for i in xrange(2 * len(self.link_dimensions))], M)
             x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, m)
             if self.enforce_constraints:            
                 x_new = self.check_constraints(x_new)
+        if self.show_viewer:
+            cjvals = v_double()
+            cjvels = v_double()
+            cjvals_arr = [x_new[i] for i in xrange(len(x_new) / 2)]
+            cjvels_arr = [x_new[i] for i in xrange(len(x_new) / 2, len(x_new))]
+            cjvals[:] = cjvals_arr
+            cjvels[:] = cjvels_arr
+            self.propagator.updateRobotValues(cjvals, cjvels)
+            time.sleep(self.control_duration) 
         return x_new
     
     def sample_control_error(self, M):

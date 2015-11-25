@@ -53,6 +53,10 @@ namespace shared {
 		         OpenRAVE::EnvironmentBasePtr environment,
 		         OpenRAVE::RobotBasePtr robot);
 	   
+	   void update_robot_values(const std::vector<double> &current_joint_values,
+	   	   		                const std::vector<double> &current_joint_velocities,									 
+	   	   					    OpenRAVE::RobotBasePtr robot);
+	   
    private:
 	   OpenRAVE::RobotBasePtr getRobot();
 	   
@@ -71,6 +75,7 @@ namespace shared {
 	   OpenRAVE::RobotBasePtr robot_;
 	   
 	   bool show_viewer_;
+	   
    };
 
 }
