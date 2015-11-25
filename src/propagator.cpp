@@ -120,13 +120,16 @@ OpenRAVE::RobotBasePtr Propagator::getRobot() {
     }   
 }
 
-void Propagator::propagate_linear(const std::vector<double> &current_state,
-           std::vector<double> &control,
-           std::vector<double> &control_error_vec,	   		                 
-           const double duration,
-           std::vector<double> &result,
-           OpenRAVE::EnvironmentBasePtr environment=nullptr,
-           OpenRAVE::RobotBasePtr robot=nullptr) {
+void Propagator::propagate_linear(const std::vector<double> &x_dash,
+                                  const std::vector<double> &u_dash,
+								  const std::vector<double> &x_star_current,
+								  const std::vector<double> &u_star_current,
+								  const std::vector<double> &x_star_next,								  
+                                  const std::vector<double> &control_error_vec,	   		                 
+                                  const double duration,
+                                  std::vector<double> &result,
+                                  OpenRAVE::EnvironmentBasePtr environment=nullptr,
+                                  OpenRAVE::RobotBasePtr robot=nullptr) {
 	
 	OpenRAVE::EnvironmentBasePtr env_to_use(nullptr);
 	OpenRAVE::RobotBasePtr robot_to_use(nullptr);
@@ -148,37 +151,54 @@ void Propagator::propagate_linear(const std::vector<double> &current_state,
 		return;	
 	}
 	
-	std::vector<double> state_vec;
-	std::vector<double> control_vec;
-	for (auto &k: current_state) {
-		state_vec.push_back(k);
+	std::vector<double> x_dash_vec;
+	std::vector<double> u_dash_vec;
+	std::vector<double> x_star_vec;
+	std::vector<double> u_star_vec;
+	
+	
+	
+	for (auto &k: x_dash) {
+		x_dash_vec.push_back(k);
 	}
-	for (auto &k: control) {
-		control_vec.push_back(k);
+	for (auto &k: u_dash) {
+		u_dash_vec.push_back(k);
+	}	
+	for (auto &k: x_star_current) {
+		x_star_vec.push_back(k);
+	}
+	for (auto &k: u_star_current) {
+		u_star_vec.push_back(k);
 	}
 	
-	MatrixXd f = integrator_->get_F(state_vec, control_vec, control_error_vec);	
+	VectorXd x_dash_eigen_vec(x_dash_vec.size());
+	VectorXd u_dash_eigen_vec(u_dash_vec.size());
+	VectorXd zeta_eigen_vec(control_error_vec.size());
+	VectorXd x_star_next_eigen_vec(x_star_next.size());
+	
+	for (size_t i = 0; i < x_dash_vec.size(); i++) {
+		x_dash_eigen_vec[i] = x_dash_vec[i];
+	}
+	for (size_t i = 0; i < u_dash_vec.size(); i++) {
+		u_dash_eigen_vec[i] = u_dash_vec[i];
+	}
+	for (size_t i = 0; i < zeta_eigen_vec.size(); i++) {
+		zeta_eigen_vec[i] = control_error_vec[i];
+	}
+	for (size_t i = 0; i < x_star_next.size(); i++) {
+		x_star_next_eigen_vec[i] = x_star_next[i];
+	}
+	
 	std::vector<MatrixXd> ABV;
-	integrator_->getProcessMatrices(state_vec, control_vec, duration, ABV);	
-	VectorXd state_eigen_vec(state_vec.size());
-	VectorXd control_eigen_vec(control_vec.size());
-	
-	VectorXd zeta_eigen_vec(state_vec.size());
-	VectorXd res(state_vec.size());
-	for (size_t i = 0; i < state_eigen_vec.size(); i++) {
-		state_eigen_vec[i] = state_vec[i];
-		zeta_eigen_vec[i] = 0;
-	}
-	
-	for (size_t i = 0; i < control_eigen_vec.size(); i++) {
-		control_eigen_vec[i] = control_vec[i];
-	}
-	
-    //res = f + ABV[0] * state_eigen_vec + ABV[1] * control_eigen_vec + ABV[2] * zeta_eigen_vec;
-	res = f + ABV[0] * state_eigen_vec + ABV[1] * control_eigen_vec + ABV[2] * zeta_eigen_vec;
-	
-	for (size_t i = 0; i < res.size(); i++) {
-		result.push_back(res[i]);
+	VectorXd x_dash_next_eigen_vec(x_dash_vec.size());
+	VectorXd res_eigen_vec(x_dash_vec.size());
+	integrator_->getProcessMatrices(x_star_vec, u_star_vec, duration, ABV);	
+		
+	x_dash_next_eigen_vec = ABV[0] * x_dash_eigen_vec + ABV[1] * u_dash_eigen_vec + ABV[2] * zeta_eigen_vec;
+	res_eigen_vec = x_dash_next_eigen_vec + x_star_next_eigen_vec;
+    
+	for (size_t i = 0; i < res_eigen_vec.size(); i++) {
+		result.push_back(res_eigen_vec[i]);
 	}
 	
 }
@@ -365,7 +385,7 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(propagate_nonlinear_overload, propagate_nonlinear, 7, 9);
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(propagate_linear_overload, propagate_linear, 5, 7);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(propagate_linear_overload, propagate_linear, 8, 10);
 
 BOOST_PYTHON_MODULE(libpropagator) {
     using namespace boost::python;

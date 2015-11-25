@@ -189,7 +189,7 @@ class Simulator:
         Ls = kalman.compute_gain(As, Bs, self.C, self.D, len(xs) - 1)
         logging.info("Simulator: Executing for " + str(n_steps) + " steps") 
         estimated_states = []
-        estimated_covariances = []                
+        estimated_covariances = []
         for i in xrange(n_steps):                        
             if not (terminal_state_reached and self.stop_when_terminal):                
                 history_entries.append(HistoryEntry(current_step + i,
@@ -213,15 +213,8 @@ class Simulator:
                                                  Bs[i], 
                                                  Vs[i], 
                                                  Ms[i])
-                #self.apply_control2(x_dash, u_dash, xs[i], xs[i+1], us[i], As[i], Bs[i], Vs[i], Ms[i])
+                self.apply_control2(x_dash, u_dash, xs[i], xs[i+1], us[i], As[i], Bs[i], Vs[i], Ms[i])
                 t_e = time.time() - t0
-                print "u " + str(u)
-                print "us[i] " + str(us[i])
-                print "xs[i] " + str(xs[i + 1])
-                print "x_true_temp " + str(x_true_temp)
-                #print "integrating took " + str(t_e) + " seconds"
-                print "===================================== "
-                
                 
                 discount = np.power(self.discount_factor, current_step + i)
                 collided = False        
@@ -236,7 +229,7 @@ class Simulator:
                     x_true = x_true_temp               
                 x_dash = np.subtract(x_true, xs[i + 1])
                 state = v_double()
-                state[:] = [x_true[i] for i in xrange(len(x_true) / 2)]                  
+                state[:] = [x_true[j] for j in xrange(len(x_true) / 2)]                  
                 ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
                 ee_position = np.array([ee_position_arr[j] for j in xrange(len(ee_position_arr))])
                 logging.info("Simulator: Current end-effector position is " + str(ee_position))                                                
@@ -256,11 +249,8 @@ class Simulator:
                                                     P_dash, 
                                                     Ws[i], 
                                                     Ns[i], 
-                                                    2 * len(self.link_dimensions))                
+                                                    2 * len(self.link_dimensions))                            
                 x_estimate_new = x_tilde + xs[i + 1]
-                #print "x_estimate " + str(x_estimate_new)
-                #sleep
-                
                 if self.enforce_constraints:     
                     x_estimate_new = self.check_constraints(x_estimate_new) 
                 estimate_collided = True                                       
@@ -355,8 +345,7 @@ class Simulator:
             return False
     
     def is_terminal(self, ee_position):
-        norm = np.linalg.norm(ee_position - self.goal_position)
-        print "dist " + str(norm)        
+        norm = np.linalg.norm(ee_position - self.goal_position)               
         if norm - 0.01 <= self.goal_radius:                       
             return True
         return False
@@ -364,78 +353,99 @@ class Simulator:
     def apply_control2(self, x_dash, u_dash, x_star, x_star2, u_star, A, B, V, M):
         x = x_dash + x_star 
         u = u_dash + u_star
+        current_joint_values = [x[i] for i in xrange(len(x) / 2)]
+        current_joint_velocities = [x[i] for i in xrange(len(x) / 2, len(x))]
         
-        state = v_double()
+        cjvalues = v_double()
+        cjvelocities = v_double()
         control = v_double()
-        state[:] = [x[i] for i in xrange(len(x))]
-        control[:] = [u[i] for i in xrange(len(u))]
-                
-        t0 = time.time()
-        A = self.integrate.getProcessMatrices(state, control, self.control_duration)                
-        Matr_list = [A[i] for i in xrange(len(A))]
-                
-        A_list = np.array([Matr_list[i] for i in xrange(len(state)**2)])
-                           
-        B_list = np.array([Matr_list[i] for i in xrange(len(state)**2, 2 * len(state)**2)])
-                              
-        V_list = np.array([Matr_list[i] for i in xrange(2 * len(state)**2, 
-                                                                3 * len(state)**2)])
-               
-        A = A_list.reshape(len(state), len(state)).T                
-        V = V_list.reshape(len(state), len(state)).T
-        B = B_list.reshape(len(state), len(state)).T
-        print "Got linear matrices in " + str(time.time() - t0) + " seconds"
-        
-        current_joint_values = v_double()
-        current_joint_velocities = v_double()
-        
-        current_joint_values[:] = [x[i] for i in xrange(len(self.link_dimensions))]
-        current_joint_velocities[:] = [x[i + len(self.link_dimensions)] for i in xrange(len(self.link_dimensions))]        
+        control_star = v_double()
         control_error = v_double()
-        ce = self.sample_control_error(M)
-            
-        control_error[:] = ce 
-        t0 = time.time()
         result = v_double()
-        vec = []
-        num_prop_runs = 1
-        #self.control_duration = 0.00001
-        for i in xrange(num_prop_runs):          
-            result = v_double()
-            cjv = [current_joint_values[j] for j in xrange(len(current_joint_values))]
-            cjv.extend([current_joint_velocities[j] for j in xrange(len(current_joint_velocities))])
-            self.propagator.propagate(current_joint_values,
-                                      current_joint_velocities,
-                                      control,
-                                      control_error,
-                                      self.simulation_step_size,
-                                      self.control_duration,
-                                      result)                    
-            x_new = [result[i] for i in xrange(len(result))]                
-            vec.append(np.array(x_new))                
-            n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(vec))            
-            res = [np.asscalar(mean[i]) for i in xrange(len(mean))]           
+        cjvalues[:] = current_joint_values
+        cjvelocities[:] = current_joint_velocities
+        control[:] = u
+        
+        ce = self.sample_control_error(M)
+        control_error[:] = ce
+        control_star[:] = u_star
         
         
-        print "Propagated in " + str(time.time() - t0) + " seconds"
-        delta_x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, ce)
-        x_new_2 = delta_x_new + x_star2        
+        
+        cjv = [x[j] for j in xrange(len(x) / 2)]
+        cjv.extend([[j] for j in xrange(len(x)/2, len(x))])
+        self.propagator.propagate(cjvalues,
+                                  cjvelocities,
+                                  control,
+                                  control_error,
+                                  self.simulation_step_size,
+                                  self.control_duration,
+                                  result)
+                           
+        x_new1 = np.array([result[i] for i in xrange(len(result))])
+        
+        '''
+        Now the linear state
+        '''
+        state_star = v_double()        
+        state_star[:] = [x_star[i] for i in xrange(len(x))]        
+        
+        An = self.integrate.getProcessMatrices(state_star, control_star, self.control_duration)                
+        Matr_list = [An[i] for i in xrange(len(An))]
+                
+        A_list = np.array([Matr_list[i] for i in xrange(len(state_star)**2)])
+                           
+        B_list = np.array([Matr_list[i] for i in xrange(len(state_star)**2, 2 * len(state_star)**2)])
+                              
+        V_list = np.array([Matr_list[i] for i in xrange(2 * len(state_star)**2, 
+                                                        3 * len(state_star)**2)])
+               
+        A2 = A_list.reshape(len(state_star), len(state_star)).T                
+        V2 = V_list.reshape(len(state_star), len(state_star)).T
+        B2 = B_list.reshape(len(state_star), len(state_star)).T
+        
+        delta_x_new = np.dot(A2, x_dash) + np.dot(B2, u_dash) + np.dot(V2, ce)
+        x_new2 = delta_x_new + x_star2
+        
+        dist = 0.0
+        for i in xrange(len(x_new1)):
+            dist += np.square(x_new1[i] - x_new2[i])
+        dist = np.sqrt(dist)
         
         
-        print ""
+        x_dash_vec = v_double()
+        x_dash_vec[:] = x_dash
+        u_dash_vec = v_double()
+        u_dash_vec[:] = u_dash
+        x_star_current_vec = v_double()
+        x_star_current_vec[:] = x_star
+        x_star_next_vec = v_double()
+        x_star_next_vec[:] = x_star2
+        u_star_current_vec = v_double()
+        u_star_current_vec[:] = u_star
+        result_vec = v_double()
+        self.propagator.propagateLinear(x_dash_vec,
+                                        u_dash_vec,
+                                        x_star_current_vec,
+                                        u_star_current_vec,
+                                        x_star_next_vec,
+                                        control_error,
+                                        self.control_duration,
+                                        result_vec)
+        x_new3 = [result_vec[i] for i in xrange(len(result_vec))]
+        
         print "x_dash " + str(x_dash)
         print ""
         print "u_dash " + str(u_dash)
         print ""
-        print "x_new1 " + str(res)
-        print ""
-        print "delta_x_new " + str(delta_x_new)
-        print ""
-        print "x_new2 " + str(x_new_2)       
-        sum = 0.0
-        for i in xrange(len(res)):
-            sum += np.square(res[i] - x_new_2[i])
-        print "dist " + str(np.sqrt(sum))
+        print "x_new1 " + str(x_new1)
+        print " "
+        print "x_new2 " + str(x_new2)
+        print " "
+        print "x_new3 " + str(x_new3)
+        print " "
+        print "dist " + str(dist)
+        print "======================================="
         time.sleep(0.5)
         
        
@@ -456,27 +466,22 @@ class Simulator:
             
             control_error[:] = ce 
             result = v_double()
-            vec = []
-            num_prop_runs = 1
+            vec = []                     
+            result = v_double()
+            cjv = [current_joint_values[j] for j in xrange(len(current_joint_values))]
+            cjv.extend([current_joint_velocities[j] for j in xrange(len(current_joint_velocities))])
+            self.propagator.propagate(current_joint_values,
+                                      current_joint_velocities,
+                                      control,
+                                      control_error,
+                                      self.simulation_step_size,
+                                      self.control_duration,
+                                      result)
             if self.show_viewer:
-                num_prop_runs = 1
-            for i in xrange(num_prop_runs):          
-                result = v_double()
-                cjv = [current_joint_values[j] for j in xrange(len(current_joint_values))]
-                cjv.extend([current_joint_velocities[j] for j in xrange(len(current_joint_velocities))])
-                self.propagator.propagate(current_joint_values,
-                                          current_joint_velocities,
-                                          control,
-                                          control_error,
-                                          self.simulation_step_size,
-                                          self.control_duration,
-                                          result)
                 time.sleep(self.control_duration)                    
-                x_new = [result[i] for i in xrange(len(result))]                
-                vec.append(np.array(x_new))                
-            n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(vec))            
-            res = [np.asscalar(mean[i]) for i in xrange(len(mean))]            
-            return res   
+            x_new = np.array([result[i] for i in xrange(len(result))])                
+                        
+            return x_new  
         else:               
             m = self.get_random_joint_angles([0.0 for i in xrange(2 * len(self.link_dimensions))], M)
             x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, m)

@@ -33,10 +33,10 @@ num_bins: 201
 ## Uncertainty parameters
 #################################################
 # The minimum joint state covariance
-min_covariance: 0.0
+min_covariance: 0.1
 
 # The maximum joint state covariance
-max_covariance: 0.0
+max_covariance: 0.1
 
 # The number of covariance steps
 covariance_steps: 1

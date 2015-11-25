@@ -32,13 +32,16 @@ namespace shared {
 	                 double viscous,
 	                 bool show_viewer);
 	   
-	   void propagate_linear(const std::vector<double> &current_state,
-	   		                 std::vector<double> &control,
-	   		                 std::vector<double> &control_error_vec,	   		                 
-	   		                 const double duration,
-	   		                 std::vector<double> &result,
-	   		                 OpenRAVE::EnvironmentBasePtr environment,
-	   		                 OpenRAVE::RobotBasePtr robot);
+	   void propagate_linear(const std::vector<double> &x_dash,
+                             const std::vector<double> &u_dash,
+				             const std::vector<double> &x_star_current,
+				             const std::vector<double> &u_star_current,
+				             const std::vector<double> &x_star_next,								  
+                             const std::vector<double> &control_error_vec,	   		                 
+                             const double duration,
+                             std::vector<double> &result,
+                             OpenRAVE::EnvironmentBasePtr environment,
+                             OpenRAVE::RobotBasePtr robot);
 	   
 	   void propagate_nonlinear(const std::vector<double> &current_joint_values,
 		         const std::vector<double> &current_joint_velocities,

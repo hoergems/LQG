@@ -235,8 +235,9 @@ class PathPlanningInterface:
         while True:
             xs, us, zs = self._construct(obstacles, joint_constraints)
             if not len(xs) == 0: 
-                print "PUTTTTT"           
+                print "PUTTTTTING"                           
                 queue.put((xs, us, zs))
+                print "PUT" 
         
     def _construct(self, obstacles, joint_constraints):
         path_planner2 = None        
