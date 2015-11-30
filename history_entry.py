@@ -8,6 +8,7 @@ class HistoryEntry:
                  x_estimate,
                  x_dash,
                  x_dash_linear,
+                 linearization_error,
                  action,
                  observation,
                  covariance,
@@ -27,6 +28,7 @@ class HistoryEntry:
         self.estimate_collided = estimate_collided
         self.terminal = terminal
         self.reward = reward
+        self.linearization_error = linearization_error
         
     def set_action(self, action):
         self.action = action
@@ -45,6 +47,9 @@ class HistoryEntry:
         
     def set_terminal(self, terminal):
         self.terminal = terminal
+        
+    def set_linearization_error(self, error):
+        self.linearization_error = error
         
     def serialize(self, path, file):        
         with open(os.path.join(path, file), 'a') as f:                    
@@ -109,6 +114,9 @@ class HistoryEntry:
             if not self.terminal:
                 term_string = "Terminal: false"
             f.write(term_string + " \n")
+            
+            err_string = "Linearization error: " + str(self.linearization_error)
+            f.write(err_string + " \n")
             
             f.write(" \n")
                

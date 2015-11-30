@@ -336,7 +336,6 @@ class PathEvaluator:
             Cov = np.dot(Gamma_t, np.dot(R_t, Gamma_t.T))                       
             cov_state = np.array([[Cov[j, k] for k in xrange(2 * len(self.link_dimensions))] for j in xrange(2 * len(self.link_dimensions))])
             
-            
             (state_reward, terminal) = self.get_expected_state_reward(xs[i], cov_state)
             path_rewards.append(np.power(self.discount, current_step + i) * state_reward)
             '''if terminal:

@@ -168,36 +168,20 @@ class Simulator:
         x_dash = np.copy(x_tilde)
         x_dash_linear = np.copy(x_tilde_linear)
         
-        '''t_state1 = [2.5682342444639845, -1.5329856012320175, 0.0696156786090998]
-        t_state2 = [2.568234769257803, -1.5330883128644996, 0.06953418224489541]
-        tsv1 = v_double()
-        tsv2 = v_double()
-        
-        tsv1[:] = t_state1
-        tsv2[:] = t_state2
-        
-                
-        ee_position_arr1 = self.kinematics.getEndEffectorPosition(tsv1)
-        ee_position_arr2 = self.kinematics.getEndEffectorPosition(tsv2)                
-        ee_position1 = np.array([ee_position_arr1[j] for j in xrange(len(ee_position_arr1))])
-        ee_position2 = np.array([ee_position_arr2[j] for j in xrange(len(ee_position_arr2))])
-        
-        print "terminal1 " + str(self.is_terminal(ee_position1))
-        print "terminal2 " + str(self.is_terminal(ee_position2))
-        sleep'''
-        
         As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, us)
         Ls = kalman.compute_gain(As, Bs, self.C, self.D, len(xs) - 1)
         logging.info("Simulator: Executing for " + str(n_steps) + " steps") 
         estimated_states = []
         estimated_covariances = []
         for i in xrange(n_steps):                        
-            if not (terminal_state_reached and self.stop_when_terminal):                
+            if not (terminal_state_reached and self.stop_when_terminal):
+                linearization_error = self.calc_linearization_error(x_dash, x_dash_linear)                
                 history_entries.append(HistoryEntry(current_step + i,
                                                     x_true, 
                                                     x_estimate,
                                                     x_dash,
-                                                    x_dash_linear, 
+                                                    x_dash_linear,
+                                                    linearization_error, 
                                                     None,
                                                     None,
                                                     P_t,
@@ -216,14 +200,7 @@ class Simulator:
                                                      Bs[i], 
                                                      Vs[i], 
                                                      Ms[i])
-                
-                '''print "u_dash " + str(u_dash)
-                print "us[i] " + str(us[i])
-                print "u " + str(u)
-                print "================="'''
                 x_dash_linear, x_true_linear = self.get_linearized_next_state(x_dash, u_dash, ce, xs[i+1], As[i], Bs[i], Vs[i])
-                '''if i == 3:
-                    sleep'''
                 t_e = time.time() - t0
                 
                 discount = np.power(self.discount_factor, current_step + i)
@@ -238,12 +215,7 @@ class Simulator:
                     history_entries[-1].set_reward(-1.0 * self.step_penalty)
                     x_true = x_true_temp               
                 x_dash = np.subtract(x_true, xs[i + 1])
-                '''print "x_dash " + str(x_dash)
-                print "x_dash_linear " + str(x_dash_linear)
-                print " "
-                print "x_true " + str(x_true)
-                print "x_true_linear " + str(x_true_linear)
-                print "====================================="'''
+                
                 state = v_double()
                 state[:] = [x_true[j] for j in xrange(len(x_true) / 2)]                  
                 ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
@@ -284,6 +256,7 @@ class Simulator:
                                                         x_estimate, 
                                                         x_dash,
                                                         x_dash_linear,
+                                                        0.0,
                                                         None,
                                                         z,
                                                         P_t,
@@ -294,6 +267,7 @@ class Simulator:
                     terminal_state_reached = True                        
                     total_reward += discount * self.exit_reward
                     history_entries[-1].set_reward(self.exit_reward)
+                    history_entries[-1].set_linearization_error(self.calc_linearization_error(x_dash, x_dash_linear))
                     success = True                      
                     logging.info("Terminal state reached: reward = " + str(total_reward)) 
                     
@@ -317,6 +291,13 @@ class Simulator:
                 estimated_states,
                 estimated_covariances,                
                 history_entries)
+        
+    def calc_linearization_error(self, x_dash, x_dash_linear):
+        linearization_error = 0.0
+        for i in xrange(len(x_dash)):
+            linearization_error += np.square(x_dash[i] - x_dash_linear[i])
+        return np.sqrt(linearization_error)
+        
     
     def check_constraints(self, state):
         for i in xrange(len(state) / 2):                          
@@ -369,101 +350,9 @@ class Simulator:
         return False
     
     def get_linearized_next_state(self, x_dash, u_dash, control_error, x_star_next, A, B, V):
-        ''''x = x_dash + x_star 
-        u = u_dash + u_star
-        current_joint_values = [x[i] for i in xrange(len(x) / 2)]
-        current_joint_velocities = [x[i] for i in xrange(len(x) / 2, len(x))]
-        
-        cjvalues = v_double()
-        cjvelocities = v_double()
-        control = v_double()
-        
-        control_error = v_double()
-        result = v_double()
-        cjvalues[:] = current_joint_values
-        cjvelocities[:] = current_joint_velocities
-        control[:] = u
-        
-        ce = self.sample_control_error(M)
-        control_error[:] = ce
-        
-        
-        
-        
-        cjv = [x[j] for j in xrange(len(x) / 2)]
-        cjv.extend([[j] for j in xrange(len(x)/2, len(x))])
-        self.propagator.propagate(cjvalues,
-                                  cjvelocities,
-                                  control,
-                                  control_error,
-                                  self.simulation_step_size,
-                                  self.control_duration,
-                                  result)
-                           
-        x_new1 = np.array([result[i] for i in xrange(len(result))])'''
-        
-        '''
-        Now the linear state
-        '''
-        '''state_star = v_double()        
-        state_star[:] = [x_star[i] for i in xrange(len(x))] 
-        
-        control_star = v_double()
-        control_star[:] = u_star'''        
-        '''print "A " + str(A)
-        print "B " + str(B)
-        print "V " + str(V)
-        print "x_dash " + str(x_dash)
-        print "u_dash " + str(u_dash)
-        print "ce " + str(control_error)
-        print "np.dot(A, x_dash) " + str(np.dot(A, x_dash))
-        print "np.dot(B, u_dash) " + str(np.dot(B, u_dash))
-        print "np.dot(V, control_error) " + str(np.dot(V, control_error))'''
         delta_x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, control_error)        
         x_new2 = delta_x_new + x_star_next
         return delta_x_new, x_new2
-        
-        dist = 0.0
-        for i in xrange(len(x_new1)):
-            dist += np.square(x_new1[i] - x_new2[i])
-        dist = np.sqrt(dist)
-        
-        
-        x_dash_vec = v_double()
-        x_dash_vec[:] = x_dash
-        u_dash_vec = v_double()
-        u_dash_vec[:] = u_dash
-        x_star_current_vec = v_double()
-        x_star_current_vec[:] = x_star
-        x_star_next_vec = v_double()
-        x_star_next_vec[:] = x_star2
-        u_star_current_vec = v_double()
-        u_star_current_vec[:] = u_star
-        result_vec = v_double()
-        self.propagator.propagateLinear(x_dash_vec,
-                                        u_dash_vec,
-                                        x_star_current_vec,
-                                        u_star_current_vec,
-                                        x_star_next_vec,
-                                        control_error,
-                                        self.control_duration,
-                                        result_vec)
-        x_new3 = [result_vec[i] for i in xrange(len(result_vec))]
-        
-        print "x_dash " + str(x_dash)
-        print ""
-        print "u_dash " + str(u_dash)
-        print ""
-        print "x_new1 " + str(x_new1)
-        print " "
-        print "x_new2 " + str(x_new2)
-        print " "
-        print "x_new3 " + str(x_new3)
-        print " "
-        print "dist " + str(dist)
-        print "======================================="
-        time.sleep(0.5)
-        
        
     def apply_control(self, x_dash, u_dash, A, B, V, M):
         x_new = None

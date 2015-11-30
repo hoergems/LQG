@@ -1,6 +1,7 @@
 from path_planner import PathPlanner
 from path_evaluator import *
-from multiprocessing import Process, cpu_count, Lock, Queue
+from multiprocessing import Process, cpu_count, Lock, Queue, Pool
+import multiprocessing.queues
 from Queue import Empty, Full
 import libpath_planner
 import libdynamic_path_planner
@@ -11,11 +12,35 @@ import collections
 import numpy as np
 import scipy.stats
 
+class XQueue(multiprocessing.queues.Queue):
+    def __init__(self, maxsize=0):
+        self.objects = collections.deque()
+        self.mutex = Lock()
+        self._maxsize = maxsize        
+        
+    def empty(self):        
+        return len(self.objects) == 0
+    
+    def put(self, obj, block=True, timeout=None):
+        with self.mutex:
+            self.objects.append(obj)
+            print "Object put. size is now " + str(len(self.objects))
+            
+    def get(self, block=True, timeout=None):        
+        if len(self.objects):
+            raise Empty
+        with self.mutex():
+            return self.objects.popleft()
+        
+    def qsize(self):
+        return len(self.objects)
+        
+
 
 class PathPlanningInterface:
     def __init__(self):
-        self.path_evaluator = PathEvaluator()
-        self.mutex = Lock()
+        self.path_evaluator = PathEvaluator()        
+        self.get_it = False
         pass
     
     def setup_path_evaluator(self, A, B, C, D, H, M, N, V, W, 
@@ -175,27 +200,54 @@ class PathPlanningInterface:
                 total_gen_times,
                 total_eval_times)
         
-    def plan_paths(self, num, sim_run, timeout=0.0):               
-        path_queue = Queue()        
+    def plan_paths2(self, num, sim_run, timeout=0.0):
+        path_queue = Queue()
+        pool = Pool(processes=self.num_cores - 1)
+        result = pool.apply_async(self.construct_path(obstacles, queue, joint_constraints), args=(self.obstacles,
+                                                                                                  path_queue,
+                                                                                                  self.joint_constraints))
+        
+    def plan_paths(self, num, sim_run, timeout=0.0):
+        queues = [Queue() for i in xrange(self.num_cores - 1)]               
+        path_queue = Queue()
         paths = []
         res_paths = collections.deque()
         processes = [Process(target=self.construct_path, 
                              args=(self.obstacles, 
-                                   path_queue, 
-                                   self.joint_constraints,)) for i in xrange(self.num_cores - 1)]
+                                   queues[i], 
+                                   self.joint_constraints)) for i in xrange(self.num_cores - 1)]
         t0 = time.time() 
         for i in xrange(len(processes)):
             processes[i].daemon = True
             processes[i].start()
         curr_len = 0
         while True:
-            try:
-                if not path_queue.empty():
+            breaking = False
+            for queue in queues:
+                elapsed = time.time() - t0
+                if queue.qsize() > 0:
+                    try:
+                        res_paths.append(queue.get(timeout=0.1))
+                        print "GOT A PATH " + str(len(res_paths))
+                    except:
+                        pass
+                    if len(res_paths) == num:
+                        breaking = True
+                        break
+                    if timeout > 0.0:
+                        if elapsed > timeout:
+                            breaking = True
+                            break
+            if breaking:
+                break
+            '''try:  
+                if path_queue.qsize() > 0 and not path_queue.empty():                              
                     t0 = time.time()                    
-                    res_paths.append(path_queue.get(timeout=0.1))
+                    res_paths.append(path_queue.get(timeout=0.1))                    
                     te = time.time()
                     print str(len(res_paths)) + " paths generated " + str(te - t0)            
-            except Empty:                             
+            except Empty:                
+                #print "FUCK"                                       
                 pass
             elapsed = time.time() - t0 
             if len(res_paths) != curr_len:
@@ -205,9 +257,18 @@ class PathPlanningInterface:
             if timeout > 0.0:
                 if elapsed > timeout:
                     break
-            time.sleep(0.00001)        
+            time.sleep(0.001)'''
+        
+        #path_queue.close()         
         for i in xrange(len(processes)):
-            processes[i].terminate()        
+            processes[i].terminate()
+        '''for i in xrange(num):
+            print "Getting " + str(i + 1)
+            try:
+                res_paths.append(path_queue.get(timeout=1.0))
+            except Empty:
+                print "what: " + str(len(res_paths))
+                print "what2: " + str(path_queue.qsize()) '''       
         for i in xrange(len(res_paths)):
             p_e = res_paths.pop()                                
             if not len(p_e[0]) == 0:                                      
@@ -234,12 +295,12 @@ class PathPlanningInterface:
                 eval_time = time.time() - t0        
                 queue.put((xs, us, zs, eval_result[1], gen_time, eval_time))        
     
-    def construct_path(self, obstacles, queue, joint_constraints,):        
+    def construct_path(self, obstacles, queue, joint_constraints):        
         while True:
             xs, us, zs = self._construct(obstacles, joint_constraints)
-            if not len(xs) == 0:          
+            if not len(xs) == 0:                             
                 queue.put((xs, us, zs))
-                time.sleep(0.0001)
+                print "put. New size is " + str(queue.qsize())             
             else:
                 print "PATH HAS SIZE 0!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
         
