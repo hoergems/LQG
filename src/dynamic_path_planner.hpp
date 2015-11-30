@@ -135,6 +135,8 @@ namespace shared {
                 ompl::control::ControlSamplerPtr allocUniformControlSampler_(const ompl::control::ControlSpace *control_space);
                 
                 bool verbose_;
+                
+                void log_(std::string msg);
     };
 }
 

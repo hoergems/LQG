@@ -87,7 +87,7 @@ class PathPlanningInterface:
         self.kinematics.setLinksAndAxis(self.link_dimensions, axis)        
         self.verbose = False 
         if(logging.getLogger().isEnabledFor(logging.INFO)):
-            self.verbose = True
+            self.verbose = True        
         self.planning_algorithm = planning_algorithm
         self.dynamic_problem = False
         self.path_timeout = path_timeout
@@ -107,7 +107,7 @@ class PathPlanningInterface:
         self.viscous = viscous
         self.continuous_collision = continuous_collision
         
-    def set_start_and_goal(self, start_state, goal_states, ee_goal_position, ee_goal_threshold):        
+    def set_start_and_goal(self, start_state, goal_states, ee_goal_position, ee_goal_threshold):                
         self.start_state = start_state
         self.goal_states = goal_states
         self.ee_goal_position = ee_goal_position
@@ -253,12 +253,13 @@ class PathPlanningInterface:
             path_planner2.setup()
         else:            
             path_planner2 = libdynamic_path_planner.DynamicPathPlanner(len(self.link_dimensions) * 2,
-                                                                       False)
+                                                                       self.verbose)
             path_planner2.setupMotionValidator(self.continuous_collision)
-            print "set up motion validator"
-            print self.kinematics
+            logging.info("PathPlanningInterface: Set up motion validator. Setting kinematics...")
+            
+            
             path_planner2.setKinematics(self.kinematics)
-            print "set kinematics"
+            logging.info("PathPlanningInterface: Kinematics set. Running setup...")
             path_planner2.setup(self.model_file,
                                 self.environment_file,
                                 self.simulation_step_size,
@@ -266,7 +267,7 @@ class PathPlanningInterface:
                                 self.coulomb,
                                 self.viscous,
                                 self.delta_t)
-            print "setup"        
+            logging.info("PathPlanningInterface: Path planner setup")        
         path_planner2.setObstacles(obstacles)
         
         link_dimensions = libutil.v2_double()
@@ -294,7 +295,8 @@ class PathPlanningInterface:
         path_planner2.setGoalStates(goal_states, ee_goal_position, self.ee_goal_threshold)
         start_state = libutil.v_double()
         v = [self.start_state[i] for i in xrange(len(self.start_state))]
-        start_state[:] = v  
+        start_state[:] = v 
+        logging.info("PathPlanningInterface: Solve...") 
         xs_temp = path_planner2.solve(start_state, self.path_timeout)
         xs = []
         us = []

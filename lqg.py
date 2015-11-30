@@ -51,7 +51,7 @@ class LQG:
         if not self.setup_scene("environment", "env.xml", model_file):
             return
                         
-        print "LQG: Generating goal states..."
+        logging.info("LQG: Generating goal states...")
         goal_states = get_goal_states("lqg",
                                       self.serializer, 
                                       self.obstacles,                                      
@@ -65,11 +65,10 @@ class LQG:
                                       self.goal_position,
                                       self.goal_radius,
                                       self.planning_algortihm,
-                                      self.path_timeout)
-        
+                                      self.path_timeout)        
         if len(goal_states) == 0:
             logging.error("LQG: Couldn't generate any goal states. Problem seems to be infeasible")
-        print "LQG: " + str(len(goal_states)) + " goal states generated"         
+        logging.info("LQG: Generated " + str(len(goal_states)) + " goal states")         
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
         path_planner.setup(self.link_dimensions,
                            self.workspace_dimension,

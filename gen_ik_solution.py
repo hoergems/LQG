@@ -101,10 +101,13 @@ class IKSolutionGenerator:
             n += 1
         self.path_planner = None        
         if not len(solutions) == 0: 
-            print "IKSolutionGenerator: Found " + str(len(solutions)) + " valid goal states"           
+            print "IKSolutionGenerator: Found " + str(len(solutions)) + " valid goal states"
+            RaveDestroy()       
             return solutions        
         else:
             logging.error("IKSoultionGenerator: Couldn't find a valid IK solution. Defined problem seems to be infeasible.")
+            self.path_planner = None
+            RaveDestroy()
             return []
         
             

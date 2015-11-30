@@ -42,6 +42,12 @@ void DynamicPathPlanner::setupMotionValidator(bool continuous_collision) {
 	cout << "Motion validator setup" << endl;
 }
 
+void DynamicPathPlanner::log_(std::string msg) {	
+	if (verbose_) {
+		cout << "DynamicPathPlanner: " << msg << endl;
+	}
+}
+
 bool DynamicPathPlanner::setup(std::string model_file,
 		                       std::string environment_file,
 		                       double simulation_step_size,
@@ -52,24 +58,34 @@ bool DynamicPathPlanner::setup(std::string model_file,
 	control_duration_ = control_duration;	
 	
 	/***** Initialize OpenRAVE *****/
-	OpenRAVE::RaveInitialize(true);    
+	log_("Initializing OpenRAVE");
+	OpenRAVE::RaveInitialize(true);  
+	log_("OpenRAVE initialized");
 	env_ = OpenRAVE::RaveCreateEnvironment();    
 	env_->Load(environment_file);
+	log_("Loading or_urdf_plugin");
 	const std::string module_str("or_urdf_plugin");
 	if(!OpenRAVE::RaveLoadPlugin(module_str)) {
 	    cout << "Failed to load the or_urdf_plugin." << endl;
 	    return false;
 	}
-	    
+	log_("Loaded or_urdf_plugin");
+	
+	log_("Creating or_urdf_module");
 	OpenRAVE::ModuleBasePtr urdf_module = OpenRAVE::RaveCreateModule(env_, "URDF");
+	log_("Created or_urdf_module");
 	const std::string cmdargs("");
+	log_("Add or_urdf_module");
 	env_->AddModule(urdf_module, cmdargs);
+	log_("Added or_urdf_module");
 	std::stringstream sinput, sout;
 	sinput << "load " << model_file;
+	log_("Loading URDF model");
 	if (!urdf_module->SendCommand(sout,sinput)) {
 	    cout << "Failed to load URDF model" << endl;
 	    return false;
 	}
+	log_("URDF model loaded");
 	
 	std::vector<OpenRAVE::KinBodyPtr> bodies;
 	env_->GetBodies(bodies);
@@ -88,7 +104,9 @@ bool DynamicPathPlanner::setup(std::string model_file,
 	}
 	    
 	/***** Setup OMPL *****/
+	log_("Setting up OMPL");
 	setup_ompl_(robot, simulation_step_size, linear_propagation, verbose_);
+	log_("OMPL setup");
 	    
 	/***** Create the physics engine *****/
 	const std::string engine = "ode";
@@ -101,6 +119,7 @@ bool DynamicPathPlanner::setup(std::string model_file,
 	    		                                                                             robot,
 	    		                                                                             coulomb,
 	    		                                                                             viscous);
+	log_("Setup complete");
 	return true;
 }
 
