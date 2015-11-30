@@ -15,7 +15,7 @@ def kalman_update(x_tilde_dash_t, z_dash_t, H, P_dash_t, W, N, num_links):
     P_t = compute_P_t(K_t, H, P_dash_t, num_links)    
     return x_tilde_t, P_t
     
-def compute_kalman_gain(H, P_dash_t, W, N):      
+def compute_kalman_gain(H, P_dash_t, W, N):   
     return np.dot(P_dash_t, np.dot(H.T, linalg.inv(np.dot(H, np.dot(P_dash_t, H.T)) + np.dot(W, np.dot(N, W.T)))))
     
 def compute_state_estimate(x_tilde_dash_t, z_dash_t, H, K_t):
@@ -30,7 +30,7 @@ def compute_gain(A, B, C, D, l):
     B = B[0:l][::-1]    
     Ls = []   
     for i in xrange(l):        
-        L = - np.dot(linalg.inv(np.dot(B[i].T, np.dot(S, B[i])) + D), np.dot(B[i].T, np.dot(S, A[i])))
+        L = -np.dot(linalg.inv(np.dot(B[i].T, np.dot(S, B[i])) + D), np.dot(B[i].T, np.dot(S, A[i])))
         Ls.append(L)
         S = C + np.dot(A[i].T, np.dot(S, A[i])) + np.dot(A[i].T, np.dot(S, np.dot(B[i], L)))
         

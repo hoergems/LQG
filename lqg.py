@@ -196,7 +196,8 @@ class LQG:
                 for k in xrange(self.num_simulation_runs):
                     self.serializer.write_line("log.log", "tmp/lqg", "RUN #" + str(k + 1) + " \n")
                     (x_true, 
-                     x_tilde, 
+                     x_tilde,
+                     x_tilde_linear, 
                      x_estimate, 
                      P_t, 
                      current_step, 
@@ -207,6 +208,7 @@ class LQG:
                      estimated_c,                     
                      history_entries) = sim.simulate_n_steps(xs, us, zs,
                                                              xs[0],
+                                                             np.array([0.0 for i in xrange(2 * len(self.link_dimensions))]),
                                                              np.array([0.0 for i in xrange(2 * len(self.link_dimensions))]),
                                                              xs[0],
                                                              np.array([[0.0 for k in xrange(2 * len(self.link_dimensions))] for l in xrange(2 * len(self.link_dimensions))]),

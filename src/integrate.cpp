@@ -62,14 +62,17 @@ void Integrate::getProcessMatrices(std::vector<double> &x,
 	MatrixXd A_matrx1 = (t_e * AMatrix).exp();	
 	MatrixXd integral = power_series_(AMatrix, t_e, 20);	
 	MatrixXd B_matrx = A_matrx1 * integral * BMatrix;
+	MatrixXd V_matrx = A_matrx1 * integral * VMatrix;
 			
-	MatrixXd B_matrx_temp = MatrixXd::Identity(B_matrx.rows(), B_matrx.cols() * 2);
-	MatrixXd V_matrx_temp = MatrixXd::Identity(VMatrix.rows(), VMatrix.cols() * 2);	
+	//MatrixXd B_matrx_temp = MatrixXd::Identity(B_matrx.rows(), B_matrx.cols() * 2);
+	//MatrixXd V_matrx_temp = MatrixXd::Identity(VMatrix.rows(), VMatrix.cols() * 2);
+	MatrixXd B_matrx_temp = MatrixXd::Zero(B_matrx.rows(), B_matrx.cols() * 2);
+	MatrixXd V_matrx_temp = MatrixXd::Zero(V_matrx.rows(), V_matrx.cols() * 2);
 			
 	for (size_t i = 0; i < B_matrx.rows(); i++) {
 		for (size_t j = 0; j < B_matrx.cols(); j++) {
 			B_matrx_temp(i, j) = B_matrx(i, j);
-			V_matrx_temp(i, j) = VMatrix(i, j);
+			V_matrx_temp(i, j) = V_matrx(i, j);
 		}
 	}
 	

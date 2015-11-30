@@ -6,6 +6,8 @@ class HistoryEntry:
                  t, 
                  x_true, 
                  x_estimate,
+                 x_dash,
+                 x_dash_linear,
                  action,
                  observation,
                  covariance,
@@ -16,6 +18,8 @@ class HistoryEntry:
         self.t = t        
         self.x_true = x_true
         self.x_estimate = x_estimate
+        self.x_dash = x_dash
+        self.x_dash_linear = x_dash_linear
         self.action = action
         self.observation = observation
         self.covariance = covariance
@@ -54,7 +58,17 @@ class HistoryEntry:
             state_str = "S_ESTIMATED: " 
             for i in xrange(len(self.x_estimate)):
                 state_str += str(self.x_estimate[i]) + " "
-            f.write(state_str + " \n") 
+            f.write(state_str + " \n")
+            
+            state_dash_string = "S_DASH: "
+            for i in xrange(len(self.x_dash)):
+                state_dash_string += str(self.x_dash[i]) + " "
+            f.write(state_dash_string + " \n") 
+            
+            state_dash_linear_string = "S_DASH_LINEAR: "
+            for i in xrange(len(self.x_dash)):
+                state_dash_linear_string += str(self.x_dash_linear[i]) + " "
+            f.write(state_dash_linear_string + " \n")
             
             p_str = "COVARIANCE: " 
             for i in xrange(len(self.covariance)):

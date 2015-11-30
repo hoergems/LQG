@@ -130,7 +130,7 @@ class Simulator:
                
                 A_Matr = A_list.reshape(len(state), len(state)).T                
                 V_Matr = V_list.reshape(len(state), len(state)).T
-                B_Matr = B_list.reshape(len(state), len(state)).T
+                B_Matr = B_list.reshape(len(state), len(state)).T 
                 
                 As.append(A_Matr)
                 Bs.append(B_Matr)
@@ -156,6 +156,7 @@ class Simulator:
                          xs, us, zs,
                          x_true,                         
                          x_tilde,
+                         x_tilde_linear,
                          x_estimate,
                          P_t,
                          total_reward,                         
@@ -165,6 +166,7 @@ class Simulator:
         terminal_state_reached = False
         success = False
         x_dash = np.copy(x_tilde)
+        x_dash_linear = np.copy(x_tilde_linear)
         
         '''t_state1 = [2.5682342444639845, -1.5329856012320175, 0.0696156786090998]
         t_state2 = [2.568234769257803, -1.5330883128644996, 0.06953418224489541]
@@ -193,7 +195,9 @@ class Simulator:
             if not (terminal_state_reached and self.stop_when_terminal):                
                 history_entries.append(HistoryEntry(current_step + i,
                                                     x_true, 
-                                                    x_estimate, 
+                                                    x_estimate,
+                                                    x_dash,
+                                                    x_dash_linear, 
                                                     None,
                                                     None,
                                                     P_t,
@@ -201,18 +205,25 @@ class Simulator:
                                                     False,
                                                     False,
                                                     0.0))
-                                
+                #print "Ls[i] " + str(Ls[i])                
                 u_dash = np.dot(Ls[i], x_tilde) 
                 u = u_dash + us[i]                           
                 history_entries[-1].set_action(u)
                 t0 = time.time()
-                x_true_temp = self.apply_control(x_true, 
-                                                 u, 
-                                                 As[i], 
-                                                 Bs[i], 
-                                                 Vs[i], 
-                                                 Ms[i])
-                #self.apply_control2(x_dash, u_dash, xs[i], xs[i+1], us[i], As[i], Bs[i], Vs[i], Ms[i])
+                x_true_temp, ce = self.apply_control(x_true, 
+                                                     u, 
+                                                     As[i], 
+                                                     Bs[i], 
+                                                     Vs[i], 
+                                                     Ms[i])
+                
+                '''print "u_dash " + str(u_dash)
+                print "us[i] " + str(us[i])
+                print "u " + str(u)
+                print "================="'''
+                x_dash_linear, x_true_linear = self.get_linearized_next_state(x_dash, u_dash, ce, xs[i+1], As[i], Bs[i], Vs[i])
+                '''if i == 3:
+                    sleep'''
                 t_e = time.time() - t0
                 
                 discount = np.power(self.discount_factor, current_step + i)
@@ -227,6 +238,12 @@ class Simulator:
                     history_entries[-1].set_reward(-1.0 * self.step_penalty)
                     x_true = x_true_temp               
                 x_dash = np.subtract(x_true, xs[i + 1])
+                '''print "x_dash " + str(x_dash)
+                print "x_dash_linear " + str(x_dash_linear)
+                print " "
+                print "x_true " + str(x_true)
+                print "x_true_linear " + str(x_true_linear)
+                print "====================================="'''
                 state = v_double()
                 state[:] = [x_true[j] for j in xrange(len(x_true) / 2)]                  
                 ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
@@ -265,8 +282,10 @@ class Simulator:
                     history_entries.append(HistoryEntry(current_step + i + 1,
                                                         x_true, 
                                                         x_estimate, 
+                                                        x_dash,
+                                                        x_dash_linear,
                                                         None,
-                                                        None,
+                                                        z,
                                                         P_t,
                                                         False,
                                                         False,
@@ -287,7 +306,8 @@ class Simulator:
         #print "========================================"
         
         return (x_true, 
-                x_tilde, 
+                x_tilde,
+                x_dash_linear, 
                 x_estimate, 
                 P_t, 
                 current_step + n_steps, 
@@ -348,8 +368,8 @@ class Simulator:
             return True
         return False
     
-    def apply_control2(self, x_dash, u_dash, x_star, x_star2, u_star, A, B, V, M):
-        x = x_dash + x_star 
+    def get_linearized_next_state(self, x_dash, u_dash, control_error, x_star_next, A, B, V):
+        ''''x = x_dash + x_star 
         u = u_dash + u_star
         current_joint_values = [x[i] for i in xrange(len(x) / 2)]
         current_joint_velocities = [x[i] for i in xrange(len(x) / 2, len(x))]
@@ -357,7 +377,7 @@ class Simulator:
         cjvalues = v_double()
         cjvelocities = v_double()
         control = v_double()
-        control_star = v_double()
+        
         control_error = v_double()
         result = v_double()
         cjvalues[:] = current_joint_values
@@ -366,7 +386,7 @@ class Simulator:
         
         ce = self.sample_control_error(M)
         control_error[:] = ce
-        control_star[:] = u_star
+        
         
         
         
@@ -380,30 +400,28 @@ class Simulator:
                                   self.control_duration,
                                   result)
                            
-        x_new1 = np.array([result[i] for i in xrange(len(result))])
+        x_new1 = np.array([result[i] for i in xrange(len(result))])'''
         
         '''
         Now the linear state
         '''
-        state_star = v_double()        
-        state_star[:] = [x_star[i] for i in xrange(len(x))]        
+        '''state_star = v_double()        
+        state_star[:] = [x_star[i] for i in xrange(len(x))] 
         
-        An = self.integrate.getProcessMatrices(state_star, control_star, self.control_duration)                
-        Matr_list = [An[i] for i in xrange(len(An))]
-                
-        A_list = np.array([Matr_list[i] for i in xrange(len(state_star)**2)])
-                           
-        B_list = np.array([Matr_list[i] for i in xrange(len(state_star)**2, 2 * len(state_star)**2)])
-                              
-        V_list = np.array([Matr_list[i] for i in xrange(2 * len(state_star)**2, 
-                                                        3 * len(state_star)**2)])
-               
-        A2 = A_list.reshape(len(state_star), len(state_star)).T                
-        V2 = V_list.reshape(len(state_star), len(state_star)).T
-        B2 = B_list.reshape(len(state_star), len(state_star)).T
-        
-        delta_x_new = np.dot(A2, x_dash) + np.dot(B2, u_dash) + np.dot(V2, ce)
-        x_new2 = delta_x_new + x_star2
+        control_star = v_double()
+        control_star[:] = u_star'''        
+        '''print "A " + str(A)
+        print "B " + str(B)
+        print "V " + str(V)
+        print "x_dash " + str(x_dash)
+        print "u_dash " + str(u_dash)
+        print "ce " + str(control_error)
+        print "np.dot(A, x_dash) " + str(np.dot(A, x_dash))
+        print "np.dot(B, u_dash) " + str(np.dot(B, u_dash))
+        print "np.dot(V, control_error) " + str(np.dot(V, control_error))'''
+        delta_x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, control_error)        
+        x_new2 = delta_x_new + x_star_next
+        return delta_x_new, x_new2
         
         dist = 0.0
         for i in xrange(len(x_new1)):
@@ -449,6 +467,7 @@ class Simulator:
        
     def apply_control(self, x_dash, u_dash, A, B, V, M):
         x_new = None
+        ce = None
         if self.dynamic_problem:
             current_joint_values = v_double()
             current_joint_velocities = v_double()
@@ -477,8 +496,8 @@ class Simulator:
                                       result)                               
             x_new = np.array([result[i] for i in xrange(len(result))])
         else:               
-            m = self.get_random_joint_angles([0.0 for i in xrange(2 * len(self.link_dimensions))], M)
-            x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, m)
+            ce = self.get_random_joint_angles([0.0 for i in xrange(2 * len(self.link_dimensions))], M)
+            x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, ce)
             if self.enforce_constraints:            
                 x_new = self.check_constraints(x_new)
         if self.show_viewer:
@@ -490,7 +509,7 @@ class Simulator:
             cjvels[:] = cjvels_arr
             self.propagator.updateRobotValues(cjvals, cjvels)
             time.sleep(self.control_duration) 
-        return x_new
+        return x_new, ce
     
     def sample_control_error(self, M):
         mu = np.array([0.0 for i in xrange(2 * len(self.link_dimensions))])

@@ -132,7 +132,7 @@ class PathPlanningInterface:
             processes[i].daemon = True
             processes[i].start()
         while True:
-            try:
+            try:                            
                 res_paths.append(path_queue.get_nowait())
             except:      
                 pass
@@ -141,7 +141,7 @@ class PathPlanningInterface:
                 break
             if timeout > 0.0 and elapsed > timeout:
                 break
-            time.sleep(0.0001)
+            time.sleep(0.001)
         for i in xrange(len(processes)):
             processes[i].terminate()
         for i in xrange(len(res_paths)):
@@ -190,8 +190,12 @@ class PathPlanningInterface:
         curr_len = 0
         while True:
             try:
-                res_paths.append(path_queue.get_nowait())                
-            except:                
+                if not path_queue.empty():
+                    t0 = time.time()                    
+                    res_paths.append(path_queue.get(timeout=0.1))
+                    te = time.time()
+                    print str(len(res_paths)) + " paths generated " + str(te - t0)            
+            except Empty:                             
                 pass
             elapsed = time.time() - t0 
             if len(res_paths) != curr_len:
@@ -235,6 +239,9 @@ class PathPlanningInterface:
             xs, us, zs = self._construct(obstacles, joint_constraints)
             if not len(xs) == 0:          
                 queue.put((xs, us, zs))
+                time.sleep(0.0001)
+            else:
+                print "PATH HAS SIZE 0!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
         
     def _construct(self, obstacles, joint_constraints):
         path_planner2 = None        
