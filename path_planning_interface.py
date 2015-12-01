@@ -3,6 +3,7 @@ from path_evaluator import *
 from multiprocessing import Process, cpu_count, Lock, Queue, Pool
 import multiprocessing.queues
 from Queue import Empty, Full
+from librobot import v_string
 import libpath_planner
 import libdynamic_path_planner
 import libutil
@@ -74,8 +75,7 @@ class PathPlanningInterface:
         self.path_evaluator.setup_reward_function(step_penalty, illegal_move_penalty, exit_reward, discount_factor)
     
     def setup(self,              
-              link_dimensions, 
-              workspace_dimension,
+              robot,
               obstacles, 
               max_velocity, 
               delta_t, 
@@ -83,11 +83,12 @@ class PathPlanningInterface:
               joint_constraints,
               enforce_constraints,
               planning_algorithm,
-              path_timeout):        
-        self.link_dimensions = link_dimensions
-        self.workspace_dimension = workspace_dimension        
+              path_timeout):
+        
+        self.link_dimensions = v2_double()
+        robot.getActiveLinkDimensions(self.link_dimensions)
         self.num_cores = cpu_count() 
-        #self.num_cores = 2       
+        self.num_cores = 2       
         self.obstacles = obstacles        
         self.max_velocity = max_velocity
         self.delta_t = delta_t
@@ -98,16 +99,11 @@ class PathPlanningInterface:
         self.joint_constraints_vec = v_double()
         self.joint_constraints_vec[:] = self.joint_constraints
         
+        joints = v_string()
+        robot.getActiveJoints(joints)
         axis = v2_int()
-        ax1 = v_int()
-        ax2 = v_int()
-        ax1[:] = [0, 0, 1]
-        if workspace_dimension == 2:
-            ax2[:] = [0, 0, 1]            
-        elif workspace_dimension == 3:
-            ax2[:] = [0, 1, 0]
-            
-        axis[:] = [ax1, ax2, ax1]        
+        robot.getJointAxis(joints, axis)
+               
         self.kinematics = libkinematics.Kinematics()        
         self.kinematics.setLinksAndAxis(self.link_dimensions, axis)        
         self.verbose = False 

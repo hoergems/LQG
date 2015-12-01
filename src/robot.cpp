@@ -31,12 +31,11 @@ Robot::Robot(std::string robot_file):
 	}
 	
 	std::vector<boost::shared_ptr<urdf::Link>> links;
-	model_->getLinks(links);
-	for (size_t i = 0; i < links.size(); i++) {
-		if (links[i]->child_joints.size() != 0) {			
-			joints_.push_back(links[i]->child_joints[0]);
-		}		
-	}
+	boost::shared_ptr<const urdf::Link> root = model_->getRoot();	
+	while (root->child_links.size() != 0) {
+		joints_.push_back(root->child_joints[0]);
+		root = root->child_links[0];
+	}	
 }
 
 void Robot::getLinkNames(std::vector<std::string> &link_names) {
@@ -102,6 +101,21 @@ void Robot::getLinkInertias(std::vector<std::string> &link, std::vector<std::vec
 					inertias.push_back(inert);
 				}
 			}
+		}
+	}
+}
+
+void Robot::getActiveLinkDimensions(std::vector<std::vector<double>> &dimensions) {
+	std::vector<boost::shared_ptr<urdf::Link>> links;
+	model_->getLinks(links);
+	for (auto &link: links) {
+		if (link->collision != nullptr) {
+			std::vector<double> dim;
+			boost::shared_ptr<urdf::Box> box = boost::static_pointer_cast<urdf::Box>(link->collision->geometry);
+			dim.push_back(box->dim.x);
+			dim.push_back(box->dim.y);
+			dim.push_back(box->dim.z);
+			dimensions.push_back(dim);		    
 		}
 	}
 }
@@ -189,6 +203,14 @@ void Robot::getLinkInertialPose(std::vector<std::string> &link, std::vector<std:
 	}
 }
 
+void Robot::getActiveJoints(std::vector<std::string> &joints) {
+	for (auto &joint: joints_) {
+		if (joint->type != urdf::Joint::FIXED) {
+			joints.push_back(joint->name);
+		}
+	}
+}
+
 void Robot::getJointType(std::vector<std::string> &joint, std::vector<std::string> &type) {
 	for (size_t i = 0; i < joint.size(); i++) {
 		for (size_t j = 0; j < joints_.size(); j++) {
@@ -224,11 +246,11 @@ void Robot::getJointOrigin(std::vector<std::string> &joints, std::vector<std::ve
 	}
 }
 
-void Robot::getJointAxis(std::vector<std::string> &joints, std::vector<std::vector<double>> &axis) {
+void Robot::getJointAxis(std::vector<std::string> &joints, std::vector<std::vector<int>> &axis) {
 	for (size_t i = 0; i < joints.size(); i++) {
 		for (size_t j = 0; j < joints_.size(); j++) {
 			if (joints[i] == joints_[j]->name) {
-				std::vector<double> ax;
+				std::vector<int> ax;
 				ax.push_back(joints_[j]->axis.x);
 				ax.push_back(joints_[j]->axis.y);
 				ax.push_back(joints_[j]->axis.z);
@@ -253,11 +275,13 @@ BOOST_PYTHON_MODULE(librobot) {
     class_<Robot>("Robot", init<std::string>())
                         .def("getLinkNames", &Robot::getLinkNames)
                         .def("getLinkDimension", &Robot::getLinkDimension)
+                        .def("getActiveLinkDimensions", &Robot::getActiveLinkDimensions)
                         .def("getLinkMasses", &Robot::getLinkMasses)
                         .def("getLinkPose", &Robot::getLinkPose)
                         .def("getLinkInertialPose", &Robot::getLinkInertialPose)
                         .def("getLinkInertias", &Robot::getLinkInertias)
                         .def("getJointNames", &Robot::getJointNames)
+                        .def("getActiveJoints", &Robot::getActiveJoints)
                         .def("getJointType", &Robot::getJointType)
                         .def("getJointOrigin", &Robot::getJointOrigin)
                         .def("getJointAxis", &Robot::getJointAxis)

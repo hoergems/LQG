@@ -17,6 +17,8 @@ namespace shared {
     	    
     	    void getLinkDimension(std::vector<std::string> &link, std::vector<std::vector<double>> &dimension);
     	    
+    	    void getActiveLinkDimensions(std::vector<std::vector<double>> &dimensions);
+    	    
     	    void getLinkPose(std::vector<std::string> &link, std::vector<std::vector<double>> &pose);
     	    
     	    void getLinkInertialPose(std::vector<std::string> &link, std::vector<std::vector<double>> &pose);
@@ -25,11 +27,13 @@ namespace shared {
     	    
     	    void getJointNames(std::vector<std::string> &joint_names);
     	    
+    	    void getActiveJoints(std::vector<std::string> &joints);
+    	    
     	    void getJointType(std::vector<std::string> &joint, std::vector<std::string> &type);
     	    
     	    void getJointOrigin(std::vector<std::string> &joints, std::vector<std::vector<double>> &origins);
     	    
-    	    void getJointAxis(std::vector<std::string> &joints, std::vector<std::vector<double>> &axis);
+    	    void getJointAxis(std::vector<std::string> &joints, std::vector<std::vector<int>> &axis);
     	    
     	    
     

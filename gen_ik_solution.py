@@ -15,9 +15,8 @@ class IKSolutionGenerator:
     def __init__(self):
         self.serializer = Serializer()
     
-    def setup(self, 
-              link_dimensions, 
-              workspace_dimension, 
+    def setup(self,
+              robot,
               obstacles, 
               max_velocity, 
               delta_t, 
@@ -30,11 +29,12 @@ class IKSolutionGenerator:
         """
         Generate the obstacles
         """
+        InitOpenRAVELogging()
         logging.info("IKSolutionGenerator: Setup")
-        self.link_dimensions = link_dimensions
+        self.link_dimensions = v2_double()
+        robot.getActiveLinkDimensions(self.link_dimensions)        
         self.path_planner = PathPlanningInterface()
-        self.path_planner.setup(link_dimensions, 
-                                workspace_dimension, 
+        self.path_planner.setup(robot, 
                                 obstacles, 
                                 max_velocity, 
                                 delta_t, 
@@ -45,8 +45,8 @@ class IKSolutionGenerator:
                                 path_timeout)
         logging.info("IKSolutionGenerator: Create OpenRAVE environment")
         self.env = openravepy.Environment()
-        self.env.StopSimulation()
-        logging.info("IKSolutionGenerator: Loading robot file: " + str(robot_file))
+        self.env.StopSimulation()       
+        logging.info("IKSolutionGenerator: Loading robot file: " + robot_file)
         self.env.Load(robot_file)
         logging.info("IKSolutionGenerator: Loading environment file")
         self.env.Load(environment_file)
@@ -54,9 +54,10 @@ class IKSolutionGenerator:
         self.robot = self.env.GetRobots()[0]
         self.robot.SetActiveManipulator("arm")   
 
-    def generate(self, start_state, goal_position, goal_threshold, workspace_dimension):        
-        possible_ik_solutions = []        
-        if workspace_dimension == 2:
+    def generate(self, start_state, goal_position, goal_threshold):              
+        possible_ik_solutions = []
+        print "generate"        
+        if self.robot.GetJoints()[1].GetAxis()[1] == 0:
             InitOpenRAVELogging()
             ikmodel = openravepy.databases.inversekinematics.InverseKinematicsModel(self.robot,
                                                                                     iktype=IkParameterizationType.TranslationXY2D)

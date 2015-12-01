@@ -61,7 +61,9 @@ bool DynamicPathPlanner::setup(std::string model_file,
 	log_("Initializing OpenRAVE");
 	OpenRAVE::RaveInitialize(true);  
 	log_("OpenRAVE initialized");
-	env_ = OpenRAVE::RaveCreateEnvironment();    
+	env_ = OpenRAVE::RaveCreateEnvironment();
+	log_("Loading environment: " + environment_file);
+	
 	env_->Load(environment_file);
 	log_("Loading or_urdf_plugin");
 	const std::string module_str("or_urdf_plugin");

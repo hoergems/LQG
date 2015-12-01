@@ -7,6 +7,8 @@ import sys
 import logging
 import scipy
 from libutil import *
+from librobot import Robot as Manipulator
+from librobot import v_string
 from serializer import Serializer
 from libobstacle import *
 from util_py import *
@@ -41,22 +43,26 @@ class LQG:
         
         self.utils = Utils()
         
-        model_file = os.getcwd() + "/model/model.xml"
+        model_file = "model/model.xml"
         urdf_model_file = "test.urdf"
+        
+        self.robot = Manipulator(urdf_model_file)
+        
+        
         #environment_file = "env.xml"
         environment_file = os.path.join("environment", "env.xml")
         
         if self.workspace_dimension == 3:
-            model_file = os.getcwd() + "/model/model3D.xml"
-        if not self.setup_scene("environment", "env.xml", model_file):
+            model_file = "model/model3D.xml"
+        if not self.setup_scene("environment", "env.xml", self.robot):
             return
-                        
+                
         logging.info("LQG: Generating goal states...")
         goal_states = get_goal_states("lqg",
                                       self.serializer, 
-                                      self.obstacles,                                      
-                                      self.link_dimensions,
-                                      self.workspace_dimension,
+                                      self.obstacles,
+                                      model_file,                                      
+                                      self.robot,                                    
                                       self.max_velocity,
                                       self.delta_t,
                                       self.joint_constraints,
@@ -70,8 +76,7 @@ class LQG:
             logging.error("LQG: Couldn't generate any goal states. Problem seems to be infeasible")
         logging.info("LQG: Generated " + str(len(goal_states)) + " goal states")         
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
-        path_planner.setup(self.link_dimensions,
-                           self.workspace_dimension,
+        path_planner.setup(self.robot,                           
                            self.obstacles,  
                            self.max_velocity, 
                            self.delta_t, 
@@ -290,8 +295,8 @@ class LQG:
         
     def setup_scene(self, 
                     environment_path, 
-                    environment_file, 
-                    model_file):
+                    environment_file,
+                    robot):
         """ Load the obstacles """ 
         environment, goal_area = self.serializer.load_environment(file="env.xml", path="environment") 
         if goal_area == None:
@@ -308,8 +313,15 @@ class LQG:
         for obstacle in environment:                       
             self.obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))                    
         
-        """ Setup operations """        
-        self.link_dimensions = self.utils.getLinkDimensions(model_file)
+        """ Setup operations """
+        link_names = v_string()
+        robot.getLinkNames(link_names)
+        link_dims = v2_double()
+        robot.getLinkDimension(link_names, link_dims)
+        self.link_dimensions = v2_double()
+        for i in xrange(len(link_dims)):
+            if len(link_dims[i]) != 0:
+                self.link_dimensions.append(link_dims[i])        
         return True
             
     def init_serializer(self):
