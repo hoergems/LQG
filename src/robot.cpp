@@ -18,10 +18,159 @@ struct VecToList
     }
 };
 
+bool Robot::initLinks(TiXmlElement *robot_xml) {
+	for (TiXmlElement* link_xml = robot_xml->FirstChildElement("link"); link_xml; link_xml = link_xml->NextSiblingElement("link"))
+	{
+		//Link names
+		std::string link_name(link_xml->Attribute("name"));
+		link_names_.push_back(link_name);
+		
+		//Link dimensions
+		std::vector<double> link_dimension;
+		TiXmlElement *coll_xml = link_xml->FirstChildElement("collision");
+		if (coll_xml) {
+			TiXmlElement *geom_xml = coll_xml->FirstChildElement("geometry");			
+			TiXmlElement *dim_xml = geom_xml->FirstChildElement("box");			
+		    const char* xyz_str = dim_xml->Attribute("size");		    
+		    std::vector<std::string> pieces;					
+		    boost::split( pieces, xyz_str, boost::is_any_of(" "));
+		    for (unsigned int i = 0; i < pieces.size(); ++i) { 
+			    if (pieces[i] != "") {
+				    try {
+					    link_dimension.push_back(boost::lexical_cast<double>(pieces[i].c_str()));
+				    }
+				    catch (boost::bad_lexical_cast &e) {
+							    									
+				    }
+			    }
+		    }
+		    if (link_dimension.size() != 3) {
+		    	std::vector<double> ld({0.0, 0.0, 0.0});
+		    	link_dimensions_.push_back(ld);
+		    }
+		    else {
+		    	link_dimensions_.push_back(link_dimension);
+		    }
+		}
+		
+		//Link inertia
+		TiXmlElement *ine = link_xml->FirstChildElement("inertial");
+		
+		if (ine) {
+			
+			// Link masses
+			active_links_.push_back(link_name);			
+			TiXmlElement *mass_xml = ine->FirstChildElement("mass");
+			double mass = 0.0;
+			if (mass_xml) {
+				try {
+					if (mass_xml->Attribute("value")) {
+						mass = boost::lexical_cast<double>(mass_xml->Attribute("value"));
+					}
+				}
+				catch (boost::bad_lexical_cast &e) {
+					
+				}
+			}
+			link_masses_.push_back(mass);			
+			
+			//Inertia origins
+			std::vector<double> inertia_origin = process_origin_(ine);
+			link_inertia_origins_.push_back(inertia_origin);
+			
+			//Inertia matrix
+			std::vector<double> inertia_vals;
+			double ixx = 0.0;
+			double ixy = 0.0;
+			double ixz = 0.0;
+			double iyy = 0.0;
+			double iyz = 0.0;
+			double izz = 0.0;
+			TiXmlElement *matr_xml = ine->FirstChildElement("inertia");
+			if (matr_xml) {				
+				try {
+				    if (matr_xml->Attribute("ixx")) {
+					    ixx = boost::lexical_cast<double>(matr_xml->Attribute("ixx"));					    
+				    }
+				    if (matr_xml->Attribute("ixy")) {
+				        ixy = boost::lexical_cast<double>(matr_xml->Attribute("ixy"));
+				    }
+				    if (matr_xml->Attribute("ixz")) {
+				    	ixz = boost::lexical_cast<double>(matr_xml->Attribute("ixz"));
+				    }
+				    if (matr_xml->Attribute("iyy")) {
+				    	iyy = boost::lexical_cast<double>(matr_xml->Attribute("iyy"));
+				    }
+				    if (matr_xml->Attribute("iyz")) {
+				    	iyz = boost::lexical_cast<double>(matr_xml->Attribute("iyz"));
+				    }
+				    if (matr_xml->Attribute("izz")) {
+				    	izz = boost::lexical_cast<double>(matr_xml->Attribute("izz"));
+				    }
+				}
+				catch (boost::bad_lexical_cast &e) {
+									
+				}
+			}
+				
+			inertia_vals.push_back(ixx);
+			inertia_vals.push_back(ixy);
+			inertia_vals.push_back(ixz);
+			inertia_vals.push_back(iyy);
+			inertia_vals.push_back(iyz);
+			inertia_vals.push_back(izz);
+			link_inertia_matrices_.push_back(inertia_vals);
+		}
+	}
+	
+	return true;
+}
+
+std::vector<double> Robot::process_origin_(TiXmlElement *xml) {
+	TiXmlElement *origin_xml = xml->FirstChildElement("origin");
+	std::vector<double> origin;
+	if (origin_xml) {				
+		if (origin_xml->Attribute("xyz")) {
+			const char* xyz_str = origin_xml->Attribute("xyz");
+			std::vector<std::string> pieces;					
+			boost::split( pieces, xyz_str, boost::is_any_of(" "));
+			for (unsigned int i = 0; i < pieces.size(); ++i){
+				if (pieces[i] != "") {
+					try {
+						origin.push_back(boost::lexical_cast<double>(pieces[i].c_str()));
+					}
+					catch (boost::bad_lexical_cast &e) {
+								
+					}
+				}						
+			}
+		}				
+	}
+	if (origin.size() == 3) {
+		return origin;
+	}
+	else {
+		std::vector<double> orig({0.0, 0.0, 0.0});
+		return orig;
+	}
+}
+
 Robot::Robot(std::string robot_file):
 	robot_file_(robot_file),
 	model_(new urdf::Model()),
-	joints_(){	
+	joints_(),
+	link_names_(),
+	active_links_(),
+	link_masses_(),
+	link_inertia_origins_(){	
+	
+	TiXmlDocument xml_doc;
+	xml_doc.LoadFile(robot_file);
+	
+	TiXmlElement *robot_xml = xml_doc.FirstChildElement("robot");
+	initLinks(robot_xml);	
+	
+	sleep(10);
 	
 	if (!model_->initFile(robot_file)){
 		cout << "Failed to parse urdf file" << endl;

@@ -65,7 +65,8 @@ class LQG:
         model_file = "model/model.xml"
         urdf_model_file = "test.urdf"
         
-        self.robot = Robot(urdf_model_file)        
+        self.robot = Robot(urdf_model_file) 
+        sleep       
         
         #environment_file = "env.xml"
         environment_file = os.path.join("environment", "env.xml")
