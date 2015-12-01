@@ -42,8 +42,11 @@ void DynamicPathPlanner::setupMotionValidator(bool continuous_collision) {
 	cout << "Motion validator setup" << endl;
 }
 
-void DynamicPathPlanner::log_(std::string msg) {	
-	if (verbose_) {
+void DynamicPathPlanner::log_(std::string msg, bool warn=false) {
+	if (warn) {
+		cout << "DynamicPathPlanner: " << msg << endl;
+	}
+	else if (verbose_) {
 		cout << "DynamicPathPlanner: " << msg << endl;
 	}
 }
@@ -57,15 +60,15 @@ bool DynamicPathPlanner::setup(std::string model_file,
 							   double control_duration) {	
 	control_duration_ = control_duration;	
 	
-	/***** Initialize OpenRAVE *****/
-	log_("Initializing OpenRAVE");
+	/***** Initialize OpenRAVE *****/	
+	log_("Initializing OpenRAVE", true);
 	OpenRAVE::RaveInitialize(true);  
-	log_("OpenRAVE initialized");
+	log_("OpenRAVE initialized", true);
 	env_ = OpenRAVE::RaveCreateEnvironment();
-	log_("Loading environment: " + environment_file);
-	
-	env_->Load(environment_file);
-	log_("Loading or_urdf_plugin");
+	log_("Loading environment: " + environment_file, true);
+	env_->Load("environment/env.xml");
+	//env_->Load(environment_file);
+	log_("Loading or_urdf_plugin", true);
 	const std::string module_str("or_urdf_plugin");
 	if(!OpenRAVE::RaveLoadPlugin(module_str)) {
 	    cout << "Failed to load the or_urdf_plugin." << endl;

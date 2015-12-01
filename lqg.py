@@ -1,4 +1,4 @@
-import numpy as np
+'''import numpy as np
 import plot as Plot
 import os
 import glob
@@ -7,8 +7,7 @@ import sys
 import logging
 import scipy
 from libutil import *
-from librobot import Robot as Manipulator
-from librobot import v_string
+import librobot
 from serializer import Serializer
 from libobstacle import *
 from util_py import *
@@ -18,21 +17,27 @@ from simulator import Simulator
 from path_planning_interface import PathPlanningInterface
 from EMD import *
 from xml.dom import minidom
-from gen_ik_solution import *
-from history_entry import *
-
+from history_entry import *'''
+import sys
+import time
+import numpy as np
+import os
+import glob
+import scipy
+from serializer import Serializer
+from libutil import *
+import logging
+from librobot import v_string, Robot
+from util_py import check_positive_definite, get_goal_states, copyToTmp
+from simulator import Simulator
+from path_evaluator import PathEvaluator
+from path_planning_interface import PathPlanningInterface
+from libobstacle import Obstacle, Terrain
 
 class LQG:
     def __init__(self, plot):
-        np.set_printoptions(precision=16)
-        dir = "stats/lqg"
-        self.clear_stats(dir)
-        sim = Simulator()
-        path_evaluator = PathEvaluator()
-        path_planner = PathPlanningInterface()
-        self.init_serializer()        
-        
         """ Reading the config """
+        self.init_serializer()
         config = self.serializer.read_config("config_lqg.yaml")
         self.set_params(config) 
         
@@ -40,14 +45,27 @@ class LQG:
         if config['verbose']:
             logging_level = logging.DEBUG
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)
+        print "======================"
+        print "Destroy"
+        #RaveDestroy()
+        print "======================"
+        np.set_printoptions(precision=16)
+        dir = "stats/lqg"
+        self.clear_stats(dir)
+        logging.info("Start up simulator")
+        sim = Simulator()
+        path_evaluator = PathEvaluator()
+        path_planner = PathPlanningInterface()
+           
+        
+        
         
         self.utils = Utils()
         
         model_file = "model/model.xml"
         urdf_model_file = "test.urdf"
         
-        self.robot = Manipulator(urdf_model_file)
-        
+        self.robot = Robot(urdf_model_file)        
         
         #environment_file = "env.xml"
         environment_file = os.path.join("environment", "env.xml")
@@ -71,7 +89,8 @@ class LQG:
                                       self.goal_position,
                                       self.goal_radius,
                                       self.planning_algortihm,
-                                      self.path_timeout)        
+                                      self.path_timeout)
+          
         if len(goal_states) == 0:
             logging.error("LQG: Couldn't generate any goal states. Problem seems to be infeasible")
         logging.info("LQG: Generated " + str(len(goal_states)) + " goal states")         
@@ -291,6 +310,7 @@ class LQG:
                 
             cmd = "cp " + model_file + " " + dir + "/model"
             os.system(cmd)
+        RaveDestroy()
         print "Done"        
         
     def setup_scene(self, 

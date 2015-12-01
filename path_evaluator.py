@@ -14,7 +14,7 @@ from threading import Lock
 class PathEvaluator:
     def __init__(self):
         pass
-    
+        
     def setup(self, A, B, C, D, H, M, N, V, W, 
               link_dimensions, 
               workspace_dimension, 

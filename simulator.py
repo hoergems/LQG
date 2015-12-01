@@ -13,7 +13,7 @@ from history_entry import *
 
 class Simulator:
     def __init__(self):
-        pass
+        pass        
     
     def setup_problem(self,
                       A,

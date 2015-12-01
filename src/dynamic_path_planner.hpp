@@ -32,7 +32,8 @@
 #include <ompl/base/MotionValidator.h>
 #include "MotionValidator.hpp"
 
-
+using std::cout;
+using std::endl;
 namespace shared {
 
     typedef boost::shared_ptr<ompl::control::PathControl> PathControlPtr;
@@ -136,7 +137,7 @@ namespace shared {
                 
                 bool verbose_;
                 
-                void log_(std::string msg);
+                void log_(std::string msg, bool warn);
     };
 }
 

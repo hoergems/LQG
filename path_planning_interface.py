@@ -40,9 +40,7 @@ class XQueue(multiprocessing.queues.Queue):
 
 class PathPlanningInterface:
     def __init__(self):
-        self.path_evaluator = PathEvaluator()        
-        self.get_it = False
-        pass
+        self.path_evaluator = PathEvaluator()
     
     def setup_path_evaluator(self, A, B, C, D, H, M, N, V, W, 
                              link_dimensions, 

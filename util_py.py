@@ -3,8 +3,9 @@ import shutil
 import difflib
 import logging
 import numpy as np
+import time
 from difflib import Differ
-from gen_ik_solution import *
+from gen_ik_solution import IKSolutionGenerator
 
 def check_positive_definite(matrices):
     for m in matrices:
@@ -75,8 +76,8 @@ def get_goal_states(problem,
                     goal_threshold,
                     planning_algorithm,
                     path_timeout):
-    if not compareEnvironmentToTmpFiles(problem, model_file):                     
-        ik_solution_generator = IKSolutionGenerator()        
+    ik_solution_generator = IKSolutionGenerator()   
+    if not compareEnvironmentToTmpFiles(problem, model_file):          
         ik_solution_generator.setup(robot,
                                     obstacles,
                                     max_velocity,
@@ -88,6 +89,7 @@ def get_goal_states(problem,
                                     planning_algorithm,
                                     path_timeout)
         ik_solutions = ik_solution_generator.generate(start_state, goal_position, goal_threshold)
+        #ik_solution_generator.destroy()
         if len(ik_solutions) == 0:
             return None
         serializer.serialize_ik_solutions([ik_solutions[i] for i in xrange(len(ik_solutions))], path='tmp/' + problem, file='goalstates.txt')

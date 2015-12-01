@@ -14,9 +14,13 @@ import logging
 class IKSolutionGenerator:
     def __init__(self):
         self.serializer = Serializer()
+        
+    def destroy(self):
+        self.env.Destroy()
+        RaveDestroy()
     
     def setup(self,
-              robot,
+              manipulator,
               obstacles, 
               max_velocity, 
               delta_t, 
@@ -28,13 +32,17 @@ class IKSolutionGenerator:
               path_timeout):        
         """
         Generate the obstacles
-        """
-        InitOpenRAVELogging()
+        """      
+        RaveDestroy()
+        RaveInitialize(True)
+        
+        
+        InitOpenRAVELogging()        
         logging.info("IKSolutionGenerator: Setup")
         self.link_dimensions = v2_double()
-        robot.getActiveLinkDimensions(self.link_dimensions)        
+        manipulator.getActiveLinkDimensions(self.link_dimensions)        
         self.path_planner = PathPlanningInterface()
-        self.path_planner.setup(robot, 
+        self.path_planner.setup(manipulator, 
                                 obstacles, 
                                 max_velocity, 
                                 delta_t, 
@@ -45,6 +53,7 @@ class IKSolutionGenerator:
                                 path_timeout)
         logging.info("IKSolutionGenerator: Create OpenRAVE environment")
         self.env = openravepy.Environment()
+        
         self.env.StopSimulation()       
         logging.info("IKSolutionGenerator: Loading robot file: " + robot_file)
         self.env.Load(robot_file)
@@ -102,13 +111,11 @@ class IKSolutionGenerator:
             n += 1
         self.path_planner = None        
         if not len(solutions) == 0: 
-            print "IKSolutionGenerator: Found " + str(len(solutions)) + " valid goal states"
-            RaveDestroy()       
+            print "IKSolutionGenerator: Found " + str(len(solutions)) + " valid goal states"            
             return solutions        
         else:
             logging.error("IKSoultionGenerator: Couldn't find a valid IK solution. Defined problem seems to be infeasible.")
-            self.path_planner = None
-            RaveDestroy()
+            self.path_planner = None            
             return []
         
             
