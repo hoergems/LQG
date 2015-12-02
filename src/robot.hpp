@@ -2,9 +2,9 @@
 #define ROBOR_HPP_
 #include <string>
 #include <iostream>
-#include <urdf/model.h>
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
+#include <boost/algorithm/string.hpp>
 #include <tinyxml.h>
 
 namespace shared {
@@ -40,10 +40,6 @@ namespace shared {
     
         private:
             std::string robot_file_;
-            
-            std::shared_ptr<urdf::Model> model_;
-            
-            std::vector<boost::shared_ptr<urdf::Joint>> joints_;
             
             std::vector<std::string> link_names_;
             

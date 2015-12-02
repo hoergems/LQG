@@ -266,9 +266,7 @@ std::vector<double> Robot::process_origin_(TiXmlElement *xml) {
 }
 
 Robot::Robot(std::string robot_file):
-	robot_file_(robot_file),
-	model_(new urdf::Model()),
-	joints_(),
+	robot_file_(robot_file),	
 	link_names_(),
 	active_link_names_(),
 	joint_names_(),
