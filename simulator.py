@@ -351,28 +351,54 @@ class Simulator:
         x_new2 = delta_x_new + x_star_next
         return delta_x_new, x_new2
        
-    def apply_control(self, x_dash, u_dash, A, B, V, M):
+    def apply_control(self, x, u, A, B, V, M, apply_zero_torque=False):
         x_new = None
         ce = None
+        if apply_zero_torque:        
+            while True:
+                u = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                current_joint_values = v_double()
+                current_joint_velocities = v_double()            
+                current_joint_values[:] = [x[i] for i in xrange(self.robot_dof)]
+                current_joint_velocities[:] = [x[i + self.robot_dof] for i in xrange(self.robot_dof)]
+                control = v_double()
+                control[:] = u            
+                control_error = v_double()
+                ce = self.sample_control_error(M)
+                control_error[:] = ce
+                result = v_double() 
+                self.propagator.propagate(current_joint_values,
+                                          current_joint_velocities,
+                                          control,
+                                          control_error,
+                                          self.simulation_step_size,
+                                          self.control_duration,
+                                          result)                               
+                x = np.array([result[i] for i in xrange(len(result))])
+                cjvals = v_double()
+                cjvels = v_double()
+                cjvals_arr = [x[i] for i in xrange(len(x) / 2)]
+                cjvels_arr = [x[i] for i in xrange(len(x) / 2, len(x))]
+                cjvals[:] = cjvals_arr
+                cjvels[:] = cjvels_arr
+                self.propagator.updateRobotValues(cjvals, cjvels)
+                time.sleep(self.control_duration)
+            
         if self.dynamic_problem:
             current_joint_values = v_double()
             current_joint_velocities = v_double()
             
-            current_joint_values[:] = [x_dash[i] for i in xrange(self.robot_dof)]
-            current_joint_velocities[:] = [x_dash[i + self.robot_dof] for i in xrange(self.robot_dof)]
+            current_joint_values[:] = [x[i] for i in xrange(self.robot_dof)]
+            current_joint_velocities[:] = [x[i + self.robot_dof] for i in xrange(self.robot_dof)]
             
             control = v_double()
-            control[:] = u_dash
+            control[:] = u
             
             control_error = v_double()
             ce = self.sample_control_error(M)
             
-            control_error[:] = ce 
-            result = v_double()
-            vec = []                     
-            result = v_double()
-            cjv = [current_joint_values[j] for j in xrange(len(current_joint_values))]
-            cjv.extend([current_joint_velocities[j] for j in xrange(len(current_joint_velocities))])
+            control_error[:] = ce
+            result = v_double()            
             self.propagator.propagate(current_joint_values,
                                       current_joint_velocities,
                                       control,
@@ -383,7 +409,7 @@ class Simulator:
             x_new = np.array([result[i] for i in xrange(len(result))])
         else:               
             ce = self.get_random_joint_angles([0.0 for i in xrange(2 * self.robot_dof)], M)
-            x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, ce)
+            x_new = np.dot(A, x) + np.dot(B, u) + np.dot(V, ce)
             if self.enforce_constraints:            
                 x_new = self.check_constraints(x_new)
         if self.show_viewer:
