@@ -29,7 +29,8 @@ bool Robot::initJoints(TiXmlElement *robot_xml) {
 		std::vector<double> origin = process_origin_(joint_xml);
 		joint_origins_.push_back(origin);
 		
-		std::vector<double> joint_axis;
+		// Joint axes
+		std::vector<int> joint_axis;
 		TiXmlElement *axis_xml = joint_xml->FirstChildElement("axis");
 		if (axis_xml) {
 			const char* xyz_str = axis_xml->Attribute("xyz");
@@ -38,16 +39,20 @@ bool Robot::initJoints(TiXmlElement *robot_xml) {
 			for (unsigned int i = 0; i < pieces.size(); ++i) { 
 			    if (pieces[i] != "") { 
 			    	try {
-			    		joint_axis.push_back(boost::lexical_cast<double>(pieces[i].c_str()));
+			    		joint_axis.push_back(boost::lexical_cast<int>(pieces[i].c_str()));
 			    	}
 			    	catch (boost::bad_lexical_cast &e) {
 			    								    									
 			        }
 			    }
 			}
+			
+			joint_axes_.push_back(joint_axis);
 		}
-		
-		joint_axes_.push_back(joint_axis);
+		else {
+			std::vector<int> ax({0, 0, 0});
+			joint_axes_.push_back(ax);
+		}
 		
 		// Joint limits
 		TiXmlElement *limit_xml = joint_xml->FirstChildElement("limit");
@@ -138,7 +143,11 @@ bool Robot::initLinks(TiXmlElement *robot_xml) {
 		    	cout << o << ", ";
 		    }
 		    cout << endl;
-		}		
+		}
+		else {
+			std::vector<double> ld({0.0, 0.0, 0.0});
+			link_dimensions_.push_back(ld);
+		}
 		
 		//Link inertia
 		TiXmlElement *ine = link_xml->FirstChildElement("inertial");
@@ -335,15 +344,27 @@ void Robot::getLinkInertias(std::vector<std::string> &link, std::vector<std::vec
 }
 
 void Robot::getActiveLinkDimensions(std::vector<std::vector<double>> &dimensions) {
-	for (size_t i = 0; i < link_dimensions_.size(); i++) {
-		dimensions.push_back(link_dimensions_[i]);
+	for (size_t i = 0; i < link_names_.size(); i++) {
+		for (size_t j = 0; j < active_link_names_.size(); j ++) {
+			if (link_names_[i] == active_link_names_[j]) {
+				dimensions.push_back(link_dimensions_[i]);
+			}
+		}
 	}	
 }
 
 void Robot::getLinkDimension(std::vector<std::string> &link, std::vector<std::vector<double>> &dimension) {
+	cout << "HELLO" << endl;
 	int index = 0;
 	for (size_t i = 0; i < link.size(); i++) {
+		cout << "link: " << link[i] << endl;		
 		index = get_link_index(link[i]);
+		cout << "index: " << index << endl;
+		cout << "dim: ";
+		for (auto &k: link_dimensions_[index]) {
+			cout << k << ",";
+		}
+		cout << endl;
 		dimension.push_back(link_dimensions_[index]);
 	}
 }
@@ -391,7 +412,7 @@ void Robot::getJointOrigin(std::vector<std::string> &joints, std::vector<std::ve
 	}
 }
 
-void Robot::getJointAxis(std::vector<std::string> &joints, std::vector<std::vector<double>> &axis) {
+void Robot::getJointAxis(std::vector<std::string> &joints, std::vector<std::vector<int>> &axis) {
 	for (size_t i = 0; i < joints.size(); i++) {
 		for (size_t j = 0; j < joint_names_.size(); j++) {
 			if (joints[i] == joint_names_[j]) { 

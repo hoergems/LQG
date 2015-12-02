@@ -99,9 +99,10 @@ class PathPlanningInterface:
         
         joints = v_string()
         robot.getActiveJoints(joints)
+        
         axis = v2_int()
         robot.getJointAxis(joints, axis)
-               
+         
         self.kinematics = libkinematics.Kinematics()        
         self.kinematics.setLinksAndAxis(self.link_dimensions, axis)        
         self.verbose = False 

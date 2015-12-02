@@ -170,7 +170,7 @@ class LQG:
                 
                 path_evaluator.setup(A, B, C, D, H, M, N, V, W, 
                                      self.link_dimensions,
-                                     config['workspace_dimension'], 
+                                     self.workspace_dimension, 
                                      self.sample_size, 
                                      self.obstacles,
                                      self.joint_constraints,
@@ -199,7 +199,7 @@ class LQG:
                                   self.goal_position, 
                                   self.goal_radius, 
                                   self.link_dimensions, 
-                                  config['workspace_dimension'], 
+                                  self.workspace_dimension, 
                                   self.joint_constraints,
                                   self.enforce_constraints,
                                   self.max_velocity,
@@ -334,14 +334,8 @@ class LQG:
             self.obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))                    
         
         """ Setup operations """
-        link_names = v_string()
-        robot.getLinkNames(link_names)
-        link_dims = v2_double()
-        robot.getLinkDimension(link_names, link_dims)
         self.link_dimensions = v2_double()
-        for i in xrange(len(link_dims)):
-            if len(link_dims[i]) != 0:
-                self.link_dimensions.append(link_dims[i])        
+        robot.getActiveLinkDimensions(self.link_dimensions)
         return True
             
     def init_serializer(self):

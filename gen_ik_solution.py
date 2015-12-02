@@ -33,11 +33,8 @@ class IKSolutionGenerator:
         """
         Generate the obstacles
         """      
-        RaveDestroy()
-        RaveInitialize(True)
-        
-        
-        InitOpenRAVELogging()        
+        #RaveDestroy()
+        #RaveInitialize(True)        
         logging.info("IKSolutionGenerator: Setup")
         self.link_dimensions = v2_double()
         manipulator.getActiveLinkDimensions(self.link_dimensions)        
@@ -112,7 +109,7 @@ class IKSolutionGenerator:
         self.path_planner = None        
         if not len(solutions) == 0: 
             print "IKSolutionGenerator: Found " + str(len(solutions)) + " valid goal states"            
-            return solutions        
+            return solutions                  
         else:
             logging.error("IKSoultionGenerator: Couldn't find a valid IK solution. Defined problem seems to be infeasible.")
             self.path_planner = None            

@@ -34,7 +34,7 @@ namespace shared {
     	    
     	    void getJointOrigin(std::vector<std::string> &joints, std::vector<std::vector<double>> &origins);
     	    
-    	    void getJointAxis(std::vector<std::string> &joints, std::vector<std::vector<double>> &axis);
+    	    void getJointAxis(std::vector<std::string> &joints, std::vector<std::vector<int>> &axis);
     	    
     	    
     
@@ -57,7 +57,7 @@ namespace shared {
             
             std::vector<std::vector<double>> active_joint_origins_;
             
-            std::vector<std::vector<double>> joint_axes_;
+            std::vector<std::vector<int>> joint_axes_;
             
             std::vector<double> joint_torque_limits_;
             
@@ -75,7 +75,7 @@ namespace shared {
 			
 			std::vector<double> active_joint_velocity_limits_;
             
-            std::vector<std::vector<double>> active_joint_axes_;
+            std::vector<std::vector<int>> active_joint_axes_;
             
             std::vector<std::string> active_links_;
             
