@@ -34,7 +34,7 @@ namespace shared {
     	    
     	    void getJointOrigin(std::vector<std::string> &joints, std::vector<std::vector<double>> &origins);
     	    
-    	    void getJointAxis(std::vector<std::string> &joints, std::vector<std::vector<int>> &axis);
+    	    void getJointAxis(std::vector<std::string> &joints, std::vector<std::vector<double>> &axis);
     	    
     	    
     
@@ -47,6 +47,40 @@ namespace shared {
             
             std::vector<std::string> link_names_;
             
+            std::vector<std::string> active_link_names_;
+            
+            std::vector<std::string> joint_names_;
+            
+            std::vector<std::string> joint_types_;
+            
+            std::vector<std::string> active_joints_;
+            
+            std::vector<std::vector<double>> joint_origins_;
+            
+            std::vector<std::vector<double>> link_origins_;
+            
+            std::vector<std::vector<double>> active_joint_origins_;
+            
+            std::vector<std::vector<double>> joint_axes_;
+            
+            std::vector<double> joint_torque_limits_;
+            
+            std::vector<double> active_joint_torque_limits_;
+            
+            std::vector<double> lower_joint_limits_;
+            
+            std::vector<double> upper_joint_limits_;
+            
+            std::vector<double> active_lower_joint_limits_;
+			
+			std::vector<double> active_upper_joint_limits_;
+			
+			std::vector<double> joint_velocity_limits_;
+			
+			std::vector<double> active_joint_velocity_limits_;
+            
+            std::vector<std::vector<double>> active_joint_axes_;
+            
             std::vector<std::string> active_links_;
             
             std::vector<double> link_masses_;
@@ -58,6 +92,10 @@ namespace shared {
             std::vector<std::vector<double>> link_dimensions_;
             
             bool initLinks(TiXmlElement *robot_xml);
+            
+            bool initJoints(TiXmlElement *robot_xml);
+            
+            unsigned int get_link_index(std::string &link_name);
             
             std::vector<double> process_origin_(TiXmlElement *xml);
     

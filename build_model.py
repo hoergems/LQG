@@ -219,25 +219,26 @@ class Test:
         
         link_names = v_string()
         robot.getLinkNames(link_names)
-        self.link_names = [link_names[i] for i in xrange(len(link_names))]
-        print "Got link names"
+        self.link_names = [link_names[i] for i in xrange(len(link_names))]        
+        print "Got link names " + str(self.link_names)
         joint_names = v_string()
-        robot.getJointNames(joint_names)
+        robot.getActiveJoints(joint_names)
         self.joint_names = [joint_names[i] for i in xrange(len(joint_names))]                 
-        print "got joint names"
+        print "got joint names " + str(self.joint_names)
         joint_type = v_string()
         robot.getJointType(joint_names, joint_type)
         self.joint_types = [joint_type[i] for i in xrange(len(joint_type))]
-        print "got jopint types"
+        print "got jopint types "  + str(self.joint_types)
         joint_origins = v2_double()
         robot.getJointOrigin(joint_names, joint_origins)
         self.joint_origins = [Matrix([[joint_origins[i][j]] for j in xrange(len(joint_origins[i]))]) 
                               for i in xrange(len(joint_origins))]               
-        print "got joint origins"
+        print "got joint origins " + str(self.joint_origins)
         joint_axis = v2_double()
         robot.getJointAxis(joint_names, joint_axis)
         self.joint_axis = [Matrix([[joint_axis[i][j]] for j in xrange(len(joint_axis[i]))]) for i in xrange(len(joint_axis))]
-        print "got joint axis"
+        print "got joint axis "  + str(self.joint_axis)
+        sleep
         self.q = []
         self.qdot = []
         self.qstar = []
@@ -247,31 +248,31 @@ class Test:
         self.zeta = []
         self.zetastar = []
         for i in xrange(len(self.joint_names)):
-            #if self.joint_types[i] == "revolute":            
+            if self.joint_types[i] == "revolute":          
             
-            symb_string_q = "x[" + str(i) + "]"
-            symb_string_q_dot = "x[" + str(i + len(self.joint_names) - 1) + "]"
-            symb_string_q_star = "xstar[" + str(i) + "]"
-            symb_string_q_dot_star = "xstar[" + str(i + len(self.joint_names) - 1) + "]"
-            symb_string_r = "rho[" + str(i) + "]"
-            symb_string_r_star = "rhostar[" + str(i) + "]" 
-            symb_zeta = "zeta[" + str(i) + "]"
-            symb_zeta_star = "zetastar[" + str(i) + "]"          
-            
-            
-            self.q.append(symbols(symb_string_q))
-            self.qdot.append(symbols(symb_string_q_dot))
-            self.rho.append(symbols(symb_string_r))
-            self.qstar.append(symbols(symb_string_q_star))
-            self.qdotstar.append(symbols(symb_string_q_dot_star))
-            self.rhostar.append(symbols(symb_string_r_star))
-            self.zeta.append(symbols(symb_zeta))
-            self.zetastar.append(symbols(symb_zeta_star))
+                symb_string_q = "x[" + str(i) + "]"
+                symb_string_q_dot = "x[" + str(i + len(self.joint_names) - 1) + "]"
+                symb_string_q_star = "xstar[" + str(i) + "]"
+                symb_string_q_dot_star = "xstar[" + str(i + len(self.joint_names) - 1) + "]"
+                symb_string_r = "rho[" + str(i) + "]"
+                symb_string_r_star = "rhostar[" + str(i) + "]" 
+                symb_zeta = "zeta[" + str(i) + "]"
+                symb_zeta_star = "zetastar[" + str(i) + "]"          
+                
+                
+                self.q.append(symbols(symb_string_q))
+                self.qdot.append(symbols(symb_string_q_dot))
+                self.rho.append(symbols(symb_string_r))
+                self.qstar.append(symbols(symb_string_q_star))
+                self.qdotstar.append(symbols(symb_string_q_dot_star))
+                self.rhostar.append(symbols(symb_string_r_star))
+                self.zeta.append(symbols(symb_zeta))
+                self.zetastar.append(symbols(symb_zeta_star))
         inertia_pose = v2_double()
         print "get link inertial poses"
         robot.getLinkInertialPose(link_names, inertia_pose)
         self.inertial_poses = [[inertia_pose[i][j] for j in xrange(len(inertia_pose[i]))] for i in xrange(len(inertia_pose))]
-        print "got link inertial poses"
+        print "got link inertial poses " + str(self.inertial_poses)
         masses = v_double()
         robot.getLinkMasses(link_names, masses)        
         self.link_masses = [masses[i] for i in xrange(len(masses))]

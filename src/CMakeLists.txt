@@ -112,7 +112,8 @@ target_link_libraries (robot
                        urdf
                        boost_system
                        boost_python
-                       python2.7)
+                       python2.7
+                       tinyxml)
 
 target_link_libraries (integrate
                        boost_system
