@@ -170,7 +170,7 @@ class LQG:
                 
                 path_evaluator.setup(A, B, C, D, H, M, N, V, W, 
                                      self.link_dimensions,
-                                     self.workspace_dimension, 
+                                     self.robot, 
                                      self.sample_size, 
                                      self.obstacles,
                                      self.joint_constraints,
@@ -194,12 +194,11 @@ class LQG:
                                    [us[i] for i in xrange(len(us))],
                                    [zs[i] for i in xrange(len(zs))]])
                 
-                sim.setup_problem(A, B, C, D, H, V, W, M, N, 
+                sim.setup_problem(A, B, C, D, H, V, W, M, N,
+                                  self.robot, 
                                   self.obstacles, 
                                   self.goal_position, 
-                                  self.goal_radius, 
-                                  self.link_dimensions, 
-                                  self.workspace_dimension, 
+                                  self.goal_radius,
                                   self.joint_constraints,
                                   self.enforce_constraints,
                                   self.max_velocity,

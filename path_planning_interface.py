@@ -44,7 +44,7 @@ class PathPlanningInterface:
     
     def setup_path_evaluator(self, A, B, C, D, H, M, N, V, W, 
                              link_dimensions, 
-                             workspace_dimension, 
+                             robot, 
                              sample_size, 
                              obstacles,
                              joint_constraints,
@@ -55,7 +55,7 @@ class PathPlanningInterface:
                              w2):
         self.path_evaluator.setup(A, B, C, D, H, M, N, V, W, 
                                   link_dimensions, 
-                                  workspace_dimension, 
+                                  robot, 
                                   sample_size, 
                                   obstacles,
                                   joint_constraints,
@@ -86,7 +86,7 @@ class PathPlanningInterface:
         self.link_dimensions = v2_double()
         robot.getActiveLinkDimensions(self.link_dimensions)
         self.num_cores = cpu_count() 
-        self.num_cores = 2       
+        #self.num_cores = 2       
         self.obstacles = obstacles        
         self.max_velocity = max_velocity
         self.delta_t = delta_t
@@ -97,14 +97,10 @@ class PathPlanningInterface:
         self.joint_constraints_vec = v_double()
         self.joint_constraints_vec[:] = self.joint_constraints
         
-        joints = v_string()
-        robot.getActiveJoints(joints)
-        
-        axis = v2_int()
-        robot.getJointAxis(joints, axis)
-         
-        self.kinematics = libkinematics.Kinematics()        
-        self.kinematics.setLinksAndAxis(self.link_dimensions, axis)        
+        self.kinematics = libkinematics.Kinematics()
+        self.kinematics.setParams([robot]) 
+              
+        #self.kinematics.setLinksAndAxis(self.link_dimensions, axis)        
         self.verbose = False 
         if(logging.getLogger().isEnabledFor(logging.INFO)):
             self.verbose = True        

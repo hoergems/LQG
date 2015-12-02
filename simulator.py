@@ -8,6 +8,7 @@ from libkinematics import *
 from libpropagator import *
 from libintegrate import *
 from libutil import *
+from librobot import v_string
 from history_entry import *
 
 
@@ -25,11 +26,10 @@ class Simulator:
                       W,
                       M,
                       N,
+                      robot,
                       obstacles,
                       goal_position,
                       goal_radius,
-                      link_dimensions,                      
-                      workspace_dimension,
                       joint_constraints,
                       enforce_constraints,
                       joint_velocity_limit,
@@ -48,11 +48,10 @@ class Simulator:
         self.W = W
         self.M = M
         self.N = N
+        self.robot = robot
         self.obstacles = obstacles
         self.goal_position = goal_position
         self.goal_radius = goal_radius
-        self.link_dimensions = link_dimensions 
-        self.workspace_dimension = workspace_dimension   
         self.joint_constraints = joint_constraints 
         self.enforce_constraints = enforce_constraints 
         self.joint_velocity_limit = joint_velocity_limit
@@ -66,6 +65,12 @@ class Simulator:
                               viscous,
                               show_viewer)
         self.control_duration = control_duration
+        active_joints = v_string()
+        self.robot.getActiveJoints(active_joints)
+        self.robot_dof = len(active_joints)
+        
+        self.link_dimensions = v2_double()
+        self.robot.getActiveLinkDimensions(self.link_dimensions)
         
     def setup_dynamic_problem(self,                           
                               simulation_step_size):
@@ -78,21 +83,13 @@ class Simulator:
         self.illegal_move_penalty = illegal_move_penalty
         self.exit_reward = exit_reward
     
-    def setup_simulator(self, num_simulation_runs, stop_when_terminal):
-        axis = v2_int()
-        ax1 = v_int()
-        ax2 = v_int()
-        ax1[:] = [0, 0, 1]
-        if self.workspace_dimension == 2:
-            ax2[:] = [0, 0, 1]            
-        elif self.workspace_dimension == 3:
-            ax2[:] = [0, 1, 0]            
-        axis[:] = [ax1, ax2, ax1]        
+    def setup_simulator(self, num_simulation_runs, stop_when_terminal):               
         self.utils = Utils()                
         self.kinematics = Kinematics()        
-        self.kinematics.setLinksAndAxis(self.link_dimensions, axis)               
+        self.kinematics.setParams([self.robot])               
         self.num_simulation_runs = num_simulation_runs        
         self.stop_when_terminal = stop_when_terminal
+        
         
     def enforce_velocity_limit(self, u):        
         for i in xrange(len(u)):
@@ -237,7 +234,7 @@ class Simulator:
                                                     P_dash, 
                                                     Ws[i], 
                                                     Ns[i], 
-                                                    2 * len(self.link_dimensions))                            
+                                                    2 * self.robot_dof)                            
                 x_estimate_new = x_tilde + xs[i + 1]
                 if self.enforce_constraints:     
                     x_estimate_new = self.check_constraints(x_estimate_new) 
@@ -315,7 +312,7 @@ class Simulator:
         #previous_state = []
                     
         joint_angles_goal = v_double()
-        joint_angles_goal[:] = [state[i] for i in xrange(len(self.link_dimensions))]
+        joint_angles_goal[:] = [state[i] for i in xrange(self.robot_dof)]
         collision_structures = self.utils.createManipulatorCollisionStructures(joint_angles_goal,
                                                                                self.link_dimensions, 
                                                                                self.kinematics)
@@ -361,8 +358,8 @@ class Simulator:
             current_joint_values = v_double()
             current_joint_velocities = v_double()
             
-            current_joint_values[:] = [x_dash[i] for i in xrange(len(self.link_dimensions))]
-            current_joint_velocities[:] = [x_dash[i + len(self.link_dimensions)] for i in xrange(len(self.link_dimensions))]
+            current_joint_values[:] = [x_dash[i] for i in xrange(self.robot_dof)]
+            current_joint_velocities[:] = [x_dash[i + self.robot_dof] for i in xrange(self.robot_dof)]
             
             control = v_double()
             control[:] = u_dash
@@ -385,7 +382,7 @@ class Simulator:
                                       result)                               
             x_new = np.array([result[i] for i in xrange(len(result))])
         else:               
-            ce = self.get_random_joint_angles([0.0 for i in xrange(2 * len(self.link_dimensions))], M)
+            ce = self.get_random_joint_angles([0.0 for i in xrange(2 * self.robot_dof)], M)
             x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, ce)
             if self.enforce_constraints:            
                 x_new = self.check_constraints(x_new)
@@ -401,7 +398,7 @@ class Simulator:
         return x_new, ce
     
     def sample_control_error(self, M):
-        mu = np.array([0.0 for i in xrange(2 * len(self.link_dimensions))])
+        mu = np.array([0.0 for i in xrange(2 * self.robot_dof)])
         return np.random.multivariate_normal(mu, M)
     
     def get_random_joint_angles(self, mu, cov):        
@@ -415,7 +412,7 @@ class Simulator:
     
     def get_observation(self, true_theta, H, N, W):
         return np.add(np.dot(H, true_theta), 
-                      np.dot(W, self.get_random_joint_angles([0.0 for i in xrange(2 * len(self.link_dimensions))], N)))
+                      np.dot(W, self.get_random_joint_angles([0.0 for i in xrange(2 * self.robot_dof)], N)))
     
 if __name__ == "__main__":
     Simulator()

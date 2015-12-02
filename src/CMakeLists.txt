@@ -28,13 +28,15 @@ add_library(util SHARED
             utils.cpp
             Terrain.cpp
             Obstacle.cpp
-            Kinematics.cpp)
+            Kinematics.cpp
+            robot.cpp)
 
 add_library(area SHARED
             Area.cpp)
 
 add_library(kinematics SHARED
-            Kinematics.cpp)
+            Kinematics.cpp
+            robot.cpp)
 
 add_library(robot SHARED robot.cpp)
 
@@ -50,7 +52,8 @@ add_library(obstacle SHARED
             Obstacle.cpp
             Terrain.cpp
             utils.cpp
-            Kinematics.cpp)
+            Kinematics.cpp
+            robot.cpp)
 
 add_library(path_planner SHARED
             path_planner.cpp
@@ -58,6 +61,7 @@ add_library(path_planner SHARED
             ManipulatorGoalRegion.cpp
             utils.cpp
             Kinematics.cpp
+            robot.cpp
             Terrain.cpp
             Obstacle.cpp)
 
@@ -72,7 +76,8 @@ add_library(dynamic_path_planner SHARED
             utils.cpp
             Obstacle.cpp
             Terrain.cpp
-            Kinematics.cpp            
+            Kinematics.cpp
+            robot.cpp            
             torque_damper.cpp
             control_space.cpp
             control_sampler.cpp)
@@ -81,7 +86,8 @@ target_link_libraries (util
                        boost_system
                        boost_python
                        python2.7                      
-                       fcl)
+                       fcl
+                       tinyxml)
 
 target_link_libraries(area
                       boost_system
@@ -91,14 +97,16 @@ target_link_libraries(area
 target_link_libraries(kinematics
                       boost_system
                       boost_python
-                      python2.7)
+                      python2.7
+                      tinyxml)
 
 target_link_libraries(path_planner
                       boost_system
                       boost_python
                       python2.7
                       ompl
-                      fcl)
+                      fcl
+                      tinyxml)
 
 target_link_libraries(obstacle
                       openrave0.9 
@@ -106,7 +114,8 @@ target_link_libraries(obstacle
                       boost_system
                       boost_python
                       python2.7
-                      fcl)
+                      fcl
+                      tinyxml)
 
 target_link_libraries (robot
                        urdf
@@ -135,7 +144,8 @@ target_link_libraries (dynamic_path_planner
                        boost_python
                        python2.7 
                        boost_thread
-                       fcl)
+                       fcl
+                       tinyxml)
 
 #set_property(TARGET robot PROPERTY CXX_STANDARD 11)
                        

@@ -234,7 +234,7 @@ class Test:
         self.joint_origins = [Matrix([[joint_origins[i][j]] for j in xrange(len(joint_origins[i]))]) 
                               for i in xrange(len(joint_origins))]               
         print "got joint origins " + str(self.joint_origins)
-        joint_axis = v2_double()
+        joint_axis = v2_int()
         robot.getJointAxis(joint_names, joint_axis)
         self.joint_axis = [Matrix([[joint_axis[i][j]] for j in xrange(len(joint_axis[i]))]) for i in xrange(len(joint_axis))]
         print "got joint axis "  + str(self.joint_axis)
@@ -279,7 +279,7 @@ class Test:
         link_inertias = v2_double()
         robot.getLinkInertias(link_names, link_inertias)
         print "got link inertias " + str([[link_inertias[i][j] for j in xrange(len(link_inertias[i]))] for i in xrange(len(link_inertias))]) 
-              
+        
         self.link_inertias = [Matrix([[link_inertias[i][0], link_inertias[i][1], link_inertias[i][2]],
                                       [link_inertias[i][1], link_inertias[i][3], link_inertias[i][4]],
                                       [link_inertias[i][2], link_inertias[i][4], link_inertias[i][5]]]) for i in xrange(len(link_inertias))]

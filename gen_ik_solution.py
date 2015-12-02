@@ -78,7 +78,7 @@ class IKSolutionGenerator:
             
             possible_ik_solutions = ikmodel.manip.FindIKSolutions(IkParameterization(target,IkParameterization.Type.TranslationXY2D), False)            
             
-        elif workspace_dimension == 3:            
+        else:            
             solution, unique = self.legIK(goal_position[0], 
                                           goal_position[1], 
                                           goal_position[2],

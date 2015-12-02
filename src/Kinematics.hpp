@@ -8,6 +8,7 @@
 #include <algorithm>
 //#include "/usr/local/include/fcl/math/matrix_3f.h"
 #include "fcl/math/matrix_3f.h"
+#include "robot.hpp"
 #include <Eigen/Dense>
 
 namespace shared {
@@ -16,7 +17,11 @@ namespace shared {
         public:
             Kinematics();
             
-            void setLinksAndAxis(std::vector<std::vector<double>> links, std::vector<std::vector<int>> axis); 
+            void setParams(shared::Robot *robot);
+            	
+            void setParamsPy(boost::python::list &ns);
+            
+            //void setLinksAndAxis(std::vector<std::vector<double>> links, std::vector<std::vector<int>> axis); 
             
             std::vector<double> getPositionOfLinkN(const std::vector<double> &joint_angles, const int &n) const;
             
@@ -26,7 +31,7 @@ namespace shared {
             
             std::pair<fcl::Vec3f, fcl::Matrix3f> getEndEffectorPose(const std::vector<double> &joint_angles) const;
 
-            bool setLinksAndAxisCalled();
+            //bool setLinksAndAxisCalled();
             
             
             
@@ -35,7 +40,7 @@ namespace shared {
             
             std::vector<double> rotation_offsets_;
 
-            bool setLinksAndAxisCalled_;
+            bool params_set_;
             
             Eigen::MatrixXd getTransformationMatr(double sigma_n, double d_n, double a_n, double alpha_n) const;
             

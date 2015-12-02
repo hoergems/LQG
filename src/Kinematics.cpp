@@ -9,10 +9,32 @@ namespace shared {
 Kinematics::Kinematics():
     links_(),    
     rotation_offsets_(),
-    setLinksAndAxisCalled_(false) {
+    params_set_(false) {
 }
 
-void Kinematics::setLinksAndAxis(std::vector<std::vector<double>> links, std::vector<std::vector<int>> axis) {
+void Kinematics::setParamsPy(boost::python::list &ns) {
+	shared::Robot robot = boost::python::extract<shared::Robot>(ns[0]);
+	setParams(&robot);
+}
+
+void Kinematics::setParams(shared::Robot *robot) {
+	std::vector<std::string> active_joints;
+	robot->getActiveJoints(active_joints);
+	std::vector<std::vector<double>> link_dimensions; 
+	robot->getActiveLinkDimensions(link_dimensions);
+	for (auto &dim: link_dimensions) {
+		links_.push_back(dim);
+	}
+	std::vector<std::vector<double>> origins;
+	robot->getJointOrigin(active_joints, origins);
+	
+	for (auto &o: origins) {
+		rotation_offsets_.push_back(o[3]);		
+	}
+	params_set_ = true;
+}
+
+/**void Kinematics::setLinksAndAxis(std::vector<std::vector<double>> links, std::vector<std::vector<int>> axis) {
     for (size_t i = 0; i < links.size(); i++) {
         links_.push_back(links[i]);
     }
@@ -28,7 +50,7 @@ void Kinematics::setLinksAndAxis(std::vector<std::vector<double>> links, std::ve
     }
 
     setLinksAndAxisCalled_ = true;
-}
+}*/
 
 std::vector<double> Kinematics::getPositionOfLinkN(const std::vector<double> &joint_angles, const int &n) const {
     std::pair<fcl::Vec3f, fcl::Matrix3f> link_n_pose = getPoseOfLinkN(joint_angles, n);
@@ -87,9 +109,9 @@ Eigen::MatrixXd Kinematics::getTransformationMatr(double sigma_n, double d_n, do
     return b;
 }
 
-bool Kinematics::setLinksAndAxisCalled() {
+/**bool Kinematics::setLinksAndAxisCalled() {
     return setLinksAndAxisCalled_;
-}
+}*/
 
 
 
@@ -97,13 +119,12 @@ BOOST_PYTHON_MODULE(libkinematics)
 {
     using namespace boost::python;
     
-    typedef std::vector<std::vector<double> > double_trouble;
+    void (Kinematics::*setParams_d)(boost::python::list&) = &Kinematics::setParamsPy;
     
     class_<Kinematics, std::shared_ptr<Kinematics>>("Kinematics")
         .def("getPositionOfLinkN", &Kinematics::getPositionOfLinkN)
-        .def("getEndEffectorPosition", &Kinematics::getEndEffectorPosition)
-        .def("setLinksAndAxis", &Kinematics::setLinksAndAxis) 
-        .def("setLinksAndAxisCalled", &Kinematics::setLinksAndAxisCalled)      
+        .def("getEndEffectorPosition", &Kinematics::getEndEffectorPosition)         
+		.def("setParams", setParams_d)
     ;
 }
  

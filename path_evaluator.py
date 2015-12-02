@@ -17,7 +17,7 @@ class PathEvaluator:
         
     def setup(self, A, B, C, D, H, M, N, V, W, 
               link_dimensions, 
-              workspace_dimension, 
+              robot, 
               sample_size, 
               obstacles,
               joint_constraints,
@@ -45,21 +45,11 @@ class PathEvaluator:
         self.goal_position = goal_position 
         self.goal_radius = goal_radius   
         self.w1 = w1
-        self.w2 = w2
-        self.workspace_dimension = workspace_dimension
-        self.mutex = Lock()        
+        self.w2 = w2        
+        self.mutex = Lock()
         
-        axis = v2_int()
-        ax1 = v_int()
-        ax2 = v_int()
-        ax1[:] = [0, 0, 1]
-        if workspace_dimension == 2:
-            ax2[:] = [0, 0, 1]            
-        elif workspace_dimension == 3:
-            ax2[:] = [0, 1, 0]
-        axis[:] = [ax1, ax2, ax1]
         self.kinematics = Kinematics()
-        self.kinematics.setLinksAndAxis(self.link_dimensions, axis)
+        self.kinematics.setParams([robot])
         self.utils = Utils()
         self.integrate = Integrate()
         self.dynamic_problem = False
@@ -123,66 +113,7 @@ class PathEvaluator:
                 else:
                     expected_reward -= pdf[i] * self.step_penalty
                        
-        return (expected_reward, terminal)    
-    
-    def get_jacobian(self, links, state):
-        s0 = np.sin(state[0])
-        c0 = np.cos(state[0])
-        s1 = np.sin(state[0] + state[1])
-        c1 = np.cos(state[0] + state[1])
-            
-        if len(state) == 2:
-            return np.array([[-links[0] * np.sin(state[0]) - links[1] * np.sin(state[0] + state[1]), -links[1] * np.sin(state[0] + state[1])],
-                            [links[0] * np.cos(state[0]) + links[1] * np.cos(state[0] + state[1]), links[1] * np.cos(state[0] + state[1])]])
-        elif len(state) == 3:
-            l1 = links[0]
-            l2 = links[1]
-            l3 = links[2]
-            c1 = np.cos(state[0])
-            c2 = np.cos(state[1])
-            c3 = np.cos(state[2])
-            s1 = np.sin(state[0])
-            s2 = np.sin(state[1])
-            s3 = np.sin(state[2])
-            if self.workspace_dimension == 2:
-                O_0 = np.array([0.0, 
-                                0.0, 
-                                0.0])
-                O_1 = np.array([l1*c1, 
-                                l1*s1, 
-                                0.0])
-                O_2 = np.array([l2*(c1*c2-s1*s2)+l1*c1,
-                                l2*(c2*s1+c1*s2)+l1*s1,
-                                0.0])
-                O_3 = np.array([l3*(c3*(c1*c2-s1*s2)+s3*(-c1*s2-c2*s1))+l2*(c1*c2-s1*s2)+l1*c1,
-                                l3*(c3*(c2*s1+c1*s2)+s3*(-s1*s2+c1*c2))+l2*(c2*s1+c1*s2)+l1*s1,
-                                0.0])
-                z_0 = np.array([0.0, 0.0, 1.0])
-                z_1 = np.array([0.0, 0.0, 1.0])
-                z_2 = np.array([0.0, 0.0, 1.0])
-            else:
-                O_0 = np.array([0.0, 
-                                0.0, 
-                                0.0])
-                O_1 = np.array([l1*c1,
-                                l1*s1,
-                                0.0])
-                O_2 = np.array([c1*(l2*c2+l1),
-                                s1*(l2*c2+l1),
-                                -l2*s2])
-                O_3 = np.array([l3*c1*(c2*c3-s2*s3)+c1*(l2*c2+l1),
-                                l3*s1*(c2*c3-s2*s3)+s1*(l2*c2+l1),
-                                l3*(-c3*s2-c2*s3)-l2*s2])
-                z_0 = np.array([0.0, 0.0, 1.0])
-                z_1 = np.array([-s1, c1, 0.0])
-                z_2 = np.array([-s1, c1, 0.0])
-            
-            v1 = np.vstack((np.array([np.cross(z_0, np.subtract(O_3, O_0))]).T, np.array([z_0]).T))
-            v2 = np.vstack((np.array([np.cross(z_1, np.subtract(O_3, O_1))]).T, np.array([z_1]).T))
-            v3 = np.vstack((np.array([np.cross(z_2, np.subtract(O_3, O_2))]).T, np.array([z_2]).T))
-            
-            j = np.hstack((np.hstack((v1, v2)), v3))            
-            return j
+        return (expected_reward, terminal)
         
     def evaluate_path(self, path, P_t, current_step, horizon=-1):       
         objective_p = self.evaluate(0, path, P_t, current_step, horizon)
