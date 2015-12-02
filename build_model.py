@@ -222,7 +222,7 @@ class Test:
         self.link_names = [link_names[i] for i in xrange(len(link_names))]        
         print "Got link names " + str(self.link_names)
         joint_names = v_string()
-        robot.getActiveJoints(joint_names)
+        robot.getJointNames(joint_names)
         self.joint_names = [joint_names[i] for i in xrange(len(joint_names))]                 
         print "got joint names " + str(self.joint_names)
         joint_type = v_string()
@@ -247,27 +247,26 @@ class Test:
         self.rhostar = []
         self.zeta = []
         self.zetastar = []
-        for i in xrange(len(self.joint_names)):
-            if self.joint_types[i] == "revolute":          
+        for i in xrange(len(self.joint_names)):                     
             
-                symb_string_q = "x[" + str(i) + "]"
-                symb_string_q_dot = "x[" + str(i + len(self.joint_names) - 1) + "]"
-                symb_string_q_star = "xstar[" + str(i) + "]"
-                symb_string_q_dot_star = "xstar[" + str(i + len(self.joint_names) - 1) + "]"
-                symb_string_r = "rho[" + str(i) + "]"
-                symb_string_r_star = "rhostar[" + str(i) + "]" 
-                symb_zeta = "zeta[" + str(i) + "]"
-                symb_zeta_star = "zetastar[" + str(i) + "]"          
+            symb_string_q = "x[" + str(i) + "]"
+            symb_string_q_dot = "x[" + str(i + len(self.joint_names) - 1) + "]"
+            symb_string_q_star = "xstar[" + str(i) + "]"
+            symb_string_q_dot_star = "xstar[" + str(i + len(self.joint_names) - 1) + "]"
+            symb_string_r = "rho[" + str(i) + "]"
+            symb_string_r_star = "rhostar[" + str(i) + "]" 
+            symb_zeta = "zeta[" + str(i) + "]"
+            symb_zeta_star = "zetastar[" + str(i) + "]"          
                 
                 
-                self.q.append(symbols(symb_string_q))
-                self.qdot.append(symbols(symb_string_q_dot))
-                self.rho.append(symbols(symb_string_r))
-                self.qstar.append(symbols(symb_string_q_star))
-                self.qdotstar.append(symbols(symb_string_q_dot_star))
-                self.rhostar.append(symbols(symb_string_r_star))
-                self.zeta.append(symbols(symb_zeta))
-                self.zetastar.append(symbols(symb_zeta_star))
+            self.q.append(symbols(symb_string_q))
+            self.qdot.append(symbols(symb_string_q_dot))
+            self.rho.append(symbols(symb_string_r))
+            self.qstar.append(symbols(symb_string_q_star))
+            self.qdotstar.append(symbols(symb_string_q_dot_star))
+            self.rhostar.append(symbols(symb_string_r_star))
+            self.zeta.append(symbols(symb_zeta))
+            self.zetastar.append(symbols(symb_zeta_star))
         inertia_pose = v2_double()
         print "get link inertial poses"
         robot.getLinkInertialPose(link_names, inertia_pose)

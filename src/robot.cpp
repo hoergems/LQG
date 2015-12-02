@@ -138,7 +138,7 @@ bool Robot::initLinks(TiXmlElement *robot_xml) {
 		    	cout << o << ", ";
 		    }
 		    cout << endl;
-		}
+		}		
 		
 		//Link inertia
 		TiXmlElement *ine = link_xml->FirstChildElement("inertial");
@@ -207,6 +207,15 @@ bool Robot::initLinks(TiXmlElement *robot_xml) {
 			inertia_vals.push_back(iyz);
 			inertia_vals.push_back(izz);
 			link_inertia_matrices_.push_back(inertia_vals);
+		}
+		else {			
+			link_masses_.push_back(0.0);
+			
+			std::vector<double> origin({0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+			link_inertia_origins_.push_back(origin);
+			
+			std::vector<double> inert({0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+			link_inertia_matrices_.push_back(inert);			
 		}
 	}
 	
@@ -287,27 +296,11 @@ Robot::Robot(std::string robot_file):
 	TiXmlElement *robot_xml = xml_doc.FirstChildElement("robot");
 	initLinks(robot_xml);
 	initJoints(robot_xml);
-	
-	/**sleep(10);
-	
-	if (!model_->initFile(robot_file)){
-		cout << "Failed to parse urdf file" << endl;
-	}
-	else {
-		cout << "Successfully parsed urdf file" << endl;
-	}
-	
-	std::vector<boost::shared_ptr<urdf::Link>> links;
-	boost::shared_ptr<const urdf::Link> root = model_->getRoot();	
-	while (root->child_links.size() != 0) {
-		joints_.push_back(root->child_joints[0]);
-		root = root->child_links[0];
-	}*/	
 }
 
 unsigned int Robot::get_link_index(std::string &link_name) {	
-	for (size_t i = 0; i < active_link_names_.size(); i++) {
-		if (link_name == active_link_names_[i]) {
+	for (size_t i = 0; i < link_names_.size(); i++) {
+		if (link_name == link_names_[i]) {
 			return i;
 		}
 	}
@@ -392,8 +385,8 @@ void Robot::getJointType(std::vector<std::string> &joint, std::vector<std::strin
 
 void Robot::getJointOrigin(std::vector<std::string> &joints, std::vector<std::vector<double>> &origins) {
 	for (size_t i = 0; i < joints.size(); i++) {
-		for (size_t j = 0; j < active_joints_.size(); j++) {
-			if (joints[i] == active_joints_[j]) {
+		for (size_t j = 0; j < joint_names_.size(); j++) {
+			if (joints[i] == joint_names_[j]) {
 				origins.push_back(joint_origins_[j]);
 			}
 		}
