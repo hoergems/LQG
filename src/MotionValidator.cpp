@@ -8,24 +8,19 @@ using namespace fcl;
 namespace shared {
 
 MotionValidator::MotionValidator(const ompl::base::SpaceInformationPtr &si,
+		                         boost::shared_ptr<shared::Robot> &robot,
                                  bool continuous_collision,
                                  bool dynamics):    
     ompl::base::MotionValidator(si),
-    si_(si),
-    kinematics_(nullptr),     
-    continuous_collision_(continuous_collision),    
-    utils_(),
-    link_dimensions_(),
+    si_(si), 
+    robot_(robot),
+    continuous_collision_(continuous_collision),
     obstacles_(),
     dim_(si_->getStateSpace()->getDimension())
-{
+{	
     if (dynamics) {
     	dim_ = si_->getStateSpace()->getDimension() / 2;
     }    
-}
-
-void MotionValidator::setKinematics(std::shared_ptr<Kinematics> kinematics) {
-	kinematics_ = kinematics;
 }
 
 bool MotionValidator::checkMotion(const std::vector<double> &s1, 
@@ -41,10 +36,11 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
 			return false;
 	    }		
 	}*/
-    
-	std::vector<OBB> manipulator_collision_structures_goal = utils_.createManipulatorCollisionStructures(s2,
+	std::vector<OBB> manipulator_collision_structures_goal;
+	robot_->createRobotCollisionStructures(s2, manipulator_collision_structures_goal);
+	/**std::vector<OBB> manipulator_collision_structures_goal = utils_.createManipulatorCollisionStructures(s2,
                                                                                                          link_dimensions_, 
-                                                                                                         kinematics_);
+                                                                                                         kinematics_);*/
     for (size_t i = 0; i < obstacles_.size(); i++) {        
         if (!obstacles_[i]->isTraversable()) {
         	if (obstacles_[i]->in_collision(manipulator_collision_structures_goal)) {        		
@@ -53,13 +49,17 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
         }        
     }
     
-    if (continuous_collision) {        
-        std::vector<fcl::CollisionObject> manipulator_collision_objects_start = utils_.createManipulatorCollisionObjects(s1, 
+    if (continuous_collision) {
+    	std::vector<fcl::CollisionObject> manipulator_collision_objects_start;
+    	std::vector<fcl::CollisionObject> manipulator_collision_objects_goal;
+    	robot_->createRobotCollisionObjects(s1, manipulator_collision_objects_start);
+    	robot_->createRobotCollisionObjects(s2, manipulator_collision_objects_goal);
+        /**std::vector<fcl::CollisionObject> manipulator_collision_objects_start = utils_.createManipulatorCollisionObjects(s1, 
                                                                                                                          link_dimensions_,
                                                                                                                          kinematics_);
         std::vector<fcl::CollisionObject> manipulator_collision_objects_goal = utils_.createManipulatorCollisionObjects(s2, 
                                                                                                                         link_dimensions_,
-                                                                                                                        kinematics_);
+                                                                                                                        kinematics_);*/
         for (size_t i = 0; i < obstacles_.size(); i++) {
             if (!obstacles_[i]->isTraversable()) {
                 for (size_t j = 0; j < manipulator_collision_objects_start.size(); j++) {                	
@@ -84,8 +84,7 @@ bool MotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base:
     for (unsigned int i = 0; i < dim_; i++) {
         angles1.push_back(s1->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);        
         angles2.push_back(s2->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
-    }
-        
+    }    
     return checkMotion(angles1, angles2, continuous_collision_);
 }
 
@@ -97,20 +96,23 @@ bool MotionValidator::checkMotion(const ompl::base::State *s1,
 }
 
 bool MotionValidator::isValid(const std::vector<double> &s1) const {
-	std::vector<double> joint_angles;
+	std::vector<double> joint_angles;	
 	for (size_t i = 0; i < dim_; i++) {
 		joint_angles.push_back(s1[i]);
-	}
-    std::vector<OBB> manipulator_collision_structures = utils_.createManipulatorCollisionStructures(joint_angles, 
+	}	
+	std::vector<OBB> manipulator_collision_structures;
+	
+	robot_->createRobotCollisionStructures(joint_angles, manipulator_collision_structures);	
+    /**std::vector<OBB> manipulator_collision_structures = utils_.createManipulatorCollisionStructures(joint_angles, 
                                                                                                     link_dimensions_,
-                                                                                                    kinematics_);
+                                                                                                    kinematics_);*/
     for (size_t i = 0; i < obstacles_.size(); i++) {
         if (!obstacles_[i]->getTerrain()->isTraversable()) {        	
         	if (obstacles_[i]->in_collision(manipulator_collision_structures)) {        		
         		return false;
         	}
         }
-    }
+    }    
     return true;    
 }
 
@@ -121,9 +123,4 @@ void MotionValidator::setObstacles(std::vector<std::shared_ptr<Obstacle> > &obst
     }    
 }
 
-void MotionValidator::setLinkDimensions(std::vector<std::vector<double>> &link_dimensions) {	
-    for (size_t i = 0; i < link_dimensions.size(); i++) {    	
-        link_dimensions_.push_back(link_dimensions[i]);        
-    }    
-}
 }

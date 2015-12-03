@@ -7,8 +7,6 @@
 #include <openrave-core.h>
 #include <openrave/environment.h>
 #include <iostream>
-
-#include "torque_damper.hpp"
 #include "viewer.hpp"
 #include "integrate.hpp"
 
@@ -18,19 +16,13 @@ namespace shared {
    public:
 	   Propagator();
 	   
-	   void setup(double coulomb, 
-			      double viscous,
-			      std::vector<double> &jointsLowerPositionLimit,
+	   void setup(std::vector<double> &jointsLowerPositionLimit,
 			      std::vector<double> &jointsUpperPositionLimit,
-			      std::vector<double> &jointsLowerVelLimit,
-			      std::vector<double> &jointsUpperVelLimit);
+			      std::vector<double> &jointsVelocityLimit);
 	   //void propagate_linear() const;
 	   
-	   bool setup_py(std::string model_file,
-			         std::string environment_file,
-			         double coulomb, 
-	                 double viscous,
-	                 bool show_viewer);
+	   bool setup_viewer(std::string model_file,
+			             std::string environment_file);
 	   
 	   void propagate_linear(const std::vector<double> &x_dash,
                              const std::vector<double> &u_dash,
@@ -39,9 +31,7 @@ namespace shared {
 				             const std::vector<double> &x_star_next,								  
                              const std::vector<double> &control_error_vec,	   		                 
                              const double duration,
-                             std::vector<double> &result,
-                             OpenRAVE::EnvironmentBasePtr environment,
-                             OpenRAVE::RobotBasePtr robot);
+                             std::vector<double> &result);
 	   
 	   void propagate_nonlinear(const std::vector<double> &current_joint_values,
 		         const std::vector<double> &current_joint_velocities,
@@ -49,9 +39,7 @@ namespace shared {
 		         std::vector<double> &control_error_vec,
 		         const double simulation_step_size,
 		         const double duration,
-		         std::vector<double> &result,		         
-		         OpenRAVE::EnvironmentBasePtr environment,
-		         OpenRAVE::RobotBasePtr robot);
+		         std::vector<double> &result);
 	   
 	   void update_robot_values(const std::vector<double> &current_joint_values,
 	   	   		                const std::vector<double> &current_joint_velocities,									 
@@ -60,21 +48,16 @@ namespace shared {
    private:
 	   OpenRAVE::RobotBasePtr getRobot();
 	   
-	   void createPhysicsEngine(OpenRAVE::EnvironmentBasePtr env);
-	   
-	   std::shared_ptr<TorqueDamper> damper_;
-	   
 	   std::shared_ptr<Integrate> integrator_;
 	   
 	   std::vector<double> jointsLowerPositionLimit_; 
 	   std::vector<double> jointsUpperPositionLimit_;
-	   std::vector<double> jointsLowerVelocityLimit_; 
-	   std::vector<double> jointsUpperVelocityLimit_;
+	   std::vector<double> jointsVelocityLimit_;
 	   
 	   OpenRAVE::EnvironmentBasePtr env_;
 	   OpenRAVE::RobotBasePtr robot_;
 	   
-	   bool show_viewer_;
+	   bool viewer_setup_;
 	   
    };
 

@@ -133,16 +133,13 @@ bool Robot::initLinks(TiXmlElement *robot_xml) {
 		    }
 		    else {
 		    	link_dimensions_.push_back(link_dimension);
+		    	active_link_dimensions_.push_back(link_dimension);
 		    }
 		    
 		    std::vector<double> link_origin = process_origin_(coll_xml);
 		    link_origins_.push_back(link_origin);
 		      
-		    link_origins_.push_back(link_origin);
-		    for (auto &o: link_origin) {
-		    	cout << o << ", ";
-		    }
-		    cout << endl;
+		    link_origins_.push_back(link_origin);		    
 		}
 		else {
 			std::vector<double> ld({0.0, 0.0, 0.0});
@@ -295,7 +292,10 @@ Robot::Robot(std::string robot_file):
 	active_lower_joint_limits_(),
 	active_upper_joint_limits_(),
 	link_masses_(),
-	link_inertia_origins_(){	
+	link_inertia_origins_(),
+	robot_state_(),
+	propagator_(new Propagator()),
+	kinematics_(new Kinematics()){	
 	
 	TiXmlDocument xml_doc;
 	xml_doc.LoadFile(robot_file);
@@ -303,6 +303,124 @@ Robot::Robot(std::string robot_file):
 	TiXmlElement *robot_xml = xml_doc.FirstChildElement("robot");
 	initLinks(robot_xml);
 	initJoints(robot_xml);
+	
+	propagator_->setup(active_lower_joint_limits_,
+			           active_upper_joint_limits_,
+			           active_joint_velocity_limits_);
+	
+	kinematics_->setJointOrigins(active_joint_origins_);
+	kinematics_->setLinkDimensions(active_link_dimensions_);
+}
+
+void Robot::test() {
+	cout << "HELLLO IN ROBOT" << endl;
+}
+
+std::vector<fcl::OBB> Robot::createRobotCollisionStructuresPy(const std::vector<double> &joint_angles) {
+	std::vector<fcl::OBB> collision_structures;
+	createRobotCollisionStructures(joint_angles, collision_structures);
+	return collision_structures;
+}
+
+void Robot::createRobotCollisionStructures(const std::vector<double> &joint_angles, std::vector<fcl::OBB> &collision_structures) {
+	std::vector<fcl::AABB> link_aabbs;	
+	for (size_t i = 0; i < active_link_dimensions_.size(); i++) {
+	    link_aabbs.push_back(fcl::AABB(fcl::Vec3f(0.0, -active_link_dimensions_[i][1] / 2.0, -active_link_dimensions_[i][2] / 2.0),
+	                                   fcl::Vec3f(active_link_dimensions_[i][0], active_link_dimensions_[i][1] / 2.0, active_link_dimensions_[i][2] / 2.0)));
+	}
+	
+	int n = 0;	
+	for (size_t i = 0; i < joint_angles.size(); i++) {		
+	    const std::pair<fcl::Vec3f, fcl::Matrix3f> pose_link_n = kinematics_->getPoseOfLinkN(joint_angles, n);
+	    fcl::OBB obb;	    
+	    fcl::convertBV(link_aabbs[i], fcl::Transform3f(pose_link_n.second, pose_link_n.first), obb);	    
+	    collision_structures.push_back(obb);
+	    n++;
+	 }
+}
+
+std::vector<fcl::CollisionObject> Robot::createRobotCollisionObjectsPy(const std::vector<double> &joint_angles) {
+	std::vector<fcl::CollisionObject> collision_objects;
+	createRobotCollisionObjects(joint_angles, collision_objects);
+	return collision_objects;
+}
+
+void Robot::createRobotCollisionObjects(const std::vector<double> &joint_angles, std::vector<fcl::CollisionObject> &collision_objects) {
+    std::vector<fcl::CollisionObject> vec;
+    std::vector<fcl::AABB> link_aabbs;
+    for (size_t i = 0; i < active_link_dimensions_.size(); i++) {
+        link_aabbs.push_back(fcl::AABB(fcl::Vec3f(0.0, -active_link_dimensions_[i][1] / 2.0, -active_link_dimensions_[i][2] / 2.0),
+                                       fcl::Vec3f(active_link_dimensions_[i][0], active_link_dimensions_[i][1] / 2.0, active_link_dimensions_[i][2] / 2.0)));
+    }
+    
+    //fcl::AABB link_aabb(fcl::Vec3f(0.0, -0.0025, -0.0025), fcl::Vec3f(1.0, 0.0025, 0.0025));
+    int n = 0;
+    for (size_t i = 0; i < joint_angles.size(); i++) {
+        const std::pair<fcl::Vec3f, fcl::Matrix3f> pose_link_n = kinematics_->getPoseOfLinkN(joint_angles, n);
+        fcl::Box* box = new fcl::Box();
+        fcl::Transform3f box_tf;
+        fcl::Transform3f trans(pose_link_n.second, pose_link_n.first);        
+        fcl::constructBox(link_aabbs[i], trans, *box, box_tf);        
+        collision_objects.push_back(fcl::CollisionObject(boost::shared_ptr<fcl::CollisionGeometry>(box), box_tf));
+        n++;
+    }
+    
+}
+
+void Robot::getPositionOfLinkN(const std::vector<double> &joint_angles, const int &n, std::vector<double> &position) {
+	kinematics_->getPositionOfLinkN(joint_angles, n, position);
+}
+    	    
+void Robot::getEndEffectorPosition(const std::vector<double> &joint_angles, std::vector<double> &end_effector_position) {
+	kinematics_->getEndEffectorPosition(joint_angles, end_effector_position);
+}
+
+void Robot::setupViewer(std::string model_file, std::string environment_file) {
+	propagator_->setup_viewer(model_file, environment_file);
+}
+
+void Robot::updateViewerValues(const std::vector<double> &current_joint_values,
+                               const std::vector<double> &current_joint_velocities) {
+	propagator_->update_robot_values(current_joint_values, current_joint_velocities, nullptr);
+}
+
+void Robot::propagate(std::vector<double> &current_state,
+		              std::vector<double> &control_input,
+		              std::vector<double> &control_error,
+		              double simulation_step_size,
+		              double duration,
+		              std::vector<double> &result) {
+	std::vector<double> current_joint_values;
+	std::vector<double> current_joint_velocities;
+	
+	for (size_t i = 0; i < current_state.size() / 2; i++) {
+		current_joint_values.push_back(current_state[i]);
+		current_joint_velocities.push_back(current_state[i + current_state.size() / 2]);
+	}
+	
+	
+	propagator_->propagate_nonlinear(current_joint_values,
+			                         current_joint_velocities,
+			                         control_input,
+			                         control_error,
+			                         simulation_step_size,
+			                         duration,
+			                         result);
+}
+
+void Robot::setState(std::vector<double> &joint_values, std::vector<double> &joint_velocities) {
+	robot_state_.joint_values = joint_values;
+	robot_state_.joint_velocities = joint_velocities;
+}
+
+void Robot::getState(std::vector<double> &state) {
+	for (auto &s: robot_state_.joint_values) {
+		state.push_back(s);
+	}
+	
+	for (auto &s: robot_state_.joint_velocities) {
+		state.push_back(s);
+	}
 }
 
 unsigned int Robot::get_link_index(std::string &link_name) {	
@@ -344,13 +462,16 @@ void Robot::getLinkInertias(std::vector<std::string> &link, std::vector<std::vec
 }
 
 void Robot::getActiveLinkDimensions(std::vector<std::vector<double>> &dimensions) {
-	for (size_t i = 0; i < link_names_.size(); i++) {
+	for (auto &k: active_link_dimensions_) {
+		dimensions.push_back(k);
+	}
+	/**for (size_t i = 0; i < link_names_.size(); i++) {
 		for (size_t j = 0; j < active_link_names_.size(); j ++) {
 			if (link_names_[i] == active_link_names_[j]) {
 				dimensions.push_back(link_dimensions_[i]);
 			}
 		}
-	}	
+	}*/	
 }
 
 void Robot::getLinkDimension(std::vector<std::string> &link, std::vector<std::vector<double>> &dimension) {
@@ -391,6 +512,50 @@ void Robot::getActiveJoints(std::vector<std::string> &joints) {
 	}
 }
 
+void Robot::getJointLowerPositionLimits(std::vector<std::string> &joints, std::vector<double> &joint_limits) {
+	int index = 0;
+	for (size_t i = 0; i < joints.size(); i++) {
+		for (size_t j = 0; j < joint_names_.size(); j++) {
+			if (joints[i] == joint_names_[j]) {
+				joint_limits.push_back(lower_joint_limits_[j]);
+			}
+		}
+	}
+}
+
+void Robot::getJointUpperPositionLimits(std::vector<std::string> &joints, std::vector<double> &joint_limits) {
+	int index = 0;
+	for (size_t i = 0; i < joints.size(); i++) {
+		for (size_t j = 0; j < joint_names_.size(); j++) {
+			if (joints[i] == joint_names_[j]) {
+				joint_limits.push_back(upper_joint_limits_[j]);
+			}
+		}
+	}
+}
+
+void Robot::getJointVelocityLimits(std::vector<std::string> &joints, std::vector<double> &joint_limits) {
+	int index = 0;
+	for (size_t i = 0; i < joints.size(); i++) {
+		for (size_t j = 0; j < joint_names_.size(); j++) {
+			if (joints[i] == joint_names_[j]) {
+				joint_limits.push_back(joint_velocity_limits_[j]);
+			}
+		}
+	}
+}
+
+void Robot::getJointTorqueLimits(std::vector<std::string> &joints, std::vector<double> &joint_limits) {
+	int index = 0;
+	for (size_t i = 0; i < joints.size(); i++) {
+		for (size_t j = 0; j < joint_names_.size(); j++) {
+			if (joints[i] == joint_names_[j]) {
+				joint_limits.push_back(joint_torque_limits_[j]);
+			}
+		}
+	}
+}
+
 void Robot::getJointType(std::vector<std::string> &joint, std::vector<std::string> &type) {
 	int index = 0;
 	for (size_t i = 0; i < joint.size(); i++) {
@@ -422,6 +587,10 @@ void Robot::getJointAxis(std::vector<std::string> &joints, std::vector<std::vect
 	}
 }
 
+int Robot::getDOF() {
+	return active_joints_.size();
+}
+
 BOOST_PYTHON_MODULE(librobot) {
     using namespace boost::python;
     
@@ -438,9 +607,15 @@ BOOST_PYTHON_MODULE(librobot) {
              .def(vector_indexing_suite<std::vector<std::vector<int> > >());
     
     class_<std::vector<std::string> > ("v_string")
-                 .def(vector_indexing_suite<std::vector<std::string> >());
+                 .def(vector_indexing_suite<std::vector<std::string> >());   
     
-    class_<Robot>("Robot", init<std::string>())
+    
+    class_<fcl::OBB>("OBB");
+    class_<fcl::CollisionObject>("CollisionObject", init<const boost::shared_ptr<fcl::CollisionGeometry>, const fcl::Transform3f>());
+    to_python_converter<std::vector<fcl::OBB, std::allocator<fcl::OBB> >, VecToList<fcl::OBB> >();
+    to_python_converter<std::vector<fcl::CollisionObject, std::allocator<fcl::CollisionObject> >, VecToList<fcl::CollisionObject> >();
+    
+    class_<Robot, boost::shared_ptr<Robot>>("Robot", init<std::string>())
                         .def("getLinkNames", &Robot::getLinkNames)
                         .def("getLinkDimension", &Robot::getLinkDimension)
                         .def("getActiveLinkDimensions", &Robot::getActiveLinkDimensions)
@@ -453,6 +628,14 @@ BOOST_PYTHON_MODULE(librobot) {
                         .def("getJointType", &Robot::getJointType)
                         .def("getJointOrigin", &Robot::getJointOrigin)
                         .def("getJointAxis", &Robot::getJointAxis)
+                        .def("propagate", &Robot::propagate)
+                        .def("createRobotCollisionStructures", &Robot::createRobotCollisionStructuresPy)
+                        .def("createRobotCollisionObjects", &Robot::createRobotCollisionObjectsPy)
+                        .def("getEndEffectorPosition", &Robot::getEndEffectorPosition)
+                        .def("setupViewer", &Robot::setupViewer)
+                        .def("updateViewerValues", &Robot::updateViewerValues)
+                        .def("test", &Robot::test)
+                        .def("getDOF", &Robot::getDOF)
                         //.def("setup", &Integrate::setup)                        
     ;
 }

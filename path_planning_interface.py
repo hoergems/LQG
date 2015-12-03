@@ -1,14 +1,11 @@
-from path_planner import PathPlanner
 from path_evaluator import *
 from multiprocessing import Process, cpu_count, Lock, Queue, Pool
 import multiprocessing.queues
 from Queue import Empty, Full
-from librobot import v_string
+from librobot import v_string, v_double, v2_double
 import libpath_planner
 import libdynamic_path_planner
-import libutil
 import time
-import libkinematics
 import collections
 import numpy as np
 import scipy.stats
@@ -84,6 +81,7 @@ class PathPlanningInterface:
               path_timeout):
         
         self.link_dimensions = v2_double()
+        self.robot = robot
         robot.getActiveLinkDimensions(self.link_dimensions)
         self.num_cores = cpu_count() 
         #self.num_cores = 2       
@@ -95,12 +93,8 @@ class PathPlanningInterface:
         self.enforce_constraints = enforce_constraints
         
         self.joint_constraints_vec = v_double()
-        self.joint_constraints_vec[:] = self.joint_constraints
-        
-        self.kinematics = libkinematics.Kinematics()
-        self.kinematics.setParams([robot]) 
-              
-        #self.kinematics.setLinksAndAxis(self.link_dimensions, axis)        
+        self.joint_constraints_vec[:] = self.joint_constraints              
+           
         self.verbose = False 
         if(logging.getLogger().isEnabledFor(logging.INFO)):
             self.verbose = True        
@@ -137,7 +131,9 @@ class PathPlanningInterface:
         eval_times = []
         res_paths = collections.deque()
         processes = [Process(target=self.construct_and_evaluate_path, 
-                             args=(self.obstacles, path_queue, 
+                             args=(self.robot,
+                                   self.obstacles, 
+                                   path_queue, 
                                    self.joint_constraints,
                                    current_step,
                                    horizon, 
@@ -191,20 +187,14 @@ class PathPlanningInterface:
                 total_gen_times,
                 total_eval_times)
         
-    def plan_paths2(self, num, sim_run, timeout=0.0):
-        path_queue = Queue()
-        pool = Pool(processes=self.num_cores - 1)
-        result = pool.apply_async(self.construct_path(obstacles, queue, joint_constraints), args=(self.obstacles,
-                                                                                                  path_queue,
-                                                                                                  self.joint_constraints))
-        
     def plan_paths(self, num, sim_run, timeout=0.0):
         queues = [Queue() for i in xrange(self.num_cores - 1)]               
         path_queue = Queue()
         paths = []
         res_paths = collections.deque()
         processes = [Process(target=self.construct_path, 
-                             args=(self.obstacles, 
+                             args=(self.robot,
+                                   self.obstacles, 
                                    queues[i], 
                                    self.joint_constraints)) for i in xrange(self.num_cores - 1)]
         t0 = time.time() 
@@ -268,7 +258,8 @@ class PathPlanningInterface:
                               [p_e[2][i] for i in xrange(len(p_e[0]))]])           
         return paths
     
-    def construct_and_evaluate_path(self, 
+    def construct_and_evaluate_path(self,
+                                    robot, 
                                     obstacles, 
                                     queue, 
                                     joint_constraints,
@@ -278,7 +269,7 @@ class PathPlanningInterface:
         sleep
         while True:
             t0 = time.time()               
-            xs, us, zs = self._construct(obstacles, joint_constraints)
+            xs, us, zs = self._construct(robot, obstacles, joint_constraints)
             gen_time = time.time() - t0
             if len(xs) > 1:  
                 t0 = time.time()                      
@@ -286,19 +277,19 @@ class PathPlanningInterface:
                 eval_time = time.time() - t0        
                 queue.put((xs, us, zs, eval_result[1], gen_time, eval_time))        
     
-    def construct_path(self, obstacles, queue, joint_constraints):        
+    def construct_path(self, robot, obstacles, queue, joint_constraints):        
         while True:
-            xs, us, zs = self._construct(obstacles, joint_constraints)
+            xs, us, zs = self._construct(robot, obstacles, joint_constraints)
             if not len(xs) == 0:                             
                 queue.put((xs, us, zs))
                 print "put. New size is " + str(queue.qsize())             
             else:
                 print "PATH HAS SIZE 0!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
         
-    def _construct(self, obstacles, joint_constraints):
+    def _construct(self, robot, obstacles, joint_constraints):
         path_planner2 = None        
         if not self.dynamic_problem:
-            path_planner2 = libpath_planner.PathPlanner(len(self.link_dimensions),
+            path_planner2 = libpath_planner.PathPlanner(robot,                                                        
                                                         self.delta_t,
                                                         True,
                                                         self.max_velocity,
@@ -307,52 +298,36 @@ class PathPlanningInterface:
                                                         1.0,                                                    
                                                         self.use_linear_path,
                                                         self.verbose,
-                                                        self.planning_algorithm)            
-            path_planner2.setKinematics(self.kinematics)
+                                                        self.planning_algorithm)
             path_planner2.setup()
         else:            
-            path_planner2 = libdynamic_path_planner.DynamicPathPlanner(len(self.link_dimensions) * 2,
+            path_planner2 = libdynamic_path_planner.DynamicPathPlanner(robot,                                                                       
                                                                        self.verbose)
             path_planner2.setupMotionValidator(self.continuous_collision)
-            logging.info("PathPlanningInterface: Set up motion validator. Setting kinematics...")
+            logging.info("PathPlanningInterface: Set up motion validator. Setting kinematics...")            
             
             
-            path_planner2.setKinematics(self.kinematics)
             logging.info("PathPlanningInterface: Kinematics set. Running setup...")
-            path_planner2.setup(self.model_file,
-                                self.environment_file,
-                                self.simulation_step_size,
-                                False,
-                                self.coulomb,
-                                self.viscous,
+            path_planner2.setup(self.simulation_step_size,                                
                                 self.delta_t)
             logging.info("PathPlanningInterface: Path planner setup")        
-        path_planner2.setObstacles(obstacles)
-        
-        link_dimensions = libutil.v2_double()
-        ld = []       
-        for i in xrange(len(self.link_dimensions)):
-            link_dim = libutil.v_double()            
-            link_dim[:] = [self.link_dimensions[i][j] for j in xrange(len(self.link_dimensions[i]))]
-            ld.append(link_dim)
-        link_dimensions[:] = ld               
-        path_planner2.setLinkDimensions(link_dimensions)              
-        goal_states = libutil.v2_double()
+        path_planner2.setObstacles(obstacles)        
+        print "set obstacles"
+        goal_states = v2_double()
         gs = []       
         for i in xrange(len(self.goal_states)):
-            goal_state = libutil.v_double()                  
-            goal_state[:] = [self.goal_states[i][j] for j in xrange(len(self.goal_states[i]))]            
+            goal_state = v_double()                  
+            goal_state[:] = [self.goal_states[i][j] for j in xrange(len(self.goal_states[i]))]                    
             if path_planner2.isValid(goal_state):                
-                gs.append(goal_state)                    
+                gs.append(goal_state)                       
         if len(gs) == 0:
             return [], [], []               
         goal_states[:] = gs 
         
-        ee_goal_position = libutil.v_double()
-        ee_goal_position[:] = self.ee_goal_position
-               
-        path_planner2.setGoalStates(goal_states, ee_goal_position, self.ee_goal_threshold)
-        start_state = libutil.v_double()
+        ee_goal_position = v_double()
+        ee_goal_position[:] = self.ee_goal_position        
+        path_planner2.setGoalStates(goal_states, ee_goal_position, self.ee_goal_threshold)        
+        start_state = v_double()
         v = [self.start_state[i] for i in xrange(len(self.start_state))]
         start_state[:] = v 
         logging.info("PathPlanningInterface: Solve...") 

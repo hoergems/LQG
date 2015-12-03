@@ -5,7 +5,6 @@ from libobstacle import *
 from serializer import Serializer
 from path_planning_interface import *
 from gen_ik_solution import *
-from libkinematics import *
 import json
 import time
 import numpy as np

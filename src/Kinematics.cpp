@@ -8,64 +8,43 @@ namespace shared {
 
 Kinematics::Kinematics():
     links_(),    
-    rotation_offsets_(),
-    params_set_(false) {
+    rotation_offsets_() {
 }
 
-void Kinematics::setParamsPy(boost::python::list &ns) {
-	shared::Robot robot = boost::python::extract<shared::Robot>(ns[0]);
-	setParams(&robot);
-}
-
-void Kinematics::setParams(shared::Robot *robot) {
-	std::vector<std::string> active_joints;
-	robot->getActiveJoints(active_joints);
-	std::vector<std::vector<double>> link_dimensions; 
-	robot->getActiveLinkDimensions(link_dimensions);
-	for (auto &dim: link_dimensions) {
-		links_.push_back(dim);
+void Kinematics::setJointOrigins(std::vector<std::vector<double>> &joint_origins) {
+	for (auto &o: joint_origins) {
+		rotation_offsets_.push_back(o[3]);
 	}
-	std::vector<std::vector<double>> origins;
-	robot->getJointOrigin(active_joints, origins);
-	
-	for (auto &o: origins) {
-		rotation_offsets_.push_back(o[3]);		
-	}
-	params_set_ = true;
 }
 
-/**void Kinematics::setLinksAndAxis(std::vector<std::vector<double>> links, std::vector<std::vector<int>> axis) {
-    for (size_t i = 0; i < links.size(); i++) {
-        links_.push_back(links[i]);
-    }
+void Kinematics::setLinkDimensions(std::vector<std::vector<double>> &link_dimensions) {
+	for (auto &k: link_dimensions) {
+		links_.push_back(k);
+	}
+}
 
-    for (size_t i = 0; i < axis.size(); i++) {
-        rotation_offsets_.push_back(0.0);
-        if (axis[i][1] == 1) {
-           rotation_offsets_[i] = -M_PI / 2.0;
-        }
-        else if (axis[i][1] == 1) {
-           rotation_offsets_[i] = M_PI / 2.0;
-        }       
-    }
-
-    setLinksAndAxisCalled_ = true;
-}*/
-
-std::vector<double> Kinematics::getPositionOfLinkN(const std::vector<double> &joint_angles, const int &n) const {
+void Kinematics::getPositionOfLinkN(const std::vector<double> &joint_angles, const int &n, std::vector<double> &position) const {
     std::pair<fcl::Vec3f, fcl::Matrix3f> link_n_pose = getPoseOfLinkN(joint_angles, n);
-    return std::vector<double>({link_n_pose.first[0], link_n_pose.first[1], link_n_pose.first[2]});
+    position.push_back(link_n_pose.first[0]);
+    position.push_back(link_n_pose.first[1]);
+    position.push_back(link_n_pose.first[2]);
+    
+    //return std::vector<double>({link_n_pose.first[0], link_n_pose.first[1], link_n_pose.first[2]});
 }
 
 /* Gets the end effector position for a given set of joint angles */    
-std::vector<double> Kinematics::getEndEffectorPosition(const std::vector<double> &joint_angles) const {
+void Kinematics::getEndEffectorPosition(const std::vector<double> &joint_angles, std::vector<double> &end_effector_position) const {
     int n = 3;
     std::pair<fcl::Vec3f, fcl::Matrix3f> ee_pose = getPoseOfLinkN(joint_angles, n);
-    return std::vector<double>({ee_pose.first[0], ee_pose.first[1], ee_pose.first[2]});
+    end_effector_position.push_back(ee_pose.first[0]);
+    end_effector_position.push_back(ee_pose.first[1]);
+    end_effector_position.push_back(ee_pose.first[2]);
+    
+    //return std::vector<double>({ee_pose.first[0], ee_pose.first[1], ee_pose.first[2]});
 }  
 
 std::pair<fcl::Vec3f, fcl::Matrix3f> Kinematics::getPoseOfLinkN(const std::vector<double> &joint_angles, const int &n) const {
-   Eigen::MatrixXd res(4, 4);
+   Eigen::MatrixXd res(4, 4);  
    if (n == 0) {
        res = getTransformationMatr(joint_angles[0], 0.0, 0.0, rotation_offsets_[0]);             
    }
@@ -115,7 +94,7 @@ Eigen::MatrixXd Kinematics::getTransformationMatr(double sigma_n, double d_n, do
 
 
 
-BOOST_PYTHON_MODULE(libkinematics)
+/**BOOST_PYTHON_MODULE(libkinematics)
 {
     using namespace boost::python;
     
@@ -126,6 +105,6 @@ BOOST_PYTHON_MODULE(libkinematics)
         .def("getEndEffectorPosition", &Kinematics::getEndEffectorPosition)         
 		.def("setParams", setParams_d)
     ;
-}
+}*/
  
 }

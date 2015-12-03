@@ -6,13 +6,12 @@
 #include <ompl/base/State.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include "Obstacle.hpp"
-#include "utils.hpp"
 #include "fcl/BVH/BVH_model.h"
 #include "fcl/BV/BV.h"
 #include "fcl/collision_object.h"
 #include "fcl/shape/geometric_shapes.h"
 #include "fcl/shape/geometric_shapes_utility.h"
-#include "Kinematics.hpp"
+#include "robot.hpp"
 
 #include <iostream>
 #include <mutex>
@@ -23,6 +22,7 @@ namespace shared {
     class MotionValidator: public ompl::base::MotionValidator {
         public:
             MotionValidator(const ompl::base::SpaceInformationPtr &si,
+            		        boost::shared_ptr<shared::Robot> &robot,
                             bool continuous_collision,
                             bool dynamics);
             ~MotionValidator() = default;
@@ -42,31 +42,20 @@ namespace shared {
             bool isValid(const std::vector<double> &s1) const;
                              
             void setObstacles(std::vector<std::shared_ptr<Obstacle>> &obstacles);
-
-            void setLinkDimensions(std::vector<std::vector<double>> &link_dimensions);  
-            
-            void setKinematics(std::shared_ptr<Kinematics> kinematics);
             
         private:
             const ompl::base::SpaceInformationPtr si_;
             
-            std::mutex mtx;
-        
-            /** Forward kinematics */
-            std::shared_ptr<Kinematics> kinematics_;
+            boost::shared_ptr<shared::Robot> robot_;
+            
+            std::mutex mtx;    
 
             /** The obstacles in the environment */
             std::vector<std::shared_ptr<Obstacle> > obstacles_;
             
             bool continuous_collision_;
             
-            unsigned int dim_;
-            
-            //std::vector<fcl::AABB> link_aabbs_;
-
-            utils::Utils utils_;
-
-            std::vector<std::vector<double>> link_dimensions_;
+            unsigned int dim_;             
 
             //void set_link_aabbs() const;
     };

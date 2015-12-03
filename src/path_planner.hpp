@@ -25,6 +25,7 @@
 #include <ompl/base/MotionValidator.h>
 #include "MotionValidator.hpp"
 #include "Obstacle.hpp"
+#include "robot.hpp"
 
 #include <boost/timer.hpp>
 
@@ -37,7 +38,7 @@ namespace shared {
         public:
             
             
-            PathPlanner(int dim,             
+            PathPlanner(boost::shared_ptr<shared::Robot> &robot,            		        
                         double delta_t,
                         bool continuous_collision,                        
                         double max_joint_velocity,
@@ -75,12 +76,10 @@ namespace shared {
             void setGoalStates(std::vector<std::vector<double>> &goal_states,
             		           std::vector<double> &ee_goal_position,
             		           double ee_goal_threshold);
-
-            void setLinkDimensions(std::vector<std::vector<double>> &link_dimensions);
-            
-            void setKinematics(std::shared_ptr<Kinematics> kinematics);
             
         private:        
+            boost::shared_ptr<shared::Robot> robot_;
+            
             /** The dimension of the space we're planning in */
             int dim_;
 
@@ -119,9 +118,7 @@ namespace shared {
             std::vector<std::shared_ptr<Obstacle> > obstacles_;
             
             /** A simplifier which can be used to simplify (shorten an smoothen) paths */
-            //ompl::geometric::PathSimplifier simplifier_;
-
-            std::shared_ptr<Kinematics> kinematics_;
+            //ompl::geometric::PathSimplifier simplifier_;            
             
             ompl::base::MotionValidatorPtr motionValidator_;
 

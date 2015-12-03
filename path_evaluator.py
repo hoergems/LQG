@@ -2,8 +2,6 @@ import numpy as np
 import scipy
 import kalman as kalman
 from scipy.stats import multivariate_normal
-from libkinematics import *
-from libutil import *
 from libintegrate import *
 from multiprocessing import Process, Queue, cpu_count
 import collections
@@ -25,7 +23,8 @@ class PathEvaluator:
               goal_position,
               goal_radius,
               w1, 
-              w2):       
+              w2):
+        self.robot = robot       
         self.A = A
         self.B = B
         self.C = C
@@ -47,10 +46,6 @@ class PathEvaluator:
         self.w1 = w1
         self.w2 = w2        
         self.mutex = Lock()
-        
-        self.kinematics = Kinematics()
-        self.kinematics.setParams([robot])
-        self.utils = Utils()
         self.integrate = Integrate()
         self.dynamic_problem = False
         
@@ -73,8 +68,9 @@ class PathEvaluator:
                 break
         return valid
     
-    def is_terminal(self, state):                       
-        ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
+    def is_terminal(self, state):
+        ee_position_arr = v_double()                       
+        self.robot.getEndEffectorPosition(state, ee_position_arr)                
         ee_position = np.array([ee_position_arr[j] for j in xrange(len(ee_position_arr))])        
         if np.linalg.norm(ee_position - self.goal_position) < self.goal_radius:                                   
             return True        
@@ -97,10 +93,7 @@ class PathEvaluator:
             collides = False
             terminal = False
             
-            collision_structures = self.utils.createManipulatorCollisionStructures(joint_angles, 
-                                                                                   self.link_dimensions,
-                                                                                   self.kinematics)
-                
+            collision_structures = self.robot.createRobotCollisionStructures(joint_angles)
             for obstacle in self.obstacles:
                 if obstacle.inCollisionDiscrete(collision_structures):                                            
                     expected_reward -= pdf[i] * self.collision_penalty                        

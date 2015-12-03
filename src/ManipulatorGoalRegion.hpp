@@ -9,6 +9,7 @@
 #include <ompl/base/samplers/UniformValidStateSampler.h>
 #include <ompl/util/RandomNumbers.h>
 #include "utils.hpp"
+#include "robot.hpp"
 #include <iostream>
 #include <random>
 
@@ -16,11 +17,11 @@ namespace shared {
 
     class ManipulatorGoalRegion: public ompl::base::GoalSampleableRegion {
         public:
-            ManipulatorGoalRegion(const ompl::base::SpaceInformationPtr &si,                                  
+            ManipulatorGoalRegion(const ompl::base::SpaceInformationPtr &si,
+            		              boost::shared_ptr<shared::Robot> robot,
                                   std::vector<std::vector<double>> &goal_states,
                                   std::vector<double> &ee_goal_position,
-                                  double &ee_goal_threshold,
-                                  std::shared_ptr<Kinematics> kinematics,
+                                  double &ee_goal_threshold,                                  
                                   bool dynamics);
                                   
             //~ManipulatorGoalRegion() = default;
@@ -39,7 +40,7 @@ namespace shared {
 
         private:
             /** Forward kinematics */
-            std::shared_ptr<Kinematics> kinematics_;
+            boost::shared_ptr<shared::Robot> robot_;
             
             ompl::base::SpaceInformationPtr state_space_information_;
             

@@ -16,6 +16,7 @@
 #include <openrave/environment.h>
 
 #include "propagator.hpp"
+#include "robot.hpp"
 
 namespace RBD = RigidBodyDynamics;
 
@@ -23,8 +24,8 @@ namespace shared {
     class StatePropagator: public ompl::control::StatePropagator {
         public:
             StatePropagator(const ompl::control::SpaceInformationPtr &si, 
-                            double &simulation_step_size,                            
-                            bool &linear_propagation,
+            		        boost::shared_ptr<shared::Robot> &robot,
+                            double &simulation_step_size,
                             bool &verbose);
             
             void propagate(const ompl::base::State *state, 
@@ -41,31 +42,18 @@ namespace shared {
             
             bool canSteer() const;
             
-            bool setupOpenRAVEEnvironment(OpenRAVE::EnvironmentBasePtr environment,
-                                          OpenRAVE::RobotBasePtr robot,                                          
-                                          double &coulomb,
-                                          double &viscous);
-            
         private:
             // The OMPL spacei information associated with this state propagator
             const ompl::control::SpaceInformationPtr space_information_;
             
             // Determines if the robo model has been set up
-            bool model_setup_; 
-            
-            // The OpenRAVE environment
-            OpenRAVE::EnvironmentBasePtr environment_;
+            bool model_setup_;
             
             // The robot model
-            OpenRAVE::RobotBasePtr robot_;
-            
-            std::shared_ptr<Propagator> propagator_;
+            boost::shared_ptr<shared::Robot> robot_;
             
             // The simulation step size
-            double simulation_step_size_;
-            
-            // Determines is a linear model has to be used for state propagation
-            bool linear_propagation_;
+            const double simulation_step_size_;
             
             bool verbose_;              
     };

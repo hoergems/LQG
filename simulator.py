@@ -4,10 +4,7 @@ import kalman as kalman
 import logging
 import time
 from scipy.stats import multivariate_normal
-from libkinematics import *
-from libpropagator import *
 from libintegrate import *
-from libutil import *
 from librobot import v_string
 from history_entry import *
 
@@ -36,9 +33,7 @@ class Simulator:
                       control_duration,
                       show_viewer,
                       model_file,
-                      env_file,
-                      coulomb,
-                      viscous):
+                      env_file):
         self.A = A
         self.B = B
         self.C = C
@@ -57,20 +52,13 @@ class Simulator:
         self.joint_velocity_limit = joint_velocity_limit
         self.dynamic_problem = False
         self.integrate = Integrate()
-        self.show_viewer = show_viewer
-        self.propagator = Propagator()        
-        self.propagator.setup(model_file,
-                              env_file,
-                              coulomb,
-                              viscous,
-                              show_viewer)
+        self.show_viewer = show_viewer        
         self.control_duration = control_duration
         active_joints = v_string()
         self.robot.getActiveJoints(active_joints)
         self.robot_dof = len(active_joints)
-        
-        self.link_dimensions = v2_double()
-        self.robot.getActiveLinkDimensions(self.link_dimensions)
+        if show_viewer:
+            self.robot.setupViewer(model_file, env_file)
         
     def setup_dynamic_problem(self,                           
                               simulation_step_size):
@@ -83,21 +71,9 @@ class Simulator:
         self.illegal_move_penalty = illegal_move_penalty
         self.exit_reward = exit_reward
     
-    def setup_simulator(self, num_simulation_runs, stop_when_terminal):               
-        self.utils = Utils()                
-        self.kinematics = Kinematics()        
-        self.kinematics.setParams([self.robot])               
+    def setup_simulator(self, num_simulation_runs, stop_when_terminal):
         self.num_simulation_runs = num_simulation_runs        
         self.stop_when_terminal = stop_when_terminal
-        
-        
-    def enforce_velocity_limit(self, u):        
-        for i in xrange(len(u)):
-            if u[i] < -self.joint_velocity_limit:
-                u[i] = -self.joint_velocity_limit
-            elif u[i] > self.joint_velocity_limit:
-                u[i] = self.joint_velocity_limit
-        return u
     
     def get_linear_model_matrices(self, state_path, control_path):
         As = []
@@ -214,8 +190,9 @@ class Simulator:
                 x_dash = np.subtract(x_true, xs[i + 1])
                 
                 state = v_double()
-                state[:] = [x_true[j] for j in xrange(len(x_true) / 2)]                  
-                ee_position_arr = self.kinematics.getEndEffectorPosition(state)                
+                state[:] = [x_true[j] for j in xrange(len(x_true) / 2)]
+                ee_position_arr = v_double()
+                self.robot.getEndEffectorPosition(state, ee_position_arr)
                 ee_position = np.array([ee_position_arr[j] for j in xrange(len(ee_position_arr))])
                 logging.info("Simulator: Current end-effector position is " + str(ee_position))                                                
                 
@@ -313,9 +290,7 @@ class Simulator:
                     
         joint_angles_goal = v_double()
         joint_angles_goal[:] = [state[i] for i in xrange(self.robot_dof)]
-        collision_structures = self.utils.createManipulatorCollisionStructures(joint_angles_goal,
-                                                                               self.link_dimensions, 
-                                                                               self.kinematics)
+        collision_structures = self.robot.createRobotCollisionStructures(joint_angles_goal)
         for obstacle in self.obstacles:
             if obstacle.inCollisionDiscrete(collision_structures):                               
                 return True
@@ -328,12 +303,8 @@ class Simulator:
             joint_angles_start = v_double()        
             joint_angles_start[:] = previous_state        
             
-            collision_objects_start = self.utils.createManipulatorCollisionObjects(joint_angles_start,
-                                                                                   self.link_dimensions,
-                                                                                   self.kinematics)
-            collision_objects_goal = self.utils.createManipulatorCollisionObjects(joint_angles_goal,
-                                                                                  self.link_dimensions,
-                                                                                  self.kinematics)
+            collision_objects_start = self.robot.createRobotCollisionObjects(joint_angles_start)
+            collision_objects_goal = self.robot.createRobotCollisionObjects(joint_angles_goal)
             for obstacle in self.obstacles:
                 for i in xrange(len(collision_objects_start)):
                     if obstacle.inCollisionContinuous([collision_objects_start[i], collision_objects_goal[i]]):
@@ -357,23 +328,20 @@ class Simulator:
         if apply_zero_torque:        
             while True:
                 u = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-                current_joint_values = v_double()
-                current_joint_velocities = v_double()            
-                current_joint_values[:] = [x[i] for i in xrange(self.robot_dof)]
-                current_joint_velocities[:] = [x[i + self.robot_dof] for i in xrange(self.robot_dof)]
+                current_state = v_double()
+                current_state[:] = x
                 control = v_double()
                 control[:] = u            
                 control_error = v_double()
                 ce = self.sample_control_error(M)
                 control_error[:] = ce
                 result = v_double() 
-                self.propagator.propagate(current_joint_values,
-                                          current_joint_velocities,
-                                          control,
-                                          control_error,
-                                          self.simulation_step_size,
-                                          self.control_duration,
-                                          result)                               
+                self.robot.propagate(current_state,
+                                     control,
+                                     control_error,
+                                     self.simulation_step_size,
+                                     self.control_duration,
+                                     result)                               
                 x = np.array([result[i] for i in xrange(len(result))])
                 cjvals = v_double()
                 cjvels = v_double()
@@ -385,27 +353,20 @@ class Simulator:
                 time.sleep(self.control_duration)
             
         if self.dynamic_problem:
-            current_joint_values = v_double()
-            current_joint_velocities = v_double()
-            
-            current_joint_values[:] = [x[i] for i in xrange(self.robot_dof)]
-            current_joint_velocities[:] = [x[i + self.robot_dof] for i in xrange(self.robot_dof)]
-            
+            current_state = v_double()
+            current_state[:] = x
             control = v_double()
             control[:] = u
-            
             control_error = v_double()
             ce = self.sample_control_error(M)
-            
             control_error[:] = ce
             result = v_double()            
-            self.propagator.propagate(current_joint_values,
-                                      current_joint_velocities,
-                                      control,
-                                      control_error,
-                                      self.simulation_step_size,
-                                      self.control_duration,
-                                      result)                               
+            self.robot.propagate(current_state,
+                                 control,
+                                 control_error,
+                                 self.simulation_step_size,
+                                 self.control_duration,
+                                 result)                               
             x_new = np.array([result[i] for i in xrange(len(result))])
         else:               
             ce = self.get_random_joint_angles([0.0 for i in xrange(2 * self.robot_dof)], M)
@@ -419,7 +380,7 @@ class Simulator:
             cjvels_arr = [x_new[i] for i in xrange(len(x_new) / 2, len(x_new))]
             cjvals[:] = cjvals_arr
             cjvels[:] = cjvels_arr
-            self.propagator.updateRobotValues(cjvals, cjvels)
+            self.robot.updateViewerValues(cjvals, cjvels)
             time.sleep(self.control_duration) 
         return x_new, ce
     

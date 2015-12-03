@@ -9,9 +9,10 @@ using std::endl;
 
 namespace shared {
 
-DynamicPathPlanner::DynamicPathPlanner(int dim, bool verbose):
-	state_space_dimension_(dim),
-	control_space_dimension_(dim / 2),
+DynamicPathPlanner::DynamicPathPlanner(boost::shared_ptr<shared::Robot> &robot,
+		                               bool verbose):
+	state_space_dimension_(2 * robot->getDOF()),
+	control_space_dimension_(robot->getDOF()),
     state_space_(new ompl::base::RealVectorStateSpace(state_space_dimension_)),
     state_space_bounds_(1),
 	kinematics_(nullptr),
@@ -22,24 +23,17 @@ DynamicPathPlanner::DynamicPathPlanner(int dim, bool verbose):
     state_propagator_(nullptr),
     env_(nullptr),
     motionValidator_(nullptr),
-    verbose_(verbose)
+    verbose_(verbose),
+    robot_(robot)
 {
     
 }
 
-
-void DynamicPathPlanner::setKinematics(std::shared_ptr<Kinematics> kinematics) {
-	kinematics_ = kinematics;
-	static_cast<MotionValidator &>(*motionValidator_).setKinematics(kinematics_);
-	cout << "Kinematics in motion validator set" << endl;
-}
-
-void DynamicPathPlanner::setupMotionValidator(bool continuous_collision) {
-	cout << "setup motion validator" << endl;
-	motionValidator_ = boost::make_shared<MotionValidator>(space_information_,				                                           
+void DynamicPathPlanner::setupMotionValidator(bool continuous_collision) {	
+	motionValidator_ = boost::make_shared<MotionValidator>(space_information_,
+			                                               robot_,
 														   continuous_collision,
-														   true);
-	cout << "Motion validator setup" << endl;
+														   true);	
 }
 
 void DynamicPathPlanner::log_(std::string msg, bool warn=false) {
@@ -51,96 +45,16 @@ void DynamicPathPlanner::log_(std::string msg, bool warn=false) {
 	}
 }
 
-bool DynamicPathPlanner::setup(std::string model_file,
-		                       std::string environment_file,
-		                       double simulation_step_size,
-							   bool linear_propagation,
-							   double coulomb,
-							   double viscous,
+bool DynamicPathPlanner::setup(double simulation_step_size,
 							   double control_duration) {	
-	control_duration_ = control_duration;	
-	
-	/***** Initialize OpenRAVE *****/	
-	log_("Initializing OpenRAVE", true);
-	OpenRAVE::RaveInitialize(true);  
-	log_("OpenRAVE initialized", true);
-	env_ = OpenRAVE::RaveCreateEnvironment();
-	log_("Loading environment: " + environment_file, true);
-	env_->Load("environment/env.xml");
-	//env_->Load(environment_file);
-	log_("Loading or_urdf_plugin", true);
-	const std::string module_str("or_urdf_plugin");
-	if(!OpenRAVE::RaveLoadPlugin(module_str)) {
-	    cout << "Failed to load the or_urdf_plugin." << endl;
-	    return false;
-	}
-	log_("Loaded or_urdf_plugin");
-	
-	log_("Creating or_urdf_module");
-	OpenRAVE::ModuleBasePtr urdf_module = OpenRAVE::RaveCreateModule(env_, "URDF");
-	log_("Created or_urdf_module");
-	const std::string cmdargs("");
-	log_("Add or_urdf_module");
-	env_->AddModule(urdf_module, cmdargs);
-	log_("Added or_urdf_module");
-	std::stringstream sinput, sout;
-	sinput << "load " << model_file;
-	log_("Loading URDF model");
-	if (!urdf_module->SendCommand(sout,sinput)) {
-	    cout << "Failed to load URDF model" << endl;
-	    return false;
-	}
-	log_("URDF model loaded");
-	
-	std::vector<OpenRAVE::KinBodyPtr> bodies;
-	env_->GetBodies(bodies);
-	env_->StopSimulation();
-	    
-	OpenRAVE::RobotBasePtr robot = getRobot();	
-
-	const std::vector<OpenRAVE::KinBody::LinkPtr> links(robot->GetLinks());    
-	for (size_t i = 0; i < links.size(); i++) {
-	    if (links[i]->GetName() == "world") {
-	    	links[i]->SetStatic(true);
-	    }
-	    else if (links[i]->GetName() == "end_effector") {
-	    	links[i]->Enable(false);
-	    }
-	}
+	control_duration_ = control_duration;
 	    
 	/***** Setup OMPL *****/
 	log_("Setting up OMPL");
-	setup_ompl_(robot, simulation_step_size, linear_propagation, verbose_);
+	setup_ompl_(simulation_step_size, verbose_);
 	log_("OMPL setup");
-	    
-	/***** Create the physics engine *****/
-	const std::string engine = "ode";
-	OpenRAVE::PhysicsEngineBasePtr physics_engine_ = OpenRAVE::RaveCreatePhysicsEngine(env_, engine);
-	    
-	const OpenRAVE::Vector gravity({0.0, 0.0, -9.81});    
-	physics_engine_->SetGravity(gravity);
-	env_->SetPhysicsEngine(physics_engine_);
-	boost::static_pointer_cast<StatePropagator>(state_propagator_)->setupOpenRAVEEnvironment(env_, 
-	    		                                                                             robot,
-	    		                                                                             coulomb,
-	    		                                                                             viscous);
 	log_("Setup complete");
 	return true;
-}
-
-OpenRAVE::EnvironmentBasePtr DynamicPathPlanner::getEnvironment() {
-    return env_;
-}
-
-OpenRAVE::RobotBasePtr DynamicPathPlanner::getRobot() {
-	std::vector<OpenRAVE::KinBodyPtr> bodies;
-	env_->GetBodies(bodies);
-	for (auto &body: bodies) {
-	    if (body->GetDOF() > 0) {
-	        OpenRAVE::RobotBasePtr robot = boost::static_pointer_cast<OpenRAVE::RobotBase>(body);
-	    	return robot;
-	    }    	
-	}  
 }
 
 ompl::control::ControlSamplerPtr DynamicPathPlanner::allocUniformControlSampler_(const ompl::control::ControlSpace *control_space) {	
@@ -148,54 +62,50 @@ ompl::control::ControlSamplerPtr DynamicPathPlanner::allocUniformControlSampler_
     return ompl::control::ControlSamplerPtr(new UniformControlSampler(control_space));
 }
 
-bool DynamicPathPlanner::setup_ompl_(OpenRAVE::RobotBasePtr &robot, 
-		                             double &simulation_step_size,
-		                             bool &linear_propagation,
-		                             bool &verbose) {
-    // The state space consists of joint angles + velocity    
-    //state_space_dimension_ = robot->GetDOF() * 2;
-    //control_space_dimension_ = state_space_dimension_ / 2;    
-    //state_space_ = boost::make_shared<ompl::base::RealVectorStateSpace>(state_space_dimension_);    
-    state_space_bounds_ = ompl::base::RealVectorBounds(state_space_dimension_);
-    //control_space_ = boost::make_shared<ControlSpace>(state_space_, control_space_dimension_);
-    
-    //space_information_ = boost::make_shared<ompl::control::SpaceInformation>(state_space_, control_space_);    
+bool DynamicPathPlanner::setup_ompl_(double &simulation_step_size,
+		                             bool &verbose) {    
+    state_space_bounds_ = ompl::base::RealVectorBounds(state_space_dimension_);    
     space_information_->setStateValidityChecker(boost::bind(&DynamicPathPlanner::isValid, this, _1));
     space_information_->setMotionValidator(motionValidator_);
     space_information_->setMinMaxControlDuration(1, 1);
     space_information_->setPropagationStepSize(control_duration_);
      
     problem_definition_ = boost::make_shared<ompl::base::ProblemDefinition>(space_information_);
-    planner_ = boost::make_shared<ompl::control::RRT>(space_information_);
-    //planner_->as<ompl::control::RRT>()->setIntermediateStates(false);
-    //planner_->as<ompl::control::RRT>()->setGoalBias(0.1);
-    planner_->setProblemDefinition(problem_definition_);   
-    
-    state_propagator_ = boost::make_shared<StatePropagator>(space_information_, 
-                                                            simulation_step_size,                                                            
-                                                            linear_propagation,
+    planner_ = boost::make_shared<ompl::control::RRT>(space_information_);    
+    planner_->setProblemDefinition(problem_definition_);
+    state_propagator_ = boost::make_shared<StatePropagator>(space_information_,
+    		                                                robot_,
+                                                            simulation_step_size,
                                                             verbose);    
     space_information_->setStatePropagator(state_propagator_);
     
-    // Set the bounds
-    const std::vector<OpenRAVE::KinBody::JointPtr> joints(robot->GetJoints());
-    ompl::base::RealVectorBounds control_bounds(control_space_dimension_);    
+    // Set the bounds    
+    ompl::base::RealVectorBounds control_bounds(control_space_dimension_);
+    std::vector<std::string> active_joints;
+    robot_->getActiveJoints(active_joints);
+    
+    std::vector<double> lower_position_limits;
+    std::vector<double> upper_position_limits;
+    std::vector<double> velocity_limits;
+    std::vector<double> torque_limits;
+    
+    robot_->getJointLowerPositionLimits(active_joints, lower_position_limits);
+    robot_->getJointUpperPositionLimits(active_joints, upper_position_limits);
+    robot_->getJointVelocityLimits(active_joints, velocity_limits);
+    robot_->getJointTorqueLimits(active_joints, torque_limits);
+    
         
-    for (size_t i = 0; i < joints.size(); i++) {
-        std::vector<OpenRAVE::dReal> lower_limit;
-        std::vector<OpenRAVE::dReal> upper_limit;        
-        joints[i]->GetLimits(lower_limit, upper_limit);        
-        
+    for (size_t i = 0; i < active_joints.size(); i++) {
         // Set the joints position bounds        
-        state_space_bounds_.setLow(i, lower_limit[0]);
-        state_space_bounds_.setHigh(i, upper_limit[0]);
+        state_space_bounds_.setLow(i, lower_position_limits[i]);
+        state_space_bounds_.setHigh(i, upper_position_limits[i]);
 
         // Set the joints velocity bounds              
-        state_space_bounds_.setLow(i + state_space_dimension_ / 2, -joints[i]->GetMaxVel());
-        state_space_bounds_.setHigh(i + state_space_dimension_ / 2, joints[i]->GetMaxVel());
+        state_space_bounds_.setLow(i + state_space_dimension_ / 2, -velocity_limits[i]);
+        state_space_bounds_.setHigh(i + state_space_dimension_ / 2, velocity_limits[i]);
         
-        control_bounds.setLow(i, -joints[i]->GetMaxTorque());
-        control_bounds.setHigh(i, joints[i]->GetMaxTorque());
+        control_bounds.setLow(i, -torque_limits[i]);
+        control_bounds.setHigh(i, torque_limits[i]);
         //torque_bounds = torque_bounds - 0.1;
     }    
     
@@ -204,7 +114,7 @@ bool DynamicPathPlanner::setup_ompl_(OpenRAVE::RobotBasePtr &robot,
     return true;
 }
 
-bool DynamicPathPlanner::isValid(const ompl::base::State *state) {
+bool DynamicPathPlanner::isValid(const ompl::base::State *state) {	
     bool valid = state_space_->as<ompl::base::RealVectorStateSpace>()->satisfiesBounds(state);
     if (valid) {
     	accepted_ = accepted_ + 1.0;
@@ -216,9 +126,8 @@ bool DynamicPathPlanner::isValid(const ompl::base::State *state) {
     std::vector<double> state_vec;
     for (unsigned int i = 0; i < space_information_->getStateSpace()->getDimension(); i++) {
         state_vec.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);        
-    }
-    return static_cast<MotionValidator &>(*motionValidator_).isValid(state_vec);
-    
+    }    
+    return static_cast<MotionValidator &>(*motionValidator_).isValid(state_vec);    
 }
 
 bool DynamicPathPlanner::isValidPy(std::vector<double> &state) {
@@ -275,11 +184,6 @@ void DynamicPathPlanner::setObstaclesPy(boost::python::list &ns) {
     static_cast<MotionValidator &>(*motionValidator_).setObstacles(obstacles_);
 }
 
-void DynamicPathPlanner::setLinkDimensions(std::vector<std::vector<double>> &link_dimensions) {	
-    boost::shared_ptr<MotionValidator> mv = boost::static_pointer_cast<MotionValidator>(space_information_->getMotionValidator());    
-    mv->setLinkDimensions(link_dimensions);    
-}
-
 std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<double> &start_state_vec,
 		                                                   double timeout) {
     // Set the start and goal state
@@ -290,11 +194,11 @@ std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<dou
         start_state[i] = start_state_vec[i];        
     }
 
-    ompl::base::GoalPtr gp(new ManipulatorGoalRegion(space_information_, 
+    ompl::base::GoalPtr gp(new ManipulatorGoalRegion(space_information_,
+    		                                         robot_,
     		                                         goal_states_, 
     		                                         ee_goal_position_, 
-    		                                         ee_goal_threshold_, 
-    		                                         kinematics_,
+    		                                         ee_goal_threshold_,
     		                                         true));
     boost::static_pointer_cast<ManipulatorGoalRegion>(gp)->setThreshold(ee_goal_threshold_);
     problem_definition_->addStartState(start_state);    
@@ -371,14 +275,12 @@ std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<dou
 BOOST_PYTHON_MODULE(libdynamic_path_planner) {
     using namespace boost::python;    
    
-    class_<DynamicPathPlanner>("DynamicPathPlanner", init<int, bool>())
+    class_<DynamicPathPlanner>("DynamicPathPlanner", init<boost::shared_ptr<shared::Robot> &, bool>())
 							   .def("solve", &DynamicPathPlanner::solve)
 		                       .def("setObstacles", &DynamicPathPlanner::setObstaclesPy)
 							   .def("setGoalStates", &DynamicPathPlanner::setGoalStates)
 							   .def("isValid", &DynamicPathPlanner::isValidPy)
 							   .def("setup", &DynamicPathPlanner::setup)
-							   .def("setLinkDimensions", &DynamicPathPlanner::setLinkDimensions)
-							   .def("setKinematics", &DynamicPathPlanner::setKinematics)
 							   .def("setupMotionValidator", &DynamicPathPlanner::setupMotionValidator)
 										            		 
                         //.def("doIntegration", &Integrate::do_integration)                        

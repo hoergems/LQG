@@ -5,7 +5,7 @@ using std::endl;
 
 namespace shared {
 
-PathPlanner::PathPlanner(int dim,
+PathPlanner::PathPlanner(boost::shared_ptr<shared::Robot> &robot,		                 
                          double delta_t,
                          bool continuous_collision,                         
                          double max_joint_velocity,
@@ -15,7 +15,8 @@ PathPlanner::PathPlanner(int dim,
                          bool check_linear_path,                         
                          bool verbose,
                          std::string planner):
-    dim_(dim),
+    robot_(robot),
+    dim_(robot->getDOF()),
     delta_t_(delta_t),
     continuous_collision_(continuous_collision),
     max_joint_velocity_(max_joint_velocity),
@@ -29,9 +30,9 @@ PathPlanner::PathPlanner(int dim,
     si_(new ompl::base::SpaceInformation(space_)),    
     problem_definition_(new ompl::base::ProblemDefinition(si_)),
     planner_str_(planner),    
-    planner_(nullptr),       
-    kinematics_(nullptr), 
-    motionValidator_(new MotionValidator(si_,                                   
+    planner_(nullptr),
+    motionValidator_(new MotionValidator(si_,
+    		                             robot_,
                                          continuous_collision,
                                          false)),
     verbose_(verbose)
@@ -58,11 +59,6 @@ PathPlanner::PathPlanner(int dim,
     else if (planner_str_ == "STRIDE"){
         planner_ = boost::shared_ptr<ompl::geometric::STRIDE>(new ompl::geometric::STRIDE(si_));
     }
-}
-
-void PathPlanner::setKinematics(std::shared_ptr<Kinematics> kinematics) {
-	kinematics_ = kinematics;
-	static_cast<MotionValidator &>(*motionValidator_).setKinematics(kinematics_);
 }
 
 void PathPlanner::setup() {	
@@ -92,7 +88,7 @@ void PathPlanner::setup() {
     /** Set the StateValidityChecker */    
     si_->setStateValidityChecker(boost::bind(&PathPlanner::isValid, this, _1)); 
     
-    /** Set the MotionValidation */
+    /** Set the MotionValidation */    
     si_->setMotionValidator(motionValidator_);
     
     /** Let the planner know about our problem */    
@@ -216,7 +212,7 @@ std::vector<std::vector<double> > PathPlanner::genLinearPath(std::vector<double>
 }
 
 std::vector<double> PathPlanner::sampleGoalVec() {    
-    ManipulatorGoalRegion gr(si_, goal_states_, ee_goal_position_, ee_goal_threshold_, kinematics_, false);
+    ManipulatorGoalRegion gr(si_, robot_, goal_states_, ee_goal_position_, ee_goal_threshold_, false);
     return gr.sampleGoalVec();
 }
 
@@ -233,11 +229,6 @@ void PathPlanner::setGoalStates(std::vector<std::vector<double>> &goal_states,
     }
     
     ee_goal_threshold_ = ee_goal_threshold;
-}
-
-void PathPlanner::setLinkDimensions(std::vector<std::vector<double>> &link_dimensions) {
-    boost::shared_ptr<MotionValidator> mv = boost::static_pointer_cast<MotionValidator>(si_->getMotionValidator());
-    mv->setLinkDimensions(link_dimensions);
 }
 
 bool PathPlanner::solve_(double time_limit) {
@@ -286,7 +277,7 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
     }
     
     problem_definition_->addStartState(start_state);    
-    ompl::base::GoalPtr gp(new ManipulatorGoalRegion(si_, goal_states_, ee_goal_position_, ee_goal_threshold_, kinematics_, false));
+    ompl::base::GoalPtr gp(new ManipulatorGoalRegion(si_, robot_, goal_states_, ee_goal_position_, ee_goal_threshold_, false));
     boost::dynamic_pointer_cast<ompl::base::GoalRegion>(gp)->setThreshold(ee_goal_threshold_); 
     problem_definition_->setGoal(gp);
    
@@ -405,9 +396,11 @@ std::vector<std::vector<double>> PathPlanner::augmentPath_(std::vector<std::vect
 }
 
 BOOST_PYTHON_MODULE(libpath_planner) {
-    using namespace boost::python;   
+    using namespace boost::python;  
     
-    class_<PathPlanner>("PathPlanner", init<int,                                             
+    
+    
+    class_<PathPlanner>("PathPlanner", init<boost::shared_ptr<shared::Robot>&,    		                                                                     
                                             double,
                                             bool,                                            
                                             double,
@@ -421,9 +414,7 @@ BOOST_PYTHON_MODULE(libpath_planner) {
                         .def("setObstacles", &PathPlanner::setObstaclesPy) 
                         .def("setGoalStates", &PathPlanner::setGoalStates)
                         .def("isValid", &PathPlanner::isValidPy) 
-                        .def("setup", &PathPlanner::setup) 
-                        .def("setLinkDimensions", &PathPlanner::setLinkDimensions)
-						.def("setKinematics", &PathPlanner::setKinematics)
+                        .def("setup", &PathPlanner::setup)						
     ;
 }
 

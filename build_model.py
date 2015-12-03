@@ -220,24 +220,24 @@ class Test:
         link_names = v_string()
         robot.getLinkNames(link_names)
         self.link_names = [link_names[i] for i in xrange(len(link_names))]        
-        print "Got link names " + str(self.link_names)
+        print "Got link names "
         joint_names = v_string()
         robot.getJointNames(joint_names)
         self.joint_names = [joint_names[i] for i in xrange(len(joint_names))]                 
-        print "got joint names " + str(self.joint_names)
+        print "got joint names "
         joint_type = v_string()
         robot.getJointType(joint_names, joint_type)
         self.joint_types = [joint_type[i] for i in xrange(len(joint_type))]
-        print "got jopint types "  + str(self.joint_types)
+        print "got joint types "
         joint_origins = v2_double()
         robot.getJointOrigin(joint_names, joint_origins)
         self.joint_origins = [Matrix([[joint_origins[i][j]] for j in xrange(len(joint_origins[i]))]) 
                               for i in xrange(len(joint_origins))]               
-        print "got joint origins " + str(self.joint_origins)
+        print "got joint origins "
         joint_axis = v2_int()
         robot.getJointAxis(joint_names, joint_axis)
         self.joint_axis = [Matrix([[joint_axis[i][j]] for j in xrange(len(joint_axis[i]))]) for i in xrange(len(joint_axis))]
-        print "got joint axis "  + str(self.joint_axis)
+        print "got joint axis "
         
         self.q = []
         self.qdot = []
@@ -271,14 +271,14 @@ class Test:
         print "get link inertial poses"
         robot.getLinkInertialPose(link_names, inertia_pose)
         self.inertial_poses = [[inertia_pose[i][j] for j in xrange(len(inertia_pose[i]))] for i in xrange(len(inertia_pose))]
-        print "got link inertial poses " + str(self.inertial_poses)
+        print "got link inertial poses "
         masses = v_double()
         robot.getLinkMasses(link_names, masses)        
         self.link_masses = [masses[i] for i in xrange(len(masses))]
-        print "got link masses " + str(self.link_masses)
+        print "got link masses "
         link_inertias = v2_double()
         robot.getLinkInertias(link_names, link_inertias)
-        print "got link inertias " + str([[link_inertias[i][j] for j in xrange(len(link_inertias[i]))] for i in xrange(len(link_inertias))]) 
+        print "got link inertias "
         
         self.link_inertias = [Matrix([[link_inertias[i][0], link_inertias[i][1], link_inertias[i][2]],
                                       [link_inertias[i][1], link_inertias[i][3], link_inertias[i][4]],

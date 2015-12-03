@@ -205,9 +205,7 @@ class LQG:
                                   self.delta_t,
                                   self.show_viewer,
                                   urdf_model_file,
-                                  environment_file,
-                                  self.coulomb,
-                                  self.viscous)
+                                  environment_file)
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
                 if self.dynamic_problem:
                     sim.setup_dynamic_problem(self.simulation_step_size)
@@ -308,8 +306,7 @@ class LQG:
                 os.makedirs(dir + "/model")
                 
             cmd = "cp " + model_file + " " + dir + "/model"
-            os.system(cmd)
-        RaveDestroy()
+            os.system(cmd)        
         print "Done"        
         
     def setup_scene(self, 

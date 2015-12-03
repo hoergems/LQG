@@ -27,18 +27,21 @@ link_directories(/usr/lib /usr/local/lib /opt/ros/indigo/lib)
 add_library(util SHARED 
             utils.cpp
             Terrain.cpp
-            Obstacle.cpp
-            Kinematics.cpp
-            robot.cpp)
+            Obstacle.cpp)
 
 add_library(area SHARED
             Area.cpp)
 
-add_library(kinematics SHARED
-            Kinematics.cpp
-            robot.cpp)
+#add_library(kinematics SHARED
+#            Kinematics.cpp
+#            robot.cpp)
 
-add_library(robot SHARED robot.cpp)
+add_library(robot SHARED 
+            robot.cpp
+            propagator.cpp
+            viewer.cpp
+            integrate.cpp
+            Kinematics.cpp)
 
 add_library(integrate SHARED integrate.cpp)
 
@@ -50,18 +53,18 @@ add_library(propagator SHARED
 
 add_library(obstacle SHARED
             Obstacle.cpp
-            Terrain.cpp
-            utils.cpp
-            Kinematics.cpp
-            robot.cpp)
+            Terrain.cpp)
 
 add_library(path_planner SHARED
             path_planner.cpp
             MotionValidator.cpp
             ManipulatorGoalRegion.cpp
-            utils.cpp
-            Kinematics.cpp
             robot.cpp
+            Kinematics.cpp
+            propagator.cpp
+            integrate.cpp
+            viewer.cpp
+            utils.cpp
             Terrain.cpp
             Obstacle.cpp)
 
@@ -72,12 +75,12 @@ add_library(dynamic_path_planner SHARED
             propagator.cpp
             viewer.cpp
             integrate.cpp            
-            ManipulatorGoalRegion.cpp
+            ManipulatorGoalRegion.cpp            
+            Kinematics.cpp
             utils.cpp
+            robot.cpp
             Obstacle.cpp
             Terrain.cpp
-            Kinematics.cpp
-            robot.cpp            
             torque_damper.cpp
             control_space.cpp
             control_sampler.cpp)
@@ -85,25 +88,27 @@ add_library(dynamic_path_planner SHARED
 target_link_libraries (util
                        boost_system
                        boost_python
-                       python2.7                      
-                       fcl
-                       tinyxml)
+                       python2.7
+                       tinyxml
+                       fcl)
 
 target_link_libraries(area
                       boost_system
                       boost_python
                       python2.7)
 
-target_link_libraries(kinematics
-                      boost_system
-                      boost_python
-                      python2.7
-                      tinyxml)
+#target_link_libraries(kinematics
+#                      boost_system
+#                      boost_python
+#                      python2.7
+#                      tinyxml)
 
 target_link_libraries(path_planner
                       boost_system
                       boost_python
-                      python2.7
+                      python2.7 
+                      openrave0.9 
+                      openrave0.9-core                     
                       ompl
                       fcl
                       tinyxml)
@@ -122,6 +127,9 @@ target_link_libraries (robot
                        boost_system
                        boost_python
                        python2.7
+                       openrave0.9 
+                       openrave0.9-core
+                       fcl
                        tinyxml)
 
 target_link_libraries (integrate

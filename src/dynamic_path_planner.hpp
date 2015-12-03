@@ -31,6 +31,7 @@
 #include <ompl/control/StatePropagator.h>
 #include <ompl/base/MotionValidator.h>
 #include "MotionValidator.hpp"
+#include "robot.hpp"
 
 using std::cout;
 using std::endl;
@@ -40,7 +41,7 @@ namespace shared {
 
     class DynamicPathPlanner {
         public:
-        		DynamicPathPlanner(int dim, bool verbose);
+        		DynamicPathPlanner(boost::shared_ptr<shared::Robot> &robot, bool verbose);
                             
             	~DynamicPathPlanner() { OpenRAVE::RaveDestroy(); }
         	
@@ -49,10 +50,6 @@ namespace shared {
             	bool isValidPy(std::vector<double> &state);
         	
             	std::vector<std::vector<double>> solve(const std::vector<double> &start_state_vec, double timeout);
-
-                OpenRAVE::EnvironmentBasePtr getEnvironment();
-
-                OpenRAVE::RobotBasePtr getRobot();
                 
                 void setGoalStates(std::vector<std::vector<double>> &goal_states,
                            		           std::vector<double> &ee_goal_position,
@@ -60,20 +57,11 @@ namespace shared {
                 
                 void setObstacles(const std::vector<std::shared_ptr<Obstacle> > obstacles);
                 
-                void setKinematics(std::shared_ptr<Kinematics> kinematics);
-                
                 void setupMotionValidator(bool continuous_collision);
 
-                void setObstaclesPy(boost::python::list &ns);
+                void setObstaclesPy(boost::python::list &ns); 
                 
-                void setLinkDimensions(std::vector<std::vector<double>> &link_dimensions);
-                
-                bool setup(std::string model_file,
-                		   std::string environment_file,
-                		   double simulation_step_size,
-						   bool linear_propagation,
-						   double coulomb,
-						   double viscous,
+                bool setup(double simulation_step_size,
 						   double control_duration); 
 
         private:
@@ -124,13 +112,13 @@ namespace shared {
                 std::vector<double> ee_goal_position_;
                             
                 double ee_goal_threshold_;
+                
+                boost::shared_ptr<shared::Robot> robot_;
 
                 // Solve the motion planning problem
                 bool solve_(double time_limit);
                 
-                bool setup_ompl_(OpenRAVE::RobotBasePtr &robot, 
-                		         double &simulation_step_size,
-                		         bool &linear_propagation,
+                bool setup_ompl_(double &simulation_step_size,
                 		         bool &verbose);
                                    
                 ompl::control::ControlSamplerPtr allocUniformControlSampler_(const ompl::control::ControlSpace *control_space);
