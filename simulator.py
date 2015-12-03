@@ -172,7 +172,8 @@ class Simulator:
                                                      As[i], 
                                                      Bs[i], 
                                                      Vs[i], 
-                                                     Ms[i])
+                                                     Ms[i],
+                                                     False)
                 x_dash_linear, x_true_linear = self.get_linearized_next_state(x_dash, u_dash, ce, xs[i+1], As[i], Bs[i], Vs[i])
                 t_e = time.time() - t0
                 
@@ -349,7 +350,7 @@ class Simulator:
                 cjvels_arr = [x[i] for i in xrange(len(x) / 2, len(x))]
                 cjvals[:] = cjvals_arr
                 cjvels[:] = cjvels_arr
-                self.propagator.updateRobotValues(cjvals, cjvels)
+                self.robot.updateViewerValues(cjvals, cjvels)
                 time.sleep(self.control_duration)
             
         if self.dynamic_problem:
