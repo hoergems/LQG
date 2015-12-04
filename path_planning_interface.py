@@ -188,15 +188,13 @@ class PathPlanningInterface:
                 total_eval_times)
         
     def plan_paths(self, num, sim_run, timeout=0.0):
-        queues = [Queue() for i in xrange(self.num_cores - 1)]               
-        path_queue = Queue()
+        queues = [Queue() for i in xrange(self.num_cores - 1)] 
         paths = []
         res_paths = collections.deque()
         processes = [Process(target=self.construct_path, 
                              args=(self.robot,
                                    self.obstacles, 
-                                   queues[i], 
-                                   self.joint_constraints)) for i in xrange(self.num_cores - 1)]
+                                   queues[i])) for i in xrange(self.num_cores - 1)]
         t0 = time.time() 
         for i in xrange(len(processes)):
             processes[i].daemon = True
@@ -207,49 +205,22 @@ class PathPlanningInterface:
             for queue in queues:
                 elapsed = time.time() - t0
                 if queue.qsize() > 0:
-                    try:
+                    try:                        
                         res_paths.append(queue.get(timeout=0.1))
                         print "GOT A PATH " + str(len(res_paths))
                     except:
                         pass
-                    if len(res_paths) == num:
+                    if len(res_paths) == num:                        
                         breaking = True
                         break
-                    if timeout > 0.0:
+                    if timeout > 0.0:                        
                         if elapsed > timeout:
                             breaking = True
-                            break
+                            break            
             if breaking:
-                break
-            '''try:  
-                if path_queue.qsize() > 0 and not path_queue.empty():                              
-                    t0 = time.time()                    
-                    res_paths.append(path_queue.get(timeout=0.1))                    
-                    te = time.time()
-                    print str(len(res_paths)) + " paths generated " + str(te - t0)            
-            except Empty:                
-                #print "FUCK"                                       
-                pass
-            elapsed = time.time() - t0 
-            if len(res_paths) != curr_len:
-                curr_len = len(res_paths)                                   
-            if len(res_paths) == num:
-                break
-            if timeout > 0.0:
-                if elapsed > timeout:
-                    break
-            time.sleep(0.001)'''
-        
-        #path_queue.close()         
+                break         
         for i in xrange(len(processes)):
-            processes[i].terminate()
-        '''for i in xrange(num):
-            print "Getting " + str(i + 1)
-            try:
-                res_paths.append(path_queue.get(timeout=1.0))
-            except Empty:
-                print "what: " + str(len(res_paths))
-                print "what2: " + str(path_queue.qsize()) '''       
+            processes[i].terminate()              
         for i in xrange(len(res_paths)):
             p_e = res_paths.pop()                                
             if not len(p_e[0]) == 0:                                      
@@ -261,15 +232,14 @@ class PathPlanningInterface:
     def construct_and_evaluate_path(self,
                                     robot, 
                                     obstacles, 
-                                    queue, 
-                                    joint_constraints,
+                                    queue,                                    
                                     current_step, 
                                     horizon, 
                                     P_t):
         sleep
         while True:
             t0 = time.time()               
-            xs, us, zs = self._construct(robot, obstacles, joint_constraints)
+            xs, us, zs = self._construct(robot, obstacles)
             gen_time = time.time() - t0
             if len(xs) > 1:  
                 t0 = time.time()                      
@@ -277,16 +247,13 @@ class PathPlanningInterface:
                 eval_time = time.time() - t0        
                 queue.put((xs, us, zs, eval_result[1], gen_time, eval_time))        
     
-    def construct_path(self, robot, obstacles, queue, joint_constraints):        
-        while True:
-            xs, us, zs = self._construct(robot, obstacles, joint_constraints)
-            if not len(xs) == 0:                             
+    def construct_path(self, robot, obstacles, queue):
+        while True:            
+            xs, us, zs = self._construct(robot, obstacles)
+            if not len(xs) == 0:
                 queue.put((xs, us, zs))
-                print "put. New size is " + str(queue.qsize())             
-            else:
-                print "PATH HAS SIZE 0!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
         
-    def _construct(self, robot, obstacles, joint_constraints):
+    def _construct(self, robot, obstacles):
         path_planner2 = None        
         if not self.dynamic_problem:
             path_planner2 = libpath_planner.PathPlanner(robot,                                                        
@@ -338,7 +305,7 @@ class PathPlanningInterface:
         for i in xrange(len(xs_temp)):
             xs.append([xs_temp[i][j] for j in xrange(0, 2 * len(self.link_dimensions))])
             us.append([xs_temp[i][j] for j in xrange(2 * len(self.link_dimensions), 4 * len(self.link_dimensions))])
-            zs.append([xs_temp[i][j] for j in xrange(4 * len(self.link_dimensions), 6 * len(self.link_dimensions))])
+            zs.append([xs_temp[i][j] for j in xrange(4 * len(self.link_dimensions), 6 * len(self.link_dimensions))])        
         return xs, us, zs
     
 if __name__ == "__main__":

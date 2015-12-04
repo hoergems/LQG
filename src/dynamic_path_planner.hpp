@@ -43,7 +43,7 @@ namespace shared {
         public:
         		DynamicPathPlanner(boost::shared_ptr<shared::Robot> &robot, bool verbose);
                             
-            	~DynamicPathPlanner() { OpenRAVE::RaveDestroy(); }
+            	~DynamicPathPlanner() {  }
         	
             	bool isValid(const ompl::base::State *state);
             	
