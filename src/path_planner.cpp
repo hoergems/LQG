@@ -8,8 +8,7 @@ namespace shared {
 PathPlanner::PathPlanner(boost::shared_ptr<shared::Robot> &robot,		                 
                          double delta_t,
                          bool continuous_collision,                         
-                         double max_joint_velocity,
-                         std::vector<double> joint_constraints,
+                         double max_joint_velocity,                         
                          bool enforce_constraints,
                          double stretching_factor,
                          bool check_linear_path,                         
@@ -19,8 +18,7 @@ PathPlanner::PathPlanner(boost::shared_ptr<shared::Robot> &robot,
     dim_(robot->getDOF()),
     delta_t_(delta_t),
     continuous_collision_(continuous_collision),
-    max_joint_velocity_(max_joint_velocity),
-    joint_constraints_(joint_constraints),
+    max_joint_velocity_(max_joint_velocity),    
     enforce_constraints_(enforce_constraints),
     stretching_factor_(stretching_factor),
     planning_range_(delta_t_ * max_joint_velocity_),
@@ -62,14 +60,35 @@ PathPlanner::PathPlanner(boost::shared_ptr<shared::Robot> &robot,
 }
 
 void PathPlanner::setup() {	
+	std::vector<std::string> activeJoints;
+    robot_->getActiveJoints(activeJoints);
+    
+    std::vector<double> lowerJointPositionPonstraints;
+    std::vector<double> upperJointPositionConstraints;
+    
+    robot_->getJointLowerPositionLimits(activeJoints, lowerJointPositionPonstraints);
+    robot_->getJointUpperPositionLimits(activeJoints, upperJointPositionConstraints);
+    
+    cout << "low: ";
+    for (auto &k: lowerJointPositionPonstraints) {
+    	cout << k << ", ";
+    }
+    cout << endl;
+    
+    cout << "up: ";
+    for (auto &k: upperJointPositionConstraints) {
+        cout << k << ", ";
+    }
+    cout << endl;
+	
 	ompl::base::RealVectorBounds bounds(dim_);
 	if (enforce_constraints_) {
 		/** We assume that the there are no joint limits. So the range of each joint
 		*** is between -2*Pi and 2*Pi
 		*/   
 		for (size_t i = 0; i < dim_; i++) {				
-			bounds.setLow(i, -joint_constraints_[i]);
-			bounds.setHigh(i, joint_constraints_[i]);
+			bounds.setLow(i, lowerJointPositionPonstraints[i]);
+			bounds.setHigh(i, upperJointPositionConstraints[i]);
 		}
 		
 		/** Apply the bounds to the space */    
@@ -403,8 +422,7 @@ BOOST_PYTHON_MODULE(libpath_planner) {
     class_<PathPlanner>("PathPlanner", init<boost::shared_ptr<shared::Robot>&,    		                                                                     
                                             double,
                                             bool,                                            
-                                            double,
-                                            std::vector<double>,
+                                            double,                                            
                                             bool,
                                             double,
                                             bool,                                            
