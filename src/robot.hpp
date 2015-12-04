@@ -73,12 +73,18 @@ struct RobotState {
     	    
     	    void test();
     	    
-    	    void propagate(std::vector<double> &current_state,
+    	    bool propagate(std::vector<double> &current_state,
 		                   std::vector<double> &control_input,
 		                   std::vector<double> &control_error,
 		                   double simulation_step_size,
 		                   double duration,
 		                   std::vector<double> &result);
+    	    
+    	    bool propagate_linear(std::vector<double> &current_state,
+    	    		              std::vector<double> &control_input,
+    	    		              std::vector<double> &control_error,
+    	    		              double duration,
+    	    		              std::vector<double> &result);
     	    
     	    void createRobotCollisionStructures(const std::vector<double> &joint_angles, std::vector<fcl::OBB> &collision_structures);
     	    

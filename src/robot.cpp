@@ -384,7 +384,19 @@ void Robot::updateViewerValues(const std::vector<double> &current_joint_values,
 	propagator_->update_robot_values(current_joint_values, current_joint_velocities, nullptr);
 }
 
-void Robot::propagate(std::vector<double> &current_state,
+bool Robot::propagate_linear(std::vector<double> &current_state,
+    	    		         std::vector<double> &control_input,
+    	    		         std::vector<double> &control_error,
+    	    		         double duration,
+    	    		         std::vector<double> &result) {
+	return propagator_->propagate_linear(current_state,
+			                             control_input,
+			                             control_error,
+			                             duration,
+			                             result);	
+}
+
+bool Robot::propagate(std::vector<double> &current_state,
 		              std::vector<double> &control_input,
 		              std::vector<double> &control_error,
 		              double simulation_step_size,
@@ -399,13 +411,13 @@ void Robot::propagate(std::vector<double> &current_state,
 	}
 	
 	
-	propagator_->propagate_nonlinear(current_joint_values,
-			                         current_joint_velocities,
-			                         control_input,
-			                         control_error,
-			                         simulation_step_size,
-			                         duration,
-			                         result);
+	return propagator_->propagate_nonlinear(current_joint_values,
+			                                current_joint_velocities,
+			                                control_input,
+			                                control_error,
+			                                simulation_step_size,
+			                                duration,
+			                                result);
 }
 
 void Robot::setState(std::vector<double> &joint_values, std::vector<double> &joint_velocities) {

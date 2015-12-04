@@ -113,66 +113,43 @@ void Propagator::update_robot_values(const std::vector<double> &current_joint_va
     robot_to_use->SetDOFVelocities(newJointVelocities);	
 }
 
-void Propagator::propagate_linear(const std::vector<double> &x_dash,
-                                  const std::vector<double> &u_dash,
-								  const std::vector<double> &x_star_current,
-								  const std::vector<double> &u_star_current,
-								  const std::vector<double> &x_star_next,								  
-                                  const std::vector<double> &control_error_vec,	   		                 
+bool Propagator::propagate_linear(const std::vector<double> &current_joint_values,
+                                  const std::vector<double> &control,
+                                  const std::vector<double> &control_error,				             		             
                                   const double duration,
                                   std::vector<double> &result) {
 	
-	std::vector<double> x_dash_vec;
-	std::vector<double> u_dash_vec;
-	std::vector<double> x_star_vec;
-	std::vector<double> u_star_vec;
-	
-	for (auto &k: x_dash) {
-		x_dash_vec.push_back(k);
-	}
-	for (auto &k: u_dash) {
-		u_dash_vec.push_back(k);
-	}	
-	for (auto &k: x_star_current) {
-		x_star_vec.push_back(k);
-	}
-	for (auto &k: u_star_current) {
-		u_star_vec.push_back(k);
-	}
-	
-	VectorXd x_dash_eigen_vec(x_dash_vec.size());
-	VectorXd u_dash_eigen_vec(u_dash_vec.size());
-	VectorXd zeta_eigen_vec(control_error_vec.size());
-	VectorXd x_star_next_eigen_vec(x_star_next.size());
-	
-	for (size_t i = 0; i < x_dash_vec.size(); i++) {
-		x_dash_eigen_vec[i] = x_dash_vec[i];
-	}
-	for (size_t i = 0; i < u_dash_vec.size(); i++) {
-		u_dash_eigen_vec[i] = u_dash_vec[i];
-	}
-	for (size_t i = 0; i < zeta_eigen_vec.size(); i++) {
-		zeta_eigen_vec[i] = control_error_vec[i];
-	}
-	for (size_t i = 0; i < x_star_next.size(); i++) {
-		x_star_next_eigen_vec[i] = x_star_next[i];
-	}
-	
-	std::vector<MatrixXd> ABV;
-	VectorXd x_dash_next_eigen_vec(x_dash_vec.size());
-	VectorXd res_eigen_vec(x_dash_vec.size());
-	integrator_->getProcessMatrices(x_star_vec, u_star_vec, duration, ABV);	
+	std::vector<double> c;
+    bool allZeros = true;
+
+	for (size_t i=0; i < control.size(); i++) {
+		if (control[i] != 0) {
+		    allZeros = false;
+		    c.push_back(1.0);            
+		}
+		else {
+		    // Add no uncertainty if joint input is 0
+		    c.push_back(0.0);
+		}
+    }
 		
-	x_dash_next_eigen_vec = ABV[0] * x_dash_eigen_vec + ABV[1] * u_dash_eigen_vec + ABV[2] * zeta_eigen_vec;
-	res_eigen_vec = x_dash_next_eigen_vec + x_star_next_eigen_vec;
-    
-	for (size_t i = 0; i < res_eigen_vec.size(); i++) {
-		result.push_back(res_eigen_vec[i]);
+    if (allZeros) {
+	    return false;
 	}
+		
+	for (size_t i = 0; i < control.size(); i++) {
+	    result.push_back(current_joint_values[i] + 
+					     duration * control[i] + 
+					     c[i] * control_error[i]);
+	}
+	for (size_t i = 0; i < control.size(); i++) {
+		result.push_back(0.0);
+	}
+	return true;
 	
 }
 	
-void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_values,
+bool Propagator::propagate_nonlinear(const std::vector<double> &current_joint_values,
 				                     const std::vector<double> &current_joint_velocities,
 				                     std::vector<double> &control,
 				                     std::vector<double> &control_error_vec,
@@ -230,10 +207,12 @@ void Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	for (size_t i = 0; i < newJointVelocities.size(); i++) {
 		result.push_back(newJointVelocities[i]);
 	}
+	
+	return true;
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(propagate_nonlinear_overload, propagate_nonlinear, 7, 7);
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(propagate_linear_overload, propagate_linear, 8, 8);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(propagate_linear_overload, propagate_linear, 5, 5);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(update_robot_values_overload, update_robot_values, 2, 3);
 
 BOOST_PYTHON_MODULE(libpropagator) {

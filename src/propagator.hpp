@@ -24,22 +24,19 @@ namespace shared {
 	   bool setup_viewer(std::string model_file,
 			             std::string environment_file);
 	   
-	   void propagate_linear(const std::vector<double> &x_dash,
-                             const std::vector<double> &u_dash,
-				             const std::vector<double> &x_star_current,
-				             const std::vector<double> &u_star_current,
-				             const std::vector<double> &x_star_next,								  
-                             const std::vector<double> &control_error_vec,	   		                 
-                             const double duration,
-                             std::vector<double> &result);
+	   bool propagate_linear(const std::vector<double> &current_joint_values,
+               const std::vector<double> &control,
+               const std::vector<double> &control_error,				             		             
+               const double duration,
+               std::vector<double> &result);
 	   
-	   void propagate_nonlinear(const std::vector<double> &current_joint_values,
-		         const std::vector<double> &current_joint_velocities,
-		         std::vector<double> &control,
-		         std::vector<double> &control_error_vec,
-		         const double simulation_step_size,
-		         const double duration,
-		         std::vector<double> &result);
+	   bool propagate_nonlinear(const std::vector<double> &current_joint_values,
+		                        const std::vector<double> &current_joint_velocities,
+		                        std::vector<double> &control,
+		                        std::vector<double> &control_error_vec,
+		                        const double simulation_step_size,
+		                        const double duration,
+		                        std::vector<double> &result);
 	   
 	   void update_robot_values(const std::vector<double> &current_joint_values,
 	   	   		                const std::vector<double> &current_joint_velocities,									 
