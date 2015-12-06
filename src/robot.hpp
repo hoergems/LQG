@@ -60,9 +60,12 @@ struct RobotState {
     	    
     	    void getJointTorqueLimits(std::vector<std::string> &joints, std::vector<double> &joint_limits);
     	    
+    	    void getJointDamping(std::vector<std::string> &joints, std::vector<double> &damping);
+    	    
     	    void getPositionOfLinkN(const std::vector<double> &joint_angles, const int &n, std::vector<double> &position);
     	    
     	    void getEndEffectorPosition(const std::vector<double> &joint_angles, std::vector<double> &end_effector_position);
+    	    
     	    
     	    void updateViewerValues(const std::vector<double> &current_joint_values,
                                     const std::vector<double> &current_joint_velocities);
@@ -107,6 +110,8 @@ struct RobotState {
             std::vector<std::string> joint_types_;
             
             std::vector<std::string> active_joints_;
+            
+            std::vector<double> joint_dampings_;
             
             std::vector<std::vector<double>> joint_origins_;
             

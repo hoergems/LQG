@@ -41,13 +41,13 @@ class Test:
         if self.simplifying:
             C = trigsimp(C)             
         print "Calculating normal forces" 
-        viscous = 1.0
+        
         N = self.calc_generalized_forces(self.q,
                                          self.qdot, 
                                          Ocs, 
                                          self.link_masses, 
                                          g,
-                                         viscous)        
+                                         self.viscous)        
         if self.simplifying:      
             N = trigsimp(N)
         t0 = time.time()
@@ -238,6 +238,11 @@ class Test:
         robot.getJointAxis(joint_names, joint_axis)
         self.joint_axis = [Matrix([[joint_axis[i][j]] for j in xrange(len(joint_axis[i]))]) for i in xrange(len(joint_axis))]
         print "got joint axis "
+        
+        print "get joint damping"        
+        joint_damping = v_double();
+        robot.getJointDamping(joint_names, joint_damping)
+        self.viscous = [joint_damping[i] for i in xrange(len(joint_damping) - 1)]        
         
         self.q = []
         self.qdot = []
@@ -567,6 +572,9 @@ class Test:
                                 ms, 
                                 g,
                                 viscous):
+        print "=================="
+        print viscous
+        print "=================="
         V = 0.0                          
         for i in xrange(len(Ocs)):            
             el = ms[i + 1] * g.transpose() * Ocs[i]                                                
@@ -577,7 +585,7 @@ class Test:
             N = Matrix([[trigsimp(diff(V, thetas[i]))] for i in xrange(len(thetas) - 1)]) 
         else:
             N = Matrix([[diff(V, thetas[i])] for i in xrange(len(thetas) - 1)])        
-        K = N + Matrix([[viscous * dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
+        K = N + Matrix([[viscous[i] * dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
         return K      
         
     def calc_coriolis_matrix(self, thetas, dot_thetas, M):        

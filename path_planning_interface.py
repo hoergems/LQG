@@ -248,7 +248,10 @@ class PathPlanningInterface:
                 queue.put((xs, us, zs, eval_result[1], gen_time, eval_time))        
     
     def construct_path(self, robot, obstacles, queue):
-        while True:            
+        while True:
+            #xs = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0] for i in xrange(10)]
+            #us = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0] for i in xrange(10)]
+            #zs = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0] for i in xrange(10)]           
             xs, us, zs = self._construct(robot, obstacles)
             if not len(xs) == 0:
                 queue.put((xs, us, zs))

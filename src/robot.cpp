@@ -84,6 +84,16 @@ bool Robot::initJoints(TiXmlElement *robot_xml) {
 		upper_joint_limits_.push_back(upper_limit);
 		joint_velocity_limits_.push_back(velocity_limit);
 		
+		// Joint dynamics
+		TiXmlElement *dyn_xml = joint_xml->FirstChildElement("dynamics");
+		double damping = 0.0;
+		if (dyn_xml) {
+			std::string damping_str(dyn_xml->Attribute("damping"));
+			damping = boost::lexical_cast<double>(damping_str.c_str());
+		}
+		
+		joint_dampings_.push_back(damping);
+		
 		// Joint types
 		std::string joint_type(joint_xml->Attribute("type"));
 		joint_types_.push_back(joint_type);
@@ -568,6 +578,17 @@ void Robot::getJointTorqueLimits(std::vector<std::string> &joints, std::vector<d
 	}
 }
 
+void Robot::getJointDamping(std::vector<std::string> &joints, std::vector<double> &damping) {
+	int index = 0;
+	for (size_t i = 0; i < joints.size(); i++) {
+	    for (size_t j = 0; j < joint_names_.size(); j++) {
+		    if (joints[i] == joint_names_[j]) {
+				damping.push_back(joint_dampings_[j]);
+			}
+		}
+	}
+}
+
 void Robot::getJointType(std::vector<std::string> &joint, std::vector<std::string> &type) {
 	int index = 0;
 	for (size_t i = 0; i < joint.size(); i++) {
@@ -638,6 +659,7 @@ BOOST_PYTHON_MODULE(librobot) {
                         .def("getJointNames", &Robot::getJointNames)
                         .def("getActiveJoints", &Robot::getActiveJoints)
                         .def("getJointType", &Robot::getJointType)
+						.def("getJointDamping", &Robot::getJointDamping)
                         .def("getJointOrigin", &Robot::getJointOrigin)
                         .def("getJointAxis", &Robot::getJointAxis)
                         .def("propagate", &Robot::propagate)
