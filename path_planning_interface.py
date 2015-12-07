@@ -74,8 +74,7 @@ class PathPlanningInterface:
               obstacles, 
               max_velocity, 
               delta_t, 
-              use_linear_path, 
-              joint_constraints,
+              use_linear_path,              
               enforce_constraints,
               planning_algorithm,
               path_timeout):
@@ -89,11 +88,7 @@ class PathPlanningInterface:
         self.max_velocity = max_velocity
         self.delta_t = delta_t
         self.use_linear_path = use_linear_path
-        self.joint_constraints = joint_constraints
-        self.enforce_constraints = enforce_constraints
-        
-        self.joint_constraints_vec = v_double()
-        self.joint_constraints_vec[:] = self.joint_constraints              
+        self.enforce_constraints = enforce_constraints             
            
         self.verbose = False 
         if(logging.getLogger().isEnabledFor(logging.INFO)):
