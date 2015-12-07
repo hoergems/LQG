@@ -56,22 +56,12 @@ class LQG:
         sim = Simulator()
         path_evaluator = PathEvaluator()
         path_planner = PathPlanningInterface()
-           
-        
-        
-        
         self.utils = Utils()
         
-        model_file = "model/model.xml"
-        urdf_model_file = "test.urdf"
-        
-        self.robot = Robot(urdf_model_file)
-        
-        #environment_file = "env.xml"
+        model_file = "model/test.xml"
+        urdf_model_file = "model/test.urdf"
         environment_file = os.path.join("environment", "env.xml")
-        
-        if self.workspace_dimension == 3:
-            model_file = "model/model3D.xml"
+        self.robot = Robot(urdf_model_file)
         if not self.setup_scene("environment", "env.xml", self.robot):
             return
                 
