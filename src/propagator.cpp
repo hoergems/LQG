@@ -56,14 +56,8 @@ bool Propagator::setup_viewer(std::string model_file,
 			cout << "Failed to load URDF model" << endl;
 			return false;
 		}
-			
-		std::vector<OpenRAVE::KinBodyPtr> bodies;
-		env_->GetBodies(bodies);
-		env_->StopSimulation();
-		for (auto &k: bodies) {
-			cout << k->GetName() << endl;
-		}
 		
+		env_->StopSimulation();
 		OpenRAVE::RobotBasePtr robot = getRobot();
 		
 		const std::vector<OpenRAVE::KinBody::LinkPtr> links(robot->GetLinks()); 
@@ -207,7 +201,7 @@ bool Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	
 	//Enforce position and velocity limits
 	bool legal = true;
-	if (enforce_constraints_) {
+	if (enforce_constraints_) {		
 		for (unsigned int i = 0; i < newJointValues.size(); i++) {
 			if (newJointValues[i] < jointsLowerPositionLimit_[i]) {
 				legal = false;	    	

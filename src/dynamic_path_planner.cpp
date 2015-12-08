@@ -120,6 +120,11 @@ bool DynamicPathPlanner::isValid(const ompl::base::State *state) {
     	accepted_ = accepted_ + 1.0;
     }
     else {
+    	cout << "not valid: ";
+    	for (unsigned int i = 0; i < space_information_->getStateSpace()->getDimension(); i++) {
+    		cout << state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i] << ", ";
+    	}
+    	cout << endl;
     	rejected_ = rejected_ + 1.0;
     	return false;
     }

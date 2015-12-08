@@ -62,6 +62,7 @@ class LQG:
         urdf_model_file = "model/test.urdf"
         environment_file = os.path.join("environment", "env.xml")
         self.robot = Robot(urdf_model_file)
+        self.robot.enforceConstraints(self.enforce_constraints)
         if not self.setup_scene("environment", "env.xml", self.robot):
             return
                 

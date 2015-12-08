@@ -95,7 +95,7 @@ class PathPlanningInterface:
             self.verbose = True        
         self.planning_algorithm = planning_algorithm
         self.dynamic_problem = False
-        self.path_timeout = path_timeout
+        self.path_timeout = path_timeout        
         
     def setup_dynamic_problem(self, 
                               urdf_model,
@@ -179,37 +179,35 @@ class PathPlanningInterface:
                 total_eval_times)
         
     def plan_paths(self, num, sim_run, timeout=0.0):
-        queues = [Queue() for i in xrange(self.num_cores - 1)] 
-        paths = []
+        queue = Queue() 
+        paths = []        
         res_paths = collections.deque()
         processes = [Process(target=self.construct_path, 
                              args=(self.robot,
                                    self.obstacles, 
-                                   queues[i])) for i in xrange(self.num_cores - 1)]
+                                   queue,
+                                   i)) for i in xrange(self.num_cores - 1)]
         t0 = time.time() 
         for i in xrange(len(processes)):
             processes[i].daemon = True
             processes[i].start()
         curr_len = 0
         while True:
-            breaking = False
-            for queue in queues:
-                elapsed = time.time() - t0
-                if queue.qsize() > 0:
-                    try:                        
-                        res_paths.append(queue.get(timeout=0.1))
-                        print "GOT A PATH " + str(len(res_paths))
-                    except:
-                        pass
+            breaking = False 
+            try:                
+                if queue.empty() == False:                                            
+                    res_paths.append(queue.get(timeout=0.1))                    
                     if len(res_paths) == num:                        
                         breaking = True
                         break
                     if timeout > 0.0:                        
                         if elapsed > timeout:
                             breaking = True
-                            break            
+                            break 
+            except:
+                pass           
             if breaking:
-                break         
+                break                  
         for i in xrange(len(processes)):
             processes[i].terminate()              
         for i in xrange(len(res_paths)):
@@ -238,14 +236,15 @@ class PathPlanningInterface:
                 eval_time = time.time() - t0        
                 queue.put((xs, us, zs, eval_result[1], gen_time, eval_time))        
     
-    def construct_path(self, robot, obstacles, queue):
+    def construct_path(self, robot, obstacles, queue, process_num):
         while True:
             #xs = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0] for i in xrange(10)]
             #us = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0] for i in xrange(10)]
             #zs = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0] for i in xrange(10)]           
             xs, us, zs = self._construct(robot, obstacles)
-            if not len(xs) == 0:
+            if not len(xs) == 0:                              
                 queue.put((xs, us, zs))
+                time.sleep(0.1)
         
     def _construct(self, robot, obstacles):
         path_planner2 = None        

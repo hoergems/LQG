@@ -97,7 +97,7 @@ struct RobotState {
     	    
     	    std::vector<fcl::OBB> createRobotCollisionStructuresPy(const std::vector<double> &joint_angles);
     	    
-    	    void enforce_constraints(bool enforce);
+    	    void enforceConstraints(bool enforce);
     	    
     
         private:
