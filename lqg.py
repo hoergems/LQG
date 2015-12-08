@@ -295,21 +295,17 @@ class LQG:
                     environment_path, 
                     environment_file,
                     robot):
-        """ Load the obstacles """ 
-        environment, goal_area = self.serializer.load_environment(file="env.xml", path="environment") 
-        if goal_area == None:
+        """ Load the obstacles """         
+        self.obstacles = self.utils.loadObstaclesXML("environment/env.xml")
+        
+        """ Load the goal area """
+        goal_area = v_double()
+        self.utils.loadGoalArea("environment/env.xml", goal_area)
+        if len(goal_area) == 0:
             print "ERROR: Your environment file doesn't define a goal area"
-            return False 
-        
-        goal_position = goal_area.getLocation()
-        
-        self.goal_position = [goal_position[i] for i in xrange(len(goal_position))]
-        self.goal_radius = goal_area.getRadius()
-             
-        self.obstacles = []
-        terrain = Terrain("default", 0.0, 1.0, False)                
-        for obstacle in environment:                       
-            self.obstacles.append(Obstacle(obstacle[0][0], obstacle[0][1], obstacle[0][2], obstacle[1][0], obstacle[1][1], obstacle[1][2], terrain))                    
+            return False
+        self.goal_position = [goal_area[i] for i in xrange(0, 3)]
+        self.goal_radius = goal_area[3] 
         
         """ Setup operations """
         self.link_dimensions = v2_double()

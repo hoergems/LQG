@@ -243,38 +243,5 @@ class Serializer:
                     float_arr = [float(arr[k]) for k in xrange(0, len(arr) - 1)]
                     float_arrs.append(float_arr)
             return float_arrs
-        return []      
-        
-    
-    def load_environment(self, file="env.xml", path="stats/environment"):
-        try:
-            xmldoc = minidom.parse(os.path.join(path, file)) 
-        except Exception as e:
-            logging.error("Serializer: " + str(e))
-            return None         
-        obst_name_objects = xmldoc.getElementsByTagName("KinBody")        
-        obstacles = []
-        goal_area = None
-        for i in xrange(len(obst_name_objects)):
-            obstacle_name = obst_name_objects[i].attributes["name"].value
-            if not obstacle_name == "GoalArea":
-                translation_elements_node = obst_name_objects[i].childNodes[i].childNodes[1].getElementsByTagName("Translation")
-                extention_elements_node = obst_name_objects[i].childNodes[i].childNodes[1].getElementsByTagName("extents")
-                if len(translation_elements_node) > 1 or len(translation_elements_node) == 0:
-                    print "Serializer: Failed to get translation of obstacles"
-                    return []
-                if len(extention_elements_node) > 1 or len(extention_elements_node) == 0:
-                    print "Serializer: Failed to get dimension of obstacles"
-                    return []
-                trans = [float(k) for k in translation_elements_node[0].childNodes[0].nodeValue.split(" ")]
-                dim = [float(k) for k in extention_elements_node[0].childNodes[0].nodeValue.split(" ")]
-                obstacles.append([trans, dim])
-            else:
-                translation_elements_node = obst_name_objects[i].childNodes[1].childNodes[1].getElementsByTagName("Translation")
-                
-                radius_element_node = obst_name_objects[i].childNodes[1].childNodes[1].getElementsByTagName("Radius")
-                trans = [float(k) for k in translation_elements_node[0].childNodes[0].nodeValue.split(" ")]
-                radius = float(radius_element_node[0].childNodes[0].nodeValue)                
-                goal_area = Area(trans[0], trans[1], trans[2], radius)                
-        return obstacles, goal_area                
+        return []             
         

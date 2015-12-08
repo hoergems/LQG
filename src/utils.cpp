@@ -79,6 +79,18 @@ std::vector<std::vector<double>> Utils::loadGoalStates() {
 
 }
 
+std::vector<shared::Obstacle> Utils::loadObstaclesXMLPy(std::string obstacles_file) {
+	std::vector<shared::Obstacle> obstacles;	
+	std::vector<std::shared_ptr<shared::Obstacle> > obst;
+	loadObstaclesXML(obstacles_file, obst);
+	for (auto &k: obst) {
+		obstacles.push_back(*(k.get()));
+	}
+	
+	return obstacles;
+	
+}
+
 void Utils::loadObstaclesXML(std::string &obstacles_file,
 		                     std::vector<std::shared_ptr<shared::Obstacle> > &obst) {
 	std::vector<ObstacleStruct> obstacles;	
@@ -168,6 +180,10 @@ void Utils::loadObstaclesXML(std::string &obstacles_file,
 	                                                      terrain));
 	       
 	}
+}
+
+void Utils::loadGoalAreaPy(std::string env_file, std::vector<double> &goal_area) {
+	loadGoalArea(env_file, goal_area);
 }
 
 void Utils::loadGoalArea(std::string &env_file, std::vector<double> &goal_area) {
@@ -297,7 +313,11 @@ BOOST_PYTHON_MODULE(libutil) {
     class_<std::vector<int> > ("v_int")
          .def(vector_indexing_suite<std::vector<int> >());
     
-    class_<Utils>("Utils")
+    to_python_converter<std::vector<shared::Obstacle,class std::allocator<shared::Obstacle> >, VecToList<shared::Obstacle> >();
+    
+    class_<Utils>("Utils", init<>())
+    		.def("loadObstaclesXML", &Utils::loadObstaclesXMLPy)
+			.def("loadGoalArea", &Utils::loadGoalAreaPy)
          
          
     ;

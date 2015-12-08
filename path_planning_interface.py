@@ -272,7 +272,7 @@ class PathPlanningInterface:
                                 self.delta_t)
             logging.info("PathPlanningInterface: Path planner setup")        
         path_planner2.setObstacles(obstacles)        
-        print "set obstacles"
+        #print "set obstacles"
         goal_states = v2_double()
         gs = []       
         for i in xrange(len(self.goal_states)):

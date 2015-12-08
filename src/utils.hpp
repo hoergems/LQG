@@ -25,8 +25,12 @@ double euclideanDistance(std::vector<double> &vec1, std::vector<double> &vec2);
 
 class Utils {      
     public:
+	    std::vector<shared::Obstacle> loadObstaclesXMLPy(std::string obstacles_file);
+	
 		void loadObstaclesXML(std::string &obstacles_file,
                               std::vector<std::shared_ptr<shared::Obstacle> > &obst);
+		
+		void loadGoalAreaPy(std::string env_file, std::vector<double> &goal_area);
 		
 		void loadGoalArea(std::string &env_file, std::vector<double> &goal_area);
 				           
