@@ -73,8 +73,7 @@ class LQG:
                                       model_file,                                      
                                       self.robot,                                    
                                       self.max_velocity,
-                                      self.delta_t,                                      
-                                      self.enforce_constraints,
+                                      self.delta_t,
                                       self.start_state,
                                       self.goal_position,
                                       self.goal_radius,
@@ -89,8 +88,7 @@ class LQG:
                            self.obstacles,  
                            self.max_velocity, 
                            self.delta_t, 
-                           self.use_linear_path,                           
-                           self.enforce_constraints,
+                           self.use_linear_path,
                            self.planning_algortihm,
                            self.path_timeout)
         if self.dynamic_problem:
@@ -159,8 +157,7 @@ class LQG:
                                      self.link_dimensions,
                                      self.robot, 
                                      self.sample_size, 
-                                     self.obstacles,                                     
-                                     self.enforce_constraints,
+                                     self.obstacles,
                                      self.goal_position,
                                      self.goal_radius)
                 if self.dynamic_problem:
@@ -182,8 +179,7 @@ class LQG:
                                   self.robot, 
                                   self.obstacles, 
                                   self.goal_position, 
-                                  self.goal_radius,                                  
-                                  self.enforce_constraints,
+                                  self.goal_radius,
                                   self.max_velocity,
                                   self.delta_t,
                                   self.show_viewer,

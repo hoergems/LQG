@@ -294,34 +294,3 @@ BOOST_PYTHON_MODULE(libdynamic_path_planner) {
 }
  
 }
-
-
-
-/**int main(int argc, char** argv) {
-    double coulomb = 0.0;
-    double viscous = 1.0;
-    double control_duration = 0.005;
-    double simulation_step_size = 0.001;    
-    double time_limit = 10.0;
-    bool linear_propagation = false;
-    bool verbose = true;
-    const std::string model_file("test.urdf");
-    shared::OMPLControl ompl_test(model_file,
-                                      control_duration,
-                                      simulation_step_size,
-                                      coulomb,
-                                      viscous,
-                                      linear_propagation,
-                                      verbose);
-    //ompl_test.testNormalDist(control_duration, simulation_step_size, coulomb, viscous);    
-    //OpenRAVE::EnvironmentBasePtr env = ompl_test.getEnvironment(); 
-    
-    //ompl_test.testPhysics(simulation_step_size, coulomb, viscous);    
-    shared::PathControlPtr controls = ompl_test.test(time_limit);
-    //ompl_test.viewControls(controls,
-                           //simulation_step_size);
-    //OpenRAVE::RaveDestroy();
-    return 0;
-}*/
-
-

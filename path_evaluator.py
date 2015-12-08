@@ -18,8 +18,7 @@ class PathEvaluator:
               link_dimensions, 
               robot, 
               sample_size, 
-              obstacles,              
-              enforce_constraints,
+              obstacles,
               goal_position,
               goal_radius):
         self.robot = robot       
@@ -48,7 +47,7 @@ class PathEvaluator:
         self.upper_position_constraints = [upper_position_constraints[i] for i in xrange(len(upper_position_constraints))]
         self.velocity_constraints = [velocity_constraints[i] for i in xrange(len(velocity_constraints))]
         
-        self.enforce_constraints = enforce_constraints
+        self.enforce_constraints = robot.constraintsEnforced()
         self.sample_size = sample_size
         self.num_cores = cpu_count() - 1
         #self.num_cores = 2 

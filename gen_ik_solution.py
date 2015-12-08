@@ -22,8 +22,7 @@ class IKSolutionGenerator:
               manipulator,
               obstacles, 
               max_velocity, 
-              delta_t,              
-              enforce_constraints,
+              delta_t,
               robot_file, 
               environment_file,
               planning_algorithm,
@@ -41,8 +40,7 @@ class IKSolutionGenerator:
                                 obstacles, 
                                 max_velocity, 
                                 delta_t, 
-                                False,                                
-                                enforce_constraints,
+                                False,
                                 planning_algorithm,
                                 path_timeout)
         logging.info("IKSolutionGenerator: Create OpenRAVE environment")

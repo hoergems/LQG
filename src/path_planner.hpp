@@ -41,8 +41,7 @@ namespace shared {
             PathPlanner(boost::shared_ptr<shared::Robot> &robot,            		        
                         double delta_t,
                         bool continuous_collision,                        
-                        double max_joint_velocity,                        
-                        bool enforce_constraints,
+                        double max_joint_velocity,
                         double stretching_factor,
                         bool check_linear_path,                        
                         bool verbose,						
@@ -88,8 +87,6 @@ namespace shared {
             bool continuous_collision_;
             
             double max_joint_velocity_;
-            
-            bool enforce_constraints_;
             
             double stretching_factor_;
             

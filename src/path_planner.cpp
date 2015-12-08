@@ -8,8 +8,7 @@ namespace shared {
 PathPlanner::PathPlanner(boost::shared_ptr<shared::Robot> &robot,		                 
                          double delta_t,
                          bool continuous_collision,                         
-                         double max_joint_velocity,                         
-                         bool enforce_constraints,
+                         double max_joint_velocity,
                          double stretching_factor,
                          bool check_linear_path,                         
                          bool verbose,						 
@@ -18,8 +17,7 @@ PathPlanner::PathPlanner(boost::shared_ptr<shared::Robot> &robot,
     dim_(robot->getDOF()),
     delta_t_(delta_t),
     continuous_collision_(continuous_collision),
-    max_joint_velocity_(max_joint_velocity),    
-    enforce_constraints_(enforce_constraints),
+    max_joint_velocity_(max_joint_velocity),
     stretching_factor_(stretching_factor),
     planning_range_(delta_t_ * max_joint_velocity_),     
     check_linear_path_(check_linear_path),  
@@ -69,7 +67,7 @@ void PathPlanner::setup() {
     robot_->getJointUpperPositionLimits(activeJoints, upperJointPositionConstraints);
 	
 	ompl::base::RealVectorBounds bounds(dim_);
-	if (enforce_constraints_) {
+	if (robot_->constraintsEnforced()) {
 		/** We assume that the there are no joint limits. So the range of each joint
 		*** is between -2*Pi and 2*Pi
 		*/   
@@ -410,8 +408,7 @@ BOOST_PYTHON_MODULE(libpath_planner) {
     class_<PathPlanner>("PathPlanner", init<boost::shared_ptr<shared::Robot>&,    		                                                                     
                                             double,
                                             bool,                                            
-                                            double,                                            
-                                            bool,
+                                            double,
                                             double,
                                             bool,                                            
                                             bool,											

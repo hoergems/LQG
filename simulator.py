@@ -26,8 +26,7 @@ class Simulator:
                       robot,
                       obstacles,
                       goal_position,
-                      goal_radius,                      
-                      enforce_constraints,
+                      goal_radius,
                       joint_velocity_limit,
                       control_duration,
                       show_viewer,
@@ -57,7 +56,7 @@ class Simulator:
         self.lower_position_constraints = [lower_position_constraints[i] for i in xrange(len(lower_position_constraints))]
         self.upper_position_constraints = [upper_position_constraints[i] for i in xrange(len(upper_position_constraints))]
         
-        self.enforce_constraints = enforce_constraints
+        self.enforce_constraints = robot.constraintsEnforced()
         self.dynamic_problem = False
         self.integrate = Integrate()
         self.show_viewer = show_viewer        

@@ -74,8 +74,7 @@ class PathPlanningInterface:
               obstacles, 
               max_velocity, 
               delta_t, 
-              use_linear_path,              
-              enforce_constraints,
+              use_linear_path,
               planning_algorithm,
               path_timeout):
         
@@ -87,8 +86,7 @@ class PathPlanningInterface:
         self.obstacles = obstacles        
         self.max_velocity = max_velocity
         self.delta_t = delta_t
-        self.use_linear_path = use_linear_path
-        self.enforce_constraints = enforce_constraints             
+        self.use_linear_path = use_linear_path         
            
         self.verbose = False 
         if(logging.getLogger().isEnabledFor(logging.INFO)):
@@ -252,8 +250,7 @@ class PathPlanningInterface:
             path_planner2 = libpath_planner.PathPlanner(robot,                                                        
                                                         self.delta_t,
                                                         True,
-                                                        self.max_velocity,                                                        
-                                                        self.enforce_constraints,                                                    
+                                                        self.max_velocity,                                 
                                                         1.0,                                                    
                                                         self.use_linear_path,
                                                         self.verbose,

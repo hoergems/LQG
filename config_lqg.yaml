@@ -83,7 +83,7 @@ continuous_collision_check: False
 #########################################
 # Dynamic problem and parameters
 #########################################
-dynamic_problem: True
+dynamic_problem: False
 simulation_step_size: 0.001
 
 #########################################

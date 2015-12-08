@@ -323,6 +323,10 @@ Robot::Robot(std::string robot_file):
 	kinematics_->setLinkDimensions(active_link_dimensions_);	
 }
 
+bool Robot::constraintsEnforced() {
+	return enforce_constraints_;
+}
+
 void Robot::enforceConstraints(bool enforce) {
 	enforce_constraints_ = enforce;
 	propagator_->enforce_constraints(enforce_constraints_);
@@ -672,6 +676,7 @@ BOOST_PYTHON_MODULE(librobot) {
 						.def("getJointUpperPositionLimits", &Robot::getJointUpperPositionLimits)
 						.def("getJointVelocityLimits", &Robot::getJointVelocityLimits)
 						.def("enforceConstraints", &Robot::enforceConstraints)
+						.def("constraintsEnforced", &Robot::constraintsEnforced)
                         //.def("setup", &Integrate::setup)                        
     ;
 }

@@ -99,6 +99,8 @@ struct RobotState {
     	    
     	    void enforceConstraints(bool enforce);
     	    
+    	    bool constraintsEnforced();
+    	    
     
         private:
             std::string robot_file_;
