@@ -36,7 +36,7 @@ namespace shared {
     
     class PathPlanner {
         public:
-            
+            PathPlanner() = default;
             
             PathPlanner(boost::shared_ptr<shared::Robot> &robot,            		        
                         double delta_t,
@@ -45,7 +45,7 @@ namespace shared {
                         bool enforce_constraints,
                         double stretching_factor,
                         bool check_linear_path,                        
-                        bool verbose,
+                        bool verbose,						
                         std::string planner);
                         
             ~PathPlanner() {clearAll();}
@@ -119,7 +119,7 @@ namespace shared {
             
             ompl::base::MotionValidatorPtr motionValidator_;
 
-            bool verbose_;            
+            bool verbose_;
 
             std::vector<std::vector<double>> goal_states_;
             

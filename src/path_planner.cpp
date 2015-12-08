@@ -12,7 +12,7 @@ PathPlanner::PathPlanner(boost::shared_ptr<shared::Robot> &robot,
                          bool enforce_constraints,
                          double stretching_factor,
                          bool check_linear_path,                         
-                         bool verbose,
+                         bool verbose,						 
                          std::string planner):
     robot_(robot),
     dim_(robot->getDOF()),
@@ -21,8 +21,7 @@ PathPlanner::PathPlanner(boost::shared_ptr<shared::Robot> &robot,
     max_joint_velocity_(max_joint_velocity),    
     enforce_constraints_(enforce_constraints),
     stretching_factor_(stretching_factor),
-    planning_range_(delta_t_ * max_joint_velocity_),
-    //planning_range_((1.0 / stretching_factor_) * std::sqrt(dim * std::pow(delta_t_ * max_joint_velocity_, 2))), 
+    planning_range_(delta_t_ * max_joint_velocity_),     
     check_linear_path_(check_linear_path),  
     space_(new ompl::base::RealVectorStateSpace(dim_)),    
     si_(new ompl::base::SpaceInformation(space_)),    
@@ -31,11 +30,11 @@ PathPlanner::PathPlanner(boost::shared_ptr<shared::Robot> &robot,
     planner_(nullptr),
     motionValidator_(new MotionValidator(si_,
     		                             robot_,
-                                         continuous_collision,
+                                         continuous_collision,										 
                                          false)),
-    verbose_(verbose)
-{   
-    if (!verbose_) {        
+    verbose_(verbose)	
+{    
+	if (!verbose_) {        
         ompl::msg::noOutputHandler();
     }
     
@@ -68,18 +67,6 @@ void PathPlanner::setup() {
     
     robot_->getJointLowerPositionLimits(activeJoints, lowerJointPositionPonstraints);
     robot_->getJointUpperPositionLimits(activeJoints, upperJointPositionConstraints);
-    
-    cout << "low: ";
-    for (auto &k: lowerJointPositionPonstraints) {
-    	cout << k << ", ";
-    }
-    cout << endl;
-    
-    cout << "up: ";
-    for (auto &k: upperJointPositionConstraints) {
-        cout << k << ", ";
-    }
-    cout << endl;
 	
 	ompl::base::RealVectorBounds bounds(dim_);
 	if (enforce_constraints_) {
@@ -90,24 +77,21 @@ void PathPlanner::setup() {
 			bounds.setLow(i, lowerJointPositionPonstraints[i]);
 			bounds.setHigh(i, upperJointPositionConstraints[i]);
 		}
-		
-		/** Apply the bounds to the space */    
-		space_->as<ompl::base::RealVectorStateSpace>()->setBounds(bounds);
 	}
 	else {
 		for (size_t i = 0; i < dim_; i++) {
-			bounds.setLow(i, -M_PI + 0.0000001);
-			bounds.setHigh(i, M_PI + 0.0000001);			
+			bounds.setLow(i, -100000);
+			bounds.setHigh(i, 100000);			
 		}
-				
-		/** Apply the bounds to the space */    
-		space_->as<ompl::base::RealVectorStateSpace>()->setBounds(bounds);
 	}
+	
+	/** Apply the bounds to the space */    
+   space_->as<ompl::base::RealVectorStateSpace>()->setBounds(bounds);
     
     /** Set the StateValidityChecker */    
     si_->setStateValidityChecker(boost::bind(&PathPlanner::isValid, this, _1)); 
     
-    /** Set the MotionValidation */    
+    /** Set the MotionValidation */
     si_->setMotionValidator(motionValidator_);
     
     /** Let the planner know about our problem */    
@@ -270,14 +254,15 @@ bool PathPlanner::solve_(double time_limit) {
 }
 
 /** Solves the motion planning problem */
-std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &start_state_vec, double timeout) {	
+std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &start_state_vec, double timeout) {
+	
     std::vector<double> ss_vec;
     ompl::base::ScopedState<> start_state(space_); 
     for (size_t i =0; i < dim_; i++) {
         ss_vec.push_back(start_state_vec[i]);
         start_state[i] = ss_vec[i]; 
     }
-       
+    
     std::vector<std::vector<double> > solution_vector;
     boost::shared_ptr<MotionValidator> mv = boost::static_pointer_cast<MotionValidator>(si_->getMotionValidator());    
        
@@ -316,7 +301,8 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
             clear();        
             if (verbose_) {
                 cout << "Linear path is a valid solution. Returning linear path of length " << linear_path.size() << endl;
-            }        
+            } 
+            
             return augmentPath_(linear_path);
         } 
     
@@ -346,9 +332,11 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
     	return solution_vector;
     }
     
+    boost::shared_ptr<ompl::geometric::PathGeometric> solution_path = boost::static_pointer_cast<ompl::geometric::PathGeometric>(problem_definition_->getSolutionPath());
+    
     solution_vector.push_back(ss_vec);    
     /** We found a solution, so get the solution path */
-    boost::shared_ptr<ompl::geometric::PathGeometric> solution_path = boost::static_pointer_cast<ompl::geometric::PathGeometric>(problem_definition_->getSolutionPath());    
+    
     if (verbose_) {
         cout << "Solution found in " << t.elapsed() << " seconds." << endl;
         cout << "Solution path has length " << solution_path->getStates().size() << endl;
@@ -426,7 +414,7 @@ BOOST_PYTHON_MODULE(libpath_planner) {
                                             bool,
                                             double,
                                             bool,                                            
-                                            bool,
+                                            bool,											
                                             std::string>())
                         .def("solve", &PathPlanner::solve)
                         .def("setObstacles", &PathPlanner::setObstaclesPy) 
