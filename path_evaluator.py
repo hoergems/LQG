@@ -41,11 +41,14 @@ class PathEvaluator:
         robot.getActiveJoints(active_joints)
         lower_position_constraints = v_double()
         upper_position_constraints = v_double()
+        velocity_constraints = v_double()        
         robot.getJointLowerPositionLimits(active_joints, lower_position_constraints)
         robot.getJointUpperPositionLimits(active_joints, upper_position_constraints)
+        robot.getJointVelocityLimits(active_joints, velocity_constraints)
         
         self.lower_position_constraints = [lower_position_constraints[i] for i in xrange(len(lower_position_constraints))]
         self.upper_position_constraints = [upper_position_constraints[i] for i in xrange(len(upper_position_constraints))]
+        self.velocity_constraints = [velocity_constraints[i] for i in xrange(len(velocity_constraints))]
         
         self.enforce_constraints = enforce_constraints
         self.sample_size = sample_size
@@ -69,14 +72,14 @@ class PathEvaluator:
         self.exit_reward = exit_reward
         self.discount = discount
         
-    def check_constraints(self, sample):
-        valid = True
-        for i in xrange(len(sample)):
+    def check_constraints(self, sample):      
+        for i in xrange(len(sample) / 2):
             if ((sample[i] < self.lower_position_constraints[i] or 
-                 sample[i] > self.upper_position_constraints[i])):
-                valid = False
-                break
-        return valid
+                 sample[i] > self.upper_position_constraints[i] or
+                 sample[i + len(sample) / 2] < -self.velocity_constraints[i] or
+                 sample[i + len(sample) / 2] > self.velocity_constraints[i])):
+                return False
+        return True
     
     def is_terminal(self, state):
         ee_position_arr = v_double()                       
@@ -93,10 +96,11 @@ class PathEvaluator:
         pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True) 
         pdf /= sum(pdf)        
         expected_reward = 0.0
+        terminal = False        
         for i in xrange(len(samples)):
             if self.enforce_constraints:
                 if not self.check_constraints(samples[i]):
-                    continue
+                    continue            
             vec = [samples[i][j] for j in xrange(len(self.link_dimensions))]
             joint_angles = v_double()
             joint_angles[:] = vec

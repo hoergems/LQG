@@ -670,6 +670,7 @@ BOOST_PYTHON_MODULE(librobot) {
                         .def("getDOF", &Robot::getDOF)
 						.def("getJointLowerPositionLimits", &Robot::getJointLowerPositionLimits)
 						.def("getJointUpperPositionLimits", &Robot::getJointUpperPositionLimits)
+						.def("getJointVelocityLimits", &Robot::getJointVelocityLimits)
                         //.def("setup", &Integrate::setup)                        
     ;
 }

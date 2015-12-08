@@ -78,7 +78,7 @@ exit_reward: 1000.0
 # The number of samples drawn from the distribution at each state to check a path for collision
 sample_size: 200
 
-enforce_constraints: False
+enforce_constraints: True
 
 stop_when_terminal: True
 
@@ -89,10 +89,6 @@ plot_paths: True
 planning_algorithm: RRTConnect
 
 continuous_collision_check: False
-
-# Determines if a path has to be generated first before doing continuous
-# collision checking. Has no effect when continuous_collision_check is False
-lazy_collision_check: False
 
 #########################################
 # Dynamic problem and parameters
