@@ -161,9 +161,7 @@ class LQG:
                                      self.obstacles,                                     
                                      self.enforce_constraints,
                                      self.goal_position,
-                                     self.goal_radius,
-                                     self.w1,
-                                     self.w2)
+                                     self.goal_radius)
                 if self.dynamic_problem:
                     path_evaluator.setup_dynamic_problem(self.delta_t)
                 path_evaluator.setup_reward_function(self.step_penalty, self.illegal_move_penalty, self.exit_reward, self.discount_factor)
@@ -385,9 +383,7 @@ class LQG:
         self.stop_when_terminal = config['stop_when_terminal']        
         self.enforce_constraints = config['enforce_constraints']
         self.sample_size = config['sample_size']  
-        self.workspace_dimension = config['workspace_dimension'] 
-        self.w1 = config['w1']
-        self.w2 = config['w2']
+        self.workspace_dimension = config['workspace_dimension']        
         self.plot_paths = config['plot_paths']
         self.planning_algortihm = config['planning_algorithm']
         self.dynamic_problem = config['dynamic_problem'] 

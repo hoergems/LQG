@@ -50,13 +50,6 @@ use_paths_from_file: False
 
 overwrite_paths_file: True
 
-# Path evaluation weights
-# Weight for the collision probability
-w1: 1.0
-
-# Weight for the end effector covariance trace
-w2: 0.0
-
 ################################################
 ## Reward parameters
 ################################################

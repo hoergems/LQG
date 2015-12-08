@@ -21,9 +21,7 @@ class PathEvaluator:
               obstacles,              
               enforce_constraints,
               goal_position,
-              goal_radius,
-              w1, 
-              w2):
+              goal_radius):
         self.robot = robot       
         self.A = A
         self.B = B
@@ -55,9 +53,7 @@ class PathEvaluator:
         self.num_cores = cpu_count() - 1
         #self.num_cores = 2 
         self.goal_position = goal_position 
-        self.goal_radius = goal_radius   
-        self.w1 = w1
-        self.w2 = w2        
+        self.goal_radius = goal_radius
         self.mutex = Lock()
         self.integrate = Integrate()
         self.dynamic_problem = False
