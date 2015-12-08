@@ -158,8 +158,7 @@ class LQG:
                                      self.link_dimensions,
                                      self.robot, 
                                      self.sample_size, 
-                                     self.obstacles,
-                                     self.joint_constraints,
+                                     self.obstacles,                                     
                                      self.enforce_constraints,
                                      self.goal_position,
                                      self.goal_radius,
@@ -184,8 +183,7 @@ class LQG:
                                   self.robot, 
                                   self.obstacles, 
                                   self.goal_position, 
-                                  self.goal_radius,
-                                  self.joint_constraints,
+                                  self.goal_radius,                                  
                                   self.enforce_constraints,
                                   self.max_velocity,
                                   self.delta_t,
@@ -384,8 +382,7 @@ class LQG:
         self.illegal_move_penalty = config['illegal_move_penalty']
         self.step_penalty = config['step_penalty']
         self.exit_reward = config['exit_reward']
-        self.stop_when_terminal = config['stop_when_terminal']
-        self.joint_constraints = config['joint_constraints']
+        self.stop_when_terminal = config['stop_when_terminal']        
         self.enforce_constraints = config['enforce_constraints']
         self.sample_size = config['sample_size']  
         self.workspace_dimension = config['workspace_dimension'] 

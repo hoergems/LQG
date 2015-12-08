@@ -26,8 +26,7 @@ class Simulator:
                       robot,
                       obstacles,
                       goal_position,
-                      goal_radius,
-                      joint_constraints,
+                      goal_radius,                      
                       enforce_constraints,
                       joint_velocity_limit,
                       control_duration,
@@ -46,10 +45,19 @@ class Simulator:
         self.robot = robot
         self.obstacles = obstacles
         self.goal_position = goal_position
-        self.goal_radius = goal_radius
-        self.joint_constraints = joint_constraints 
-        self.enforce_constraints = enforce_constraints 
-        self.joint_velocity_limit = joint_velocity_limit
+        self.goal_radius = goal_radius        
+        
+        active_joints = v_string()
+        robot.getActiveJoints(active_joints)
+        lower_position_constraints = v_double()
+        upper_position_constraints = v_double()
+        robot.getJointLowerPositionLimits(active_joints, lower_position_constraints)
+        robot.getJointUpperPositionLimits(active_joints, upper_position_constraints)
+        
+        self.lower_position_constraints = [lower_position_constraints[i] for i in xrange(len(lower_position_constraints))]
+        self.upper_position_constraints = [upper_position_constraints[i] for i in xrange(len(upper_position_constraints))]
+        
+        self.enforce_constraints = enforce_constraints
         self.dynamic_problem = False
         self.integrate = Integrate()
         self.show_viewer = show_viewer        
@@ -276,10 +284,10 @@ class Simulator:
     
     def check_constraints(self, state):
         for i in xrange(len(state) / 2):                          
-            if state[i] < -self.joint_constraints[i]:
-                state[i] = -self.joint_constraints[i] + 0.00001
-            if state[i] > self.joint_constraints[i]:
-                state[i] = self.joint_constraints[i] - 0.00001        
+            if state[i] < self.lower_position_constraints[i]:
+                state[i] = self.lower_position_constraints[i] + 0.00001
+            if state[i] > self.upper_position_constraints[i]:
+                state[i] = self.upper_position_constraints[i] - 0.00001        
         return state
     
     

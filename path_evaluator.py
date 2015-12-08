@@ -3,6 +3,7 @@ import scipy
 import kalman as kalman
 from scipy.stats import multivariate_normal
 from libintegrate import *
+from librobot import v_string
 from multiprocessing import Process, Queue, cpu_count
 import collections
 import time
@@ -17,8 +18,7 @@ class PathEvaluator:
               link_dimensions, 
               robot, 
               sample_size, 
-              obstacles,
-              joint_constraints,
+              obstacles,              
               enforce_constraints,
               goal_position,
               goal_radius,
@@ -36,7 +36,17 @@ class PathEvaluator:
         self.W = W 
         self.link_dimensions = link_dimensions
         self.obstacles = obstacles
-        self.joint_constraints = joint_constraints
+        
+        active_joints = v_string()
+        robot.getActiveJoints(active_joints)
+        lower_position_constraints = v_double()
+        upper_position_constraints = v_double()
+        robot.getJointLowerPositionLimits(active_joints, lower_position_constraints)
+        robot.getJointUpperPositionLimits(active_joints, upper_position_constraints)
+        
+        self.lower_position_constraints = [lower_position_constraints[i] for i in xrange(len(lower_position_constraints))]
+        self.upper_position_constraints = [upper_position_constraints[i] for i in xrange(len(upper_position_constraints))]
+        
         self.enforce_constraints = enforce_constraints
         self.sample_size = sample_size
         self.num_cores = cpu_count() - 1
@@ -62,8 +72,8 @@ class PathEvaluator:
     def check_constraints(self, sample):
         valid = True
         for i in xrange(len(sample)):
-            if ((sample[i] < -self.joint_constraints[i] or 
-                 sample[i] > self.joint_constraints[i])):
+            if ((sample[i] < self.lower_position_constraints[i] or 
+                 sample[i] > self.upper_position_constraints[i])):
                 valid = False
                 break
         return valid

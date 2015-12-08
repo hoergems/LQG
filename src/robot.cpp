@@ -668,6 +668,8 @@ BOOST_PYTHON_MODULE(librobot) {
                         .def("updateViewerValues", &Robot::updateViewerValues)
                         .def("test", &Robot::test)
                         .def("getDOF", &Robot::getDOF)
+						.def("getJointLowerPositionLimits", &Robot::getJointLowerPositionLimits)
+						.def("getJointUpperPositionLimits", &Robot::getJointUpperPositionLimits)
                         //.def("setup", &Integrate::setup)                        
     ;
 }

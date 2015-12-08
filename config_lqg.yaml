@@ -78,8 +78,6 @@ exit_reward: 1000.0
 # The number of samples drawn from the distribution at each state to check a path for collision
 sample_size: 200
 
-joint_constraints: [3.14159, 3.14159, 3.14159]
-
 enforce_constraints: False
 
 stop_when_terminal: True
