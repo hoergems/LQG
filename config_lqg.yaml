@@ -13,9 +13,6 @@ use_linear_path: False
 # Number of simulation runs for the best found path
 num_simulation_runs: 30
 
-# Dimension of the workspace (2 = 2D, 3 = 3D)
-workspace_dimension: 3
-
 # Maximum angular velocity of the joints (in rad/sec)
 max_velocity: 4.0
 
