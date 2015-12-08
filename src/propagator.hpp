@@ -16,9 +16,12 @@ namespace shared {
    public:
 	   Propagator();
 	   
+	   ~Propagator() {if (viewer_setup_) { OpenRAVE::RaveDestroy(); }}
+	   
 	   void setup(std::vector<double> &jointsLowerPositionLimit,
 			      std::vector<double> &jointsUpperPositionLimit,
-			      std::vector<double> &jointsVelocityLimit);
+			      std::vector<double> &jointsVelocityLimit,
+				  bool enforce_constraints);
 	   //void propagate_linear() const;
 	   
 	   bool setup_viewer(std::string model_file,
@@ -42,6 +45,8 @@ namespace shared {
 	   	   		                const std::vector<double> &current_joint_velocities,									 
 	   	   					    OpenRAVE::RobotBasePtr robot);
 	   
+	   void enforce_constraints(bool enforce);
+	   
    private:
 	   OpenRAVE::RobotBasePtr getRobot();
 	   
@@ -50,6 +55,8 @@ namespace shared {
 	   std::vector<double> jointsLowerPositionLimit_; 
 	   std::vector<double> jointsUpperPositionLimit_;
 	   std::vector<double> jointsVelocityLimit_;
+	   
+	   bool enforce_constraints_;
 	   
 	   OpenRAVE::EnvironmentBasePtr env_;
 	   OpenRAVE::RobotBasePtr robot_;

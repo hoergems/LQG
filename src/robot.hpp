@@ -97,6 +97,8 @@ struct RobotState {
     	    
     	    std::vector<fcl::OBB> createRobotCollisionStructuresPy(const std::vector<double> &joint_angles);
     	    
+    	    void enforce_constraints(bool enforce);
+    	    
     
         private:
             std::string robot_file_;
@@ -154,6 +156,8 @@ struct RobotState {
             bool initLinks(TiXmlElement *robot_xml);
             
             bool initJoints(TiXmlElement *robot_xml);
+            
+            bool enforce_constraints_;
             
             unsigned int get_link_index(std::string &link_name);
             

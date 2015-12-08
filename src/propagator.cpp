@@ -8,22 +8,34 @@ namespace shared {
 Propagator::Propagator():	
 	env_(nullptr),
 	robot_(nullptr),
+	enforce_constraints_(false),
 	integrator_(new Integrate()),
 	viewer_setup_(false){	
 }
 
 void Propagator::setup(std::vector<double> &jointsLowerPositionLimit,
 		               std::vector<double> &jointsUpperPositionLimit,
-		               std::vector<double> &jointsVelocityLimit) {	
+		               std::vector<double> &jointsVelocityLimit,
+					   bool enforce_constraints) {	
 	for (size_t i = 0; i < jointsLowerPositionLimit.size(); i++) {
 		jointsLowerPositionLimit_.push_back(jointsLowerPositionLimit[i]);
 		jointsUpperPositionLimit_.push_back(jointsUpperPositionLimit[i]);
 		jointsVelocityLimit_.push_back(jointsVelocityLimit[i]);
 	}
+	
+	enforce_constraints_ = enforce_constraints;
+}
+
+void Propagator::enforce_constraints(bool enforce) {
+	enforce_constraints_ = enforce;
 }
 
 bool Propagator::setup_viewer(std::string model_file,
 		                      std::string environment_file) {
+	
+	    if (viewer_setup_) {
+	    	return false;
+	    }
 	
 		OpenRAVE::RaveInitialize(true);    
 		env_ = OpenRAVE::RaveCreateEnvironment();
@@ -48,11 +60,14 @@ bool Propagator::setup_viewer(std::string model_file,
 		std::vector<OpenRAVE::KinBodyPtr> bodies;
 		env_->GetBodies(bodies);
 		env_->StopSimulation();
+		for (auto &k: bodies) {
+			cout << k->GetName() << endl;
+		}
 		
 		OpenRAVE::RobotBasePtr robot = getRobot();
 		
 		const std::vector<OpenRAVE::KinBody::LinkPtr> links(robot->GetLinks()); 
-		for (size_t i = 0; i < links.size(); i++) {
+		for (size_t i = 0; i < links.size(); i++) {			
 			if (links[i]->GetName() == "world") {
 				links[i]->SetStatic(true);
 			}
@@ -64,6 +79,8 @@ bool Propagator::setup_viewer(std::string model_file,
 		
 		shared::RaveViewer viewer;
 		viewer.testView(env_);
+		cout << "VIEWER SETUP!!!!!!!!!!" << endl;
+	viewer_setup_ = true;
     return true;
 }
 
@@ -99,7 +116,15 @@ void Propagator::update_robot_values(const std::vector<double> &current_joint_va
 		
 	std::vector<OpenRAVE::dReal> newJointVelocities;
 	for (size_t i = 0; i < current_joint_values.size(); i++) {
-		newJointValues.push_back(current_joint_values[i]);		
+		if (current_joint_values[i] < -M_PI) {
+			newJointValues.push_back(2.0 * M_PI + current_joint_values[i]);
+		}
+		else if (current_joint_values[i] > M_PI) {
+			newJointValues.push_back(-2.0 * M_PI + current_joint_values[i]);
+		}
+		else {
+		    newJointValues.push_back(current_joint_values[i]);
+		}
 	}
 		
 	for (size_t i = 0; i < current_joint_velocities.size(); i++) {
@@ -181,23 +206,29 @@ bool Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	}
 	
 	//Enforce position and velocity limits
-	for (unsigned int i = 0; i < newJointValues.size(); i++) {
-	    if (newJointValues[i] < jointsLowerPositionLimit_[i]) {
-		    newJointValues[i] = jointsLowerPositionLimit_[i];
-		    newJointVelocities[i] = 0;
+	bool legal = true;
+	if (enforce_constraints_) {
+		for (unsigned int i = 0; i < newJointValues.size(); i++) {
+			if (newJointValues[i] < jointsLowerPositionLimit_[i]) {
+				legal = false;	    	
+				newJointValues[i] = jointsLowerPositionLimit_[i];
+				newJointVelocities[i] = 0;				
+			}
+			else if (newJointValues[i] > jointsUpperPositionLimit_[i]) {
+				legal = false;			
+				newJointValues[i] = jointsUpperPositionLimit_[i];
+				newJointVelocities[i] = 0;
+			}
+	
+			if (newJointVelocities[i] < -jointsVelocityLimit_[i]) {
+				newJointVelocities[i] = -jointsVelocityLimit_[i];
+				legal = false;
+			}
+			else if (newJointVelocities[i] > jointsVelocityLimit_[i]) {
+				newJointVelocities[i] = jointsVelocityLimit_[i];
+				legal = false;
+			}		        
 		}
-		else if (newJointValues[i] > jointsUpperPositionLimit_[i]) {
-		    newJointValues[i] = jointsUpperPositionLimit_[i];
-		    newJointVelocities[i] = 0;
-		}
-
-		if (newJointVelocities[i] < -jointsVelocityLimit_[i]) {
-		    newJointVelocities[i] = -jointsVelocityLimit_[i];
-		}
-		else if (newJointVelocities[i] > jointsVelocityLimit_[i]) {
-	        newJointVelocities[i] = jointsVelocityLimit_[i];
-		}
-		        
 	}
 	
 	for (size_t i = 0; i < newJointValues.size(); i++) {
@@ -208,7 +239,7 @@ bool Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 		result.push_back(newJointVelocities[i]);
 	}
 	
-	return true;
+	return legal;
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(propagate_nonlinear_overload, propagate_nonlinear, 7, 7);

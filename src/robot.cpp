@@ -304,22 +304,28 @@ Robot::Robot(std::string robot_file):
 	link_masses_(),
 	link_inertia_origins_(),
 	robot_state_(),
+	enforce_constraints_(false),
 	propagator_(new Propagator()),
-	kinematics_(new Kinematics()){	
+	kinematics_(new Kinematics()){
 	
 	TiXmlDocument xml_doc;
-	xml_doc.LoadFile(robot_file);
-	
+	xml_doc.LoadFile(robot_file);	
 	TiXmlElement *robot_xml = xml_doc.FirstChildElement("robot");
 	initLinks(robot_xml);
 	initJoints(robot_xml);
 	
 	propagator_->setup(active_lower_joint_limits_,
 			           active_upper_joint_limits_,
-			           active_joint_velocity_limits_);
+			           active_joint_velocity_limits_,
+					   enforce_constraints_);
 	
 	kinematics_->setJointOrigins(active_joint_origins_);
-	kinematics_->setLinkDimensions(active_link_dimensions_);
+	kinematics_->setLinkDimensions(active_link_dimensions_);	
+}
+
+void Robot::enforce_constraints(bool enforce) {
+	enforce_constraints_ = enforce;
+	propagator_->enforce_constraints(enforce_constraints_);
 }
 
 void Robot::test() {
@@ -496,18 +502,10 @@ void Robot::getActiveLinkDimensions(std::vector<std::vector<double>> &dimensions
 	}*/	
 }
 
-void Robot::getLinkDimension(std::vector<std::string> &link, std::vector<std::vector<double>> &dimension) {
-	cout << "HELLO" << endl;
+void Robot::getLinkDimension(std::vector<std::string> &link, std::vector<std::vector<double>> &dimension) {	
 	int index = 0;
-	for (size_t i = 0; i < link.size(); i++) {
-		cout << "link: " << link[i] << endl;		
+	for (size_t i = 0; i < link.size(); i++) {				
 		index = get_link_index(link[i]);
-		cout << "index: " << index << endl;
-		cout << "dim: ";
-		for (auto &k: link_dimensions_[index]) {
-			cout << k << ",";
-		}
-		cout << endl;
 		dimension.push_back(link_dimensions_[index]);
 	}
 }
