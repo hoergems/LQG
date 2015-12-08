@@ -42,10 +42,12 @@ namespace shared {
         for (size_t i = 0; i < ee_goal_position_.size(); i++) {
         	ee_g.push_back(ee_goal_position_[i]);
         }
+        
         double distance = utils::euclideanDistance(ee_position, ee_g); 
         if (distance <= ee_goal_threshold_) {
         	cout << "Goal threshold reached!!!!" << endl;
         }
+        
         return distance;             
     } 
     

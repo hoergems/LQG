@@ -33,7 +33,9 @@ namespace shared {
             
             
             
-        private:        
+        private:
+            std::vector<std::vector<double>> joint_origins_;
+            
             std::vector<std::vector<double>> links_;
             
             std::vector<double> rotation_offsets_;            

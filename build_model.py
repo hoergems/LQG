@@ -26,8 +26,6 @@ class Test:
         print "Calculating Jacobian matrices"
         t_start = time.time()
         Jvs, Ocs = self.get_link_jacobians(self.joint_origins, self.inertial_poses, self.joint_axis, self.q)
-        #print Jvs
-        #print Ocs
         
         M_is = self.construct_link_inertia_matrices(self.link_masses, self.Is)        
         print "Calculating inertia matrix"
@@ -232,7 +230,7 @@ class Test:
         joint_origins = v2_double()
         robot.getJointOrigin(joint_names, joint_origins)
         self.joint_origins = [Matrix([[joint_origins[i][j]] for j in xrange(len(joint_origins[i]))]) 
-                              for i in xrange(len(joint_origins))]               
+                              for i in xrange(len(joint_origins))]                     
         print "got joint origins "
         joint_axis = v2_int()
         robot.getJointAxis(joint_names, joint_axis)
@@ -571,11 +569,8 @@ class Test:
                                 Ocs, 
                                 ms, 
                                 g,
-                                viscous):
-        print "=================="
-        print viscous
-        print "=================="
-        V = 0.0                          
+                                viscous):        
+        V = 0.0                
         for i in xrange(len(Ocs)):            
             el = ms[i + 1] * g.transpose() * Ocs[i]                                                
             V += el[0]
@@ -662,10 +657,15 @@ class Test:
                                com_coordinates[i + 1][2], 
                                joint_origins[i][3] + axis[i][0] * thetas[i], 
                                joint_origins[i][4] + axis[i][1] * thetas[i], 
-                               joint_origins[i][5] + axis[i][2] * thetas[i]) for i in xrange(len(joint_origins) -1)]        
+                               joint_origins[i][5] + axis[i][2] * thetas[i]) for i in xrange(len(joint_origins) -1)]         
         
         """
         O and z of the first joint
+        """
+        
+        """
+        Os => Origins of the joints w.r.t. to the base frame
+        Ocs => Origins of the center of masses w.r.t to the base frame
         """
         Os = [Matrix([[joint_origins[0][0]],
                       [joint_origins[0][1]],
@@ -675,9 +675,9 @@ class Test:
                       [axis[0][2]]])]
         Ocs = []
         zcs = []
-        I = Matrix([[1.0, 0.0, 0.0, 0.0],
-                    [0.0, 1.0, 0.0, 0.0],
-                    [0.0, 0.0, 1.0, 0.0],
+        I = Matrix([[1.0, 0.0, 0.0, joint_origins[0][0]],
+                    [0.0, 1.0, 0.0, joint_origins[0][1]],
+                    [0.0, 0.0, 1.0, joint_origins[0][2]],
                     [0.0, 0.0, 0.0, 1.0]])
         res = I
         for i in xrange(len(thetas) - 1):
@@ -700,11 +700,11 @@ class Test:
                 Os.append(trigsimp(O))
             else:
                 Os.append(O)
-            zs.append(z)
+            zs.append(z)                
         Jvs = []
         for i in xrange(len(thetas) - 1):
             Jv = Matrix([[0.0 for m in xrange(len(thetas) - 1)] for n in xrange(6)])
-            for k in xrange(i + 1):
+            for k in xrange(i + 1):                
                 r1 = 0.0
                 if self.simplifying:
                     r1 = trigsimp(Matrix(zcs[i].cross(Ocs[i] - Os[k])))
@@ -716,11 +716,29 @@ class Test:
             if self.simplifying:
                 Jvs.append(trigsimp(Jv))
             else:
-                Jvs.append(Jv) 
+                Jvs.append(Jv)
+        Jvs_new = []
+        Ocs_new = [] 
         if self.simplifying:
-            Jvs = [nsimplify(Jvs[i], [pi]) for i in xrange(len(Jvs))]  
-            Ocs = [nsimplify(Ocs[i], [pi]) for i in xrange(len(Ocs))]             
-        return Jvs, Ocs
+            for i in xrange(len(Jvs)):
+                jv_s = Jvs[i]
+                try:
+                    jv_s = nsimplify(jv_s, [pi])
+                    Jvs_new.append(jv_s)
+                except:
+                    Jvs_new.append(Jvs[i]) 
+                #Jvs = [nsimplify(Jvs[i], [pi]) for i in xrange(len(Jvs))]
+            for i in xrange(len(Ocs)):
+                oc_s = Ocs[i]
+                try:
+                    oc_s = nsimplify(oc_s, [pi])
+                    Ocs_new.append(oc_s) 
+                except:  
+                    Ocs_new.append(Ocs[i])
+            #Ocs = [nsimplify(Ocs[i], [pi]) for i in xrange(len(Ocs))]
+            
+                    
+        return Jvs_new, Ocs
     
     def transform(self, x, y, z, r, p, yaw):
         trans = Matrix([[1.0, 0.0, 0.0, x],

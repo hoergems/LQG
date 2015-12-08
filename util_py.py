@@ -87,7 +87,7 @@ def get_goal_states(problem,
         ik_solutions = ik_solution_generator.generate(start_state, goal_position, goal_threshold)
         ik_solution_generator.destroy()
         if len(ik_solutions) == 0:
-            return None
+            return []
         serializer.serialize_ik_solutions([ik_solutions[i] for i in xrange(len(ik_solutions))], path='tmp/' + problem, file='goalstates.txt')
         copyToTmp(problem)    
     else:

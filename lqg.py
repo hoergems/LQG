@@ -65,6 +65,9 @@ class LQG:
         self.robot.enforceConstraints(self.enforce_constraints)
         if not self.setup_scene("environment", "env.xml", self.robot):
             return
+        
+        #self.robot.setupViewer(urdf_model_file, environment_file)
+        #self.run_viewer()       
                 
         logging.info("LQG: Generating goal states...")
         goal_states = get_goal_states("lqg",
@@ -82,6 +85,7 @@ class LQG:
           
         if len(goal_states) == 0:
             logging.error("LQG: Couldn't generate any goal states. Problem seems to be infeasible")
+            return
         logging.info("LQG: Generated " + str(len(goal_states)) + " goal states")         
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
         path_planner.setup(self.robot,                           
@@ -286,7 +290,38 @@ class LQG:
                 
             cmd = "cp " + model_file + " " + dir + "/model"
             os.system(cmd)        
-        print "Done"        
+        print "Done"
+        
+    def run_viewer(self):
+        x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        while True:
+            u = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            current_state = v_double()
+            current_state[:] = x
+            control = v_double()
+            control[:] = u            
+            control_error = v_double()
+            ce = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            control_error[:] = ce
+            result = v_double() 
+            self.robot.propagate(current_state,
+                                 control,
+                                 control_error,
+                                 self.simulation_step_size,
+                                 0.03,
+                                 result)                               
+            x = np.array([result[i] for i in xrange(len(result))])
+            cjvals = v_double()
+            cjvels = v_double()
+            cjvals_arr = [x[i] for i in xrange(len(x) / 2)]
+            cjvels_arr = [x[i] for i in xrange(len(x) / 2, len(x))]
+            cjvals[:] = cjvals_arr
+            cjvels[:] = cjvels_arr
+            self.robot.updateViewerValues(cjvals, cjvels)
+            time.sleep(0.03) 
+            
+    
+        
         
     def setup_scene(self, 
                     environment_path, 

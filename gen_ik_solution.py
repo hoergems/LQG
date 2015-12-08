@@ -31,7 +31,8 @@ class IKSolutionGenerator:
         Generate the obstacles
         """      
         #RaveDestroy()
-        #RaveInitialize(True)        
+        #RaveInitialize(True)
+        self.manipulator = manipulator        
         logging.info("IKSolutionGenerator: Setup")
         self.link_dimensions = v2_double()
         manipulator.getActiveLinkDimensions(self.link_dimensions)        
@@ -53,9 +54,25 @@ class IKSolutionGenerator:
         self.env.Load(environment_file)
         logging.info("IKSolutionGenerator: OpenRAVE initialized")
         self.robot = self.env.GetRobots()[0]
-        self.robot.SetActiveManipulator("arm")   
+        self.robot.SetActiveManipulator("arm")
+        
+    def transform_goal(self, goal_position):
+        """
+        Transform goal position to first joint frame
+        """
+        active_joints = v_string()
+        self.manipulator.getActiveJoints(active_joints)
+        joint_origins = v2_double()
+        self.manipulator.getJointOrigin(active_joints, joint_origins) 
+        joint_origin_first_joint = [joint_origins[0][i] for i in xrange(3)]
+        goal_position = [goal_position[i] - joint_origin_first_joint[i] for i in xrange(len(goal_position))]
+        return goal_position   
 
-    def generate(self, start_state, goal_position, goal_threshold):              
+    def generate(self, start_state, goal_position, goal_threshold): 
+        """
+        Goal position is w.r.t. base frame
+        """       
+        goal_position = self.transform_goal(goal_position)      
         possible_ik_solutions = []
         print "generate"        
         if self.robot.GetJoints()[1].GetAxis()[1] == 0:
@@ -78,6 +95,9 @@ class IKSolutionGenerator:
                                           goal_position[1], 
                                           goal_position[2],
                                           self.link_dimensions)
+            if len(solution) == 0:
+                print "ERROR: Couldn't generate IK solutions for given goal position. Problem is infeasible"
+                return []
             sol1 = solution
             #if unique:
             possible_ik_solutions = [sol1]

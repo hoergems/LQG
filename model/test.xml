@@ -16,7 +16,7 @@
      <Translation>0.0 0 0.005</Translation>
      <Geom type="box">
        <Translation>0.5 0 0</Translation>
-       <Extents>0.5 0.001 0.001</Extents>
+       <Extents>0.5 0.01 0.005</Extents>
      </Geom>
    </Body>
    <Joint circular="true" name="j1" type="hinge">
@@ -35,7 +35,7 @@
      <Translation>1.0 0 0.0</Translation>
      <Geom type="box">
        <Translation>0.5 0.0 0</Translation>
-       <Extents>0.5 0.001 0.001</Extents>
+       <Extents>0.5 0.0075 0.005</Extents>
      </Geom>
    </Body>
    <Joint circular="true" name="j2" type="hinge">
@@ -44,7 +44,7 @@
      <offsetfrom>Arm1</offsetfrom>
      <!--<weight>3</weight>-->
      <limitsdeg>-180 180</limitsdeg>
-     <axis>0 0 1</axis>
+     <axis>0 1 0</axis>
      <maxvel>0.5</maxvel>
      <resolution>0.0</resolution>
    </Joint>
@@ -54,7 +54,7 @@
      <Translation>1.0 0.0 0.0</Translation>
      <Geom type="box">
        <Translation>0.5 0.0 0</Translation>
-       <Extents>0.5 0.001 0.001</Extents>
+       <Extents>0.5 0.0075 0.005</Extents>
      </Geom>
    </Body>
    <Joint circular="true" name="j3" type="hinge">
