@@ -27,7 +27,9 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
                                   const std::vector<double> &s2, 
                                   const bool &continuous_collision) const {	
 	/**for (size_t i = 0; i < s1.size(); i++) {		
-		if ((fabs((s2[i] - s1[i]) / delta_t_)) > max_joint_velocity_ + 0.00001) {
+		if ((fabs((s2[i] - s1[i]))) > M_PI) {
+			cout << "s1[i] " << s1[i] << endl;
+			cout << "s2[i] " << s2[i] << endl;
 			return false;
 		}		
 	}*/
@@ -50,6 +52,7 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
     }
     
     if (continuous_collision) {
+    	
     	std::vector<fcl::CollisionObject> manipulator_collision_objects_start;
     	std::vector<fcl::CollisionObject> manipulator_collision_objects_goal;
     	robot_->createRobotCollisionObjects(s1, manipulator_collision_objects_start);
@@ -70,7 +73,7 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
             }
         } 
     }     
-    
+    //else { cout << "Do not continuous" << endl; sleep(1);}
     return true;
 }
 
@@ -99,7 +102,20 @@ bool MotionValidator::isValid(const std::vector<double> &s1) const {
 	std::vector<double> joint_angles;	
 	for (size_t i = 0; i < dim_; i++) {
 		joint_angles.push_back(s1[i]);
-	}	
+	}
+	std::vector<double> lower_bounds = si_->getStateSpace()->as<ompl::base::RealVectorStateSpace>()->getBounds().low;
+	std::vector<double> upper_bounds = si_->getStateSpace()->as<ompl::base::RealVectorStateSpace>()->getBounds().high;
+	for (size_t i = 0; i < dim_; i++) {
+		if (s1[i] < lower_bounds[i]) {
+			return false;
+			cout << "not valid " << s1[i] << endl;
+		}
+		else if (s1[i] > upper_bounds[i]) {
+			return false;
+			cout << "not valid " << s1[i] << endl;
+		}
+	}
+	
 	std::vector<OBB> manipulator_collision_structures;
 	
 	robot_->createRobotCollisionStructures(joint_angles, manipulator_collision_structures);	
@@ -121,6 +137,10 @@ void MotionValidator::setObstacles(std::vector<std::shared_ptr<Obstacle> > &obst
     for (size_t i = 0; i < obstacles.size(); i++) {       
         obstacles_.push_back(obstacles[i]);
     }    
+}
+
+void MotionValidator::setContinuousCollisionCheck(bool continuous_collision_check) {
+	continuous_collision_ = continuous_collision_check;
 }
 
 }

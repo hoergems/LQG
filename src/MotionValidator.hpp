@@ -40,8 +40,10 @@ namespace shared {
                              std::pair< ompl::base::State *, double > &/*lastValid*/) const;
                              
             bool isValid(const std::vector<double> &s1) const;
-                             
+                                         
             void setObstacles(std::vector<std::shared_ptr<Obstacle>> &obstacles);
+            
+            void setContinuousCollisionCheck(bool continuous_collision_check);
             
         private:
             const ompl::base::SpaceInformationPtr si_;
