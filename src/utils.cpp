@@ -79,82 +79,129 @@ std::vector<std::vector<double>> Utils::loadGoalStates() {
 
 }
 
-void Utils::loadObstaclesXML(std::vector<std::shared_ptr<shared::Obstacle> > *obst, 
-                             std::string &obstacles_path) {
-    DIR *dp;
-    struct dirent *dirp;
-    if((dp  = opendir(obstacles_path.c_str())) == NULL) {
-        cout << "Error(" << errno << ") opening " << obstacles_path << endl;
-    }
-    std::vector<ObstacleStruct> obstacles;
-    while ((dirp = readdir(dp)) != NULL) {
-        std::string filename = std::string(dirp->d_name);
-        if (!filename.find(".") == 0 && 
-            filename.find("~") > filename.length()) {                              
-                ptree pt;
-                std::ifstream fin;   
-                fin.open(obstacles_path + "/" + filename);
-                read_xml(fin, pt);
-                BOOST_FOREACH( ptree::value_type &v, pt.get_child("Environment") ) {
-                    if(v.first == "KinBody") {
-                        obstacles.push_back(ObstacleStruct());
-                        std::vector<double> position;
-                        std::vector<double> size;                                            
-                        boost::property_tree::ptree subtree = (boost::property_tree::ptree)v.second;
-                        BOOST_FOREACH(boost::property_tree::ptree::value_type &vs, subtree) {
-                            if (vs.first == "Body") {                               
-                                boost::property_tree::ptree subtree2 = (boost::property_tree::ptree)vs.second;
-                                BOOST_FOREACH(boost::property_tree::ptree::value_type &vss, subtree2) {                                    
-                                    if (vss.first == "Geom") {                                          
-                                        std::string trans = vss.second.get<std::string>("Translation");
-                                        std::string size_string = vss.second.get<std::string>("extents");                                        
-                                        std::istringstream trans_s(trans);
-                                        std::istringstream size_s(size_string);
-                                        double d;
-                                        while (trans_s >> d) {                                            
-                                            position.push_back(d);
-                                        }
-                                        while (size_s >> d) {                                            
-                                            size.push_back(d);
-                                        }
-                                        obstacles[obstacles.size() - 1].x = position[0];
-                                        obstacles[obstacles.size() - 1].y = position[1];
-                                        obstacles[obstacles.size() - 1].z = position[2];
-                                        obstacles[obstacles.size() - 1].size_x = size[0];
-                                        obstacles[obstacles.size() - 1].size_y = size[1];
-                                        obstacles[obstacles.size() - 1].size_z = size[2];
-                                    }
-                                    else if (vss.first == "Terrain") {                                        
-                                        TerrainStruct terrain;
-                                        terrain.name = vss.second.get_child("<xmlattr>.name").data();
-                                        terrain.velocityDamping = vss.second.get<double>("Damping");
-                                        terrain.traversalCost = vss.second.get<double>("Cost");                                        
-                                        terrain.traversable = vss.second.get<bool>("Traversable");                                                                
-                                        obstacles[obstacles.size() - 1].terrain = terrain;
-                                        
-                                    }
-                                }   
-                            }
-                        }
-                    }
-                }
-             }
-         
-    }
-    for (size_t i = 0; i < obstacles.size(); i++) {
-        shared::Terrain terrain(obstacles[i].terrain.name,
-                                obstacles[i].terrain.traversalCost,
-                                obstacles[i].terrain.velocityDamping,
-                                obstacles[i].terrain.traversable);
-        obst->push_back(std::make_shared<shared::Obstacle>(obstacles[i].x,
-                                                           obstacles[i].y,
-                                                           obstacles[i].z,
-                                                           obstacles[i].size_x,
-                                                           obstacles[i].size_y,
-                                                           obstacles[i].size_z,
-                                                           terrain));
-       std::vector<double> dimensions = obst->at(i)->getDimensions();
-    }
+void Utils::loadObstaclesXML(std::string &obstacles_file,
+		                     std::vector<std::shared_ptr<shared::Obstacle> > &obst) {
+	std::vector<ObstacleStruct> obstacles;	
+	TiXmlDocument xml_doc;	
+    xml_doc.LoadFile(obstacles_file);    
+	TiXmlElement *env_xml = xml_doc.FirstChildElement("Environment");
+	for (TiXmlElement* obst_xml = env_xml->FirstChildElement("KinBody"); obst_xml; obst_xml = obst_xml->NextSiblingElement("KinBody"))
+	{	
+		std::string name(obst_xml->Attribute("name"));
+		TiXmlElement *body_xml = obst_xml->FirstChildElement("Body");
+		std::string enable_str(body_xml->Attribute("enable"));		
+		if (enable_str == "true") {			
+			TiXmlElement *body_xml = obst_xml->FirstChildElement("Body");			
+			if (body_xml) {
+				TiXmlElement *geom_xml = body_xml->FirstChildElement("Geom");
+				TiXmlElement *terrain_xml = body_xml->FirstChildElement("Terrain");
+				//Can play with different shapes here in the future
+				if (geom_xml) {
+					TiXmlElement *trans_xml = geom_xml->FirstChildElement("Translation");
+					TiXmlElement *ext_xml = geom_xml->FirstChildElement("extents");
+					if (trans_xml && ext_xml) {
+						obstacles.push_back(ObstacleStruct());
+						const char* xyz_str = trans_xml->GetText();
+						const char* ext_str = ext_xml->GetText();
+						std::vector<std::string> pieces;
+						std::vector<double> xyz_vec;
+						std::vector<double> extends_vec;
+						boost::split( pieces, xyz_str, boost::is_any_of(" "));
+						for (unsigned int i = 0; i < pieces.size(); ++i) {
+							if (pieces[i] != "") { 
+								xyz_vec.push_back(boost::lexical_cast<double>(pieces[i].c_str()));
+							}
+						}
+						
+						pieces.clear();
+						boost::split( pieces, ext_str, boost::is_any_of(" "));
+						for (unsigned int i = 0; i < pieces.size(); ++i) {
+							if (pieces[i] != "") {
+								extends_vec.push_back(boost::lexical_cast<double>(pieces[i].c_str()));
+							}
+						}
+						
+						obstacles[obstacles.size() - 1].x = xyz_vec[0];
+						obstacles[obstacles.size() - 1].y = xyz_vec[1];
+						obstacles[obstacles.size() - 1].z = xyz_vec[2];
+						obstacles[obstacles.size() - 1].size_x = extends_vec[0];
+						obstacles[obstacles.size() - 1].size_y = extends_vec[1];
+						obstacles[obstacles.size() - 1].size_z = extends_vec[2];
+																			 
+																			 
+					}
+				}
+				
+				if (terrain_xml) {
+					TerrainStruct terrain;
+					std::string terrain_name(terrain_xml->Attribute("name"));					
+					TiXmlElement *damping_xml = terrain_xml->FirstChildElement("Damping");
+					double damping = boost::lexical_cast<double>(damping_xml->GetText());
+					TiXmlElement *cost_xml = terrain_xml->FirstChildElement("Cost");
+					double cost = boost::lexical_cast<double>(cost_xml->GetText());
+					TiXmlElement *traversable_xml = terrain_xml->FirstChildElement("Traversable");
+					bool traversable = false;
+					if (traversable_xml->GetText() == "true") {
+						traversable = true;
+					}
+					terrain.name = terrain_name;
+					terrain.velocityDamping = damping;
+					terrain.traversalCost = cost;
+					terrain.traversable = traversable;
+					obstacles[obstacles.size() - 1].terrain = terrain;					
+				}
+			}
+		}
+	}
+	
+	for (size_t i = 0; i < obstacles.size(); i++) {
+	    shared::Terrain terrain(obstacles[i].terrain.name,
+	                            obstacles[i].terrain.traversalCost,
+	                            obstacles[i].terrain.velocityDamping,
+	                            obstacles[i].terrain.traversable);
+	    obst.push_back(std::make_shared<shared::Obstacle>(obstacles[i].x,
+	                                                      obstacles[i].y,
+	                                                      obstacles[i].z,
+	                                                      obstacles[i].size_x,
+	                                                      obstacles[i].size_y,
+	                                                      obstacles[i].size_z,
+	                                                      terrain));
+	       
+	}
+}
+
+void Utils::loadGoalArea(std::string &env_file, std::vector<double> &goal_area) {
+	TiXmlDocument xml_doc;	
+	xml_doc.LoadFile(env_file);    
+    TiXmlElement *env_xml = xml_doc.FirstChildElement("Environment");
+	for (TiXmlElement* obst_xml = env_xml->FirstChildElement("KinBody"); obst_xml; obst_xml = obst_xml->NextSiblingElement("KinBody"))
+	{
+		std::string name(obst_xml->Attribute("name"));
+		if (name == "GoalArea") { 
+			TiXmlElement *body_xml = obst_xml->FirstChildElement("Body");			
+			if (body_xml) {
+				TiXmlElement *geom_xml = body_xml->FirstChildElement("Geom");
+				if (geom_xml) {
+					TiXmlElement *trans_xml = geom_xml->FirstChildElement("Translation");
+					if (trans_xml) {
+						const char* xyz_str = trans_xml->GetText();
+						std::vector<std::string> pieces;						
+						boost::split( pieces, xyz_str, boost::is_any_of(" "));
+						for (unsigned int i = 0; i < pieces.size(); ++i) {
+						    if (pieces[i] != "") { 
+						        goal_area.push_back(boost::lexical_cast<double>(pieces[i].c_str()));
+							}
+						}
+					}
+					TiXmlElement *radius_xml = geom_xml->FirstChildElement("Radius");
+					if (radius_xml) {
+						const char* rad_str = radius_xml->GetText();
+						goal_area.push_back(boost::lexical_cast<double>(radius_xml->GetText()));
+					}
+				}				
+			}
+		}
+	}
 }
 
 void Utils::loadTerrains(std::vector<std::shared_ptr<shared::Terrain> > *terrains,

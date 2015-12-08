@@ -10,6 +10,8 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/foreach.hpp>
+#include <boost/algorithm/string.hpp>
+#include <tinyxml.h>
 #include <iostream>
 #include <iosfwd> 
 #include <string>
@@ -23,8 +25,10 @@ double euclideanDistance(std::vector<double> &vec1, std::vector<double> &vec2);
 
 class Utils {      
     public:
-		void loadObstaclesXML(std::vector<std::shared_ptr<shared::Obstacle> > *obst, 
-				              std::string &obstacles_path);
+		void loadObstaclesXML(std::string &obstacles_file,
+                              std::vector<std::shared_ptr<shared::Obstacle> > &obst);
+		
+		void loadGoalArea(std::string &env_file, std::vector<double> &goal_area);
 				           
 		void loadTerrains(std::vector<std::shared_ptr<shared::Terrain> > *terrains,
 				          std::string &terrains_path);
