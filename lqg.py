@@ -95,9 +95,7 @@ class LQG:
         if self.dynamic_problem:
             path_planner.setup_dynamic_problem(urdf_model_file,
                                                environment_file,
-                                               self.simulation_step_size,
-                                               self.coulomb,
-                                               self.viscous,
+                                               self.simulation_step_size,                                               
                                                self.continuous_collision)       
         path_planner.set_start_and_goal(self.start_state, goal_states, self.goal_position, self.goal_radius)         
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, len(self.link_dimensions))
@@ -396,9 +394,7 @@ class LQG:
         self.plot_paths = config['plot_paths']
         self.planning_algortihm = config['planning_algorithm']
         self.dynamic_problem = config['dynamic_problem'] 
-        self.simulation_step_size = config['simulation_step_size']
-        self.coulomb = config['coulomb']
-        self.viscous = config['viscous']
+        self.simulation_step_size = config['simulation_step_size']        
         self.path_timeout = config['path_timeout'] 
         self.continuous_collision = config['continuous_collision_check']
         self.show_viewer = config['show_viewer']         

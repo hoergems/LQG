@@ -100,16 +100,12 @@ class PathPlanningInterface:
     def setup_dynamic_problem(self, 
                               urdf_model,
                               environment_model, 
-                              simulation_step_size,
-                              coulomb, 
-                              viscous,
+                              simulation_step_size,                              
                               continuous_collision):
         self.dynamic_problem = True
         self.model_file = urdf_model
         self.environment_file = environment_model
-        self.simulation_step_size = simulation_step_size
-        self.coulomb = coulomb
-        self.viscous = viscous
+        self.simulation_step_size = simulation_step_size        
         self.continuous_collision = continuous_collision
         
     def set_start_and_goal(self, start_state, goal_states, ee_goal_position, ee_goal_threshold):                
