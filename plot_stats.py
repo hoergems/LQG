@@ -7,7 +7,7 @@ import os
 import logging
 from serializer import Serializer
 from scipy.stats import multivariate_normal
-from libkinematics import *
+from librobot import *
 from libutil import *
 from EMD import *
 import sets

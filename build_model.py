@@ -726,18 +726,14 @@ class Test:
                     jv_s = nsimplify(jv_s, [pi])
                     Jvs_new.append(jv_s)
                 except:
-                    Jvs_new.append(Jvs[i]) 
-                #Jvs = [nsimplify(Jvs[i], [pi]) for i in xrange(len(Jvs))]
+                    Jvs_new.append(Jvs[i])
             for i in xrange(len(Ocs)):
                 oc_s = Ocs[i]
                 try:
                     oc_s = nsimplify(oc_s, [pi])
                     Ocs_new.append(oc_s) 
                 except:  
-                    Ocs_new.append(Ocs[i])
-            #Ocs = [nsimplify(Ocs[i], [pi]) for i in xrange(len(Ocs))]
-            
-                    
+                    Ocs_new.append(Ocs[i])        
         return Jvs_new, Ocs
     
     def transform(self, x, y, z, r, p, yaw):

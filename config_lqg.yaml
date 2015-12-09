@@ -33,10 +33,10 @@ num_bins: 201
 min_covariance: 0.0
 
 # The maximum joint state covariance
-max_covariance: 0.02
+max_covariance: 10.0
 
 # The number of covariance steps
-covariance_steps: 2
+covariance_steps: 7
 
 # The observation covariance
 observation_covariance: 0.001
@@ -89,6 +89,6 @@ simulation_step_size: 0.001
 #########################################
 # Visualization
 #########################################
-show_viewer: True
+show_viewer: False
 
 

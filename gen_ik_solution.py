@@ -70,7 +70,7 @@ class IKSolutionGenerator:
 
     def generate(self, start_state, goal_position, goal_threshold): 
         """
-        Goal position is w.r.t. base frame
+        Goal position is w.r.t. first joint frame
         """       
         goal_position = self.transform_goal(goal_position)      
         possible_ik_solutions = []
