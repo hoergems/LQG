@@ -196,6 +196,7 @@ class LQG:
                 successes = 0
                 num_collisions = 0 
                 rewards_cov = []
+                num_steps = 0
                 print "LQG: Running " + str(self.num_simulation_runs) + " simulations..."              
                 for k in xrange(self.num_simulation_runs):
                     self.serializer.write_line("log.log", "tmp/lqg", "RUN #" + str(k + 1) + " \n")
@@ -225,7 +226,8 @@ class LQG:
                     for history_entry in history_entries:                        
                         history_entry.serialize("tmp/lqg", "log.log")
                         if history_entry.collided:
-                            num_collisions += 1                                          
+                            num_collisions += 1 
+                    num_steps += history_entries[-1].t                                         
                     self.serializer.write_line("log.log", "tmp/lqg", "Reward: " + str(total_reward) + " \n") 
                     self.serializer.write_line("log.log", "tmp/lqg", "\n")             
                                           
@@ -245,10 +247,13 @@ class LQG:
                 except:
                     pass
                 '''
+                
                 self.serializer.write_line("log.log", "tmp/lqg", "################################# \n")
                 self.serializer.write_line("log.log",
                                       "tmp/lqg",
                                       "Process covariance: " + str(m_covs[j]) + " \n")
+                num_steps /= self.num_simulation_runs
+                self.serializer.write_line("log.log", "tmp/lqg", "Mean number of steps: " + str(num_steps) + " \n")
                 self.serializer.write_line("log.log", "tmp/lqg", "Objective value of best path: " + str(objective) + " \n")                
                 self.serializer.write_line("log.log", "tmp/lqg", "Mean num collisions per run: " + str(float(num_collisions) / float(self.num_simulation_runs)) + " \n")
                 print "total num collisions " + str(num_collisions)    
