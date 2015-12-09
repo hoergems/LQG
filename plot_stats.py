@@ -36,7 +36,7 @@ class PlotStats:
         logging.info("PlotStats: plotting average distance to goal")
         self.plot_stat("Average distance to goal area", "avg_distance", dir=dir)
         logging.info("PlotStats: plotting mean rewards")
-        self.plot_stat("Mean rewards", "mean_rewards", dir=dir)
+        self.plot_stat("Mean rewards", "mean_rewards", dir=dir)        
         logging.info("PlotStats: plotting % successful runs")
         self.plot_stat("Num success", "succesful_runs", dir=dir)
         self.plot_stat("Percentage of successful runs", "percentage_succesful_runs", dir=dir, y_label="Succesful runs in %")
@@ -415,7 +415,7 @@ class PlotStats:
     def plot_stat(self, stat_str, output_file_str, dir="stats", y_label=""):
         if y_label == "":
             y_label = stat_str
-        files = glob.glob(os.path.join(os.path.join(dir, "*.log")))     
+        files = glob.glob(os.path.join(os.path.join(dir, "*.log")))            
         num_succ_runs = [] 
         num_succ_runs_sets = [] 
         labels = []
@@ -429,11 +429,12 @@ class PlotStats:
                 d[file_str] = []                 
             m_cov = 0.0
             succ = 0
-            with open(file, "r") as f:                
-                for line in f:
-                    if "Process covariance:" in line:
-                        m_cov = float(line.split(" ")[2])
-                    elif stat_str in line:
+            with open(file, "r") as f:
+                print file                   
+                for line in f:                                       
+                    if "Process covariance:" in line:                        
+                        m_cov = float(line.split(" ")[2])                        
+                    elif stat_str in line:                        
                         float_found = False                        
                         succ_l = line.split(" ")
                         for s in succ_l:
@@ -461,13 +462,14 @@ class PlotStats:
         max_m = max(num_succ_runs) 
         min_cov = min(m_covs)
         max_cov = max(m_covs)
+        print num_succ_runs_sets
         Plot.plot_2d_n_sets(num_succ_runs_sets,
                             labels=labels,
                             xlabel="joint covariance",
                             ylabel=y_label,
                             x_range=[min(m_covs), max(m_covs)],
                             y_range=[min_m, max_m * 1.05],
-                            show_legend=False,
+                            show_legend=True,
                             lw=3,
                             color_map=color_map,
                             save=self.save,
