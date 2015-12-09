@@ -288,8 +288,10 @@ class LQG:
             if not os.path.exists(dir + "/model"):
                 os.makedirs(dir + "/model")
                 
+            cmd = "cp " + urdf_model_file + " " + dir + "/model"
+            os.system(cmd)
             cmd = "cp " + model_file + " " + dir + "/model"
-            os.system(cmd)        
+            os.system(cmd)         
         print "Done"
         
     def run_viewer(self):

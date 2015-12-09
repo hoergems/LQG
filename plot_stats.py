@@ -23,9 +23,10 @@ class PlotStats:
         self.process_covariances = []
         for logfile in glob.glob(dir + "/*.log"):
             self.process_covariances.append(serializer.read_process_covariance(logfile))
-        self.setup_kinematics(serializer, dir=dir)        
+             
         #self.create_video(serializer, dir)
-        print "Setting up Kinematics"
+        print "Setting up robot"
+        self.setup_robot(dir)
         
         print "Kinematics setup"
         logging.info("PlotStats: plotting paths")    
@@ -45,16 +46,16 @@ class PlotStats:
         self.plot_stat("Mean planning time", "mean_planning_time", dir=dir) 
         self.plot_stat("Mean num collisions per run", "mean_num_collision_per_run", dir=dir)
         logging.info("PlotStats: plotting mean number of generated paths")
-        self.plot_mean_num_generated_paths(serializer,
+        '''self.plot_mean_num_generated_paths(serializer,
                                            dir,
                                            filename="mean_num_generated_paths_per_step*.yaml",
-                                           output="mean_num_generated_paths_per_step.pdf")
-        self.plot_mean_num_generated_paths(serializer,
+                                           output="mean_num_generated_paths_per_step.pdf")'''
+        '''self.plot_mean_num_generated_paths(serializer,
                                            dir,
                                            filename="mean_num_generated_paths_per_run*.yaml",
-                                           output="mean_num_generated_paths_per_run.pdf")
+                                           output="mean_num_generated_paths_per_run.pdf")'''
         logging.info("PlotStats: plotting mean number of steps per run")
-        self.plot_mean_num_steps(serializer,
+        '''self.plot_mean_num_steps(serializer,
                                  dir,
                                  filename="mean_num_planning_steps_per_run*.yaml",
                                  output="mean_num_planning_steps_per_run.pdf")
@@ -67,28 +68,11 @@ class PlotStats:
        
         self.plot_emd_graph(serializer, cart_coords, dir=dir)
         logging.info("PlotStats: plotting histograms...")        
-        self.save_histogram_plots(serializer, cart_coords, dir=dir)
+        self.save_histogram_plots(serializer, cart_coords, dir=dir)'''
         
-    def setup_kinematics(self, serializer, dir='stats'):
-        config = serializer.read_config(path=dir)
-        u = Utils()
-        model_file = os.getcwd() + "/" + dir + "/model/model.xml"
-        if config['workspace_dimension'] == 3:
-            model_file = os.getcwd() + "/" + dir + "/model/model3D.xml"
-        print "model file: " + model_file 
-        link_dimensions = u.getLinkDimensions(model_file)       
-        axis = v2_int()
-        ax1 = v_int()
-        ax2 = v_int()
-        ax1[:] = [0, 0, 1]
-        if config['workspace_dimension'] == 2:
-            ax2[:] = [0, 0, 1]            
-        elif config['workspace_dimension'] == 3:
-            ax2[:] = [0, 1, 0]
-        axis[:] = [ax1, ax2, ax1]
-        self.kinematics = Kinematics()
-        self.kinematics.setLinksAndAxis(link_dimensions, axis)
-               
+    def setup_robot(self, dir='stats'):
+        model_file = os.getcwd() + "/" + dir + "/model/test.urdf"
+        self.robot = Robot(model_file)       
         
     def clear_stats(self):
         for file in glob.glob("stats/*"):
@@ -457,15 +441,17 @@ class PlotStats:
                                     succ = float(s)
                                     float_found = True
                                 except:
-                                    pass
+                                    pass                        
             m_covs.append(m_cov)
             num_succ_runs.append(succ)
-            d[file_str].append(np.array([m_cov, succ]))        
-        for key in d:
+            d[file_str].append([m_cov, succ])        
+        for k in d:
             color_map.append(self.gen_random_color())
-            num_succ_runs_sets.append(np.array(d[key]))
-            labels.append(key)        
-        
+            from operator import itemgetter            
+            d[k] = sorted(d[k], key=itemgetter(0))
+            d[k] = [np.array(d[k][i]) for i in xrange(len(d[k]))]
+            num_succ_runs_sets.append(np.array(d[k]))
+            labels.append(k) 
         min_m = min(num_succ_runs)
         if min_m > 0:
             min_m = 0.0
