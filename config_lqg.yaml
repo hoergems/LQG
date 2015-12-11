@@ -5,13 +5,13 @@ verbose: False
 num_generated_paths: 1
 
 # Timeout to generate 1 path (in seconds)
-path_timeout: 1000.0
+path_timeout: 1000000.0
 
 # For the simplest toy problem. Use a linear path between the start and goal state
 use_linear_path: False
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 30
+num_simulation_runs: 50
 
 # Maximum angular velocity of the joints (in rad/sec)
 max_velocity: 4.0
@@ -20,7 +20,7 @@ max_velocity: 4.0
 control_rate: 30.0
 
 # The initial joint angles (has to be consistent with the number of links)
-start_state: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+start_state: [0.7, 0.0, 1.5, 0.0, 0.0, 0.0]
 
 #Number of bins for the histograms
 num_bins: 201
@@ -30,16 +30,16 @@ num_bins: 201
 ## Uncertainty parameters
 #################################################
 # The minimum joint state covariance
-min_covariance: 0.0
+min_covariance: 36.8421
 
 # The maximum joint state covariance
-max_covariance: 10.0
+max_covariance: 100.0
 
 # The number of covariance steps
-covariance_steps: 7
+covariance_steps: 1
 
 # The observation covariance
-observation_covariance: 0.001
+observation_covariance: 0.00000001
 
 ###################################################
 
@@ -89,6 +89,6 @@ simulation_step_size: 0.001
 #########################################
 # Visualization
 #########################################
-show_viewer: False
+show_viewer: True
 
 

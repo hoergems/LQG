@@ -66,6 +66,7 @@ class Simulator:
         self.robot_dof = len(active_joints)
         if show_viewer:
             self.robot.setupViewer(model_file, env_file)
+        self.first_update = True
         
     def setup_dynamic_problem(self,                           
                               simulation_step_size):
@@ -346,6 +347,7 @@ class Simulator:
                 control[:] = u            
                 control_error = v_double()
                 ce = self.sample_control_error(M)
+                
                 control_error[:] = ce
                 result = v_double() 
                 self.robot.propagate(current_state,
@@ -363,6 +365,10 @@ class Simulator:
                 cjvels[:] = cjvels_arr
                 self.robot.updateViewerValues(cjvals, cjvels)
                 time.sleep(self.control_duration)
+                '''if self.first_update:
+                    print "PREPARE YOUR RECORDER!!!!!"
+                    time.sleep(30)
+                    self.first_update = False '''
             
         if self.dynamic_problem:
             current_state = v_double()
@@ -372,6 +378,8 @@ class Simulator:
             control_error = v_double()
             ce = self.sample_control_error(M)
             control_error[:] = ce
+            print M
+            print "control error: " + str(ce)
             result = v_double()            
             self.robot.propagate(current_state,
                                  control,
@@ -393,7 +401,11 @@ class Simulator:
             cjvals[:] = cjvals_arr
             cjvels[:] = cjvels_arr
             self.robot.updateViewerValues(cjvals, cjvels)
-            time.sleep(self.control_duration) 
+            time.sleep(self.control_duration)
+            if self.first_update:
+                print "PREPARE YOUR RECORDER!!!!!"
+                time.sleep(30)
+                self.first_update = False 
         return x_new, ce
     
     def sample_control_error(self, M):

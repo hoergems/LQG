@@ -194,7 +194,8 @@ class PathPlanningInterface:
             breaking = False 
             try:                
                 if queue.empty() == False:                                            
-                    res_paths.append(queue.get(timeout=0.1))                    
+                    res_paths.append(queue.get(timeout=0.1))
+                    print "PathPlanningInterface: Got " + str(len(res_paths)) + " so far"                    
                     if len(res_paths) == num:                        
                         breaking = True
                         break

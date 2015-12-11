@@ -7,7 +7,6 @@
 #include <openrave-core.h>
 #include <openrave/environment.h>
 #include <iostream>
-#include "viewer.hpp"
 #include "integrate.hpp"
 
 namespace shared {
@@ -16,16 +15,10 @@ namespace shared {
    public:
 	   Propagator();
 	   
-	   ~Propagator() {if (viewer_setup_) { OpenRAVE::RaveDestroy(); }}
-	   
 	   void setup(std::vector<double> &jointsLowerPositionLimit,
 			      std::vector<double> &jointsUpperPositionLimit,
 			      std::vector<double> &jointsVelocityLimit,
 				  bool enforce_constraints);
-	   //void propagate_linear() const;
-	   
-	   bool setup_viewer(std::string model_file,
-			             std::string environment_file);
 	   
 	   bool propagate_linear(const std::vector<double> &current_joint_values,
                const std::vector<double> &control,
@@ -41,15 +34,9 @@ namespace shared {
 		                        const double duration,
 		                        std::vector<double> &result);
 	   
-	   void update_robot_values(const std::vector<double> &current_joint_values,
-	   	   		                const std::vector<double> &current_joint_velocities,									 
-	   	   					    OpenRAVE::RobotBasePtr robot);
-	   
 	   void enforce_constraints(bool enforce);
 	   
    private:
-	   OpenRAVE::RobotBasePtr getRobot();
-	   
 	   std::shared_ptr<Integrate> integrator_;
 	   
 	   std::vector<double> jointsLowerPositionLimit_; 
@@ -57,12 +44,6 @@ namespace shared {
 	   std::vector<double> jointsVelocityLimit_;
 	   
 	   bool enforce_constraints_;
-	   
-	   OpenRAVE::EnvironmentBasePtr env_;
-	   OpenRAVE::RobotBasePtr robot_;
-	   
-	   bool viewer_setup_;
-	   
    };
 
 }

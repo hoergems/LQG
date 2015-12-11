@@ -5,6 +5,7 @@
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/make_shared.hpp>
 #include "fcl/BV/BV.h" 
 #include "fcl/collision_object.h"
 #include "fcl/shape/geometric_shapes.h"
@@ -12,12 +13,39 @@
 #include <tinyxml.h>
 #include "propagator.hpp"
 #include "Kinematics.hpp"
+#include "viewer_interface.hpp"
 
 namespace shared {
 
 struct RobotState {
 	std::vector<double> joint_values;
 	std::vector<double> joint_velocities;
+};
+
+struct Link {
+	std::string name;
+	
+	bool active;
+	
+	std::vector<double> link_dimensions;
+	
+	std::vector<double> origin;
+	
+	double mass;
+	
+	std::vector<double> inertia_origin;
+	
+	std::vector<double> inertials;
+	
+	std::vector<double> com_origin;
+};
+
+struct Joint {
+	std::string name;
+	
+	std::shared_ptr<shared::Link> parent_link;
+	
+	std::shared_ptr<shared::Link> child_link;
 };
 
     class Robot {
@@ -64,11 +92,13 @@ struct RobotState {
     	    
     	    void getPositionOfLinkN(const std::vector<double> &joint_angles, const int &n, std::vector<double> &position);
     	    
-    	    void getEndEffectorPosition(const std::vector<double> &joint_angles, std::vector<double> &end_effector_position);
-    	    
+    	    void getEndEffectorPosition(const std::vector<double> &joint_angles, std::vector<double> &end_effector_position);    	    
     	    
     	    void updateViewerValues(const std::vector<double> &current_joint_values,
                                     const std::vector<double> &current_joint_velocities);
+    	    
+    	    void getOpenRAVEDescription(std::vector<OpenRAVE::KinBody::LinkInfoPtr> &link_infos,
+                                        std::vector<OpenRAVE::KinBody::JointInfoPtr> &joint_infos);
     	    
     	    void setupViewer(std::string model_file, std::string environment_file);
     	    
@@ -103,6 +133,10 @@ struct RobotState {
     	    
     
         private:
+    	    std::vector<shared::Link> links_;
+    	    
+    	    std::vector<shared::Joint> joints_;    	    
+    	    
             std::string robot_file_;
             
             std::vector<std::string> link_names_;
@@ -170,6 +204,10 @@ struct RobotState {
             std::shared_ptr<shared::Propagator> propagator_;
             
             std::shared_ptr<shared::Kinematics> kinematics_;
+            
+            shared::ViewerInterface viewer_;
+            
+            void quatFromRPY(double &roll, double &pitch, double &y, std::vector<double> &quat);
     
     	
     };

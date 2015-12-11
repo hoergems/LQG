@@ -36,7 +36,7 @@ class PlotStats:
         logging.info("PlotStats: plotting average distance to goal")
         self.plot_stat("Average distance to goal area", "avg_distance", dir=dir)
         logging.info("PlotStats: plotting mean rewards")
-        self.plot_stat("Mean rewards", "mean_rewards", dir=dir)        
+        self.plot_stat("Mean rewards", "mean_rewards", dir=dir)
         logging.info("PlotStats: plotting % successful runs")
         self.plot_stat("Num success", "succesful_runs", dir=dir)
         self.plot_stat("Percentage of successful runs", "percentage_succesful_runs", dir=dir, y_label="Succesful runs in %")
@@ -427,8 +427,8 @@ class PlotStats:
             file_str = file.split("/")[2].split("_")[1]
             if not file_str in d:
                 d[file_str] = []                 
-            m_cov = 0.0
-            succ = 0
+            m_cov = -1
+            succ = -1
             with open(file, "r") as f:
                 print file                   
                 for line in f:                                       
@@ -443,10 +443,11 @@ class PlotStats:
                                     succ = float(s)
                                     float_found = True
                                 except:
-                                    pass                        
-            m_covs.append(m_cov)
-            num_succ_runs.append(succ)
-            d[file_str].append([m_cov, succ])        
+                                    pass
+            if m_cov != -1:                        
+                m_covs.append(m_cov)
+                num_succ_runs.append(succ)
+                d[file_str].append([m_cov, succ])        
         for k in d:
             color_map.append(self.gen_random_color())
             from operator import itemgetter            
@@ -462,7 +463,6 @@ class PlotStats:
         max_m = max(num_succ_runs) 
         min_cov = min(m_covs)
         max_cov = max(m_covs)
-        print num_succ_runs_sets
         Plot.plot_2d_n_sets(num_succ_runs_sets,
                             labels=labels,
                             xlabel="joint covariance",

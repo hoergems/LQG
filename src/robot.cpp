@@ -113,9 +113,13 @@ bool Robot::initJoints(TiXmlElement *robot_xml) {
 bool Robot::initLinks(TiXmlElement *robot_xml) {
 	for (TiXmlElement* link_xml = robot_xml->FirstChildElement("link"); link_xml; link_xml = link_xml->NextSiblingElement("link"))
 	{
+		
+		shared::Link link;		
+		link.active = false;
 		//Link names
 		std::string link_name(link_xml->Attribute("name"));
 		link_names_.push_back(link_name);
+		link.name = link_name;
 		
 		//Link dimensions
 		std::vector<double> link_dimension;
@@ -140,20 +144,31 @@ bool Robot::initLinks(TiXmlElement *robot_xml) {
 		    if (link_dimension.size() != 3) {
 		    	std::vector<double> ld({0.0, 0.0, 0.0});
 		    	link_dimensions_.push_back(ld);
+		    	for (auto &k: ld) {
+		    		link.link_dimensions.push_back(k);
+		    	}		    	
 		    }
 		    else {
 		    	link_dimensions_.push_back(link_dimension);
 		    	active_link_dimensions_.push_back(link_dimension);
+		    	for (auto &k: link_dimension) {
+		    		link.link_dimensions.push_back(k);
+		    	}		    	
 		    }
 		    
 		    std::vector<double> link_origin = process_origin_(coll_xml);
-		    link_origins_.push_back(link_origin);
-		      
-		    link_origins_.push_back(link_origin);		    
+		    link_origins_.push_back(link_origin);		      
+		    for (auto &k: link_origin) {
+		    	link.origin.push_back(k);
+		    }		    
 		}
 		else {
 			std::vector<double> ld({0.0, 0.0, 0.0});
 			link_dimensions_.push_back(ld);
+			for (auto &k: ld) {
+				link.link_dimensions.push_back(k);
+			}
+			
 		}
 		
 		//Link inertia
@@ -162,7 +177,9 @@ bool Robot::initLinks(TiXmlElement *robot_xml) {
 		if (ine) {
 			
 			// Link masses
-			active_links_.push_back(link_name);			
+			active_links_.push_back(link_name);
+			link.active = true;
+			
 			TiXmlElement *mass_xml = ine->FirstChildElement("mass");
 			double mass = 0.0;
 			if (mass_xml) {
@@ -175,11 +192,15 @@ bool Robot::initLinks(TiXmlElement *robot_xml) {
 					
 				}
 			}
-			link_masses_.push_back(mass);			
+			link_masses_.push_back(mass);
+			link.mass = mass;
 			
 			//Inertia origins
 			std::vector<double> inertia_origin = process_origin_(ine);
 			link_inertia_origins_.push_back(inertia_origin);
+			for (auto &k: inertia_origin) {
+				link.inertia_origin.push_back(k);
+			}
 			
 			//Inertia matrix
 			std::vector<double> inertia_vals;
@@ -222,18 +243,36 @@ bool Robot::initLinks(TiXmlElement *robot_xml) {
 			inertia_vals.push_back(iyy);
 			inertia_vals.push_back(iyz);
 			inertia_vals.push_back(izz);
+			link.inertials.push_back(ixx);
+			link.inertials.push_back(ixy);
+			link.inertials.push_back(ixz);
+			link.inertials.push_back(iyy);
+			link.inertials.push_back(iyz);
+			link.inertials.push_back(izz);
+			
 			link_inertia_matrices_.push_back(inertia_vals);
 		}
 		else {			
 			link_masses_.push_back(0.0);
+			link.mass = 0.0;
 			
 			std::vector<double> origin({0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
 			link_inertia_origins_.push_back(origin);
+			for (auto &k: origin) {
+				link.inertia_origin.push_back(k);
+			}
 			
 			std::vector<double> inert({0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-			link_inertia_matrices_.push_back(inert);			
+			link_inertia_matrices_.push_back(inert);
+			for (auto &k: inert) {
+				link.inertials.push_back(k);
+			}
 		}
+		
+		links_.push_back(link);
 	}
+	
+	
 	
 	return true;
 }
@@ -282,7 +321,9 @@ std::vector<double> Robot::process_origin_(TiXmlElement *xml) {
 }
 
 Robot::Robot(std::string robot_file):
-	robot_file_(robot_file),	
+	robot_file_(robot_file),
+	links_(),
+	joints_(),
 	link_names_(),
 	active_link_names_(),
 	joint_names_(),
@@ -306,7 +347,8 @@ Robot::Robot(std::string robot_file):
 	robot_state_(),
 	enforce_constraints_(false),
 	propagator_(new Propagator()),
-	kinematics_(new Kinematics()){
+	kinematics_(new Kinematics()),
+	viewer_(){
 	
 	TiXmlDocument xml_doc;
 	xml_doc.LoadFile(robot_file);	
@@ -321,6 +363,57 @@ Robot::Robot(std::string robot_file):
 	
 	kinematics_->setJointOrigins(active_joint_origins_);
 	kinematics_->setLinkDimensions(active_link_dimensions_);	
+}
+
+void Robot::getOpenRAVEDescription(std::vector<OpenRAVE::KinBody::LinkInfoPtr> &link_infos,
+                                   std::vector<OpenRAVE::KinBody::JointInfoPtr> &joint_infos) {
+	for (auto &link: links_) {
+		OpenRAVE::KinBody::LinkInfoPtr link_info = boost::make_shared<OpenRAVE::KinBody::LinkInfo>();
+		link_info->_name = link.name;
+		
+		std::vector<double> quat;
+		quatFromRPY(link.origin[3], link.origin[4], link.origin[5], quat);
+		
+		OpenRAVE::Vector rot = OpenRAVE::Vector(quat[3], quat[0], quat[1], quat[2]);
+		OpenRAVE::Vector trans = OpenRAVE::Vector(link.origin[0], link.origin[1], link.origin[2]);
+		
+		link_info->_t = OpenRAVE::Transform(rot, trans);
+	}
+}
+
+void Robot::quatFromRPY(double &roll, double &pitch, double &yaw, std::vector<double> &quat) {
+	double phi, the, psi;
+	 
+    phi = roll / 2.0;
+	the = pitch / 2.0;
+	psi = yaw / 2.0;
+    double x = sin(phi) * cos(the) * cos(psi) - cos(phi) * sin(the) * sin(psi);
+	double y = cos(phi) * sin(the) * cos(psi) + sin(phi) * cos(the) * sin(psi);
+	double z = cos(phi) * cos(the) * sin(psi) - sin(phi) * sin(the) * cos(psi);
+	double w = cos(phi) * cos(the) * cos(psi) + sin(phi) * sin(the) * sin(psi);
+	
+	double s = sqrt(x * x +
+	                y * y +
+	                z * z +
+	                w * w);
+	
+	if (s == 0.0) {
+	    x = 0.0;
+	    y = 0.0;
+	    z = 0.0;
+	    w = 1.0;
+	}
+	else {
+	    x /= s;
+	    y /= s;
+	    z /= s;
+	    w /= s;
+	}
+	
+	quat.push_back(x);
+	quat.push_back(y);
+	quat.push_back(z);
+	quat.push_back(w);
 }
 
 bool Robot::constraintsEnforced() {
@@ -396,12 +489,12 @@ void Robot::getEndEffectorPosition(const std::vector<double> &joint_angles, std:
 }
 
 void Robot::setupViewer(std::string model_file, std::string environment_file) {
-	propagator_->setup_viewer(model_file, environment_file);
+	viewer_.setupViewer(model_file, environment_file);
 }
 
 void Robot::updateViewerValues(const std::vector<double> &current_joint_values,
                                const std::vector<double> &current_joint_velocities) {
-	propagator_->update_robot_values(current_joint_values, current_joint_velocities, nullptr);
+	viewer_.updateRobotValues(current_joint_values, current_joint_velocities, nullptr);
 }
 
 bool Robot::propagate_linear(std::vector<double> &current_state,

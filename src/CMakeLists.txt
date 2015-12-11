@@ -39,6 +39,7 @@ add_library(area SHARED
 add_library(robot SHARED 
             robot.cpp
             propagator.cpp
+            viewer_interface.cpp
             viewer.cpp
             integrate.cpp
             Kinematics.cpp)
@@ -63,6 +64,7 @@ add_library(path_planner SHARED
             Kinematics.cpp
             propagator.cpp
             integrate.cpp
+            viewer_interface.cpp
             viewer.cpp
             utils.cpp
             Terrain.cpp
@@ -73,6 +75,7 @@ add_library(dynamic_path_planner SHARED
             MotionValidator.cpp
             state_propagator.cpp
             propagator.cpp
+            viewer_interface.cpp
             viewer.cpp
             integrate.cpp            
             ManipulatorGoalRegion.cpp            
