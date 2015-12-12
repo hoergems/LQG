@@ -95,7 +95,8 @@ struct Joint {
     	    void getEndEffectorPosition(const std::vector<double> &joint_angles, std::vector<double> &end_effector_position);    	    
     	    
     	    void updateViewerValues(const std::vector<double> &current_joint_values,
-                                    const std::vector<double> &current_joint_velocities);
+                                    const std::vector<double> &current_joint_velocities,
+									const std::vector<std::vector<double>> &particle_joint_values);
     	    
     	    void getOpenRAVEDescription(std::vector<OpenRAVE::KinBody::LinkInfoPtr> &link_infos,
                                         std::vector<OpenRAVE::KinBody::JointInfoPtr> &joint_infos);

@@ -40,6 +40,7 @@ add_library(robot SHARED
             robot.cpp
             propagator.cpp
             viewer_interface.cpp
+            urdf_loader.cpp
             viewer.cpp
             integrate.cpp
             Kinematics.cpp)
@@ -48,8 +49,7 @@ add_library(integrate SHARED integrate.cpp)
 
 add_library(propagator SHARED 
             propagator.cpp
-            torque_damper.cpp
-            viewer.cpp
+            torque_damper.cpp            
             integrate.cpp)
 
 add_library(obstacle SHARED
@@ -61,11 +61,12 @@ add_library(path_planner SHARED
             MotionValidator.cpp
             ManipulatorGoalRegion.cpp
             robot.cpp
+            viewer_interface.cpp
+            urdf_loader.cpp
+            viewer.cpp
             Kinematics.cpp
             propagator.cpp
             integrate.cpp
-            viewer_interface.cpp
-            viewer.cpp
             utils.cpp
             Terrain.cpp
             Obstacle.cpp)
@@ -75,13 +76,14 @@ add_library(dynamic_path_planner SHARED
             MotionValidator.cpp
             state_propagator.cpp
             propagator.cpp
-            viewer_interface.cpp
-            viewer.cpp
             integrate.cpp            
             ManipulatorGoalRegion.cpp            
             Kinematics.cpp
             utils.cpp
             robot.cpp
+            viewer_interface.cpp
+            urdf_loader.cpp
+            viewer.cpp
             Obstacle.cpp
             Terrain.cpp
             torque_damper.cpp
@@ -114,7 +116,8 @@ target_link_libraries(path_planner
                       openrave0.9-core                     
                       ompl
                       fcl
-                      tinyxml)
+                      tinyxml
+                      urdf)
 
 target_link_libraries(obstacle
                       openrave0.9 
@@ -133,7 +136,8 @@ target_link_libraries (robot
                        openrave0.9 
                        openrave0.9-core
                        fcl
-                       tinyxml)
+                       tinyxml
+                       urdf)
 
 target_link_libraries (integrate
                        boost_system
@@ -156,7 +160,8 @@ target_link_libraries (dynamic_path_planner
                        python2.7 
                        boost_thread
                        fcl
-                       tinyxml)
+                       tinyxml
+                       urdf)
 
 #set_property(TARGET robot PROPERTY CXX_STANDARD 11)
                        

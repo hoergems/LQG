@@ -11,8 +11,6 @@
 #include "torque_damper.hpp"
 #include "control_space.hpp"
 #include "Obstacle.hpp"
-#include <openrave-core.h>
-#include <openrave/environment.h>
 
 #include <ompl/control/ControlSpace.h>
 #include <ompl/control/Control.h>

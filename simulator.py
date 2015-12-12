@@ -5,7 +5,7 @@ import logging
 import time
 from scipy.stats import multivariate_normal
 from libintegrate import *
-from librobot import v_string
+from librobot import v_string, v2_double
 from history_entry import *
 
 
@@ -181,7 +181,7 @@ class Simulator:
                                                      Bs[i], 
                                                      Vs[i], 
                                                      Ms[i],
-                                                     False)
+                                                     True)
                 x_dash_linear, x_true_linear = self.get_linearized_next_state(x_dash, u_dash, ce, xs[i+1], As[i], Bs[i], Vs[i])
                 t_e = time.time() - t0
                 
@@ -363,7 +363,8 @@ class Simulator:
                 cjvels_arr = [x[i] for i in xrange(len(x) / 2, len(x))]
                 cjvals[:] = cjvals_arr
                 cjvels[:] = cjvels_arr
-                self.robot.updateViewerValues(cjvals, cjvels)
+                particle_joint_values = v2_double()
+                self.robot.updateViewerValues(cjvals, cjvels, particle_joint_values)
                 time.sleep(self.control_duration)
                 '''if self.first_update:
                     print "PREPARE YOUR RECORDER!!!!!"
@@ -400,7 +401,8 @@ class Simulator:
             cjvels_arr = [x_new[i] for i in xrange(len(x_new) / 2, len(x_new))]
             cjvals[:] = cjvals_arr
             cjvels[:] = cjvels_arr
-            self.robot.updateViewerValues(cjvals, cjvels)
+            particle_joint_values = v2_double()
+            self.robot.updateViewerValues(cjvals, cjvels, particle_joint_values)
             time.sleep(self.control_duration)
             if self.first_update:
                 print "PREPARE YOUR RECORDER!!!!!"

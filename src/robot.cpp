@@ -493,8 +493,12 @@ void Robot::setupViewer(std::string model_file, std::string environment_file) {
 }
 
 void Robot::updateViewerValues(const std::vector<double> &current_joint_values,
-                               const std::vector<double> &current_joint_velocities) {
-	viewer_.updateRobotValues(current_joint_values, current_joint_velocities, nullptr);
+                               const std::vector<double> &current_joint_velocities,
+							   const std::vector<std::vector<double>> &particle_joint_values) {
+	viewer_.updateRobotValues(current_joint_values, 
+			                  current_joint_velocities,							  
+							  particle_joint_values,
+							  nullptr);
 }
 
 bool Robot::propagate_linear(std::vector<double> &current_state,

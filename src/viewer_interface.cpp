@@ -1,4 +1,6 @@
 #include "viewer_interface.hpp"
+#include <boost/foreach.hpp>
+#include <boost/make_shared.hpp>
 
 using std::cout;
 using std::endl;
@@ -8,7 +10,8 @@ namespace shared {
 ViewerInterface::ViewerInterface ():
 	viewer_setup_(false),
 	env_(nullptr),
-	robot_(nullptr){
+	robot_(nullptr),
+	urdf_loader_(){
 	
 }
 
@@ -18,27 +21,13 @@ bool ViewerInterface::setupViewer(std::string model_file,
 		return false;
     }
 	
+	model_file_ = model_file;
+	
 	OpenRAVE::RaveInitialize(true);    
 	env_ = OpenRAVE::RaveCreateEnvironment();
 	env_->Load(environment_file);
-	
-	const std::string module_str("or_urdf_plugin");
-	if(!OpenRAVE::RaveLoadPlugin(module_str)) {
-		cout << "Failed to load the or_urdf_plugin." << endl;
-		return false;
-	}
-	
-	OpenRAVE::ModuleBasePtr urdf_module = OpenRAVE::RaveCreateModule(env_, "URDF");
-	const std::string cmdargs("");
-	env_->AddModule(urdf_module, cmdargs);
-	std::stringstream sinput, sout;
-	sinput << "load " << model_file;
-	
-	if (!urdf_module->SendCommand(sout,sinput)) {
-		cout << "Failed to load URDF model" << endl;
-		return false;
-	}
-			
+	OpenRAVE::KinBodyPtr robot_ptr = urdf_loader_->load(model_file, env_);
+	env_->Add(robot_ptr, true);
 				
 	std::vector<OpenRAVE::KinBodyPtr> bodies;
 	env_->GetBodies(bodies);
@@ -67,9 +56,21 @@ bool ViewerInterface::setupViewer(std::string model_file,
 }
 
 void ViewerInterface::updateRobotValues(const std::vector<double> &current_joint_values,
-		                                const std::vector<double> &current_joint_velocities,									 
+		                                const std::vector<double> &current_joint_velocities,
+										const std::vector<std::vector<double>> &particle_joint_values,
 								        OpenRAVE::RobotBasePtr robot=nullptr) {	
 	OpenRAVE::RobotBasePtr robot_to_use(nullptr);
+	
+	std::vector<OpenRAVE::KinBodyPtr> bodies;
+	env_->GetBodies(bodies);
+	std::string particle_string = "particle";
+		
+	// Remove the particle bodies from the scene	
+	for (auto &body: bodies) {		
+		if (body->GetName().find(particle_string) != std::string::npos) {			
+			env_->Remove(body);
+		}		
+	}
 			
 	if (robot == nullptr) {
 		robot_to_use = getRobot();
@@ -82,9 +83,21 @@ void ViewerInterface::updateRobotValues(const std::vector<double> &current_joint
 		return;	
 	}
 	
+	std::vector<OpenRAVE::KinBody::LinkPtr> links = robot_to_use->GetLinks();
+	std::vector<OpenRAVE::KinBody::JointPtr> joints = robot_to_use->GetJoints();
+	
+	std::vector<OpenRAVE::KinBody::LinkInfo> link_infos;
+	std::vector<OpenRAVE::KinBody::JointInfo> joint_infos;
+	
+	for (auto &link: links) {
+		link_infos.push_back(link->GetInfo());
+	}
+	
+	for (auto &joint: joints) {
+		joint_infos.push_back(joint->GetInfo());
+	}	
+	
 	std::vector<OpenRAVE::dReal> newJointValues;
-		
-	std::vector<OpenRAVE::dReal> newJointVelocities;
 	for (size_t i = 0; i < current_joint_values.size(); i++) {
 		if (current_joint_values[i] < -M_PI) {
 			newJointValues.push_back(2.0 * M_PI + current_joint_values[i]);
@@ -93,19 +106,29 @@ void ViewerInterface::updateRobotValues(const std::vector<double> &current_joint
 			newJointValues.push_back(-2.0 * M_PI + current_joint_values[i]);
 		}
 		else {
-		    newJointValues.push_back(current_joint_values[i]);
+			newJointValues.push_back(current_joint_values[i]);
 		}
 	}
 		
-	for (size_t i = 0; i < current_joint_velocities.size(); i++) {
-		newJointVelocities.push_back(current_joint_velocities[i]);		
+	newJointValues.push_back(0);			
+	robot_to_use->SetDOFValues(newJointValues);	
+	for (size_t i = 0; i < particle_joint_values.size(); i++) {
+		OpenRAVE::KinBodyPtr robot_ptr = urdf_loader_->load(model_file_, env_);
+		std::string name = "particle_robot_";
+		name.append(std::to_string(i));
+		robot_ptr->SetName("particle_robot_1");
+        env_->Add(robot_ptr, true);
+        std::vector<OpenRAVE::dReal> joint_vals;
+        for (auto &k: particle_joint_values[i]) {
+        	joint_vals.push_back(k);
+        }
+        
+        joint_vals.push_back(0);
+        
+        robot_ptr->SetDOFValues(joint_vals);
 	}
-	
-	newJointValues.push_back(0);
-	newJointVelocities.push_back(0);
-	
-	robot_to_use->SetDOFValues(newJointValues);
-    robot_to_use->SetDOFVelocities(newJointVelocities);	
+    
+    sleep(1);
 }
 
 OpenRAVE::RobotBasePtr ViewerInterface::getRobot() {

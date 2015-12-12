@@ -3,6 +3,7 @@
 #include <openrave-core.h>
 #include <openrave/environment.h>
 #include "viewer.hpp"
+#include "urdf_loader.hpp"
 
 namespace shared {
 
@@ -20,8 +21,9 @@ public:
                      std::string environment_file);
 	
 	void updateRobotValues(const std::vector<double> &current_joint_values,
-		   	   		         const std::vector<double> &current_joint_velocities,									 
-		   	   			     OpenRAVE::RobotBasePtr robot);
+		   	   		       const std::vector<double> &current_joint_velocities,	
+						   const std::vector<std::vector<double>> &particle_joint_values,
+		   	   			   OpenRAVE::RobotBasePtr robot);
 
 
 private:
@@ -30,7 +32,11 @@ private:
     OpenRAVE::EnvironmentBasePtr env_;
     OpenRAVE::RobotBasePtr robot_;
     
+    std::string model_file_;
+    
     OpenRAVE::RobotBasePtr getRobot();
+    
+    std::shared_ptr<shared::URDFLoader> urdf_loader_;
     
 };
 
