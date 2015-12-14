@@ -111,8 +111,12 @@ void ViewerInterface::updateRobotValues(const std::vector<double> &current_joint
 	}
 		
 	newJointValues.push_back(0);			
-	robot_to_use->SetDOFValues(newJointValues);	
-	for (size_t i = 0; i < particle_joint_values.size(); i++) {
+	robot_to_use->SetDOFValues(newJointValues);
+	size_t num_plot = 50;
+	if (particle_joint_values.size() < num_plot) {
+		num_plot = particle_joint_values.size();
+	}
+	for (size_t i = 0; i < num_plot; i++) {
 		OpenRAVE::KinBodyPtr robot_ptr = urdf_loader_->load(model_file_, env_);
 		std::string name = "particle_robot_";
 		name.append(std::to_string(i));
@@ -126,9 +130,20 @@ void ViewerInterface::updateRobotValues(const std::vector<double> &current_joint
         joint_vals.push_back(0);
         
         robot_ptr->SetDOFValues(joint_vals);
+        
+        const std::vector<OpenRAVE::KinBody::LinkPtr> links = robot_ptr->GetLinks();
+        for (auto &link: links) {
+        	const std::vector<OpenRAVE::KinBody::Link::GeometryPtr> link_geometries = link->GetGeometries();
+        	for (auto &geometry: link_geometries) {
+        		if (geometry->IsVisible()) {
+        			OpenRAVE::Vector color(0.7, 0.7, 0.7, 0.7);
+        			geometry->SetDiffuseColor(color);
+					geometry->SetAmbientColor(color);
+        			geometry->SetTransparency(0.75);
+        		}
+        	}
+        }
 	}
-    
-    sleep(1);
 }
 
 OpenRAVE::RobotBasePtr ViewerInterface::getRobot() {

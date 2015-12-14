@@ -181,7 +181,7 @@ class Simulator:
                                                      Bs[i], 
                                                      Vs[i], 
                                                      Ms[i],
-                                                     True)
+                                                     False)
                 x_dash_linear, x_true_linear = self.get_linearized_next_state(x_dash, u_dash, ce, xs[i+1], As[i], Bs[i], Vs[i])
                 t_e = time.time() - t0
                 
