@@ -13,7 +13,7 @@ use_linear_path: False
 # Number of simulation runs for the best found path
 num_simulation_runs: 50
 
-# Maximum angular velocity of the joints (in rad/sec)
+# Maximum angular velocity of the joints for the kinematic problem (in rad/sec)
 max_velocity: 4.0
 
 # The joint control rate
@@ -83,7 +83,7 @@ continuous_collision_check: False
 #########################################
 # Dynamic problem and parameters
 #########################################
-dynamic_problem: True
+dynamic_problem: False
 simulation_step_size: 0.001
 
 #########################################

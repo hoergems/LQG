@@ -55,9 +55,51 @@ bool ViewerInterface::setupViewer(std::string model_file,
 	
 }
 
+void ViewerInterface::addPermanentParticles(const std::vector<std::vector<double>> &particle_joint_values,
+		                                    const std::vector<std::vector<double>> &particle_colors) {	
+	size_t num_plot = 50;
+	if (particle_joint_values.size() < num_plot) {
+		num_plot = particle_joint_values.size();
+	}
+	
+	for (size_t i = 0; i < num_plot; i++) {
+	    OpenRAVE::KinBodyPtr robot_ptr = urdf_loader_->load(model_file_, env_);
+		std::string name = "permanent_robot_";
+		name.append(std::to_string(i));
+		robot_ptr->SetName(name);
+	    env_->Add(robot_ptr, true);
+	    std::vector<OpenRAVE::dReal> joint_vals;
+	    for (auto &k: particle_joint_values[i]) {
+	        joint_vals.push_back(k);
+	    }
+	        
+	    joint_vals.push_back(0);
+	        
+	    robot_ptr->SetDOFValues(joint_vals);
+	        
+	    const std::vector<OpenRAVE::KinBody::LinkPtr> links = robot_ptr->GetLinks();
+	    for (auto &link: links) {
+	        const std::vector<OpenRAVE::KinBody::Link::GeometryPtr> link_geometries = link->GetGeometries();
+	        for (auto &geometry: link_geometries) {
+	            if (geometry->IsVisible()) {
+	        	    OpenRAVE::Vector color(particle_colors[i][0], 
+	        					           particle_colors[i][1], 
+										   particle_colors[i][2], 
+										   particle_colors[i][3]);
+	        		geometry->SetDiffuseColor(color);
+					geometry->SetAmbientColor(color);
+	        		geometry->SetTransparency(0.75);
+	        	}
+	        }
+	    }
+	}
+	
+}
+
 void ViewerInterface::updateRobotValues(const std::vector<double> &current_joint_values,
 		                                const std::vector<double> &current_joint_velocities,
 										const std::vector<std::vector<double>> &particle_joint_values,
+										const std::vector<std::vector<double>> &particle_colors,
 								        OpenRAVE::RobotBasePtr robot=nullptr) {	
 	OpenRAVE::RobotBasePtr robot_to_use(nullptr);
 	
@@ -116,11 +158,13 @@ void ViewerInterface::updateRobotValues(const std::vector<double> &current_joint
 	if (particle_joint_values.size() < num_plot) {
 		num_plot = particle_joint_values.size();
 	}
+	
+	// Here we plot non-permanent particles
 	for (size_t i = 0; i < num_plot; i++) {
 		OpenRAVE::KinBodyPtr robot_ptr = urdf_loader_->load(model_file_, env_);
 		std::string name = "particle_robot_";
 		name.append(std::to_string(i));
-		robot_ptr->SetName("particle_robot_1");
+		robot_ptr->SetName(name);
         env_->Add(robot_ptr, true);
         std::vector<OpenRAVE::dReal> joint_vals;
         for (auto &k: particle_joint_values[i]) {
@@ -136,7 +180,10 @@ void ViewerInterface::updateRobotValues(const std::vector<double> &current_joint
         	const std::vector<OpenRAVE::KinBody::Link::GeometryPtr> link_geometries = link->GetGeometries();
         	for (auto &geometry: link_geometries) {
         		if (geometry->IsVisible()) {
-        			OpenRAVE::Vector color(0.7, 0.7, 0.7, 0.7);
+        			OpenRAVE::Vector color(particle_colors[i][0], 
+        					               particle_colors[i][1], 
+										   particle_colors[i][2], 
+										   particle_colors[i][3]);
         			geometry->SetDiffuseColor(color);
 					geometry->SetAmbientColor(color);
         			geometry->SetTransparency(0.75);

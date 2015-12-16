@@ -60,9 +60,8 @@ class LQG:
         
         model_file = "model/test.xml"
         urdf_model_file = "model/test.urdf"
-        environment_file = os.path.join("environment", "env.xml")
-        self.robot = Robot(urdf_model_file)
-        self.robot.enforceConstraints(self.enforce_constraints)
+        self.init_robot(urdf_model_file)
+        environment_file = os.path.join("environment", "env.xml")        
         if not self.setup_scene("environment", "env.xml", self.robot):
             return
         
@@ -188,7 +187,7 @@ class LQG:
                                   self.delta_t,
                                   self.show_viewer,
                                   urdf_model_file,
-                                  environment_file)
+                                  environment_file)                
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
                 if self.dynamic_problem:
                     sim.setup_dynamic_problem(self.simulation_step_size)
@@ -298,6 +297,10 @@ class LQG:
             cmd = "cp " + model_file + " " + dir + "/model"
             os.system(cmd)         
         print "Done"
+        
+    def init_robot(self, urdf_model_file):
+        self.robot = Robot(urdf_model_file)
+        self.robot.enforceConstraints(self.enforce_constraints)
         
     def run_viewer(self):
         x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]

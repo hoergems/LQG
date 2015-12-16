@@ -154,6 +154,7 @@ class Simulator:
         logging.info("Simulator: Executing for " + str(n_steps) + " steps") 
         estimated_states = []
         estimated_covariances = []
+        self.show_nominal_path(xs)
         for i in xrange(n_steps):                        
             if not (terminal_state_reached and self.stop_when_terminal):
                 linearization_error = self.calc_linearization_error(x_dash, x_dash_linear)                
@@ -197,7 +198,8 @@ class Simulator:
                 else:
                     total_reward += discount * (-1.0 * self.step_penalty)
                     history_entries[-1].set_reward(-1.0 * self.step_penalty)
-                    x_true = x_true_temp               
+                    x_true = x_true_temp
+                self.update_viewer(x_true, xs)               
                 x_dash = np.subtract(x_true, xs[i + 1])
                 
                 state = v_double()
@@ -335,7 +337,14 @@ class Simulator:
         x_new2 = delta_x_new + x_star_next
         return delta_x_new, x_new2
        
-    def apply_control(self, x, u, A, B, V, M, apply_zero_torque=False):
+    def apply_control(self, 
+                      x, 
+                      u, 
+                      A, 
+                      B, 
+                      V, 
+                      M, 
+                      apply_zero_torque=False):
         x_new = None
         ce = None
         if apply_zero_torque:        
@@ -394,21 +403,42 @@ class Simulator:
             x_new = np.dot(A, x) + np.dot(B, u) + np.dot(V, ce)
             if self.enforce_constraints:            
                 x_new = self.check_constraints(x_new)
+        return x_new, ce
+    
+    def show_nominal_path(self, path):        
+        if self.show_viewer and self.first_update:
+            particle_joint_values = v2_double()
+            particle_joint_colors = v2_double()
+            pjvs = []
+            for p in path:
+                particle = v_double()
+                particle[:] = [p[i] for i in xrange(len(p) / 2)]
+                pjvs.append(particle)
+                
+                color = v_double()
+                color[:] = [0.0, 0.0, 0.0, 0.7]
+                particle_joint_colors.append(color)            
+            particle_joint_values[:] = pjvs
+            self.robot.addPermanentViewerParticles(particle_joint_values,
+                                                   particle_joint_colors)
+            self.first_update = False
+    
+    def update_viewer(self, x, path):
         if self.show_viewer:
+            
             cjvals = v_double()
             cjvels = v_double()
-            cjvals_arr = [x_new[i] for i in xrange(len(x_new) / 2)]
-            cjvels_arr = [x_new[i] for i in xrange(len(x_new) / 2, len(x_new))]
+            cjvals_arr = [x[i] for i in xrange(len(x) / 2)]
+            cjvels_arr = [x[i] for i in xrange(len(x) / 2, len(x))]
             cjvals[:] = cjvals_arr
             cjvels[:] = cjvels_arr
             particle_joint_values = v2_double()
-            self.robot.updateViewerValues(cjvals, cjvels, particle_joint_values)
+            particle_joint_colors = v2_double()
+            self.robot.updateViewerValues(cjvals, 
+                                          cjvels, 
+                                          particle_joint_values,
+                                          particle_joint_colors)
             time.sleep(self.control_duration)
-            if self.first_update:
-                print "PREPARE YOUR RECORDER!!!!!"
-                time.sleep(30)
-                self.first_update = False 
-        return x_new, ce
     
     def sample_control_error(self, M):
         mu = np.array([0.0 for i in xrange(2 * self.robot_dof)])

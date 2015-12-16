@@ -35,6 +35,19 @@ PathPlanner::PathPlanner(boost::shared_ptr<shared::Robot> &robot,
 	if (!verbose_) {        
         ompl::msg::noOutputHandler();
     }
+	
+	/**std::vector<std::string> active_joints;
+	std::vector<double> joint_velocity_limits;
+	robot_->getActiveJoints(active_joints);
+	robot_->getJointVelocityLimits(active_joints, joint_velocity_limits);
+	double max_velocity = 0.0;
+	for (auto &k: joint_velocity_limits) {
+		if (k > max_velocity) {
+			max_velocity = k;
+		}
+	}
+	
+	planning_range_ = delta_t_ * max_velocity;*/
     
     if (planner_str_ == "RRTConnect") {
     	planner_ = boost::shared_ptr<ompl::geometric::RRTConnect>(new ompl::geometric::RRTConnect(si_));
@@ -340,14 +353,14 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
         cout << "Solution path has length " << solution_path->getStates().size() << endl;
     } 
     
-    std::vector<double> vals;    
-    std::vector<std::vector<double> > temp_vals;    
+    std::vector<double> vals;
     const bool cont_check = true;
     for (size_t i=1; i<solution_path->getStates().size(); i++) {
        vals.clear();       
        for (unsigned int j = 0; j < dim_; j++) {          
-          vals.push_back(solution_path->getState(i)->as<ompl::base::RealVectorStateSpace::StateType>()->values[j]); 
-       }     
+          vals.push_back(solution_path->getState(i)->as<ompl::base::RealVectorStateSpace::StateType>()->values[j]);
+       }
+       
        solution_vector.push_back(vals);
     }   
     clear();       

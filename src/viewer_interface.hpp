@@ -23,7 +23,11 @@ public:
 	void updateRobotValues(const std::vector<double> &current_joint_values,
 		   	   		       const std::vector<double> &current_joint_velocities,	
 						   const std::vector<std::vector<double>> &particle_joint_values,
+						   const std::vector<std::vector<double>> &particle_colors,
 		   	   			   OpenRAVE::RobotBasePtr robot);
+	
+	void addPermanentParticles(const std::vector<std::vector<double>> &particle_joint_values,
+			                   const std::vector<std::vector<double>> &particle_colors);
 
 
 private:

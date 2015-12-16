@@ -2,6 +2,7 @@
 #define ROBOT_HPP_
 #include <string>
 #include <iostream>
+#include <assert.h>
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include <boost/algorithm/string.hpp>
@@ -96,7 +97,11 @@ struct Joint {
     	    
     	    void updateViewerValues(const std::vector<double> &current_joint_values,
                                     const std::vector<double> &current_joint_velocities,
-									const std::vector<std::vector<double>> &particle_joint_values);
+									const std::vector<std::vector<double>> &particle_joint_values,
+									const std::vector<std::vector<double>> &particle_colors);
+    	    
+    	    void addPermanentViewerParticles(const std::vector<std::vector<double>> &particle_joint_values,
+									         const std::vector<std::vector<double>> &particle_colors);
     	    
     	    void getOpenRAVEDescription(std::vector<OpenRAVE::KinBody::LinkInfoPtr> &link_infos,
                                         std::vector<OpenRAVE::KinBody::JointInfoPtr> &joint_infos);

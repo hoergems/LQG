@@ -492,12 +492,25 @@ void Robot::setupViewer(std::string model_file, std::string environment_file) {
 	viewer_.setupViewer(model_file, environment_file);
 }
 
+void Robot::addPermanentViewerParticles(const std::vector<std::vector<double>> &particle_joint_values,
+							            const std::vector<std::vector<double>> &particle_colors) {
+	assert(particle_joint_values.size() == particle_colors.size() &&  
+		   "Number of particles must be the same as number of colours!");
+	viewer_.addPermanentParticles(particle_joint_values,
+			                      particle_colors);	
+}
+
 void Robot::updateViewerValues(const std::vector<double> &current_joint_values,
                                const std::vector<double> &current_joint_velocities,
-							   const std::vector<std::vector<double>> &particle_joint_values) {
+							   const std::vector<std::vector<double>> &particle_joint_values,
+							   const std::vector<std::vector<double>> &particle_colors) {		
+	assert(particle_joint_values.size() == particle_colors.size() &&  
+		   "Number of particles must be the same as number of colours!");
+	// particle_color = {r, g, b, a}
 	viewer_.updateRobotValues(current_joint_values, 
 			                  current_joint_velocities,							  
 							  particle_joint_values,
+							  particle_colors,
 							  nullptr);
 }
 
@@ -767,6 +780,7 @@ BOOST_PYTHON_MODULE(librobot) {
                         .def("getEndEffectorPosition", &Robot::getEndEffectorPosition)
                         .def("setupViewer", &Robot::setupViewer)
                         .def("updateViewerValues", &Robot::updateViewerValues)
+						.def("addPermanentViewerParticles", &Robot::addPermanentViewerParticles)
                         .def("test", &Robot::test)
                         .def("getDOF", &Robot::getDOF)
 						.def("getJointLowerPositionLimits", &Robot::getJointLowerPositionLimits)
