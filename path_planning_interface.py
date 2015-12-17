@@ -206,7 +206,8 @@ class PathPlanningInterface:
             except:
                 pass           
             if breaking:
-                break                  
+                break 
+            time.sleep(0.0001)                 
         for i in xrange(len(processes)):
             processes[i].terminate()              
         for i in xrange(len(res_paths)):

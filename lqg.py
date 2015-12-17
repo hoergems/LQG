@@ -177,7 +177,7 @@ class LQG:
                 best_paths.append([[xs[i] for i in xrange(len(xs))], 
                                    [us[i] for i in xrange(len(us))],
                                    [zs[i] for i in xrange(len(zs))]])
-                
+                print "appended"
                 sim.setup_problem(A, B, C, D, H, V, W, M, N,
                                   self.robot, 
                                   self.obstacles, 
@@ -187,7 +187,8 @@ class LQG:
                                   self.delta_t,
                                   self.show_viewer,
                                   urdf_model_file,
-                                  environment_file)                
+                                  environment_file) 
+                print "problem setup"               
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
                 if self.dynamic_problem:
                     sim.setup_dynamic_problem(self.simulation_step_size)

@@ -23,21 +23,20 @@ bool ViewerInterface::setupViewer(std::string model_file,
 	
 	model_file_ = model_file;
 	
-	OpenRAVE::RaveInitialize(true);    
-	env_ = OpenRAVE::RaveCreateEnvironment();
-	env_->Load(environment_file);
-	OpenRAVE::KinBodyPtr robot_ptr = urdf_loader_->load(model_file, env_);
-	env_->Add(robot_ptr, true);
-				
+	OpenRAVE::RaveInitialize(true);	
+	env_ = OpenRAVE::RaveCreateEnvironment();	
+	env_->Load(environment_file);	
+	OpenRAVE::KinBodyPtr robot_ptr = urdf_loader_->load(model_file, env_);	
+	env_->Add(robot_ptr, true);	
 	std::vector<OpenRAVE::KinBodyPtr> bodies;
 	env_->GetBodies(bodies);
-	env_->StopSimulation();
+	env_->StopSimulation();	
 	for (auto &k: bodies) {
 		cout << k->GetName() << endl;
 	}
 	
-	OpenRAVE::RobotBasePtr robot = getRobot();			
-	const std::vector<OpenRAVE::KinBody::LinkPtr> links(robot->GetLinks()); 
+	OpenRAVE::RobotBasePtr robot = getRobot();	
+	const std::vector<OpenRAVE::KinBody::LinkPtr> links(robot->GetLinks());	
 	for (size_t i = 0; i < links.size(); i++) {			
 		if (links[i]->GetName() == "world") {
 			links[i]->SetStatic(true);
@@ -47,9 +46,10 @@ bool ViewerInterface::setupViewer(std::string model_file,
 		}
 	}
 	
+	
 	shared::RaveViewer viewer;
 	viewer.testView(env_);
-	
+	cout << "Initialized viewer" << endl;
 	viewer_setup_ = true;
 	return true;
 	
@@ -57,11 +57,7 @@ bool ViewerInterface::setupViewer(std::string model_file,
 
 void ViewerInterface::addPermanentParticles(const std::vector<std::vector<double>> &particle_joint_values,
 		                                    const std::vector<std::vector<double>> &particle_colors) {	
-	size_t num_plot = 50;
-	if (particle_joint_values.size() < num_plot) {
-		num_plot = particle_joint_values.size();
-	}
-	
+	double num_plot = particle_joint_values.size();
 	for (size_t i = 0; i < num_plot; i++) {
 	    OpenRAVE::KinBodyPtr robot_ptr = urdf_loader_->load(model_file_, env_);
 		std::string name = "permanent_robot_";

@@ -32,6 +32,7 @@ class Simulator:
                       show_viewer,
                       model_file,
                       env_file):
+        print "joint_velocity_limit: " + str(joint_velocity_limit)
         self.A = A
         self.B = B
         self.C = C
@@ -56,6 +57,13 @@ class Simulator:
         self.lower_position_constraints = [lower_position_constraints[i] for i in xrange(len(lower_position_constraints))]
         self.upper_position_constraints = [upper_position_constraints[i] for i in xrange(len(upper_position_constraints))]
         
+        self.max_joint_velocities = [joint_velocity_limit for i in xrange(2 * len(active_joints))]
+        torque_limits = v_double()
+        robot.getJointTorqueLimits(active_joints, torque_limits)
+        torque_limits = [torque_limits[i] for i in xrange(len(torque_limits))]
+        torque_limits.extend([0.0 for i in xrange(len(active_joints))])
+        self.torque_limits = [torque_limits[i] for i in xrange(len(torque_limits))]
+        
         self.enforce_constraints = robot.constraintsEnforced()
         self.dynamic_problem = False
         self.integrate = Integrate()
@@ -64,8 +72,10 @@ class Simulator:
         active_joints = v_string()
         self.robot.getActiveJoints(active_joints)
         self.robot_dof = len(active_joints)
+        print "showing viewer"
         if show_viewer:
             self.robot.setupViewer(model_file, env_file)
+        print "shown"
         self.first_update = True
         
     def setup_dynamic_problem(self,                           
@@ -133,6 +143,25 @@ class Simulator:
             
         return As, Bs, Vs, Ms, Hs, Ws, Ns
     
+    def enforce_control_constraints(self, u, us):
+        u_dash = None
+        if self.dynamic_problem:
+            for i in xrange(len(u)):
+                if u[i] > self.torque_limits[i]:
+                    u[i] = self.torque_limits[i]
+                elif u[i] < -self.torque_limits[i]:
+                    u[i] = -self.torque_limits[i]
+            u_dash = u - us            
+        else:
+            for i in xrange(len(u)):
+                if u[i] > self.max_joint_velocities[i]:
+                    u[i] = self.max_joint_velocities[i]
+                elif u[i] < -self.max_joint_velocities[i]:
+                    u[i] = -self.max_joint_velocities[i]
+            u_dash = u - us
+        return u, u_dash
+                    
+    
     def simulate_n_steps(self,
                          xs, us, zs,
                          x_true,                         
@@ -173,9 +202,11 @@ class Simulator:
                                                     0.0))
                 #print "Ls[i] " + str(Ls[i])                
                 u_dash = np.dot(Ls[i], x_tilde) 
-                u = u_dash + us[i]                           
+                u = u_dash + us[i] 
+                u, u_dash = self.enforce_control_constraints(u, us[i])                          
                 history_entries[-1].set_action(u)
                 t0 = time.time()
+                print "u " + str(u)
                 x_true_temp, ce = self.apply_control(x_true, 
                                                      u, 
                                                      As[i], 
@@ -199,6 +230,8 @@ class Simulator:
                     total_reward += discount * (-1.0 * self.step_penalty)
                     history_entries[-1].set_reward(-1.0 * self.step_penalty)
                     x_true = x_true_temp
+                print "x_true " + str(x_true)
+                print "===================================="
                 self.update_viewer(x_true, xs)               
                 x_dash = np.subtract(x_true, xs[i + 1])
                 
@@ -438,7 +471,7 @@ class Simulator:
                                           cjvels, 
                                           particle_joint_values,
                                           particle_joint_colors)
-            time.sleep(self.control_duration)
+            time.sleep(0.5)
     
     def sample_control_error(self, M):
         mu = np.array([0.0 for i in xrange(2 * self.robot_dof)])

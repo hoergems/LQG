@@ -786,6 +786,7 @@ BOOST_PYTHON_MODULE(librobot) {
 						.def("getJointLowerPositionLimits", &Robot::getJointLowerPositionLimits)
 						.def("getJointUpperPositionLimits", &Robot::getJointUpperPositionLimits)
 						.def("getJointVelocityLimits", &Robot::getJointVelocityLimits)
+						.def("getJointTorqueLimits", &Robot::getJointTorqueLimits)
 						.def("enforceConstraints", &Robot::enforceConstraints)
 						.def("constraintsEnforced", &Robot::constraintsEnforced)
                         //.def("setup", &Integrate::setup)                        
