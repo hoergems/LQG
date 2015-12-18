@@ -94,6 +94,7 @@ class LQG:
                            self.use_linear_path,
                            self.planning_algortihm,
                            self.path_timeout)
+        
         if self.dynamic_problem:
             path_planner.setup_dynamic_problem(urdf_model_file,
                                                environment_file,

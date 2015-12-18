@@ -402,8 +402,10 @@ class Simulator:
                       apply_zero_torque=False):
         x_new = None
         ce = None
-        if apply_zero_torque:        
-            while True:
+        if apply_zero_torque:
+            prop_times = []        
+            for i in xrange(10000):
+                print i
                 u = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
                 current_state = v_double()
                 current_state[:] = x
@@ -414,12 +416,14 @@ class Simulator:
                 
                 control_error[:] = ce
                 result = v_double() 
+                t0 = time.time()
                 self.robot.propagate(current_state,
                                      control,
                                      control_error,
                                      self.simulation_step_size,
                                      self.control_duration,
-                                     result)                               
+                                     result)
+                prop_times.append(time.time() - t0)                                            
                 x = np.array([result[i] for i in xrange(len(result))])
                 cjvals = v_double()
                 cjvels = v_double()
@@ -428,12 +432,18 @@ class Simulator:
                 cjvals[:] = cjvals_arr
                 cjvels[:] = cjvels_arr
                 particle_joint_values = v2_double()
-                self.robot.updateViewerValues(cjvals, cjvels, particle_joint_values)
-                time.sleep(self.control_duration)
+        
+                self.robot.updateViewerValues(cjvals, 
+                                              cjvels, 
+                                              particle_joint_values,
+                                              particle_joint_values)
+                #time.sleep(self.control_duration)
                 '''if self.first_update:
                     print "PREPARE YOUR RECORDER!!!!!"
                     time.sleep(30)
                     self.first_update = False '''
+            print "mean " + str(sum(prop_times) / len(prop_times))
+            sleep
             
         if self.dynamic_problem:
             current_state = v_double()

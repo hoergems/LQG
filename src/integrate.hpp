@@ -6,6 +6,9 @@
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include <boost/numeric/odeint/integrate/integrate.hpp>
 #include <boost/numeric/odeint/stepper/runge_kutta4.hpp>
+//#include <boost/numeric/odeint/stepper/runge_kutta_fehlberg78.hpp>
+
+#include <boost/numeric/odeint/stepper/euler.hpp>
 #include <boost/numeric/odeint/stepper/runge_kutta_dopri5.hpp>
 #include <boost/numeric/odeint/stepper/bulirsch_stoer.hpp>
 #include <boost/numeric/odeint/integrate/integrate_const.hpp>

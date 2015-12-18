@@ -83,6 +83,7 @@ bool Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	std::vector<double> inte_times({0.0, duration, simulation_step_size});	
 	integrator_->do_integration(state, control, control_error_vec, inte_times, integration_result);
 	
+	
 	std::vector<double> newJointValues;
 	std::vector<double> newJointVelocities;
 	
