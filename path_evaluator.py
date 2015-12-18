@@ -49,7 +49,7 @@ class PathEvaluator:
         
         self.enforce_constraints = robot.constraintsEnforced()
         self.sample_size = sample_size
-        self.num_cores = cpu_count() - 1
+        self.num_cores = cpu_count()
         #self.num_cores = 2 
         self.goal_position = goal_position 
         self.goal_radius = goal_radius
@@ -273,7 +273,8 @@ class PathEvaluator:
             path_rewards.append(np.power(self.discount, current_step + i) * state_reward)
             '''if terminal:
                 break'''             
-        path_reward = sum(path_rewards)               
+        path_reward = sum(path_rewards)  
+        print "PathEvaluator: Path " + str(index) + " evaluated"             
         logging.info("========================================")
         logging.info("PathEvaluator: reward for path " + 
                      str(index) + 

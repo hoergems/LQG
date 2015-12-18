@@ -4,7 +4,8 @@ import glob
 class HistoryEntry:    
     def __init__(self, 
                  t, 
-                 x_true, 
+                 x_true,
+                 x_true_linear, 
                  x_estimate,
                  x_dash,
                  x_dash_linear,
@@ -18,6 +19,7 @@ class HistoryEntry:
                  reward):
         self.t = t        
         self.x_true = x_true
+        self.x_true_linear = x_true_linear
         self.x_estimate = x_estimate
         self.x_dash = x_dash
         self.x_dash_linear = x_dash_linear
@@ -58,6 +60,11 @@ class HistoryEntry:
             state_str = "S: " 
             for i in xrange(len(self.x_true)):
                 state_str += str(self.x_true[i]) + " "
+            f.write(state_str + " \n")
+            
+            state_str = "S_LINEAR: "
+            for i in xrange(len(self.x_true_linear)):
+                state_str += str(self.x_true_linear[i]) + " "
             f.write(state_str + " \n")
             
             state_str = "S_ESTIMATED: " 

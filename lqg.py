@@ -177,7 +177,7 @@ class LQG:
                 best_paths.append([[xs[i] for i in xrange(len(xs))], 
                                    [us[i] for i in xrange(len(us))],
                                    [zs[i] for i in xrange(len(zs))]])
-                print "appended"
+                
                 sim.setup_problem(A, B, C, D, H, V, W, M, N,
                                   self.robot, 
                                   self.obstacles, 
@@ -387,9 +387,9 @@ class LQG:
         #B = np.vstack((B, np.zeros((num_links, num_links))))        
         V = np.identity(num_links * 2)
         W = np.identity(num_links * 2)
-        C = 5000.0 * np.identity(num_links * 2)
+        C = self.path_deviation_cost * np.identity(num_links * 2)
         
-        D = 1.0 * np.identity(num_links * 2)
+        D = self.control_deviation_cost * np.identity(num_links * 2)
         #D  = np.vstack((D, np.zeros((num_links, num_links))))
         
         #D = 1.0 * np.identity(num_links * 2)
@@ -428,7 +428,9 @@ class LQG:
         self.simulation_step_size = config['simulation_step_size']        
         self.path_timeout = config['path_timeout'] 
         self.continuous_collision = config['continuous_collision_check']
-        self.show_viewer = config['show_viewer']         
+        self.show_viewer = config['show_viewer']   
+        self.path_deviation_cost = config['path_deviation_cost'] 
+        self.control_deviation_cost = config['control_deviation_cost']     
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

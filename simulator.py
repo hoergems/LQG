@@ -160,6 +160,19 @@ class Simulator:
                     u[i] = -self.max_joint_velocities[i]
             u_dash = u - us
         return u, u_dash
+    
+    def check_collision(self, x_current, x_next, total_reward, history_entries):
+        if self.is_in_collision(x_current, x_next):
+            for i in xrange(len(x_current) / 2, len(x_current)):
+                x_current[i] = 0.0 
+            logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
+            total_reward += discount * (-1.0 * self.illegal_move_penalty)
+            
+    def dist(self, x1, x2):
+        sum = 0.0
+        for i in xrange(len(x1)):
+            sum += np.power((x1[i] - x2[i]), 2)
+        return np.sqrt(sum)
                     
     
     def simulate_n_steps(self,
@@ -175,20 +188,23 @@ class Simulator:
         history_entries = []        
         terminal_state_reached = False
         success = False
+        collided = False
         x_dash = np.copy(x_tilde)
         x_dash_linear = np.copy(x_tilde_linear)
+        x_true_linear = x_true
         
         As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, us)
         Ls = kalman.compute_gain(As, Bs, self.C, self.D, len(xs) - 1)
         logging.info("Simulator: Executing for " + str(n_steps) + " steps") 
         estimated_states = []
         estimated_covariances = []
-        self.show_nominal_path(xs)
+        self.show_nominal_path(xs)        
         for i in xrange(n_steps):                        
             if not (terminal_state_reached and self.stop_when_terminal):
-                linearization_error = self.calc_linearization_error(x_dash, x_dash_linear)                
+                linearization_error = self.dist(x_dash, x_dash_linear)                
                 history_entries.append(HistoryEntry(current_step + i,
                                                     x_true, 
+                                                    x_true_linear,
                                                     x_estimate,
                                                     x_dash,
                                                     x_dash_linear,
@@ -199,14 +215,12 @@ class Simulator:
                                                     False,
                                                     False,
                                                     False,
-                                                    0.0))
-                #print "Ls[i] " + str(Ls[i])                
+                                                    0.0))                               
                 u_dash = np.dot(Ls[i], x_tilde) 
                 u = u_dash + us[i] 
                 u, u_dash = self.enforce_control_constraints(u, us[i])                          
                 history_entries[-1].set_action(u)
-                t0 = time.time()
-                print "u " + str(u)
+                t0 = time.time()                
                 x_true_temp, ce = self.apply_control(x_true, 
                                                      u, 
                                                      As[i], 
@@ -214,14 +228,16 @@ class Simulator:
                                                      Vs[i], 
                                                      Ms[i],
                                                      False)
-                x_dash_linear, x_true_linear = self.get_linearized_next_state(x_dash, u_dash, ce, xs[i+1], As[i], Bs[i], Vs[i])
+                #x_dash_temp = np.subtract(x_true_temp, xs[i + 1])              
+                x_dash_linear_temp = self.get_linearized_next_state(x_dash_linear, u_dash, ce, As[i], Bs[i], Vs[i])
+                x_true_linear_temp = np.add(x_dash_linear_temp, xs[i+1])
+                    
                 t_e = time.time() - t0
-                
-                discount = np.power(self.discount_factor, current_step + i)
-                collided = False        
-                if self.is_in_collision(x_true, x_true_temp): 
-                    for i in xrange(len(x_true) / 2, len(x_true)):
-                        x_true[i] = 0.0                  
+                collided = False
+                discount = np.power(self.discount_factor, current_step + i)                        
+                if self.is_in_collision(x_true, x_true_temp):                    
+                    for j in xrange(len(x_true) / 2, len(x_true)):
+                        x_true[j] = 0.0                  
                     logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
                     total_reward += discount * (-1.0 * self.illegal_move_penalty)
                     history_entries[-1].set_reward(-1.0 * self.illegal_move_penalty)
@@ -229,11 +245,22 @@ class Simulator:
                 else:
                     total_reward += discount * (-1.0 * self.step_penalty)
                     history_entries[-1].set_reward(-1.0 * self.step_penalty)
-                    x_true = x_true_temp
-                print "x_true " + str(x_true)
-                print "===================================="
-                self.update_viewer(x_true, xs)               
+                    x_true = x_true_temp 
+                    
+                if self.is_in_collision(x_true_linear, x_true_linear_temp):
+                    for j in xrange(len(x_true_linear) / 2, len(x_true_linear)):
+                        x_true_linear[j] = 0.0                  
+                else:
+                    x_true_linear = x_true_linear_temp
+                
+                '''print "x_true " + str(x_true)
+                print "x_true_linear " + str(x_true_linear)'''
+                                       
+                self.update_viewer(x_true, xs)                             
                 x_dash = np.subtract(x_true, xs[i + 1])
+                x_dash_linear = np.subtract(x_true_linear , xs[i + 1])
+                '''print "x_dash " + str(x_dash)
+                print "x_dash_linear " + str(x_dash_linear)'''
                 
                 state = v_double()
                 state[:] = [x_true[j] for j in xrange(len(x_true) / 2)]
@@ -274,7 +301,8 @@ class Simulator:
                 
                 if self.is_terminal(ee_position):                    
                     history_entries.append(HistoryEntry(current_step + i + 1,
-                                                        x_true, 
+                                                        x_true,
+                                                        x_true_linear, 
                                                         x_estimate, 
                                                         x_dash,
                                                         x_dash_linear,
@@ -289,7 +317,7 @@ class Simulator:
                     terminal_state_reached = True                        
                     total_reward += discount * self.exit_reward
                     history_entries[-1].set_reward(self.exit_reward)
-                    history_entries[-1].set_linearization_error(self.calc_linearization_error(x_dash, x_dash_linear))
+                    history_entries[-1].set_linearization_error(self.dist(x_dash, x_dash_linear))
                     success = True                      
                     logging.info("Terminal state reached: reward = " + str(total_reward)) 
                     
@@ -312,14 +340,7 @@ class Simulator:
                 terminal_state_reached,
                 estimated_states,
                 estimated_covariances,                
-                history_entries)
-        
-    def calc_linearization_error(self, x_dash, x_dash_linear):
-        linearization_error = 0.0
-        for i in xrange(len(x_dash)):
-            linearization_error += np.square(x_dash[i] - x_dash_linear[i])
-        return np.sqrt(linearization_error)
-        
+                history_entries)    
     
     def check_constraints(self, state):
         for i in xrange(len(state) / 2):                          
@@ -365,10 +386,11 @@ class Simulator:
             return True
         return False
     
-    def get_linearized_next_state(self, x_dash, u_dash, control_error, x_star_next, A, B, V):
-        delta_x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, control_error)        
-        x_new2 = delta_x_new + x_star_next
-        return delta_x_new, x_new2
+    def get_linearized_next_state(self, x_dash, u_dash, control_error, A, B, V):
+        delta_x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, control_error) 
+        return delta_x_new       
+        #x_new2 = delta_x_new + x_star_next
+        #return delta_x_new, x_new2
        
     def apply_control(self, 
                       x, 
@@ -433,9 +455,19 @@ class Simulator:
             x_new = np.array([result[i] for i in xrange(len(result))])
         else:               
             ce = self.get_random_joint_angles([0.0 for i in xrange(2 * self.robot_dof)], M)
+            '''print "A " + str(A)
+            print "x " + str(x)
+            print "B " + str(B)
+            print "u " + str(u)
+            print "V " + str(V)
+            print "ce " + str(ce)'''
             x_new = np.dot(A, x) + np.dot(B, u) + np.dot(V, ce)
+            '''print "x_new " + str(x_new)
+            print "================================="'''
+            
             if self.enforce_constraints:            
                 x_new = self.check_constraints(x_new)
+            
         return x_new, ce
     
     def show_nominal_path(self, path):        
