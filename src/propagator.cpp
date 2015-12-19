@@ -75,8 +75,8 @@ bool Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	for (size_t i = 0; i < current_joint_values.size(); i++) {
 		state.push_back(current_joint_values[i]);
 	}
-	for (size_t i = 0; i < current_joint_values.size(); i++) {
-		state.push_back(current_joint_velocities[i]);
+	for (size_t i = 0; i < current_joint_values.size(); i++) {		
+		state.push_back(current_joint_velocities[i]);		
 	}
 	
 	std::vector<double> integration_result;

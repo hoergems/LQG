@@ -223,10 +223,10 @@ def plot_3d_points(points, x_scale=[-4.0, 4.0], y_scale=[-4.0, 4.0], z_scale=[-4
     x = points[:,0]
     y = points[:,1]
     z = points[:,2]
-    ax.set_xlabel("v1")
-    ax.set_ylabel("v2")
-    ax.set_zlabel("alpha")
-    ax.view_init(elev=17.0, azim=-58.0)
+    ax.set_xlabel("x1")
+    ax.set_ylabel("x2")
+    ax.set_zlabel("x3")
+    ax.view_init(elev=25.0, azim=56.0)
     #ax.auto_scale_xyz([-1.0, 1.0], [-1.0, 1.0], [-1.0, 1.0])
     ax.scatter(x, y, z, c='r')
     ax.auto_scale_xyz(x_scale, y_scale, z_scale)

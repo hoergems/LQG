@@ -22,11 +22,14 @@ bool ViewerInterface::setupViewer(std::string model_file,
     }
 	
 	model_file_ = model_file;
-	
-	OpenRAVE::RaveInitialize(true);	
-	env_ = OpenRAVE::RaveCreateEnvironment();	
+	OpenRAVE::RaveSetDebugLevel(4);
+	//OpenRAVE::RaveInitialize(false);	
+	env_ = OpenRAVE::RaveCreateEnvironment();
+	cout << "loading " << environment_file << endl;
 	env_->Load(environment_file);	
-	OpenRAVE::KinBodyPtr robot_ptr = urdf_loader_->load(model_file, env_);	
+	cout << "loaded environment" << endl;	
+	OpenRAVE::KinBodyPtr robot_ptr = urdf_loader_->load(model_file, env_);
+	cout << "loaded robot" << endl;
 	env_->Add(robot_ptr, true);	
 	std::vector<OpenRAVE::KinBodyPtr> bodies;
 	env_->GetBodies(bodies);

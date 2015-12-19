@@ -82,7 +82,7 @@ class PathPlanningInterface:
         self.robot = robot
         robot.getActiveLinkDimensions(self.link_dimensions)
         self.num_cores = cpu_count() 
-        #self.num_cores = 2       
+        self.num_cores = 2       
         self.obstacles = obstacles        
         self.max_velocity = max_velocity
         self.delta_t = delta_t
@@ -191,7 +191,11 @@ class PathPlanningInterface:
             processes[i].start()
         curr_len = 0
         while True:
-            breaking = False 
+            breaking = False            
+            for p in processes:
+                if p.is_alive():
+                    break
+                breaking = True                
             try:                
                 if queue.empty() == False:                                            
                     res_paths.append(queue.get(timeout=0.1))
@@ -240,13 +244,15 @@ class PathPlanningInterface:
         while True:
             #xs = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0] for i in xrange(10)]
             #us = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0] for i in xrange(10)]
-            #zs = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0] for i in xrange(10)]           
-            xs, us, zs = self._construct(robot, obstacles)
+            #zs = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0] for i in xrange(10)]                     
+            xs, us, zs, success = self._construct(robot, obstacles)
+            if (not success):
+                break;
             if not len(xs) == 0:                              
                 queue.put((xs, us, zs))
                 time.sleep(0.1)
         
-    def _construct(self, robot, obstacles):
+    def _construct(self, robot, obstacles):        
         path_planner2 = None        
         if not self.dynamic_problem:
             path_planner2 = libpath_planner.PathPlanner(robot,                                                        
@@ -268,18 +274,31 @@ class PathPlanningInterface:
             logging.info("PathPlanningInterface: Kinematics set. Running setup...")
             path_planner2.setup(self.simulation_step_size,                                
                                 self.delta_t)
-            logging.info("PathPlanningInterface: Path planner setup")        
+            logging.info("PathPlanningInterface: Path planner setup")
+        print "setting obstacles"        
         path_planner2.setObstacles(obstacles)        
         #print "set obstacles"
         goal_states = v2_double()
-        gs = []       
+        gs = [] 
+        
+        '''
+        Check if the start state is valid
+        '''
+        ss_vec = v_double()
+        ss_vec[:] = self.start_state
+        if not path_planner2.isValid(ss_vec):
+            return [], [], [], False
+              
+        '''
+        Check of the goa states are valid
+        '''
         for i in xrange(len(self.goal_states)):
             goal_state = v_double()                  
             goal_state[:] = [self.goal_states[i][j] for j in xrange(len(self.goal_states[i]))]                    
-            if path_planner2.isValid(goal_state):                
+            if path_planner2.isValid(goal_state):                                
                 gs.append(goal_state)                       
-        if len(gs) == 0:
-            return [], [], []               
+        if len(gs) == 0:                        
+            return [], [], [], False               
         goal_states[:] = gs 
         
         ee_goal_position = v_double()
@@ -288,7 +307,7 @@ class PathPlanningInterface:
         start_state = v_double()
         v = [self.start_state[i] for i in xrange(len(self.start_state))]
         start_state[:] = v 
-        logging.info("PathPlanningInterface: Solve...") 
+        logging.warn("PathPlanningInterface: Solve...") 
         xs_temp = path_planner2.solve(start_state, self.path_timeout)
         xs = []
         us = []
@@ -296,8 +315,26 @@ class PathPlanningInterface:
         for i in xrange(len(xs_temp)):
             xs.append([xs_temp[i][j] for j in xrange(0, 2 * len(self.link_dimensions))])
             us.append([xs_temp[i][j] for j in xrange(2 * len(self.link_dimensions), 4 * len(self.link_dimensions))])
-            zs.append([xs_temp[i][j] for j in xrange(4 * len(self.link_dimensions), 6 * len(self.link_dimensions))])        
-        return xs, us, zs
+            zs.append([xs_temp[i][j] for j in xrange(4 * len(self.link_dimensions), 6 * len(self.link_dimensions))]) 
+        
+        all_states = v2_double()
+        print "getting all states"
+        path_planner2.getAllStates(all_states)
+        print "got all states " + str(len(all_states))
+        plot_states_states = [np.array(all_states[i][0:3]) for i in xrange(len(all_states))]
+        plot_states_velocities = [np.array(all_states[i][3:6]) for i in xrange(len(all_states))]
+        from plot import plot_3d_points
+        scale = [-np.pi - 0.01, np.pi + 0.01]
+        scale2 = [-11, 11]
+        plot_3d_points(np.array(plot_states_states),
+                       scale,
+                       scale,
+                       scale)
+        plot_3d_points(np.array(plot_states_velocities),
+                       scale2,
+                       scale2,
+                       scale2)      
+        return xs, us, zs, True
     
 if __name__ == "__main__":
     PathPlanningInterface()

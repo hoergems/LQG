@@ -17,14 +17,15 @@ DynamicPathPlanner::DynamicPathPlanner(boost::shared_ptr<shared::Robot> &robot,
     state_space_bounds_(1),
 	kinematics_(nullptr),
     control_space_(new ControlSpace(state_space_, control_space_dimension_)),
-    space_information_(new ompl::control::SpaceInformation(state_space_, control_space_)),
+    space_information_(new ManipulatorSpaceInformation(state_space_, control_space_)),
     problem_definition_(nullptr),
     planner_(nullptr),
     state_propagator_(nullptr),
     env_(nullptr),
     motionValidator_(nullptr),
     verbose_(verbose),
-    robot_(robot)
+    robot_(robot),
+	all_states_()
 {
     
 }
@@ -63,7 +64,7 @@ ompl::control::ControlSamplerPtr DynamicPathPlanner::allocUniformControlSampler_
 }
 
 bool DynamicPathPlanner::setup_ompl_(double &simulation_step_size,
-		                             bool &verbose) {    
+		                             bool &verbose) {
     state_space_bounds_ = ompl::base::RealVectorBounds(state_space_dimension_);    
     space_information_->setStateValidityChecker(boost::bind(&DynamicPathPlanner::isValid, this, _1));
     space_information_->setMotionValidator(motionValidator_);
@@ -71,7 +72,8 @@ bool DynamicPathPlanner::setup_ompl_(double &simulation_step_size,
     space_information_->setPropagationStepSize(control_duration_);
      
     problem_definition_ = boost::make_shared<ompl::base::ProblemDefinition>(space_information_);
-    planner_ = boost::make_shared<ompl::control::RRT>(space_information_);    
+    //planner_ = boost::make_shared<ompl::control::RRT>(space_information_);
+    planner_ = boost::make_shared<RRTControl>(space_information_);
     planner_->setProblemDefinition(problem_definition_);
     state_propagator_ = boost::make_shared<StatePropagator>(space_information_,
     		                                                robot_,
@@ -110,7 +112,12 @@ bool DynamicPathPlanner::setup_ompl_(double &simulation_step_size,
     }    
     
     state_space_->as<ompl::base::RealVectorStateSpace>()->setBounds(state_space_bounds_);
-    control_space_->as<ompl::control::RealVectorControlSpace>()->setBounds(control_bounds);    
+    control_space_->as<ompl::control::RealVectorControlSpace>()->setBounds(control_bounds);
+    space_information_->setup();
+    cout << "call1" << endl;
+    space_information_->allocDirectedControlSampler();
+    cout << "call2" << endl;
+    space_information_.get()->allocDirectedControlSampler();
     return true;
 }
 
@@ -131,8 +138,19 @@ bool DynamicPathPlanner::isValid(const ompl::base::State *state) {
     std::vector<double> state_vec;
     for (unsigned int i = 0; i < space_information_->getStateSpace()->getDimension(); i++) {
         state_vec.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);        
-    }    
+    } 
+    all_states_.push_back(state_vec);
     return static_cast<MotionValidator &>(*motionValidator_).isValid(state_vec);    
+}
+
+void DynamicPathPlanner::getAllStates(std::vector<std::vector<double>> &all_states) {
+	int i = 1;
+	for (auto &k: all_states_) {
+		all_states.push_back(k);
+		cout << "i: " << i << endl;
+		cout << "total: " << all_states_.size() << endl;
+		i++;
+	}
 }
 
 bool DynamicPathPlanner::isValidPy(std::vector<double> &state) {
@@ -191,8 +209,7 @@ void DynamicPathPlanner::setObstaclesPy(boost::python::list &ns) {
 
 std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<double> &start_state_vec,
 		                                                   double timeout) {
-    // Set the start and goal state
-	cout << "solve" << endl;
+    // Set the start and goal state	
     ompl::base::ScopedState<> start_state(state_space_);
     std::vector<std::vector<double>> solution_vector; 
     for (unsigned int i = 0; i < state_space_dimension_; i++) {
@@ -287,6 +304,7 @@ BOOST_PYTHON_MODULE(libdynamic_path_planner) {
 							   .def("isValid", &DynamicPathPlanner::isValidPy)
 							   .def("setup", &DynamicPathPlanner::setup)
 							   .def("setupMotionValidator", &DynamicPathPlanner::setupMotionValidator)
+							   .def("getAllStates", &DynamicPathPlanner::getAllStates)
 										            		 
                         //.def("doIntegration", &Integrate::do_integration)                        
                         //.def("getResult", &Integrate::getResult)

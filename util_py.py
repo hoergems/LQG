@@ -74,7 +74,7 @@ def get_goal_states(problem,
                     goal_threshold,
                     planning_algorithm,
                     path_timeout):     
-    if not compareEnvironmentToTmpFiles(problem, model_file):
+    if not compareEnvironmentToTmpFiles(problem, model_file):        
         ik_solution_generator = IKSolutionGenerator()          
         ik_solution_generator.setup(robot,
                                     obstacles,

@@ -6,6 +6,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
+#include "ManipulatorSpaceInformation.hpp"
 #include "state_propagator.hpp"
 #include "ManipulatorGoalRegion.hpp"
 #include "torque_damper.hpp"
@@ -16,7 +17,8 @@
 #include <ompl/control/Control.h>
 #include <ompl/control/spaces/RealVectorControlSpace.h>
 #include <ompl/control/SpaceInformation.h>
-#include <ompl/control/planners/rrt/RRT.h>
+//#include <ompl/control/planners/rrt/RRT.h>
+#include "rrt_control.hpp"
 #include <ompl/control/planners/est/EST.h>
 
 #include <ompl/base/State.h>
@@ -60,7 +62,9 @@ namespace shared {
                 void setObstaclesPy(boost::python::list &ns); 
                 
                 bool setup(double simulation_step_size,
-						   double control_duration); 
+						   double control_duration);
+                
+                void getAllStates(std::vector<std::vector<double>> &all_states);
 
         private:
                 std::shared_ptr<Kinematics> kinematics_;
@@ -124,6 +128,8 @@ namespace shared {
                 bool verbose_;
                 
                 void log_(std::string msg, bool warn);
+                
+                std::vector<std::vector<double>> all_states_;
     };
 }
 

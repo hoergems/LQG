@@ -64,9 +64,10 @@ class LQG:
         environment_file = os.path.join("environment", "env.xml")        
         if not self.setup_scene("environment", "env.xml", self.robot):
             return
-        
         #self.robot.setupViewer(urdf_model_file, environment_file)
-        #self.run_viewer()       
+        #self.show_state_distribution(urdf_model_file, environment_file)
+        #self.robot.setupViewer(urdf_model_file, environment_file)
+        #self.run_viewer(urdf_model_file, environment_file)       
                 
         logging.info("LQG: Generating goal states...")
         goal_states = get_goal_states("lqg",
@@ -304,10 +305,84 @@ class LQG:
         self.robot = Robot(urdf_model_file)
         self.robot.enforceConstraints(self.enforce_constraints)
         
-    def run_viewer(self):
+    """
+    Analyzing functions (will be removed later)
+    =====================================================================
+    """
+        
+    def sample_control_error(self, M):
+        mu = np.array([0.0 for i in xrange(2 * self.robot_dof)])
+        return np.random.multivariate_normal(mu, M)
+    
+    def show_state_distribution(self, model_file, env_file):
+        self.robot.setupViewer(model_file, env_file)       
+        M = 30.0 * np.identity(2 * len(self.link_dimensions))
+        active_joints = v_string()
+        self.robot.getActiveJoints(active_joints)
+        self.robot_dof = len(active_joints)
+        x = [0.0, -np.pi / 2.0, 0.0, 0.0, 0.0, 0.0]
+        states = []
+        for z in xrange(2000):
+            u = [70.0, 70.0, 70.0, 0.0, 0.0, 0.0]
+            current_state = v_double()
+            current_state[:] = x
+            control = v_double()
+            control[:] = u            
+            control_error = v_double()
+            ce = self.sample_control_error(M)
+            #ce = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            control_error[:] = ce
+            x = None
+            for k in xrange(1):
+                result = v_double()
+                self.robot.propagate(current_state,
+                                     control,
+                                     control_error,
+                                     self.simulation_step_size,
+                                     self.delta_t,
+                                     result)                               
+                x = [result[i] for i in xrange(len(result))]
+                
+                current_state[:] = x
+                print x
+            states.append(np.array(x[3:6]))
+            x = [0.0, -np.pi/ 2.0, 0.0, 0.0, 0.0, 0.0]
+            
+            cjvals = v_double()
+            cjvels = v_double()
+            cjvals_arr = [x[i] for i in xrange(len(x) / 2)]
+            cjvels_arr = [x[i] for i in xrange(len(x) / 2, len(x))]
+            cjvals[:] = cjvals_arr
+            cjvels[:] = cjvels_arr
+            particle_joint_values = v2_double()
+            particle_joint_colors = v2_double()
+            self.robot.updateViewerValues(cjvals, 
+                                          cjvels,
+                                          particle_joint_values,
+                                          particle_joint_values)
+        from plot import plot_3d_points
+        mins = []
+        maxs = []
+        
+        x_min = min([states[i][0] for i in xrange(len(states))])
+        x_max = max([states[i][0] for i in xrange(len(states))])
+        y_min = min([states[i][1] for i in xrange(len(states))])
+        y_max = max([states[i][1] for i in xrange(len(states))])
+        z_min = min([states[i][2] for i in xrange(len(states))])
+        z_max = max([states[i][2] for i in xrange(len(states))])
+        
+        scale = [-0.2, 0.2]
+        plot_3d_points(np.array(states), 
+                       x_scale = [x_min, x_max], 
+                       y_scale = [y_min, y_max], 
+                       z_scale=  [z_min, z_max])
+        sleep
+        
+    def run_viewer(self, model_file, env_file):
+        self.robot.setupViewer(model_file, env_file)
         x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         while True:
-            u = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            u = [0.0, -70.0, 0.0, 0.0, 0.0, 0.0]
             current_state = v_double()
             current_state[:] = x
             control = v_double()
@@ -329,10 +404,16 @@ class LQG:
             cjvels_arr = [x[i] for i in xrange(len(x) / 2, len(x))]
             cjvals[:] = cjvals_arr
             cjvels[:] = cjvels_arr
-            self.robot.updateViewerValues(cjvals, cjvels)
+            particle_joint_values = v2_double()
+            self.robot.updateViewerValues(cjvals, 
+                                          cjvels,
+                                          particle_joint_values,
+                                          particle_joint_values)
             time.sleep(0.03) 
             
-    
+    """
+    ================================================================
+    """
         
         
     def setup_scene(self, 

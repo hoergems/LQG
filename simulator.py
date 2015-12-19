@@ -404,8 +404,7 @@ class Simulator:
         ce = None
         if apply_zero_torque:
             prop_times = []        
-            for i in xrange(10000):
-                print i
+            for i in xrange(10000):                
                 u = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
                 current_state = v_double()
                 current_state[:] = x
@@ -513,7 +512,7 @@ class Simulator:
                                           cjvels, 
                                           particle_joint_values,
                                           particle_joint_colors)
-            time.sleep(0.5)
+            time.sleep(self.control_duration)
     
     def sample_control_error(self, M):
         mu = np.array([0.0 for i in xrange(2 * self.robot_dof)])

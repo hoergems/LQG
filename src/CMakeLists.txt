@@ -72,7 +72,9 @@ add_library(path_planner SHARED
             Obstacle.cpp)
 
 add_library(dynamic_path_planner SHARED 
-            dynamic_path_planner.cpp 
+            dynamic_path_planner.cpp
+            ManipulatorSpaceInformation.cpp
+            rrt_control.cpp 
             MotionValidator.cpp
             state_propagator.cpp
             propagator.cpp

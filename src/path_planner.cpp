@@ -286,10 +286,10 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
         cout << endl;        
     }
     
-    if (!isValid(start_state.get())) {        
+    /**if (!isValid(start_state.get())) {        
         cout << "Path planner: ERROR: Start state not valid!" << endl;        
         return solution_vector;    
-    }
+    }*/
     
     problem_definition_->addStartState(start_state);    
     ompl::base::GoalPtr gp(new ManipulatorGoalRegion(si_, robot_, goal_states_, ee_goal_position_, ee_goal_threshold_, false));
