@@ -100,7 +100,10 @@ class LQG:
             path_planner.setup_dynamic_problem(urdf_model_file,
                                                environment_file,
                                                self.simulation_step_size,                                               
-                                               self.continuous_collision)       
+                                               self.continuous_collision,
+                                               self.num_control_samples,
+                                               self.min_control_duration,
+                                               self.max_control_duration)       
         path_planner.set_start_and_goal(self.start_state, goal_states, self.goal_position, self.goal_radius)         
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, len(self.link_dimensions))
         
@@ -512,7 +515,10 @@ class LQG:
         self.continuous_collision = config['continuous_collision_check']
         self.show_viewer = config['show_viewer']   
         self.path_deviation_cost = config['path_deviation_cost'] 
-        self.control_deviation_cost = config['control_deviation_cost']     
+        self.control_deviation_cost = config['control_deviation_cost']
+        self.num_control_samples = config['num_control_samples'] 
+        self.min_control_duration = config['min_control_duration']
+        self.max_control_duration = config['max_control_duration']    
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

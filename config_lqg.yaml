@@ -89,6 +89,9 @@ continuous_collision_check: False
 #########################################
 dynamic_problem: True
 simulation_step_size: 0.1
+num_control_samples: 1
+min_control_duration: 1
+max_control_duration: 4
 
 #########################################
 # Visualization

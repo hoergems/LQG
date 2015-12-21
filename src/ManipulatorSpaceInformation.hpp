@@ -19,7 +19,12 @@ namespace shared {
             
             double getPropagationStepSize() const;
             
+            void setNumControlSamples(unsigned int &num_control_samples);
+            
             //unsigned int getMinControlDuration();
+            
+        private:
+            unsigned int num_control_samples_;
                         
     };
 

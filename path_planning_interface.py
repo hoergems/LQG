@@ -99,12 +99,18 @@ class PathPlanningInterface:
                               urdf_model,
                               environment_model, 
                               simulation_step_size,                              
-                              continuous_collision):
+                              continuous_collision,
+                              num_control_samples,
+                              min_control_duration,
+                              max_control_duration):
         self.dynamic_problem = True
         self.model_file = urdf_model
         self.environment_file = environment_model
         self.simulation_step_size = simulation_step_size        
         self.continuous_collision = continuous_collision
+        self.num_control_samples = num_control_samples
+        self.min_control_duration = min_control_duration
+        self.max_control_duration = max_control_duration
         
     def set_start_and_goal(self, start_state, goal_states, ee_goal_position, ee_goal_threshold):                
         self.start_state = start_state
@@ -263,7 +269,7 @@ class PathPlanningInterface:
                                                         self.use_linear_path,
                                                         self.verbose,
                                                         self.planning_algorithm)
-            path_planner2.setup()
+            path_planner2.setup()            
         else:            
             path_planner2 = libdynamic_path_planner.DynamicPathPlanner(robot,                                                                       
                                                                        self.verbose)
@@ -274,6 +280,14 @@ class PathPlanningInterface:
             logging.info("PathPlanningInterface: Kinematics set. Running setup...")
             path_planner2.setup(self.simulation_step_size,                                
                                 self.delta_t)
+            num_control_samples = libdynamic_path_planner.v_int()
+            num_control_samples[:] = [self.num_control_samples]
+            path_planner2.setNumControlSamples(num_control_samples)
+            
+            min_max_control_duration = libdynamic_path_planner.v_int()
+            min_max_control_duration[:] = [self.min_control_duration,
+                                           self.max_control_duration]
+            path_planner2.setMinMaxControlDuration(min_max_control_duration)
             logging.info("PathPlanningInterface: Path planner setup")
         print "setting obstacles"        
         path_planner2.setObstacles(obstacles)        
@@ -316,24 +330,24 @@ class PathPlanningInterface:
             xs.append([xs_temp[i][j] for j in xrange(0, 2 * len(self.link_dimensions))])
             us.append([xs_temp[i][j] for j in xrange(2 * len(self.link_dimensions), 4 * len(self.link_dimensions))])
             zs.append([xs_temp[i][j] for j in xrange(4 * len(self.link_dimensions), 6 * len(self.link_dimensions))]) 
-        
-        all_states = v2_double()
-        print "getting all states"
-        path_planner2.getAllStates(all_states)
-        print "got all states " + str(len(all_states))
-        plot_states_states = [np.array(all_states[i][0:3]) for i in xrange(len(all_states))]
-        plot_states_velocities = [np.array(all_states[i][3:6]) for i in xrange(len(all_states))]
-        from plot import plot_3d_points
-        scale = [-np.pi - 0.01, np.pi + 0.01]
-        scale2 = [-11, 11]
-        plot_3d_points(np.array(plot_states_states),
-                       scale,
-                       scale,
-                       scale)
-        plot_3d_points(np.array(plot_states_velocities),
-                       scale2,
-                       scale2,
-                       scale2)      
+        if self.dynamic_problem:
+            all_states = v2_double()
+            print "getting all states"
+            path_planner2.getAllStates(all_states)
+            print "got all states " + str(len(all_states))
+            plot_states_states = [np.array(all_states[i][0:3]) for i in xrange(len(all_states))]
+            plot_states_velocities = [np.array(all_states[i][3:6]) for i in xrange(len(all_states))]
+            from plot import plot_3d_points
+            scale = [-np.pi - 0.01, np.pi + 0.01]
+            scale2 = [-11, 11]
+            plot_3d_points(np.array(plot_states_states),
+                           scale,
+                           scale,
+                           scale)
+            plot_3d_points(np.array(plot_states_velocities),
+                           scale2,
+                           scale2,
+                           scale2)      
         return xs, us, zs, True
     
 if __name__ == "__main__":

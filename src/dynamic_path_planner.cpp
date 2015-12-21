@@ -63,6 +63,17 @@ ompl::control::ControlSamplerPtr DynamicPathPlanner::allocUniformControlSampler_
     return ompl::control::ControlSamplerPtr(new UniformControlSampler(control_space));
 }
 
+void DynamicPathPlanner::setNumControlSamples(std::vector<int> &num_control_samples) {
+	unsigned int ncs = (unsigned int)num_control_samples[0];
+	boost::static_pointer_cast<ManipulatorSpaceInformation>(space_information_)->setNumControlSamples(ncs);	
+}
+
+void DynamicPathPlanner::setMinMaxControlDuration(std::vector<int> &min_max_control_duration) {
+	unsigned int min = (unsigned int)min_max_control_duration[0];
+	unsigned int max = (unsigned int)min_max_control_duration[1];
+	space_information_->setMinMaxControlDuration(min, max);	
+}
+
 bool DynamicPathPlanner::setup_ompl_(double &simulation_step_size,
 		                             bool &verbose) {
     state_space_bounds_ = ompl::base::RealVectorBounds(state_space_dimension_);    
@@ -75,6 +86,7 @@ bool DynamicPathPlanner::setup_ompl_(double &simulation_step_size,
     //planner_ = boost::make_shared<ompl::control::RRT>(space_information_);
     planner_ = boost::make_shared<RRTControl>(space_information_);
     planner_->setProblemDefinition(problem_definition_);
+    //boost::static_pointer_cast<RRTControl>(planner_)->setIntermediateStates(true);
     state_propagator_ = boost::make_shared<StatePropagator>(space_information_,
     		                                                robot_,
                                                             simulation_step_size,
@@ -112,18 +124,26 @@ bool DynamicPathPlanner::setup_ompl_(double &simulation_step_size,
     }    
     
     state_space_->as<ompl::base::RealVectorStateSpace>()->setBounds(state_space_bounds_);
-    control_space_->as<ompl::control::RealVectorControlSpace>()->setBounds(control_bounds);
-    space_information_->setup();
-    cout << "call1" << endl;
-    space_information_->allocDirectedControlSampler();
-    cout << "call2" << endl;
-    space_information_.get()->allocDirectedControlSampler();
+    control_space_->as<ompl::control::RealVectorControlSpace>()->setBounds(control_bounds);    
     return true;
 }
 
 bool DynamicPathPlanner::isValid(const ompl::base::State *state) {	
-    bool valid = state_space_->as<ompl::base::RealVectorStateSpace>()->satisfiesBounds(state);
-    if (valid) {
+	std::vector<double> state_vec;
+	for (unsigned int i = 0; i < space_information_->getStateSpace()->getDimension(); i++) {
+	    state_vec.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);        
+	} 
+	all_states_.push_back(state_vec);
+    if (state_space_->as<ompl::base::RealVectorStateSpace>()->satisfiesBounds(state) && 
+    	static_cast<MotionValidator &>(*motionValidator_).isValid(state_vec)) {
+    	accepted_ = accepted_ + 1.0;
+    	return true;
+    }
+    else {
+    	rejected_ = rejected_ + 1.0;
+    	return false;
+    }
+    /**if (valid) {
     	accepted_ = accepted_ + 1.0;
     }
     else {
@@ -135,21 +155,14 @@ bool DynamicPathPlanner::isValid(const ompl::base::State *state) {
     	rejected_ = rejected_ + 1.0;
     	return false;
     }
-    std::vector<double> state_vec;
-    for (unsigned int i = 0; i < space_information_->getStateSpace()->getDimension(); i++) {
-        state_vec.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);        
-    } 
+    
     all_states_.push_back(state_vec);
-    return static_cast<MotionValidator &>(*motionValidator_).isValid(state_vec);    
+    return static_cast<MotionValidator &>(*motionValidator_).isValid(state_vec); */   
 }
 
-void DynamicPathPlanner::getAllStates(std::vector<std::vector<double>> &all_states) {
-	int i = 1;
+void DynamicPathPlanner::getAllStates(std::vector<std::vector<double>> &all_states) {	
 	for (auto &k: all_states_) {
-		all_states.push_back(k);
-		cout << "i: " << i << endl;
-		cout << "total: " << all_states_.size() << endl;
-		i++;
+		all_states.push_back(k);		
 	}
 }
 
@@ -295,7 +308,10 @@ std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<dou
 }
 
 BOOST_PYTHON_MODULE(libdynamic_path_planner) {
-    using namespace boost::python;    
+    using namespace boost::python;
+    
+    class_<std::vector<int> > ("v_int")
+             .def(vector_indexing_suite<std::vector<int> >());
    
     class_<DynamicPathPlanner>("DynamicPathPlanner", init<boost::shared_ptr<shared::Robot> &, bool>())
 							   .def("solve", &DynamicPathPlanner::solve)
@@ -305,6 +321,8 @@ BOOST_PYTHON_MODULE(libdynamic_path_planner) {
 							   .def("setup", &DynamicPathPlanner::setup)
 							   .def("setupMotionValidator", &DynamicPathPlanner::setupMotionValidator)
 							   .def("getAllStates", &DynamicPathPlanner::getAllStates)
+							   .def("setNumControlSamples", &DynamicPathPlanner::setNumControlSamples)
+							   .def("setMinMaxControlDuration", &DynamicPathPlanner::setMinMaxControlDuration)
 										            		 
                         //.def("doIntegration", &Integrate::do_integration)                        
                         //.def("getResult", &Integrate::getResult)
