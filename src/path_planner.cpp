@@ -408,6 +408,13 @@ std::vector<std::vector<double>> PathPlanner::augmentPath_(std::vector<std::vect
 			path_element.push_back(observation[j]);
 		}
 		
+		if (i != solution_path.size() - 1) {
+			path_element.push_back(delta_t_);
+		}
+		else {
+			path_element.push_back(0.0);
+		}
+		
 		augmented_path.push_back(path_element);
 	}	
 	return augmented_path;

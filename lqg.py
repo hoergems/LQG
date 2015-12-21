@@ -182,10 +182,10 @@ class LQG:
                                      self.goal_position,
                                      self.goal_radius)
                 if self.dynamic_problem:
-                    path_evaluator.setup_dynamic_problem(self.delta_t)
+                    path_evaluator.setup_dynamic_problem()
                 path_evaluator.setup_reward_function(self.step_penalty, self.illegal_move_penalty, self.exit_reward, self.discount_factor)
                 t0 = time.time() 
-                xs, us, zs, objective = path_evaluator.evaluate_paths(paths, P_t, 0)
+                xs, us, zs, control_durations, objective = path_evaluator.evaluate_paths(paths, P_t, 0)
                 te = time.time() - t0
                 print "LQG: Time to evaluate " + str(len(paths)) + " paths: " + str(te) + "s"
                 mean_planning_time = time_to_generate_paths + te
@@ -194,15 +194,15 @@ class LQG:
                 print "LQG: Length of best path: " + str(len(xs))  
                 best_paths.append([[xs[i] for i in xrange(len(xs))], 
                                    [us[i] for i in xrange(len(us))],
-                                   [zs[i] for i in xrange(len(zs))]])
+                                   [zs[i] for i in xrange(len(zs))],
+                                   [control_durations[i] for i in xrange(len(control_durations))]])
                 
                 sim.setup_problem(A, B, C, D, H, V, W, M, N,
                                   self.robot, 
                                   self.obstacles, 
                                   self.goal_position, 
                                   self.goal_radius,
-                                  self.max_velocity,
-                                  self.delta_t,
+                                  self.max_velocity,                                  
                                   self.show_viewer,
                                   urdf_model_file,
                                   environment_file) 
@@ -229,7 +229,8 @@ class LQG:
                      terminal,
                      estimated_s,
                      estimated_c,                     
-                     history_entries) = sim.simulate_n_steps(xs, us, zs,
+                     history_entries) = sim.simulate_n_steps(xs, us, zs, 
+                                                             control_durations,
                                                              xs[0],
                                                              np.array([0.0 for i in xrange(2 * len(self.link_dimensions))]),
                                                              np.array([0.0 for i in xrange(2 * len(self.link_dimensions))]),

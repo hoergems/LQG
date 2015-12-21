@@ -82,7 +82,7 @@ class PathPlanningInterface:
         self.robot = robot
         robot.getActiveLinkDimensions(self.link_dimensions)
         self.num_cores = cpu_count() 
-        self.num_cores = 2       
+        #self.num_cores = 2       
         self.obstacles = obstacles        
         self.max_velocity = max_velocity
         self.delta_t = delta_t
@@ -225,7 +225,8 @@ class PathPlanningInterface:
             if not len(p_e[0]) == 0:                                      
                 paths.append([[p_e[0][i] for i in xrange(len(p_e[0]))], 
                               [p_e[1][i] for i in xrange(len(p_e[0]))], 
-                              [p_e[2][i] for i in xrange(len(p_e[0]))]])           
+                              [p_e[2][i] for i in xrange(len(p_e[0]))],
+                              [p_e[3][i] for i in xrange(len(p_e[0]))]])                  
         return paths
     
     def construct_and_evaluate_path(self,
@@ -251,11 +252,11 @@ class PathPlanningInterface:
             #xs = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0] for i in xrange(10)]
             #us = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0] for i in xrange(10)]
             #zs = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0] for i in xrange(10)]                     
-            xs, us, zs, success = self._construct(robot, obstacles)
+            xs, us, zs, control_durations, success = self._construct(robot, obstacles)
             if (not success):
                 break;
             if not len(xs) == 0:                              
-                queue.put((xs, us, zs))
+                queue.put((xs, us, zs, control_durations))
                 time.sleep(0.1)
         
     def _construct(self, robot, obstacles):        
@@ -301,7 +302,7 @@ class PathPlanningInterface:
         ss_vec = v_double()
         ss_vec[:] = self.start_state
         if not path_planner2.isValid(ss_vec):
-            return [], [], [], False
+            return [], [], [], [], False
               
         '''
         Check of the goa states are valid
@@ -312,7 +313,7 @@ class PathPlanningInterface:
             if path_planner2.isValid(goal_state):                                
                 gs.append(goal_state)                       
         if len(gs) == 0:                        
-            return [], [], [], False               
+            return [], [], [], [], False               
         goal_states[:] = gs 
         
         ee_goal_position = v_double()
@@ -325,11 +326,15 @@ class PathPlanningInterface:
         xs_temp = path_planner2.solve(start_state, self.path_timeout)
         xs = []
         us = []
-        zs = []        
+        zs = [] 
+        control_durations = []       
         for i in xrange(len(xs_temp)):
             xs.append([xs_temp[i][j] for j in xrange(0, 2 * len(self.link_dimensions))])
             us.append([xs_temp[i][j] for j in xrange(2 * len(self.link_dimensions), 4 * len(self.link_dimensions))])
-            zs.append([xs_temp[i][j] for j in xrange(4 * len(self.link_dimensions), 6 * len(self.link_dimensions))]) 
+            zs.append([xs_temp[i][j] for j in xrange(4 * len(self.link_dimensions), 6 * len(self.link_dimensions))])
+            control_durations.append(xs_temp[i][6 * len(self.link_dimensions)]) 
+        print "control_durations " + str(control_durations) 
+        
         if self.dynamic_problem:
             all_states = v2_double()
             print "getting all states"
@@ -348,7 +353,7 @@ class PathPlanningInterface:
                            scale2,
                            scale2,
                            scale2)      
-        return xs, us, zs, True
+        return xs, us, zs, control_durations, True
     
 if __name__ == "__main__":
     PathPlanningInterface()

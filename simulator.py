@@ -27,8 +27,7 @@ class Simulator:
                       obstacles,
                       goal_position,
                       goal_radius,
-                      joint_velocity_limit,
-                      control_duration,
+                      joint_velocity_limit,                      
                       show_viewer,
                       model_file,
                       env_file):
@@ -67,8 +66,7 @@ class Simulator:
         self.enforce_constraints = robot.constraintsEnforced()
         self.dynamic_problem = False
         self.integrate = Integrate()
-        self.show_viewer = show_viewer        
-        self.control_duration = control_duration
+        self.show_viewer = show_viewer
         active_joints = v_string()
         self.robot.getActiveJoints(active_joints)
         self.robot_dof = len(active_joints)
@@ -93,7 +91,7 @@ class Simulator:
         self.num_simulation_runs = num_simulation_runs        
         self.stop_when_terminal = stop_when_terminal
     
-    def get_linear_model_matrices(self, state_path, control_path):
+    def get_linear_model_matrices(self, state_path, control_path, control_durations):
         As = []
         Bs = []
         Vs = []
@@ -109,14 +107,15 @@ class Simulator:
                 control[:] = control_path[i]
                 
                 t0 = time.time()
-                A = self.integrate.getProcessMatrices(state, control, self.control_duration)                
-                Matr_list = [A[i] for i in xrange(len(A))]
+                print "control_durations " + str(control_durations)
+                A = self.integrate.getProcessMatrices(state, control, control_durations[i])                
+                Matr_list = [A[j] for j in xrange(len(A))]
                 
-                A_list = np.array([Matr_list[i] for i in xrange(len(state)**2)])
+                A_list = np.array([Matr_list[j] for j in xrange(len(state)**2)])
                            
-                B_list = np.array([Matr_list[i] for i in xrange(len(state)**2, 2 * len(state)**2)])
+                B_list = np.array([Matr_list[j] for j in xrange(len(state)**2, 2 * len(state)**2)])
                               
-                V_list = np.array([Matr_list[i] for i in xrange(2 * len(state)**2, 
+                V_list = np.array([Matr_list[j] for j in xrange(2 * len(state)**2, 
                                                                 3 * len(state)**2)])
                
                 A_Matr = A_list.reshape(len(state), len(state)).T                
@@ -177,6 +176,7 @@ class Simulator:
     
     def simulate_n_steps(self,
                          xs, us, zs,
+                         control_durations,
                          x_true,                         
                          x_tilde,
                          x_tilde_linear,
@@ -193,7 +193,7 @@ class Simulator:
         x_dash_linear = np.copy(x_tilde_linear)
         x_true_linear = x_true
         
-        As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, us)
+        As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, us, control_durations)
         Ls = kalman.compute_gain(As, Bs, self.C, self.D, len(xs) - 1)
         logging.info("Simulator: Executing for " + str(n_steps) + " steps") 
         estimated_states = []
@@ -220,9 +220,11 @@ class Simulator:
                 u = u_dash + us[i] 
                 u, u_dash = self.enforce_control_constraints(u, us[i])                          
                 history_entries[-1].set_action(u)
-                t0 = time.time()                
+                t0 = time.time() 
+                print control_durations[i]               
                 x_true_temp, ce = self.apply_control(x_true, 
-                                                     u, 
+                                                     u,
+                                                     control_durations[i], 
                                                      As[i], 
                                                      Bs[i], 
                                                      Vs[i], 
@@ -256,7 +258,7 @@ class Simulator:
                 '''print "x_true " + str(x_true)
                 print "x_true_linear " + str(x_true_linear)'''
                                        
-                self.update_viewer(x_true, xs)                             
+                self.update_viewer(x_true, control_durations[i], xs)                             
                 x_dash = np.subtract(x_true, xs[i + 1])
                 x_dash_linear = np.subtract(x_true_linear , xs[i + 1])
                 '''print "x_dash " + str(x_dash)
@@ -394,7 +396,8 @@ class Simulator:
        
     def apply_control(self, 
                       x, 
-                      u, 
+                      u,
+                      control_duration, 
                       A, 
                       B, 
                       V, 
@@ -420,7 +423,7 @@ class Simulator:
                                      control,
                                      control_error,
                                      self.simulation_step_size,
-                                     self.control_duration,
+                                     control_duration,
                                      result)
                 prop_times.append(time.time() - t0)                                            
                 x = np.array([result[i] for i in xrange(len(result))])
@@ -457,7 +460,7 @@ class Simulator:
                                  control,
                                  control_error,
                                  self.simulation_step_size,
-                                 self.control_duration,
+                                 control_duration,
                                  result)                               
             x_new = np.array([result[i] for i in xrange(len(result))])
         else:               
@@ -495,7 +498,7 @@ class Simulator:
                                                    particle_joint_colors)
             self.first_update = False
     
-    def update_viewer(self, x, path):
+    def update_viewer(self, x, control_duration, path):
         if self.show_viewer:
             
             cjvals = v_double()
@@ -510,7 +513,7 @@ class Simulator:
                                           cjvels, 
                                           particle_joint_values,
                                           particle_joint_colors)
-            time.sleep(self.control_duration)
+            time.sleep(control_duration)
     
     def sample_control_error(self, M):
         mu = np.array([0.0 for i in xrange(2 * self.robot_dof)])

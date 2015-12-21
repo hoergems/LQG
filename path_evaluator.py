@@ -57,9 +57,8 @@ class PathEvaluator:
         self.integrate = Integrate()
         self.dynamic_problem = False
         
-    def setup_dynamic_problem(self, control_duration):
-        self.dynamic_problem = True 
-        self.control_duration = control_duration       
+    def setup_dynamic_problem(self):
+        self.dynamic_problem = True             
         
     def setup_reward_function(self, step_penalty, collision_penalty, exit_reward, discount):
         self.step_penalty = step_penalty
@@ -155,9 +154,9 @@ class PathEvaluator:
                 best_objective = path_rewards[i]
                 best_path = evaluated_paths[i][1]
         logging.info("PathEvaluator: Objective value for the best path is " + str(best_objective))
-        return best_path[0], best_path[1], best_path[2], best_objective
+        return best_path[0], best_path[1], best_path[2], best_path[3], best_objective
     
-    def get_linear_model_matrices(self, state_path, control_path):
+    def get_linear_model_matrices(self, state_path, control_path, control_durations):
         As = []
         Bs = []
         Vs = []
@@ -182,15 +181,15 @@ class PathEvaluator:
                 
                 t0 = time.time()
                 
-                A = self.integrate.getProcessMatrices(state, control, self.control_duration)  
+                A = self.integrate.getProcessMatrices(state, control, control_durations[i])  
                          
-                Matr_list = [A[i] for i in xrange(len(A))]
+                Matr_list = [A[j] for j in xrange(len(A))]
                 
-                A_list = np.array([Matr_list[i] for i in xrange(len(state)**2)])
+                A_list = np.array([Matr_list[j] for j in xrange(len(state)**2)])
                            
-                B_list = np.array([Matr_list[i] for i in xrange(len(state)**2, 2 * len(state)**2)])
+                B_list = np.array([Matr_list[j] for j in xrange(len(state)**2, 2 * len(state)**2)])
                               
-                V_list = np.array([Matr_list[i] for i in xrange(2 * len(state)**2, 
+                V_list = np.array([Matr_list[j] for i in xrange(2 * len(state)**2, 
                                                                 3 * len(state)**2)])
                
                 A_Matr = A_list.reshape(len(state), len(state)).T
@@ -220,12 +219,13 @@ class PathEvaluator:
     def evaluate(self, index, path, P_t, current_step, horizon, eval_queue=None):
         xs = path[0]
         us = path[1]
-        zs = path[2]        
+        zs = path[2]  
+        control_durations = path[3]      
         horizon_L = horizon + 1 
         if horizon == -1 or len(xs) < horizon_L:            
             horizon_L = len(xs)
         
-        As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, us)        
+        As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, us, control_durations)        
         
         #Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, horizon_L - 1)
         Ls = kalman.compute_gain(As, Bs, self.C, self.D, horizon_L - 1)

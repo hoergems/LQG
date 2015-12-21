@@ -86,7 +86,7 @@ bool DynamicPathPlanner::setup_ompl_(double &simulation_step_size,
     //planner_ = boost::make_shared<ompl::control::RRT>(space_information_);
     planner_ = boost::make_shared<RRTControl>(space_information_);
     planner_->setProblemDefinition(problem_definition_);
-    //boost::static_pointer_cast<RRTControl>(planner_)->setIntermediateStates(true);
+    boost::static_pointer_cast<RRTControl>(planner_)->setIntermediateStates(true);
     state_propagator_ = boost::make_shared<StatePropagator>(space_information_,
     		                                                robot_,
                                                             simulation_step_size,
@@ -296,6 +296,14 @@ std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<dou
             for (size_t j = 0; j < state_space_dimension_; j++) {
                 solution_state.push_back(solution_states_[i]->as<ompl::base::RealVectorStateSpace::StateType>()->values[j]);                
             }
+            
+            if (i < solution_states_.size() - 1) { 
+            	solution_state.push_back(control_durations[i]);
+            }
+            else {
+            	solution_state.push_back(0.0);
+            }
+            
             solution_vector.push_back(solution_state);          
         }
         cout << "Solution found in " << t.elapsed() << "seconds" << endl;
