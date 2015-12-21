@@ -451,9 +451,7 @@ class Simulator:
             control[:] = u
             control_error = v_double()
             ce = self.sample_control_error(M)
-            control_error[:] = ce
-            print M
-            print "control error: " + str(ce)
+            control_error[:] = ce            
             result = v_double()            
             self.robot.propagate(current_state,
                                  control,

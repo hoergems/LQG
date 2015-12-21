@@ -107,8 +107,16 @@ class LQG:
         path_planner.set_start_and_goal(self.start_state, goal_states, self.goal_position, self.goal_radius)         
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, len(self.link_dimensions))
         
-        if check_positive_definite([C, D]):            
-            m_covs = np.linspace(self.min_covariance, self.max_covariance, self.covariance_steps)            
+        if check_positive_definite([C, D]):
+            m_covs = None
+            if self.inc_covariance == "process":
+                m_covs = np.linspace(self.min_process_covariance, 
+                                     self.max_process_covariance, 
+                                     self.covariance_steps)                 
+            elif self.inc_covariance == "observation":          
+                m_covs = np.linspace(self.min_observation_covariance, 
+                                     self.max_observation_covariance,
+                                     self.covariance_steps)
             #m_covs = np.array([np.around(m_covs[i], 5) for i in xrange(len(m_covs))])            
             emds = []
             mean_planning_times = []
@@ -149,17 +157,22 @@ class LQG:
             successes = []                   
             for j in xrange(len(m_covs)):
                 print "LQG: Evaluating paths for covariance value " + str(m_covs[j]) + "..."
-                """
-                The process noise covariance matrix
-                """
-                M = m_covs[j] * np.identity(2 * len(self.link_dimensions))
+                M = None
+                N = None
+                if self.inc_covariance == "process":
+                    """
+                    The process noise covariance matrix
+                    """
+                    M = m_covs[j] * np.identity(2 * len(self.link_dimensions))
+                    N = self.min_observation_covariance * np.identity(2 * len(self.link_dimensions))
+                elif self.inc_covariance == "observation":
+                    M = self.min_process_covariance * np.identity(2 * len(self.link_dimensions))
+                    N = m_covs[j] * np.identity(2 * len(self.link_dimensions))               
+                
                 
                 P_t = np.array([[0.0 for k in xrange(2 * len(self.link_dimensions))] for l in xrange(2 * len(self.link_dimensions))]) 
                 
-                """
-                The observation noise covariance matrix
-                """
-                N = self.observation_covariance * np.identity(2 * len(self.link_dimensions))
+               
                 
                 path_evaluator.setup(A, B, C, D, H, M, N, V, W, 
                                      self.link_dimensions,
@@ -254,9 +267,22 @@ class LQG:
                 '''
                 
                 self.serializer.write_line("log.log", "tmp/lqg", "################################# \n")
-                self.serializer.write_line("log.log",
-                                      "tmp/lqg",
-                                      "Process covariance: " + str(m_covs[j]) + " \n")
+                if self.inc_covariance == "process":
+                    self.serializer.write_line("log.log",
+                                               "tmp/lqg",
+                                               "Process covariance: " + str(m_covs[j]) + " \n")
+                    self.serializer.write_line("log.log",
+                                               "tmp/lqg",
+                                               "Observation covariance: " + str(self.min_observation_covariance) + " \n")
+                    
+                elif self.inc_covariance == "observation":
+                    self.serializer.write_line("log.log",
+                                               "tmp/lqg",
+                                               "Process covariance: " + str(self.min_process_covariance) + " \n")
+                    self.serializer.write_line("log.log",
+                                               "tmp/lqg",
+                                               "Observation covariance: " + str(m_covs[j]) + " \n")
+                    
                 num_steps /= self.num_simulation_runs
                 self.serializer.write_line("log.log", "tmp/lqg", "Mean number of steps: " + str(num_steps) + " \n")
                 self.serializer.write_line("log.log", "tmp/lqg", "Objective value of best path: " + str(objective) + " \n")                
@@ -494,10 +520,11 @@ class LQG:
         self.start_state = config['start_state']        
         self.num_simulation_runs = config['num_simulation_runs']
         self.num_bins = config['num_bins']
-        self.min_covariance = config['min_covariance']
-        self.max_covariance = config['max_covariance']
+        self.min_process_covariance = config['min_process_covariance']
+        self.max_process_covariance = config['max_process_covariance']
         self.covariance_steps = config['covariance_steps']
-        self.observation_covariance = config['observation_covariance']        
+        self.min_observation_covariance = config['min_observation_covariance']
+        self.max_observation_covariance = config['max_observation_covariance']        
         self.use_paths_from_file = config['use_paths_from_file']        
         self.overwrite_paths_file = config['overwrite_paths_file']
         self.discount_factor = config['discount_factor']
@@ -518,7 +545,8 @@ class LQG:
         self.control_deviation_cost = config['control_deviation_cost']
         self.num_control_samples = config['num_control_samples'] 
         self.min_control_duration = config['min_control_duration']
-        self.max_control_duration = config['max_control_duration']    
+        self.max_control_duration = config['max_control_duration']   
+        self.inc_covariance = config['inc_covariance'] 
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

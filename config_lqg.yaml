@@ -30,16 +30,23 @@ num_bins: 201
 ## Uncertainty parameters
 #################################################
 # The minimum joint state covariance
-min_covariance: 0.0
+min_process_covariance: 0.0
 
 # The maximum joint state covariance
-max_covariance: 60.0
+max_process_covariance: 60.0
+
+# The minimum observation covariance
+min_observation_covariance: 0.00001
+
+# The maximum observation covariance
+max_observation_covariance: 0.001
+
+#Determines which parameter (process covariance or observation
+#covariance should be increased during simulation)
+inc_covariance: process
 
 # The number of covariance steps
 covariance_steps: 10
-
-# The observation covariance
-observation_covariance: 0.00001
 
 path_deviation_cost: 5000.0
 
