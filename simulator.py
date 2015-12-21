@@ -98,8 +98,7 @@ class Simulator:
         Ms = []
         Hs = []
         Ws = []
-        Ns = []
-        print "control_durations " + str(control_durations)
+        Ns = []        
         if self.dynamic_problem:
             for i in xrange(len(state_path)):
                 state = v_double()
@@ -260,9 +259,7 @@ class Simulator:
                                        
                 self.update_viewer(x_true, control_durations[i], xs)                             
                 x_dash = np.subtract(x_true, xs[i + 1])
-                x_dash_linear = np.subtract(x_true_linear , xs[i + 1])
-                print "M " + str(self.M)
-                print "N " + str(self.N)
+                x_dash_linear = np.subtract(x_true_linear , xs[i + 1])                
                 
                 '''print "x_dash " + str(x_dash)
                 print "x_dash_linear " + str(x_dash_linear)'''
