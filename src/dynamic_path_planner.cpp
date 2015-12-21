@@ -74,6 +74,10 @@ void DynamicPathPlanner::setMinMaxControlDuration(std::vector<int> &min_max_cont
 	space_information_->setMinMaxControlDuration(min, max);	
 }
 
+void DynamicPathPlanner::addIntermediateStates(bool add_intermediate_states) {
+	boost::static_pointer_cast<RRTControl>(planner_)->setIntermediateStates(add_intermediate_states);
+}
+
 bool DynamicPathPlanner::setup_ompl_(double &simulation_step_size,
 		                             bool &verbose) {
     state_space_bounds_ = ompl::base::RealVectorBounds(state_space_dimension_);    
@@ -287,6 +291,8 @@ std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<dou
             		solution_state.push_back(0.0);            		
             	}
             }
+            
+            cout << "Duration: " << control_durations[i] << endl;
             for (size_t j = 0; j < state_space_dimension_ / 2; j++) { 
             	solution_state.push_back(0.0);
             }
@@ -331,6 +337,7 @@ BOOST_PYTHON_MODULE(libdynamic_path_planner) {
 							   .def("getAllStates", &DynamicPathPlanner::getAllStates)
 							   .def("setNumControlSamples", &DynamicPathPlanner::setNumControlSamples)
 							   .def("setMinMaxControlDuration", &DynamicPathPlanner::setMinMaxControlDuration)
+							   .def("addIntermediateStates", &DynamicPathPlanner::addIntermediateStates)
 										            		 
                         //.def("doIntegration", &Integrate::do_integration)                        
                         //.def("getResult", &Integrate::getResult)

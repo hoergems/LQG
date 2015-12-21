@@ -103,7 +103,8 @@ class LQG:
                                                self.continuous_collision,
                                                self.num_control_samples,
                                                self.min_control_duration,
-                                               self.max_control_duration)       
+                                               self.max_control_duration,
+                                               self.add_intermediate_states)       
         path_planner.set_start_and_goal(self.start_state, goal_states, self.goal_position, self.goal_radius)         
         A, H, B, V, W, C, D = self.problem_setup(self.delta_t, len(self.link_dimensions))
         
@@ -548,6 +549,7 @@ class LQG:
         self.min_control_duration = config['min_control_duration']
         self.max_control_duration = config['max_control_duration']   
         self.inc_covariance = config['inc_covariance'] 
+        self.add_intermediate_states = config['add_intermediate_states']
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

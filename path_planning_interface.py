@@ -102,7 +102,8 @@ class PathPlanningInterface:
                               continuous_collision,
                               num_control_samples,
                               min_control_duration,
-                              max_control_duration):
+                              max_control_duration,
+                              add_intermediate_states):
         self.dynamic_problem = True
         self.model_file = urdf_model
         self.environment_file = environment_model
@@ -111,6 +112,7 @@ class PathPlanningInterface:
         self.num_control_samples = num_control_samples
         self.min_control_duration = min_control_duration
         self.max_control_duration = max_control_duration
+        self.add_intermediate_states = add_intermediate_states
         
     def set_start_and_goal(self, start_state, goal_states, ee_goal_position, ee_goal_threshold):                
         self.start_state = start_state
@@ -289,6 +291,7 @@ class PathPlanningInterface:
             min_max_control_duration[:] = [self.min_control_duration,
                                            self.max_control_duration]
             path_planner2.setMinMaxControlDuration(min_max_control_duration)
+            path_planner2.addIntermediateStates(self.add_intermediate_states)
             logging.info("PathPlanningInterface: Path planner setup")
         print "setting obstacles"        
         path_planner2.setObstacles(obstacles)        
@@ -335,7 +338,7 @@ class PathPlanningInterface:
             control_durations.append(xs_temp[i][6 * len(self.link_dimensions)]) 
         print "control_durations " + str(control_durations) 
         
-        if self.dynamic_problem:
+        '''if self.dynamic_problem:
             all_states = v2_double()
             print "getting all states"
             path_planner2.getAllStates(all_states)
@@ -352,7 +355,7 @@ class PathPlanningInterface:
             plot_3d_points(np.array(plot_states_velocities),
                            scale2,
                            scale2,
-                           scale2)      
+                           scale2)'''      
         return xs, us, zs, control_durations, True
     
 if __name__ == "__main__":

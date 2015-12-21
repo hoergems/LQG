@@ -99,6 +99,7 @@ class Simulator:
         Hs = []
         Ws = []
         Ns = []
+        print "control_durations " + str(control_durations)
         if self.dynamic_problem:
             for i in xrange(len(state_path)):
                 state = v_double()
@@ -106,8 +107,7 @@ class Simulator:
                 state[:] = state_path[i]
                 control[:] = control_path[i]
                 
-                t0 = time.time()
-                print "control_durations " + str(control_durations)
+                t0 = time.time()                
                 A = self.integrate.getProcessMatrices(state, control, control_durations[i])                
                 Matr_list = [A[j] for j in xrange(len(A))]
                 
@@ -220,8 +220,7 @@ class Simulator:
                 u = u_dash + us[i] 
                 u, u_dash = self.enforce_control_constraints(u, us[i])                          
                 history_entries[-1].set_action(u)
-                t0 = time.time() 
-                print control_durations[i]               
+                t0 = time.time()
                 x_true_temp, ce = self.apply_control(x_true, 
                                                      u,
                                                      control_durations[i], 
@@ -230,6 +229,7 @@ class Simulator:
                                                      Vs[i], 
                                                      Ms[i],
                                                      False)
+                
                 #x_dash_temp = np.subtract(x_true_temp, xs[i + 1])              
                 x_dash_linear_temp = self.get_linearized_next_state(x_dash_linear, u_dash, ce, As[i], Bs[i], Vs[i])
                 x_true_linear_temp = np.add(x_dash_linear_temp, xs[i+1])
@@ -261,6 +261,9 @@ class Simulator:
                 self.update_viewer(x_true, control_durations[i], xs)                             
                 x_dash = np.subtract(x_true, xs[i + 1])
                 x_dash_linear = np.subtract(x_true_linear , xs[i + 1])
+                print "M " + str(self.M)
+                print "N " + str(self.N)
+                
                 '''print "x_dash " + str(x_dash)
                 print "x_dash_linear " + str(x_dash_linear)'''
                 

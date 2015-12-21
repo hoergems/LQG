@@ -69,6 +69,8 @@ namespace shared {
                 void setNumControlSamples(std::vector<int> &num_control_samples);
                 
                 void setMinMaxControlDuration(std::vector<int> &min_max_control_duration);
+                
+                void addIntermediateStates(bool add_intermediate_states);
 
         private:
                 std::shared_ptr<Kinematics> kinematics_;
