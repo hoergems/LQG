@@ -100,9 +100,9 @@ class PathEvaluator:
             collides = False
             terminal = False
             
-            collision_structures = self.robot.createRobotCollisionStructures(joint_angles)
+            collision_objects = self.robot.createRobotCollisionObjects(joint_angles)
             for obstacle in self.obstacles:
-                if obstacle.inCollisionDiscrete(collision_structures):                                            
+                if obstacle.inCollisionDiscrete(collision_objects):                                            
                     expected_reward -= pdf[i] * self.collision_penalty                        
                     collides = True
                     break

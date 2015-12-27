@@ -125,13 +125,15 @@ struct Joint {
     	    		              double duration,
     	    		              std::vector<double> &result);
     	    
-    	    void createRobotCollisionStructures(const std::vector<double> &joint_angles, std::vector<fcl::OBB> &collision_structures);
+    	    //void createRobotCollisionStructures(const std::vector<double> &joint_angles, std::vector<fcl::OBB> &collision_structures);
     	    
-    	    void createRobotCollisionObjects(const std::vector<double> &joint_angles, std::vector<fcl::CollisionObject> &collision_objects) ;
+    	    void createRobotCollisionObjects(const std::vector<double> &joint_angles, 
+    	    		std::vector<std::shared_ptr<fcl::CollisionObject const>> &collision_objects) ;
     	    
-    	    std::vector<fcl::CollisionObject> createRobotCollisionObjectsPy(const std::vector<double> &joint_angles);
+    	    std::vector<std::shared_ptr<fcl::CollisionObject const>> 
+			        createRobotCollisionObjectsPy(const std::vector<double> &joint_angles);
     	    
-    	    std::vector<fcl::OBB> createRobotCollisionStructuresPy(const std::vector<double> &joint_angles);
+    	    //std::vector<fcl::AABB> createRobotCollisionStructuresPy(const std::vector<double> &joint_angles);
     	    
     	    void enforceConstraints(bool enforce);
     	    

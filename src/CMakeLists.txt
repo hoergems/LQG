@@ -27,7 +27,8 @@ link_directories(/usr/lib /usr/local/lib /opt/ros/indigo/lib)
 add_library(util SHARED 
             utils.cpp
             Terrain.cpp
-            Obstacle.cpp)
+            Obstacle.cpp
+            BoxObstacle.cpp)
 
 add_library(area SHARED
             Area.cpp)
@@ -69,7 +70,8 @@ add_library(path_planner SHARED
             integrate.cpp
             utils.cpp
             Terrain.cpp
-            Obstacle.cpp)
+            Obstacle.cpp
+            BoxObstacle.cpp)
 
 add_library(dynamic_path_planner SHARED 
             dynamic_path_planner.cpp
@@ -87,6 +89,7 @@ add_library(dynamic_path_planner SHARED
             urdf_loader.cpp
             viewer.cpp
             Obstacle.cpp
+            BoxObstacle.cpp
             Terrain.cpp
             torque_damper.cpp
             control_space.cpp

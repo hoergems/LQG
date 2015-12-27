@@ -361,9 +361,9 @@ class Simulator:
                     
         joint_angles_goal = v_double()
         joint_angles_goal[:] = [state[i] for i in xrange(self.robot_dof)]
-        collision_structures = self.robot.createRobotCollisionStructures(joint_angles_goal)
+        collision_objects = self.robot.createRobotCollisionObjects(joint_angles_goal)
         for obstacle in self.obstacles:
-            if obstacle.inCollisionDiscrete(collision_structures):                               
+            if obstacle.inCollisionDiscrete(collision_objects):                               
                 return True
         return False  
         

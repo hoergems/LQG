@@ -429,7 +429,7 @@ void Robot::test() {
 	cout << "HELLLO IN ROBOT" << endl;
 }
 
-std::vector<fcl::OBB> Robot::createRobotCollisionStructuresPy(const std::vector<double> &joint_angles) {
+/**std::vector<fcl::OBB> Robot::createRobotCollisionStructuresPy(const std::vector<double> &joint_angles) {
 	std::vector<fcl::OBB> collision_structures;
 	createRobotCollisionStructures(joint_angles, collision_structures);
 	return collision_structures;
@@ -450,16 +450,17 @@ void Robot::createRobotCollisionStructures(const std::vector<double> &joint_angl
 	    collision_structures.push_back(obb);
 	    n++;
 	 }
-}
+}*/
 
-std::vector<fcl::CollisionObject> Robot::createRobotCollisionObjectsPy(const std::vector<double> &joint_angles) {
-	std::vector<fcl::CollisionObject> collision_objects;
+std::vector<std::shared_ptr<fcl::CollisionObject const>> Robot::createRobotCollisionObjectsPy(const std::vector<double> &joint_angles) {
+	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects;
 	createRobotCollisionObjects(joint_angles, collision_objects);
 	return collision_objects;
 }
 
-void Robot::createRobotCollisionObjects(const std::vector<double> &joint_angles, std::vector<fcl::CollisionObject> &collision_objects) {
-    std::vector<fcl::CollisionObject> vec;
+void Robot::createRobotCollisionObjects(const std::vector<double> &joint_angles, 
+		                                std::vector<std::shared_ptr<fcl::CollisionObject const>> &collision_objects) {
+    //std::vector<std::shared_ptr<fcl::CollisionObject>> vec;
     std::vector<fcl::AABB> link_aabbs;
     for (size_t i = 0; i < active_link_dimensions_.size(); i++) {
         link_aabbs.push_back(fcl::AABB(fcl::Vec3f(0.0, -active_link_dimensions_[i][1] / 2.0, -active_link_dimensions_[i][2] / 2.0),
@@ -474,7 +475,7 @@ void Robot::createRobotCollisionObjects(const std::vector<double> &joint_angles,
         fcl::Transform3f box_tf;
         fcl::Transform3f trans(pose_link_n.second, pose_link_n.first);        
         fcl::constructBox(link_aabbs[i], trans, *box, box_tf);        
-        collision_objects.push_back(fcl::CollisionObject(boost::shared_ptr<fcl::CollisionGeometry>(box), box_tf));
+        collision_objects.push_back(std::make_shared<fcl::CollisionObject>(boost::shared_ptr<fcl::CollisionGeometry>(box), box_tf));
         n++;
     }
     
@@ -759,6 +760,10 @@ BOOST_PYTHON_MODULE(librobot) {
     class_<fcl::CollisionObject>("CollisionObject", init<const boost::shared_ptr<fcl::CollisionGeometry>, const fcl::Transform3f>());
     to_python_converter<std::vector<fcl::OBB, std::allocator<fcl::OBB> >, VecToList<fcl::OBB> >();
     to_python_converter<std::vector<fcl::CollisionObject, std::allocator<fcl::CollisionObject> >, VecToList<fcl::CollisionObject> >();
+    to_python_converter<std::vector<std::shared_ptr<fcl::CollisionObject const>, std::allocator<std::shared_ptr<fcl::CollisionObject const>> >, 
+	                    VecToList<std::shared_ptr<fcl::CollisionObject const>> >();
+    
+    register_ptr_to_python<std::shared_ptr<fcl::CollisionObject const>>();
     
     class_<Robot, boost::shared_ptr<Robot>>("Robot", init<std::string>())
                         .def("getLinkNames", &Robot::getLinkNames)
@@ -775,7 +780,7 @@ BOOST_PYTHON_MODULE(librobot) {
                         .def("getJointOrigin", &Robot::getJointOrigin)
                         .def("getJointAxis", &Robot::getJointAxis)
                         .def("propagate", &Robot::propagate)
-                        .def("createRobotCollisionStructures", &Robot::createRobotCollisionStructuresPy)
+                        //.def("createRobotCollisionStructures", &Robot::createRobotCollisionStructuresPy)
                         .def("createRobotCollisionObjects", &Robot::createRobotCollisionObjectsPy)
                         .def("getEndEffectorPosition", &Robot::getEndEffectorPosition)
                         .def("setupViewer", &Robot::setupViewer)

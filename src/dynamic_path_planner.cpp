@@ -218,7 +218,9 @@ void DynamicPathPlanner::setObstacles(std::vector<std::shared_ptr<Obstacle> > ob
 
 void DynamicPathPlanner::setObstaclesPy(boost::python::list &ns) {
     for (size_t i = 0; i < len(ns); i++) {
-        obstacles_.push_back(std::make_shared<Obstacle>(boost::python::extract<Obstacle>(ns[i])));
+    	std::shared_ptr<ObstacleWrapper> obst_wrapper = boost::python::extract<std::shared_ptr<ObstacleWrapper>>(ns[i]);
+    	obstacles_.push_back(std::static_pointer_cast<shared::Obstacle>(obst_wrapper));
+        //obstacles_.push_back(std::make_shared<Obstacle>(boost::python::extract<Obstacle>(ns[i])));
     }
 
     static_cast<MotionValidator &>(*motionValidator_).setObstacles(obstacles_);

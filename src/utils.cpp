@@ -17,12 +17,11 @@ struct TerrainStruct {
 };
 
 struct ObstacleStruct {
+	std::string type;
     double x;
     double y;
     double z;
-    double size_x;
-    double size_y;
-    double size_z;
+    std::vector<double> extends;
     TerrainStruct terrain;     
 };
 
@@ -79,13 +78,16 @@ std::vector<std::vector<double>> Utils::loadGoalStates() {
 
 }
 
-std::vector<shared::Obstacle> Utils::loadObstaclesXMLPy(std::string obstacles_file) {
-	std::vector<shared::Obstacle> obstacles;	
+std::vector<std::shared_ptr<shared::ObstacleWrapper>> Utils::loadObstaclesXMLPy(std::string obstacles_file) {
+	std::vector<std::shared_ptr<shared::ObstacleWrapper>> obstacles;	
 	std::vector<std::shared_ptr<shared::Obstacle> > obst;
 	loadObstaclesXML(obstacles_file, obst);
-	for (auto &k: obst) {
-		obstacles.push_back(*(k.get()));
+	for (size_t i = 0; i < obst.size(); i++) {
+		obstacles.push_back(std::static_pointer_cast<shared::ObstacleWrapper>(obst[i]));
 	}
+	/**for (auto &k: obst) {
+		obstacles.push_back(k);
+	}*/
 	
 	return obstacles;
 	
@@ -109,38 +111,44 @@ void Utils::loadObstaclesXML(std::string &obstacles_file,
 				TiXmlElement *terrain_xml = body_xml->FirstChildElement("Terrain");
 				//Can play with different shapes here in the future
 				if (geom_xml) {
+					std::string type(geom_xml->Attribute("type"));
 					TiXmlElement *trans_xml = geom_xml->FirstChildElement("Translation");
-					TiXmlElement *ext_xml = geom_xml->FirstChildElement("extents");
-					if (trans_xml && ext_xml) {
-						obstacles.push_back(ObstacleStruct());
-						const char* xyz_str = trans_xml->GetText();
-						const char* ext_str = ext_xml->GetText();
-						std::vector<std::string> pieces;
-						std::vector<double> xyz_vec;
-						std::vector<double> extends_vec;
-						boost::split( pieces, xyz_str, boost::is_any_of(" "));
-						for (unsigned int i = 0; i < pieces.size(); ++i) {
-							if (pieces[i] != "") { 
-								xyz_vec.push_back(boost::lexical_cast<double>(pieces[i].c_str()));
-							}
-						}
+					if (trans_xml) {						
+					    if (type == "box") {					    	
+						    TiXmlElement *ext_xml = geom_xml->FirstChildElement("extents");
+						    if (ext_xml) {						    	
+						    	obstacles.push_back(ObstacleStruct());
+						    	const char* xyz_str = trans_xml->GetText();
+						        const char* ext_str = ext_xml->GetText();
+						        std::vector<std::string> pieces;
+						        std::vector<double> xyz_vec;
+						        std::vector<double> extends_vec;
+						        boost::split( pieces, xyz_str, boost::is_any_of(" "));
+						        for (unsigned int i = 0; i < pieces.size(); ++i) {
+						            if (pieces[i] != "") { 
+						        	    xyz_vec.push_back(boost::lexical_cast<double>(pieces[i].c_str()));
+						            }
+						        }
+						        
+						        pieces.clear();
+						        boost::split( pieces, ext_str, boost::is_any_of(" "));
+						        for (unsigned int i = 0; i < pieces.size(); ++i) {
+						            if (pieces[i] != "") {
+						                extends_vec.push_back(boost::lexical_cast<double>(pieces[i].c_str()));
+						            }
+						        }
+						        obstacles[obstacles.size() - 1].type = type;
+						        obstacles[obstacles.size() - 1].x = xyz_vec[0];
+						        obstacles[obstacles.size() - 1].y = xyz_vec[1];
+						        obstacles[obstacles.size() - 1].z = xyz_vec[2];
+						        obstacles[obstacles.size() - 1].extends.push_back(extends_vec[0]);
+						        obstacles[obstacles.size() - 1].extends.push_back(extends_vec[1]);
+						        obstacles[obstacles.size() - 1].extends.push_back(extends_vec[2]);						        
+						    }
+					    }
+					    else if (type == "sphere") {
 						
-						pieces.clear();
-						boost::split( pieces, ext_str, boost::is_any_of(" "));
-						for (unsigned int i = 0; i < pieces.size(); ++i) {
-							if (pieces[i] != "") {
-								extends_vec.push_back(boost::lexical_cast<double>(pieces[i].c_str()));
-							}
-						}
-						
-						obstacles[obstacles.size() - 1].x = xyz_vec[0];
-						obstacles[obstacles.size() - 1].y = xyz_vec[1];
-						obstacles[obstacles.size() - 1].z = xyz_vec[2];
-						obstacles[obstacles.size() - 1].size_x = extends_vec[0];
-						obstacles[obstacles.size() - 1].size_y = extends_vec[1];
-						obstacles[obstacles.size() - 1].size_z = extends_vec[2];
-																			 
-																			 
+					    }
 					}
 				}
 				
@@ -165,21 +173,22 @@ void Utils::loadObstaclesXML(std::string &obstacles_file,
 			}
 		}
 	}
-	
+	cout << "obstacles size " << obstacles.size() << endl;
 	for (size_t i = 0; i < obstacles.size(); i++) {
 	    shared::Terrain terrain(obstacles[i].terrain.name,
 	                            obstacles[i].terrain.traversalCost,
 	                            obstacles[i].terrain.velocityDamping,
 	                            obstacles[i].terrain.traversable);
-	    obst.push_back(std::make_shared<shared::Obstacle>(obstacles[i].x,
-	                                                      obstacles[i].y,
-	                                                      obstacles[i].z,
-	                                                      obstacles[i].size_x,
-	                                                      obstacles[i].size_y,
-	                                                      obstacles[i].size_z,
-	                                                      terrain));
-	       
-	}
+	    if (obstacles[i].type == "box") {
+	    	obst.push_back(std::make_shared<shared::BoxObstacle>(obstacles[i].x,
+                                                         obstacles[i].y,
+                                                         obstacles[i].z,
+														 obstacles[i].extends[0],
+														 obstacles[i].extends[1],
+														 obstacles[i].extends[2],
+														 terrain));
+	    }   
+	}	
 }
 
 void Utils::loadGoalAreaPy(std::string env_file, std::vector<double> &goal_area) {
@@ -313,7 +322,12 @@ BOOST_PYTHON_MODULE(libutil) {
     class_<std::vector<int> > ("v_int")
          .def(vector_indexing_suite<std::vector<int> >());
     
-    to_python_converter<std::vector<shared::Obstacle,class std::allocator<shared::Obstacle> >, VecToList<shared::Obstacle> >();
+    to_python_converter<std::vector<shared::BoxObstacle,
+	                                class std::allocator<shared::BoxObstacle> >, VecToList<shared::BoxObstacle> >();
+    
+    to_python_converter<std::vector<std::shared_ptr<shared::ObstacleWrapper>,
+    	                            class std::allocator<std::shared_ptr<shared::ObstacleWrapper>> >, 
+									VecToList<std::shared_ptr<shared::ObstacleWrapper>> >();
     
     class_<Utils>("Utils", init<>())
     		.def("loadObstaclesXML", &Utils::loadObstaclesXMLPy)

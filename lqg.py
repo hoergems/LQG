@@ -454,7 +454,7 @@ class LQG:
                     environment_file,
                     robot):
         """ Load the obstacles """         
-        self.obstacles = self.utils.loadObstaclesXML("environment/env.xml")
+        self.obstacles = self.utils.loadObstaclesXML("environment/env.xml")      
         
         """ Load the goal area """
         goal_area = v_double()

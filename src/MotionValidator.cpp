@@ -38,25 +38,25 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
 			return false;
 	    }		
 	}*/
-	std::vector<OBB> manipulator_collision_structures_goal;
-	robot_->createRobotCollisionStructures(s2, manipulator_collision_structures_goal);
+	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects_goal;
+	robot_->createRobotCollisionObjects(s2, collision_objects_goal);
+	//std::vector<OBB> manipulator_collision_structures_goal;
+	//robot_->createRobotCollisionStructures(s2, manipulator_collision_structures_goal);
 	/**std::vector<OBB> manipulator_collision_structures_goal = utils_.createManipulatorCollisionStructures(s2,
                                                                                                          link_dimensions_, 
                                                                                                          kinematics_);*/
     for (size_t i = 0; i < obstacles_.size(); i++) {        
         if (!obstacles_[i]->isTraversable()) {
-        	if (obstacles_[i]->in_collision(manipulator_collision_structures_goal)) {        		
+        	if (obstacles_[i]->in_collision(collision_objects_goal)) {        		
         		return false;
         	}
         }        
     }
     
-    if (continuous_collision) {
+    if (continuous_collision) {    	
+    	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects_start;    	
+    	robot_->createRobotCollisionObjects(s1, collision_objects_start);
     	
-    	std::vector<fcl::CollisionObject> manipulator_collision_objects_start;
-    	std::vector<fcl::CollisionObject> manipulator_collision_objects_goal;
-    	robot_->createRobotCollisionObjects(s1, manipulator_collision_objects_start);
-    	robot_->createRobotCollisionObjects(s2, manipulator_collision_objects_goal);
         /**std::vector<fcl::CollisionObject> manipulator_collision_objects_start = utils_.createManipulatorCollisionObjects(s1, 
                                                                                                                          link_dimensions_,
                                                                                                                          kinematics_);
@@ -65,8 +65,8 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
                                                                                                                         kinematics_);*/
         for (size_t i = 0; i < obstacles_.size(); i++) {
             if (!obstacles_[i]->isTraversable()) {
-                for (size_t j = 0; j < manipulator_collision_objects_start.size(); j++) {                	
-                	if (obstacles_[i]->in_collision(manipulator_collision_objects_start[j], manipulator_collision_objects_goal[j])) {                		
+                for (size_t j = 0; j < collision_objects_start.size(); j++) {                	
+                	if (obstacles_[i]->in_collision(collision_objects_start[j], collision_objects_goal[j])) {                		
                 		return false;
                 	}
                 }
@@ -116,15 +116,14 @@ bool MotionValidator::isValid(const std::vector<double> &s1) const {
 		}
 	}
 	
-	std::vector<OBB> manipulator_collision_structures;
-	
-	robot_->createRobotCollisionStructures(joint_angles, manipulator_collision_structures);	
+	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects;
+	robot_->createRobotCollisionObjects(joint_angles, collision_objects);	
     /**std::vector<OBB> manipulator_collision_structures = utils_.createManipulatorCollisionStructures(joint_angles, 
                                                                                                     link_dimensions_,
                                                                                                     kinematics_);*/
     for (size_t i = 0; i < obstacles_.size(); i++) {
         if (!obstacles_[i]->getTerrain()->isTraversable()) {        	
-        	if (obstacles_[i]->in_collision(manipulator_collision_structures)) {        		
+        	if (obstacles_[i]->in_collision(collision_objects)) {        		
         		return false;
         	}
         }

@@ -1,4 +1,3 @@
-
 #include "Obstacle.hpp"
 #include <iostream> 
 
@@ -13,67 +12,75 @@ using namespace boost::python;
 
 namespace shared {
 
-Obstacle::Obstacle(double pos_x, double pos_y, double pos_z, double size_x, double size_y, double size_z, const Terrain &terrain): 
-    pos_x_(pos_x),
-    pos_y_(pos_y),
-    pos_z_(pos_z),
-    size_x_(size_x),
-    size_y_(size_y),
-    size_z_(size_z),
-    collision_structure_(),    
-    collision_object_ptr_(),    
-    terrain_(terrain) {    
-    createCollisionStructure();    
-    createCollisionObject();    
-}
-
-bool Obstacle::in_collision(const std::vector<std::shared_ptr<Obstacle> > &other_obstacles) {        
-    for (size_t i = 0; i < other_obstacles.size(); i++) {
-        if (collision_structure_.overlap(*(other_obstacles[i]->getCollisionStructure()))) {
-            return true;
-        }
-    }
-    
-    return false;
-}
-
-bool Obstacle::in_collision(std::vector<OBB> &other_collision_structures) {	
-    for (size_t i = 0; i < other_collision_structures.size(); i++) {        
-        if (collision_structure_.overlap(other_collision_structures[i])) {            
-            return true;
-        }
-    }
-    
-    return false;
-}
-
-bool Obstacle::in_collision(std::vector<double> &point) {
-    Vec3f p_vec(point[0], point[1], point[2]);    
-    return collision_structure_.contain(p_vec);
-}
-
-bool Obstacle::in_collision_discrete(boost::python::list &ns) {
-    std::vector<OBB> other_collision_structures;
-    for (int i = 0; i < len(ns); ++i)
+template<class T>
+struct VecToList
+{
+    static PyObject* convert(const std::vector<T>& vec)
     {
-        other_collision_structures.push_back(boost::python::extract<OBB>(ns[i]));
+        boost::python::list* l = new boost::python::list();
+        for(size_t i = 0; i < vec.size(); i++)
+            (*l).append(vec[i]);
+
+        return l->ptr();
+    }
+};
+
+Obstacle::Obstacle(const Terrain &terrain):
+		collision_object_ptr_(nullptr),
+		terrain_(terrain){
+	
+}
+
+std::shared_ptr<Terrain> Obstacle::getTerrain() const {
+    return std::make_shared<Terrain>(terrain_);
+}
+
+bool Obstacle::isTraversable() const{
+    return terrain_.isTraversable();
+}
+
+bool Obstacle::in_collision(std::vector<double> &point) const{
+    Vec3f p_vec(point[0], point[1], point[2]);
+    return collision_object_ptr_->getAABB().contain(p_vec);
+    //return collision_structure_.contain(p_vec);
+}
+
+bool Obstacle::in_collision(std::vector<std::shared_ptr<fcl::CollisionObject const>> &other_collision_objects) const {	
+	for (size_t i = 0; i < other_collision_objects.size(); i++) {
+		if (collision_object_ptr_->getAABB().overlap(other_collision_objects[i]->getAABB())) {
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+/**bool Obstacle::in_collision(std::vector<fcl::AABB> &other_collision_structures) const{	
+    for (size_t i = 0; i < other_collision_structures.size(); i++) {        
+        if (collision_object_ptr_->getAABB().overlap(other_collision_structures[i])) {            
+            return true;
+        }
     }
     
-    return in_collision(other_collision_structures);
+    return false;
+}*/
+
+bool Obstacle::in_collision(const std::vector<std::shared_ptr<Obstacle> > &other_obstacles) const{        
+    for (size_t i = 0; i < other_obstacles.size(); i++) {
+        if (collision_object_ptr_->getAABB().overlap(other_obstacles[i]->getCollisionObject()->getAABB())) {
+            return true;
+        }
+    }
+    
+    return false;
 }
 
-bool Obstacle::in_collision_continuous(boost::python::list &ns) {
-
-    fcl::CollisionObject collision_object_start = boost::python::extract<fcl::CollisionObject>(ns[0]);
-    fcl::CollisionObject collision_object_goal = boost::python::extract<fcl::CollisionObject>(ns[1]);
-    return in_collision(collision_object_start, collision_object_goal);
-}
-
-bool Obstacle::in_collision(const fcl::CollisionObject &collision_object_start, const fcl::CollisionObject &collision_object_goal) { 	
+bool Obstacle::in_collision(std::shared_ptr<fcl::CollisionObject const> &collision_object_start, 
+		std::shared_ptr<fcl::CollisionObject const> &collision_object_goal) const { 	
     fcl::ContinuousCollisionRequest request;
     fcl::ContinuousCollisionResult result;    
-    fcl::continuousCollide(&collision_object_start, 
-                           collision_object_goal.getTransform(), 
+    fcl::continuousCollide(collision_object_start.get(), 
+                           collision_object_goal->getTransform(), 
                            collision_object_ptr_.get(),
                            collision_object_ptr_->getTransform(),
                            request,
@@ -81,56 +88,43 @@ bool Obstacle::in_collision(const fcl::CollisionObject &collision_object_start, 
     return result.is_collide;
 }
 
-void Obstacle::createCollisionObject() {
-    Box* box = new Box();
-    Transform3f box_tf;
-    Matrix3f rot(1.0, 0.0, 0.0,
-                 0.0, 1.0, 0.0,
-                 0.0, 0.0, 1.0);
-    Vec3f trans(0.0, 0.0, 0.0);
-    Transform3f rotate_transform(rot, trans);    
-    constructBox(collision_structure_, rotate_transform, *box, box_tf);    
-    collision_object_ptr_ = std::make_shared<fcl::CollisionObject>(fcl::CollisionObject(boost::shared_ptr<CollisionGeometry>(box), box_tf));
+bool Obstacle::in_collision_discrete(boost::python::list &ns) {
+    std::vector<std::shared_ptr<fcl::CollisionObject const>> other_collision_objects;
+    for (int i = 0; i < len(ns); ++i)
+    {
+        other_collision_objects.push_back(boost::python::extract<std::shared_ptr<fcl::CollisionObject const>>(ns[i]));
+    }
+    
+    return in_collision(other_collision_objects);
 }
 
-void Obstacle::createCollisionStructure() {    
-    Vec3f p1(pos_x_ - size_x_, 
-             pos_y_ - size_y_, 
-             pos_z_ - size_z_);
-    Vec3f p2(pos_x_ + size_x_, 
-             pos_y_ + size_y_, 
-             pos_z_ + size_z_);
-    AABB collision_structure(p1, p2);
-    Matrix3f rot(1.0, 0.0, 0.0,
-                 0.0, 1.0, 0.0,
-                 0.0, 0.0, 1.0);
-    Vec3f trans(0.0, 0.0, 0.0);
-    Transform3f rotate_transform(rot, trans);
-    convertBV(collision_structure, rotate_transform, collision_structure_);    
+bool Obstacle::in_collision_continuous(boost::python::list &ns) {
+
+    std::shared_ptr<fcl::CollisionObject const> collision_object_start = 
+    		boost::python::extract<std::shared_ptr<fcl::CollisionObject const>>(ns[0]);
+    std::shared_ptr<fcl::CollisionObject const> collision_object_goal = 
+    		boost::python::extract<std::shared_ptr<fcl::CollisionObject const>>(ns[1]);
+    return in_collision(collision_object_start, collision_object_goal);
 }
 
-std::shared_ptr<Terrain> Obstacle::getTerrain() const {
-    return std::make_shared<Terrain>(terrain_);
-}
+/**std::shared_ptr<fcl::AABB> Obstacle::getCollisionStructure() const {
+    return std::make_shared<fcl::AABB>(collision_object_->getAABB());
+}*/
 
-std::shared_ptr<OBB> Obstacle::getCollisionStructure() const {
-    return std::make_shared<OBB>(collision_structure_);
-}
-
-std::vector<double> Obstacle::getDimensions() const {
-    std::vector<double> dimensions({pos_x_, pos_y_, pos_z_, size_x_, size_y_, size_z_});
-    return dimensions;
-}
-
-bool Obstacle::isTraversable() {
-    return terrain_.isTraversable();
+std::shared_ptr<fcl::CollisionObject const> Obstacle::getCollisionObject() const {
+	return collision_object_ptr_;
 }
 
 BOOST_PYTHON_MODULE(libobstacle)
 {   
     #include "Terrain.hpp"
-    bool (Obstacle::*in_collision_d)(boost::python::list&) = &Obstacle::in_collision_discrete;
-    bool (Obstacle::*in_collision_c)(boost::python::list&) = &Obstacle::in_collision_continuous;
+    bool (ObstacleWrapper::*in_collision_d)(boost::python::list&) = &ObstacleWrapper::in_collision_discrete;
+    bool (ObstacleWrapper::*in_collision_c)(boost::python::list&) = &ObstacleWrapper::in_collision_continuous;
+    
+    to_python_converter<std::vector<std::shared_ptr<ObstacleWrapper>, std::allocator<std::shared_ptr<ObstacleWrapper>> >, 
+    	                    VecToList<std::shared_ptr<ObstacleWrapper>> >();
+    
+    register_ptr_to_python<std::shared_ptr<ObstacleWrapper>>();
     
     class_<Terrain>("Terrain", init<const std::string, const double, const double, const bool>())
          .def("getTraversalCost", &Terrain::getTraversalCost)
@@ -139,11 +133,11 @@ BOOST_PYTHON_MODULE(libobstacle)
          .def("isTraversable", &Terrain::isTraversable)    
     ;
     
-    class_<Obstacle>("Obstacle", init<double, double, double, double, double, double, Terrain>())
-         .def("getDimensions", &Obstacle::getDimensions)
+    class_<ObstacleWrapper, boost::noncopyable>("Obstacle", init<Terrain>())         
          .def("inCollisionDiscrete", in_collision_d)
          .def("inCollisionContinuous", in_collision_c)
-         .def("isTraversable", &Obstacle::isTraversable)         
+         .def("isTraversable", &ObstacleWrapper::isTraversable)
+		 .def("createCollisionObject", boost::python::pure_virtual(&ObstacleWrapper::createCollisionObject))
     ;
 }
 
