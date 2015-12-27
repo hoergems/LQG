@@ -25,6 +25,8 @@ class Test:
         """        
         print "Calculating Jacobian matrices"
         t_start = time.time()
+        
+        ee_jacobian = self.get_end_effector_jacobian(self.joint_origins, self.joint_axis, self.q)
         Jvs, Ocs = self.get_link_jacobians(self.joint_origins, self.inertial_poses, self.joint_axis, self.q)
         
         M_is = self.construct_link_inertia_matrices(self.link_masses, self.Is)        
@@ -657,7 +659,8 @@ class Test:
                                com_coordinates[i + 1][2], 
                                joint_origins[i][3] + axis[i][0] * thetas[i], 
                                joint_origins[i][4] + axis[i][1] * thetas[i], 
-                               joint_origins[i][5] + axis[i][2] * thetas[i]) for i in xrange(len(joint_origins) -1)]         
+                               joint_origins[i][5] + axis[i][2] * thetas[i]) for i in xrange(len(joint_origins) -1)]
+                
         
         """
         O and z of the first joint
@@ -681,10 +684,12 @@ class Test:
                     [0.0, 0.0, 0.0, 1.0]])
         res = I
         for i in xrange(len(thetas) - 1):
-            res *= dhcs[i]            
+            res *= dhcs[i] 
+            res = nsimplify(res, tolerance=1e-4)           
             col3 = res.col(2)
             col4 = res.col(3)            
             z = Matrix([col3[j] for j in xrange(3)])
+            #z = nsimplify(z, tolerance=1e-4)
             O = Matrix([col4[j] for j in xrange(3)])
             if self.simplifying:
                 Ocs.append(trigsimp(O))
@@ -700,7 +705,9 @@ class Test:
                 Os.append(trigsimp(O))
             else:
                 Os.append(O)
-            zs.append(z)                
+            zs.append(z)         
+        #print [nsimplify(zcs[i], tolerance=1e-4) for i in xrange(len(zcs))]   
+                   
         Jvs = []
         for i in xrange(len(thetas) - 1):
             Jv = Matrix([[0.0 for m in xrange(len(thetas) - 1)] for n in xrange(6)])
@@ -720,8 +727,7 @@ class Test:
         Jvs_new = []
         Ocs_new = [] 
         if self.simplifying:
-            for i in xrange(len(Jvs)):
-                jv_s = Jvs[i]
+            for i in xrange(len(Jvs)):                
                 try:
                     jv_s = nsimplify(jv_s, [pi])
                     Jvs_new.append(jv_s)
@@ -733,8 +739,69 @@ class Test:
                     oc_s = nsimplify(oc_s, [pi])
                     Ocs_new.append(oc_s) 
                 except:  
-                    Ocs_new.append(Ocs[i])        
+                    Ocs_new.append(Ocs[i]) 
+               
         return Jvs_new, Ocs
+    
+    def get_end_effector_jacobian(self, joint_origins, axis, thetas):        
+        I = Matrix([[1.0, 0.0, 0.0, joint_origins[0][0]],
+                    [0.0, 1.0, 0.0, joint_origins[0][1]],
+                    [0.0, 0.0, 1.0, joint_origins[0][2]],
+                    [0.0, 0.0, 0.0, 1.0]])
+       
+        Os = [Matrix([[joint_origins[0][0]],
+                      [joint_origins[0][1]],
+                      [joint_origins[0][2]]])]        
+        zs = [Matrix([[axis[0][0]],
+                      [axis[0][1]],
+                      [axis[0][2]]])]
+        res = I
+        
+        for i in xrange(0, len(thetas) - 1):
+            """
+            Rotation about the joint angle
+            """
+            t1 = self.transform(0.0,
+                                0.0,
+                                0.0,
+                                axis[i][0] * thetas[i],
+                                axis[i][1] * thetas[i],
+                                axis[i][2] * thetas[i])
+            
+            
+            """
+            Translation and rotation to the next joint angle
+            """
+            t2 = self.transform(joint_origins[i+1][0], 
+                                joint_origins[i+1][1],
+                                joint_origins[i+1][2],
+                                joint_origins[i+1][3], 
+                                joint_origins[i+1][4],
+                                joint_origins[i+1][5])
+            t = t1 * t2
+            
+            res *= t
+            
+            
+            col3 = res.col(2)
+            col4 = res.col(3)                      
+            zs.append(trigsimp(Matrix([col3[j] for j in xrange(3)])))
+            Os.append(trigsimp(Matrix([col4[j] for j in xrange(3)])))
+        
+        
+        Jv = Matrix([[0.0 for m in xrange(len(thetas) - 1)] for n in xrange(6)])
+        for i in xrange(3):
+            r1 = 0.0
+            if self.simplifying:
+                r1 = trigsimp(Matrix(zs[i].cross(Os[-1] - Os[i])))
+            else:
+                r1 = Matrix(zs[i].cross(Oc[-1] - Os[i])) 
+            for t in xrange(3):
+                Jv[t, i] = r1[t, 0]
+                Jv[t + 3, i] = zs[i][t, 0]
+        return nsimplify(Jv, tolerance=1e-4) 
+        
+    
     
     def transform(self, x, y, z, r, p, yaw):
         trans = Matrix([[1.0, 0.0, 0.0, x],

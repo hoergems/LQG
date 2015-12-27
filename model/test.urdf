@@ -74,7 +74,15 @@
     </collision>    
   </link>
 
-  <link name="end_effector"/>   
+  <link name="end_effector">
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="0 0 0"/>
+      </geometry>
+      <material name="Grey"/>
+    </collision>
+  </link>   
 
   <joint name="joint1" type="revolute">
     <parent link="world"/>

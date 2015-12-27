@@ -14,8 +14,7 @@ class PathEvaluator:
     def __init__(self):
         pass
         
-    def setup(self, A, B, C, D, H, M, N, V, W, 
-              link_dimensions, 
+    def setup(self, A, B, C, D, H, M, N, V, W,               
               robot, 
               sample_size, 
               obstacles,
@@ -30,8 +29,8 @@ class PathEvaluator:
         self.M = M
         self.N = N
         self.V = V
-        self.W = W 
-        self.link_dimensions = link_dimensions
+        self.W = W
+        self.robot_dof = robot.getDOF()
         self.obstacles = obstacles
         
         active_joints = v_string()
@@ -95,7 +94,7 @@ class PathEvaluator:
             if self.enforce_constraints:
                 if not self.check_constraints(samples[i]):
                     continue            
-            vec = [samples[i][j] for j in xrange(len(self.link_dimensions))]
+            vec = [samples[i][j] for j in xrange(self.robot_dof)]
             joint_angles = v_double()
             joint_angles[:] = vec
             collides = False
@@ -230,7 +229,7 @@ class PathEvaluator:
         #Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, horizon_L - 1)
         Ls = kalman.compute_gain(As, Bs, self.C, self.D, horizon_L - 1)
         
-        NU = np.array([[0.0 for i in xrange(2 * len(self.link_dimensions))] for i in xrange(2 * len(self.link_dimensions))])
+        NU = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])
                 
         Q_t = np.vstack((np.hstack((self.M, NU)), 
                          np.hstack((NU, self.N))))
@@ -247,7 +246,7 @@ class PathEvaluator:
         for i in xrange(1, horizon_L):                              
             P_hat_t = kalman.compute_p_hat_t(As[i], P_t, Vs[i], Ms[i])
             K_t = kalman.compute_kalman_gain(Hs[i], P_hat_t, Ws[i], Ns[i])
-            P_t = kalman.compute_P_t(K_t, Hs[i], P_hat_t, 2 * len(self.link_dimensions))
+            P_t = kalman.compute_P_t(K_t, Hs[i], P_hat_t, 2 * self.robot_dof)
             
             F_0 = np.hstack((As[i], np.dot(Bs[i], Ls[i - 1])))
             F_1 = np.hstack((np.dot(K_t, np.dot(Hs[i], As[i])), 
@@ -259,15 +258,15 @@ class PathEvaluator:
                                np.hstack((np.dot(K_t, np.dot(Hs[i], Vs[i])), np.dot(K_t, Ws[i])))))            
             """ Compute R """    
             R_t = np.dot(F_t, np.dot(R_t, F_t.T)) + np.dot(G_t, np.dot(Q_t, G_t.T)) 
-            L = np.identity(2 * len(self.link_dimensions))
+            L = np.identity(2 * self.robot_dof)
             if i != horizon_L - 1:
                 L = Ls[i]
                 
-            Gamma_t = np.vstack((np.hstack((np.identity(2 * len(self.link_dimensions)), NU)), 
+            Gamma_t = np.vstack((np.hstack((np.identity(2 * self.robot_dof), NU)), 
                                  np.hstack((NU, L))))
                              
             Cov = np.dot(Gamma_t, np.dot(R_t, Gamma_t.T))                       
-            cov_state = np.array([[Cov[j, k] for k in xrange(2 * len(self.link_dimensions))] for j in xrange(2 * len(self.link_dimensions))])
+            cov_state = np.array([[Cov[j, k] for k in xrange(2 * self.robot_dof)] for j in xrange(2 * self.robot_dof)])
             
             (state_reward, terminal) = self.get_expected_state_reward(xs[i], cov_state)
             path_rewards.append(np.power(self.discount, current_step + i) * state_reward)

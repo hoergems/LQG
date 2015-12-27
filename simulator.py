@@ -69,7 +69,7 @@ class Simulator:
         self.show_viewer = show_viewer
         active_joints = v_string()
         self.robot.getActiveJoints(active_joints)
-        self.robot_dof = len(active_joints)
+        self.robot_dof = self.robot.getDOF()
         print "showing viewer"
         if show_viewer:
             self.robot.setupViewer(model_file, env_file)

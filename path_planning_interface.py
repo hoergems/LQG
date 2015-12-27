@@ -77,10 +77,8 @@ class PathPlanningInterface:
               use_linear_path,
               planning_algorithm,
               path_timeout):
-        
-        self.link_dimensions = v2_double()
         self.robot = robot
-        robot.getActiveLinkDimensions(self.link_dimensions)
+        self.robot_dof = self.robot.getDOF()
         self.num_cores = cpu_count() 
         #self.num_cores = 2       
         self.obstacles = obstacles        
@@ -326,16 +324,17 @@ class PathPlanningInterface:
         v = [self.start_state[i] for i in xrange(len(self.start_state))]
         start_state[:] = v 
         logging.warn("PathPlanningInterface: Solve...") 
-        xs_temp = path_planner2.solve(start_state, self.path_timeout)
+        xs_temp = path_planner2.solve(start_state, self.path_timeout)        
         xs = []
         us = []
         zs = [] 
         control_durations = []       
-        for i in xrange(len(xs_temp)):
-            xs.append([xs_temp[i][j] for j in xrange(0, 2 * len(self.link_dimensions))])
-            us.append([xs_temp[i][j] for j in xrange(2 * len(self.link_dimensions), 4 * len(self.link_dimensions))])
-            zs.append([xs_temp[i][j] for j in xrange(4 * len(self.link_dimensions), 6 * len(self.link_dimensions))])
-            control_durations.append(xs_temp[i][6 * len(self.link_dimensions)])
+        for i in xrange(len(xs_temp)):                    
+            xs.append([xs_temp[i][j] for j in xrange(0, 2 * self.robot_dof)])
+            us.append([xs_temp[i][j] for j in xrange(2 * self.robot_dof, 4 * self.robot_dof)])
+            zs.append([xs_temp[i][j] for j in xrange(4 * self.robot_dof, 6 * self.robot_dof)])
+            
+            control_durations.append(xs_temp[i][6 * self.robot_dof])
         
         '''if self.dynamic_problem:
             all_states = v2_double()

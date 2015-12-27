@@ -106,7 +106,7 @@ class LQG:
                                                self.max_control_duration,
                                                self.add_intermediate_states)       
         path_planner.set_start_and_goal(self.start_state, goal_states, self.goal_position, self.goal_radius)         
-        A, H, B, V, W, C, D = self.problem_setup(self.delta_t, len(self.link_dimensions))
+        A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.robot_dof)
         
         if check_positive_definite([C, D]):
             m_covs = None
@@ -131,9 +131,9 @@ class LQG:
                     us = []
                     zs = []
                     for j in xrange(len(path)):
-                        xs.append([path[j][i] for i in xrange(len(self.link_dimensions))])
-                        us.append([path[j][len(self.link_dimensions) + i] for i in xrange(len(self.link_dimensions))])
-                        zs.append([path[j][2 * len(self.link_dimensions) + i] for i in xrange(len(self.link_dimensions))])
+                        xs.append([path[j][i] for i in xrange(self.robot_dof)])
+                        us.append([path[j][self.robot_dof + i] for i in xrange(self.robot_dof)])
+                        zs.append([path[j][2 * self.robot_dof + i] for i in xrange(self.robot_dof)])
                     paths.append([xs, us, zs])
             else:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
@@ -164,19 +164,18 @@ class LQG:
                     """
                     The process noise covariance matrix
                     """
-                    M = m_covs[j] * np.identity(2 * len(self.link_dimensions))
-                    N = self.min_observation_covariance * np.identity(2 * len(self.link_dimensions))
+                    M = m_covs[j] * np.identity(2 * self.robot_dof)
+                    N = self.min_observation_covariance * np.identity(2 * self.robot_dof)
                 elif self.inc_covariance == "observation":
-                    M = self.min_process_covariance * np.identity(2 * len(self.link_dimensions))
-                    N = m_covs[j] * np.identity(2 * len(self.link_dimensions))               
+                    M = self.min_process_covariance * np.identity(2 * self.robot_dof)
+                    N = m_covs[j] * np.identity(2 * self.robot_dof)               
                 
                 
-                P_t = np.array([[0.0 for k in xrange(2 * len(self.link_dimensions))] for l in xrange(2 * len(self.link_dimensions))]) 
+                P_t = np.array([[0.0 for k in xrange(2 * self.robot_dof)] for l in xrange(2 * self.robot_dof)]) 
                 
                
                 
-                path_evaluator.setup(A, B, C, D, H, M, N, V, W, 
-                                     self.link_dimensions,
+                path_evaluator.setup(A, B, C, D, H, M, N, V, W,                                     
                                      self.robot, 
                                      self.sample_size, 
                                      self.obstacles,
@@ -233,10 +232,10 @@ class LQG:
                      history_entries) = sim.simulate_n_steps(xs, us, zs, 
                                                              control_durations,
                                                              xs[0],
-                                                             np.array([0.0 for i in xrange(2 * len(self.link_dimensions))]),
-                                                             np.array([0.0 for i in xrange(2 * len(self.link_dimensions))]),
+                                                             np.array([0.0 for i in xrange(2 * self.robot_dof)]),
+                                                             np.array([0.0 for i in xrange(2 * self.robot_dof)]),
                                                              xs[0],
-                                                             np.array([[0.0 for k in xrange(2 * len(self.link_dimensions))] for l in xrange(2 * len(self.link_dimensions))]),
+                                                             np.array([[0.0 for k in xrange(2 * self.robot_dof)] for l in xrange(2 * self.robot_dof)]),
                                                              0.0,                                                           
                                                              0,
                                                              len(xs) - 1)
@@ -269,7 +268,10 @@ class LQG:
                 '''
                 
                 self.serializer.write_line("log.log", "tmp/lqg", "################################# \n")
-                if self.inc_covariance == "process":
+                self.serializer.write_line("log.log",
+                                           "tmp/lqg",
+                                           "inc_covariance: " + str(self.inc_covariance) + " \n")
+                if self.inc_covariance == "process":                  
                     self.serializer.write_line("log.log",
                                                "tmp/lqg",
                                                "Process covariance: " + str(m_covs[j]) + " \n")
@@ -277,7 +279,7 @@ class LQG:
                                                "tmp/lqg",
                                                "Observation covariance: " + str(self.min_observation_covariance) + " \n")
                     
-                elif self.inc_covariance == "observation":
+                elif self.inc_covariance == "observation":                    
                     self.serializer.write_line("log.log",
                                                "tmp/lqg",
                                                "Process covariance: " + str(self.min_process_covariance) + " \n")
@@ -347,7 +349,7 @@ class LQG:
     
     def show_state_distribution(self, model_file, env_file):
         self.robot.setupViewer(model_file, env_file)       
-        M = 30.0 * np.identity(2 * len(self.link_dimensions))
+        M = 30.0 * np.identity(2 * self.robot_dof)
         active_joints = v_string()
         self.robot.getActiveJoints(active_joints)
         self.robot_dof = len(active_joints)
@@ -464,8 +466,7 @@ class LQG:
         self.goal_radius = goal_area[3] 
         
         """ Setup operations """
-        self.link_dimensions = v2_double()
-        robot.getActiveLinkDimensions(self.link_dimensions)
+        self.robot_dof = robot.getDOF()        
         return True
             
     def init_serializer(self):
