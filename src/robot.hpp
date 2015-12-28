@@ -139,6 +139,7 @@ struct Joint {
     	    
     	    bool constraintsEnforced();
     	    
+    	    void setGravityConstant(double gravity_constant);    	    
     
         private:
     	    std::vector<shared::Link> links_;

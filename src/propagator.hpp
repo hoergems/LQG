@@ -36,6 +36,8 @@ namespace shared {
 	   
 	   void enforce_constraints(bool enforce);
 	   
+	   void set_gravity_constant(double &gravity_constant);
+	   
    private:
 	   std::shared_ptr<Integrate> integrator_;
 	   

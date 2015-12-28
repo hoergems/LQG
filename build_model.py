@@ -17,9 +17,13 @@ class Test:
     def __init__(self, model, simplifying, buildcpp, lin_steady_states):        
         self.simplifying = simplifying
         self.parse_urdf(model)
+        ''''g = Matrix([[0],
+                    [0],
+                    [9.81]])'''
+        g_symb = symbols("g_")
         g = Matrix([[0],
                     [0],
-                    [9.81]])       
+                    [g_symb]])     
         """
         Get the Jacobians of the links expressed in the robot's base frame
         """        
@@ -27,6 +31,8 @@ class Test:
         t_start = time.time()
         
         ee_jacobian = self.get_end_effector_jacobian(self.joint_origins, self.joint_axis, self.q)
+        print ee_jacobian.transpose().shape
+        #sleep
         Jvs, Ocs = self.get_link_jacobians(self.joint_origins, self.inertial_poses, self.joint_axis, self.q)
         
         M_is = self.construct_link_inertia_matrices(self.link_masses, self.Is)        
@@ -42,12 +48,24 @@ class Test:
             C = trigsimp(C)             
         print "Calculating normal forces" 
         
+        """
+        F is a 6 dimensional external force vector (fx, fy, fz, mx, my, mz), consisting of 
+        pull f and twist m
+        """
+        F = Matrix([[0],
+                    [0],
+                    [1],
+                    [0],
+                    [0],
+                    [0]])
         N = self.calc_generalized_forces(self.q,
                                          self.qdot, 
                                          Ocs, 
                                          self.link_masses, 
                                          g,
-                                         self.viscous)        
+                                         self.viscous,
+                                         ee_jacobian,
+                                         F)        
         if self.simplifying:      
             N = trigsimp(N)
         t0 = time.time()
@@ -571,7 +589,9 @@ class Test:
                                 Ocs, 
                                 ms, 
                                 g,
-                                viscous):        
+                                viscous,
+                                ee_jacobian,
+                                F):        
         V = 0.0                
         for i in xrange(len(Ocs)):            
             el = ms[i + 1] * g.transpose() * Ocs[i]                                                
@@ -581,8 +601,15 @@ class Test:
         if self.simplifying:    
             N = Matrix([[trigsimp(diff(V, thetas[i]))] for i in xrange(len(thetas) - 1)]) 
         else:
-            N = Matrix([[diff(V, thetas[i])] for i in xrange(len(thetas) - 1)])        
+            N = Matrix([[diff(V, thetas[i])] for i in xrange(len(thetas) - 1)]) 
+        '''
+        The joint friction forces
+        '''       
         K = N + Matrix([[viscous[i] * dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
+        print K.shape
+        print ee_jacobian.shape
+        print F.shape
+        K = K - ee_jacobian.transpose() * F
         return K      
         
     def calc_coriolis_matrix(self, thetas, dot_thetas, M):        

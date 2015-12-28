@@ -23,6 +23,10 @@ void Propagator::setup(std::vector<double> &jointsLowerPositionLimit,
 	enforce_constraints_ = enforce_constraints;
 }
 
+void Propagator::set_gravity_constant(double &gravity_constant) {
+	integrator_->setGravityConstant(gravity_constant);
+}
+
 void Propagator::enforce_constraints(bool enforce) {
 	enforce_constraints_ = enforce;
 }

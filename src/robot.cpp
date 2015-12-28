@@ -527,6 +527,10 @@ bool Robot::propagate_linear(std::vector<double> &current_state,
 			                             result);	
 }
 
+void Robot::setGravityConstant(double gravity_constant) {
+	propagator_->set_gravity_constant(gravity_constant);
+}
+
 bool Robot::propagate(std::vector<double> &current_state,
 		              std::vector<double> &control_input,
 		              std::vector<double> &control_error,
@@ -794,6 +798,7 @@ BOOST_PYTHON_MODULE(librobot) {
 						.def("getJointTorqueLimits", &Robot::getJointTorqueLimits)
 						.def("enforceConstraints", &Robot::enforceConstraints)
 						.def("constraintsEnforced", &Robot::constraintsEnforced)
+						.def("setGravityConstant", &Robot::setGravityConstant)
                         //.def("setup", &Integrate::setup)                        
     ;
 }

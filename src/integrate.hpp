@@ -24,10 +24,11 @@ namespace shared {
     typedef std::vector<double> state_type;
 
     class Integrate {
-    public:
-    	
+    public:   	
     	
     	Integrate();
+    	
+    	void setGravityConstant(double g);
     	
     	void do_integration(std::vector<double> &x,
     			            std::vector<double> &control,
@@ -73,6 +74,11 @@ MatrixXd getA0(const state_type &x, const state_type &rho, const state_type &zet
     	std::pair<int, std::vector<double>> getClosestSteadyState(const state_type &x) const;
     	
     	std::pair<Integrate::AB_funct, std::pair<Integrate::AB_funct, Integrate::AB_funct>> getClosestSteadyStateFunctions(int &idx) const;
+    	
+    	/**
+    	 * Gravity constant
+    	 */
+    	mutable double g_;
     	
     	mutable std::vector<double> rho_;
     	

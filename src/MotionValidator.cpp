@@ -26,25 +26,8 @@ MotionValidator::MotionValidator(const ompl::base::SpaceInformationPtr &si,
 bool MotionValidator::checkMotion(const std::vector<double> &s1, 
                                   const std::vector<double> &s2, 
                                   const bool &continuous_collision) const {	
-	/**for (size_t i = 0; i < s1.size(); i++) {		
-		if ((fabs((s2[i] - s1[i]))) > M_PI) {
-			cout << "s1[i] " << s1[i] << endl;
-			cout << "s2[i] " << s2[i] << endl;
-			return false;
-		}		
-	}*/
-	/**for (size_t i = 0; i < s1.size(); i++) {		
-	    if ((fabs((s2[i] - s1[i]) / 0.033333)) > 4.0 + 0.00001) {	    	
-			return false;
-	    }		
-	}*/
 	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects_goal;
-	robot_->createRobotCollisionObjects(s2, collision_objects_goal);
-	//std::vector<OBB> manipulator_collision_structures_goal;
-	//robot_->createRobotCollisionStructures(s2, manipulator_collision_structures_goal);
-	/**std::vector<OBB> manipulator_collision_structures_goal = utils_.createManipulatorCollisionStructures(s2,
-                                                                                                         link_dimensions_, 
-                                                                                                         kinematics_);*/
+	robot_->createRobotCollisionObjects(s2, collision_objects_goal);	
     for (size_t i = 0; i < obstacles_.size(); i++) {        
         if (!obstacles_[i]->isTraversable()) {
         	if (obstacles_[i]->in_collision(collision_objects_goal)) {        		
@@ -56,13 +39,6 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
     if (continuous_collision) {    	
     	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects_start;    	
     	robot_->createRobotCollisionObjects(s1, collision_objects_start);
-    	
-        /**std::vector<fcl::CollisionObject> manipulator_collision_objects_start = utils_.createManipulatorCollisionObjects(s1, 
-                                                                                                                         link_dimensions_,
-                                                                                                                         kinematics_);
-        std::vector<fcl::CollisionObject> manipulator_collision_objects_goal = utils_.createManipulatorCollisionObjects(s2, 
-                                                                                                                        link_dimensions_,
-                                                                                                                        kinematics_);*/
         for (size_t i = 0; i < obstacles_.size(); i++) {
             if (!obstacles_[i]->isTraversable()) {
                 for (size_t j = 0; j < collision_objects_start.size(); j++) {                	
@@ -73,15 +49,12 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
             }
         } 
     }     
-    //else { cout << "Do not continuous" << endl; sleep(1);}
+    
     return true;
 }
 
 /** Check if a motion between two states is valid. This assumes that state s1 is valid */
-bool MotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base::State *s2) const {
-	/**if (boost::dynamic_pointer_cast<ManipulatorGoalRegion>(goal_region_)->isSatisfied(s2)) {
-		cout << "WER TEHERE" << endl;		
-	}*/
+bool MotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base::State *s2) const {	
     std::vector<double> angles1;
     std::vector<double> angles2;    
     for (unsigned int i = 0; i < dim_; i++) {
@@ -117,10 +90,7 @@ bool MotionValidator::isValid(const std::vector<double> &s1) const {
 	}
 	
 	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects;
-	robot_->createRobotCollisionObjects(joint_angles, collision_objects);	
-    /**std::vector<OBB> manipulator_collision_structures = utils_.createManipulatorCollisionStructures(joint_angles, 
-                                                                                                    link_dimensions_,
-                                                                                                    kinematics_);*/
+	robot_->createRobotCollisionObjects(joint_angles, collision_objects);    
     for (size_t i = 0; i < obstacles_.size(); i++) {
         if (!obstacles_[i]->getTerrain()->isTraversable()) {        	
         	if (obstacles_[i]->in_collision(collision_objects)) {        		

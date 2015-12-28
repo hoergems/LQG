@@ -47,8 +47,8 @@ class LQG:
             return
         #self.robot.setupViewer(urdf_model_file, environment_file)
         #self.show_state_distribution(urdf_model_file, environment_file)
-        #self.robot.setupViewer(urdf_model_file, environment_file)
-        #self.run_viewer(urdf_model_file, environment_file)       
+        self.robot.setupViewer(urdf_model_file, environment_file)
+        self.run_viewer(urdf_model_file, environment_file)       
                 
         logging.info("LQG: Generating goal states...")
         goal_states = get_goal_states("lqg",
@@ -318,6 +318,7 @@ class LQG:
     def init_robot(self, urdf_model_file):
         self.robot = Robot(urdf_model_file)
         self.robot.enforceConstraints(self.enforce_constraints)
+        self.robot.setGravityConstant(self.gravity_constant)
         
     """
     Analyzing functions (will be removed later)
@@ -532,6 +533,7 @@ class LQG:
         self.max_control_duration = config['max_control_duration']   
         self.inc_covariance = config['inc_covariance'] 
         self.add_intermediate_states = config['add_intermediate_states']
+        self.gravity_constant = config['gravity']
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
