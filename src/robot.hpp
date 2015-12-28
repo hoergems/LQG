@@ -16,6 +16,9 @@
 #include "Kinematics.hpp"
 #include "viewer_interface.hpp"
 
+using std::cout;
+using std::endl;
+
 namespace shared {
 
 struct RobotState {
@@ -126,9 +129,20 @@ struct Joint {
     	    		              std::vector<double> &result);
     	    
     	    //void createRobotCollisionStructures(const std::vector<double> &joint_angles, std::vector<fcl::OBB> &collision_structures);
+    	    /**
+    	     * Creates the collision object for the end effector
+    	     */
+    	    void createEndEffectorCollisionObject(const std::vector<double> &joint_angles,
+    	    		std::vector<std::shared_ptr<fcl::CollisionObject const>> &collision_objects); 
     	    
+    	    std::vector<std::shared_ptr<fcl::CollisionObject const>> 
+			        createEndEffectorCollisionObjectPy(const std::vector<double> &joint_angles);
+    	    
+    	    /**
+    	     * Create the robot collision objects
+    	     */
     	    void createRobotCollisionObjects(const std::vector<double> &joint_angles, 
-    	    		std::vector<std::shared_ptr<fcl::CollisionObject const>> &collision_objects) ;
+    	    		std::vector<std::shared_ptr<fcl::CollisionObject const>> &collision_objects);
     	    
     	    std::vector<std::shared_ptr<fcl::CollisionObject const>> 
 			        createRobotCollisionObjectsPy(const std::vector<double> &joint_angles);

@@ -395,7 +395,7 @@ class LQG:
         
     def run_viewer(self, model_file, env_file):
         self.robot.setupViewer(model_file, env_file)
-        self.robot.setExternalForce(0.0, 2.0, 0.0)
+        self.robot.setExternalForce(0.0, 1.0, 0.0)
         x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         while True:
             u = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -413,9 +413,29 @@ class LQG:
                                  self.simulation_step_size,
                                  0.03,
                                  result)
+            
+            '''
+            Get the end effector velocity vector
+            '''
             ee_velocity = v_double()
             self.robot.getEndEffectorVelocity(result, ee_velocity)
-            print "ee_velocity " + str([ee_velocity[i] for i in xrange(len(ee_velocity))])                               
+            #print "ee_velocity " + str([ee_velocity[i] for i in xrange(len(ee_velocity))])
+            
+            '''
+            Get the end effector position
+            '''
+            ee_position = v_double()
+            joint_angles = v_double()
+            joint_angles[:] = [result[i] for i in xrange(len(result) / 2)]
+            self.robot.getEndEffectorPosition(joint_angles, ee_position)      
+            
+            collision_objects = self.robot.createRobotCollisionObjects(joint_angles)
+            ee_collision_objects = self.robot.createEndEffectorCollisionObject(joint_angles)
+            
+            for o in self.obstacles:
+                print "collides " + str(o.inCollisionDiscrete(collision_objects))
+                print "ee collides " + str(o.inCollisionDiscrete(ee_collision_objects))
+                #print o.inCollisionPoint(ee_position)                                               
             x = np.array([result[i] for i in xrange(len(result))])
             cjvals = v_double()
             cjvels = v_double()

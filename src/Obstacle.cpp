@@ -39,16 +39,35 @@ bool Obstacle::isTraversable() const{
     return terrain_.isTraversable();
 }
 
-bool Obstacle::in_collision(std::vector<double> &point) const{
+bool Obstacle::in_collision(std::vector<double> &point) {
+    Vec3f p_vec(point[0], point[1], point[2]);
+    return collision_object_ptr_->getAABB().contain(p_vec);    
+}
+
+bool Obstacle::in_collision_point(std::vector<double> &point) {
     Vec3f p_vec(point[0], point[1], point[2]);
     return collision_object_ptr_->getAABB().contain(p_vec);    
 }
 
 bool Obstacle::in_collision(std::vector<std::shared_ptr<fcl::CollisionObject const>> &other_collision_objects) const {	
 	for (size_t i = 0; i < other_collision_objects.size(); i++) {
-		if (collision_object_ptr_->getAABB().overlap(other_collision_objects[i]->getAABB())) {
+		fcl::CollisionRequest request;		
+		fcl::CollisionResult result;
+		fcl::collide(other_collision_objects[i].get(), 
+				     collision_object_ptr_.get(),
+					 request,
+					 result);
+		if (result.isCollision()) {
 			return true;
 		}
+		/**fcl::AABB overlap;
+		if (collision_object_ptr_->getAABB().overlap(other_collision_objects[i]->getAABB(), overlap)) {
+			cout << "overlap center: ";
+			cout << overlap.center()[0] << ", ";
+			cout << overlap.center()[1] << ", ";
+			cout << overlap.center()[2] << endl;
+			return true;
+		}*/
 	}
 	
 	return false;
@@ -105,6 +124,7 @@ BOOST_PYTHON_MODULE(libobstacle)
     #include "Terrain.hpp"
     bool (ObstacleWrapper::*in_collision_d)(boost::python::list&) = &ObstacleWrapper::in_collision_discrete;
     bool (ObstacleWrapper::*in_collision_c)(boost::python::list&) = &ObstacleWrapper::in_collision_continuous;
+    bool (ObstacleWrapper::*in_collision_p)(std::vector<double>&) = &ObstacleWrapper::in_collision_point;
     
     to_python_converter<std::vector<std::shared_ptr<ObstacleWrapper>, std::allocator<std::shared_ptr<ObstacleWrapper>> >, 
     	                    VecToList<std::shared_ptr<ObstacleWrapper>> >();
@@ -121,6 +141,7 @@ BOOST_PYTHON_MODULE(libobstacle)
     class_<ObstacleWrapper, boost::noncopyable>("Obstacle", init<Terrain>())         
          .def("inCollisionDiscrete", in_collision_d)
          .def("inCollisionContinuous", in_collision_c)
+		 .def("inCollisionPoint", in_collision_p)
          .def("isTraversable", &ObstacleWrapper::isTraversable)
 		 .def("createCollisionObject", boost::python::pure_virtual(&ObstacleWrapper::createCollisionObject))
     ;

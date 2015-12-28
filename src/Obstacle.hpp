@@ -14,6 +14,7 @@
 #include "fcl/BV/BV.h"
 #include "fcl/collision_object.h"
 #include "fcl/collision_data.h"
+#include "fcl/collision.h"
 #include "fcl/continuous_collision.h"
 #include "fcl/shape/geometric_shapes.h"
 #include "fcl/shape/geometric_shapes_utility.h"
@@ -57,7 +58,9 @@ class Obstacle {
         /**
          * Checks if a point lies withing this obstacle
          */
-        bool in_collision(std::vector<double> &point) const; 
+        bool in_collision(std::vector<double> &point);
+        
+        virtual bool in_collision_point(std::vector<double> &point);
         
         /**
          * Python interface for discrete collision check
@@ -116,6 +119,10 @@ public:
 	
 	bool in_collision_continuous(boost::python::list &ns) {
 		this->get_override("in_collision_continuous")(ns);
+	}
+	
+	bool in_collision_point(std::vector<double> &point) {
+		this->get_override("in_collision_point")(point);
 	}
 };
 
