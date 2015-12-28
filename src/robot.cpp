@@ -362,7 +362,9 @@ Robot::Robot(std::string robot_file):
 					   enforce_constraints_);
 	
 	kinematics_->setJointOrigins(active_joint_origins_);
-	kinematics_->setLinkDimensions(active_link_dimensions_);	
+	kinematics_->setLinkDimensions(active_link_dimensions_);
+	
+	propagator_->setJointDamping(joint_dampings_);
 }
 
 void Robot::getOpenRAVEDescription(std::vector<OpenRAVE::KinBody::LinkInfoPtr> &link_infos,

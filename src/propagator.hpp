@@ -51,6 +51,11 @@ namespace shared {
 	    */
 	   MatrixXd get_ee_jacobian(std::vector<double> &state);
 	   
+	   /**
+	    * Sets the joint viscous frictions
+	    */
+	   void setJointDamping(std::vector<double> &viscous);
+	   
    private:
 	   std::shared_ptr<Integrate> integrator_;
 	   

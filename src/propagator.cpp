@@ -37,6 +37,10 @@ MatrixXd Propagator::get_ee_jacobian(std::vector<double> &state) {
 	return integrator_->get_end_effector_jacobian(state, rho, zeta);
 }
 
+void Propagator::setJointDamping(std::vector<double> &viscous) {
+	integrator_->setJointDamping(viscous);
+}
+
 void Propagator::enforce_constraints(bool enforce) {
 	enforce_constraints_ = enforce;
 }

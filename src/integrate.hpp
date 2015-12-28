@@ -38,6 +38,11 @@ namespace shared {
     	 */
     	void setExternalForce(double &f_x, double &f_y, double &f_z);
     	
+    	/**
+    	 * Sets the viscous joint damping constants
+    	 */
+    	void setJointDamping(std::vector<double> &viscous);
+    	
     	void do_integration(std::vector<double> &x,
     			            std::vector<double> &control,
     			            std::vector<double> &control_error,
@@ -97,6 +102,11 @@ MatrixXd getA0(const state_type &x, const state_type &rho, const state_type &zet
     	mutable double f_x_;
     	mutable double f_y_;
     	mutable double f_z_;
+    	
+    	/**
+    	 * Viscous joint dampings
+    	 */
+    	mutable std::vector<double> viscous_;
     	
     	mutable std::vector<double> rho_;
     	

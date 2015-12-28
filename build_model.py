@@ -263,7 +263,8 @@ class Test:
         print "get joint damping"        
         joint_damping = v_double();
         robot.getJointDamping(joint_names, joint_damping)
-        self.viscous = [joint_damping[i] for i in xrange(len(joint_damping) - 1)]        
+        self.viscous = [symbols("viscous_[" + str(i) + "]") for i in xrange(len(joint_damping) - 1)]
+        #self.viscous = [joint_damping[i] for i in xrange(len(joint_damping) - 1)]        
         
         self.q = []
         self.qdot = []
