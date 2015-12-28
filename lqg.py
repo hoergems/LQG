@@ -437,13 +437,16 @@ class LQG:
                     
                     ###Get the end effector velocity vector                                       
                     ee_velocity = v_double()
-                    self.robot.getEndEffectorVelocity(result, ee_velocity)
+                    self.robot.getEndEffectorVelocity(result, ee_velocity)                   
                     ee_linear_velocity = np.array([ee_velocity[i] for i in xrange(len(ee_velocity) / 2)])
+                    
                     ext_force = o.getExternalForce()
                     force_vector = -ext_force * ee_linear_velocity
                     print "ee_linear_velocity " + str(ee_linear_velocity)
                     print "force vector: " + str(force_vector)
-                    self.robot.setExternalForce(force_vector[0], force_vector[1], force_vector[2])
+                    self.robot.setExternalForce(force_vector[0], 
+                                                force_vector[1], 
+                                                force_vector[2])
             if not in_collision:
                 self.robot.setExternalForce(fx, fy, fz)
                 #self.robot.setExternalForce(0.0, 0.0, 0.0)
