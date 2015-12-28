@@ -100,6 +100,7 @@ class Test:
             self.gen_cpp_code2(B, "B0", header_src, imple_src)
             self.gen_cpp_code2(V, "V0", header_src, imple_src)
             self.gen_cpp_code2(f, "F0", header_src, imple_src)
+            self.gen_cpp_code2(ee_jacobian, "EEJacobian", header_src, imple_src)
         print "Building model took " + str(time.time() - t_start) + " seconds"  
         if buildcpp:
             print "Build c++ code..."
@@ -373,7 +374,8 @@ class Test:
             if ("MatrixXd Integrate::getA" in lines[i] or 
                 "MatrixXd Integrate::getB" in lines[i] or 
                 "MatrixXd Integrate::getV" in lines[i] or
-                "MatrixXd Integrate::getF" in lines[i]):
+                "MatrixXd Integrate::getF" in lines[i] or
+                "MatrixXd Integrate::getEEJacobian" in lines[i]):
                 idx1 = i                
                 breaking = True
             if "}" in lines[i] and breaking:
@@ -399,7 +401,8 @@ class Test:
             if ("MatrixXd getA" in lines_header[i] or 
                 "MatrixXd getB" in lines_header[i] or 
                 "MatrixXd getV" in lines_header[i] or
-                "MatrixXd getF" in lines_header[i]):
+                "MatrixXd getF" in lines_header[i] or 
+                "MatrixXd getEEJacobian" in lines_header[i]):
                 idxs.append(i)
         for i in xrange(len(lines_header)):
             app = True

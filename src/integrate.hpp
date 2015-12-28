@@ -51,6 +51,8 @@ namespace shared {
     	
     	MatrixXd get_F(const state_type &x, const state_type &rho, const state_type &zeta) const;
     	
+    	MatrixXd get_end_effector_jacobian(const state_type &x, const state_type &rho, const state_type &zeta) const;
+    	
     	std::vector<double> getProcessMatricesSteadyStatesVec(std::vector<double> &x, double t_e) const;
     	
     	std::vector<double> getProcessMatricesVec(std::vector<double> &x, 
@@ -62,6 +64,7 @@ namespace shared {
     	std::vector<double> getResult();
     	
     private:
+MatrixXd getEEJacobian(const state_type &x, const state_type &rho, const state_type &zeta) const; 
 MatrixXd getF0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
 MatrixXd getV0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
 MatrixXd getB0(const state_type &x, const state_type &rho, const state_type &zeta) const; 

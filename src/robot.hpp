@@ -148,6 +148,12 @@ struct Joint {
     	     * Set the external force acting on the end-effector
     	     */
     	    void setExternalForce(double f_x, double f_y, double f_z);
+    	    
+    	    /**
+    	     * Gets the end-effector velocity for a given state
+    	     */
+    	    void getEndEffectorVelocity(std::vector<double> &state,
+    	    		                    std::vector<double> &ee_velocity);	    
     
         private:
     	    std::vector<shared::Link> links_;

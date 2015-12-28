@@ -31,6 +31,12 @@ void Propagator::set_external_force(double &f_x, double &f_y, double &f_z) {
 	integrator_->setExternalForce(f_x, f_y, f_z);
 }
 
+MatrixXd Propagator::get_ee_jacobian(std::vector<double> &state) {
+	const std::vector<double> rho;
+	const std::vector<double> zeta;
+	return integrator_->get_end_effector_jacobian(state, rho, zeta);
+}
+
 void Propagator::enforce_constraints(bool enforce) {
 	enforce_constraints_ = enforce;
 }

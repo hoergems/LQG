@@ -412,7 +412,10 @@ class LQG:
                                  control_error,
                                  self.simulation_step_size,
                                  0.03,
-                                 result)                               
+                                 result)
+            ee_velocity = v_double()
+            self.robot.getEndEffectorVelocity(result, ee_velocity)
+            print "ee_velocity " + str([ee_velocity[i] for i in xrange(len(ee_velocity))])                               
             x = np.array([result[i] for i in xrange(len(result))])
             cjvals = v_double()
             cjvels = v_double()

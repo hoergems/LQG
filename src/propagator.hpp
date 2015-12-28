@@ -46,6 +46,11 @@ namespace shared {
 	    */
 	   void set_external_force(double &f_x, double &f_y, double &f_z);
 	   
+	   /**
+	    * Gets the state dependent end-effector jacobian
+	    */
+	   MatrixXd get_ee_jacobian(std::vector<double> &state);
+	   
    private:
 	   std::shared_ptr<Integrate> integrator_;
 	   

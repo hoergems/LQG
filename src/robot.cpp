@@ -535,6 +535,21 @@ void Robot::setExternalForce(double f_x, double f_y, double f_z) {
 	propagator_->set_external_force(f_x, f_y, f_z);
 }
 
+void Robot::getEndEffectorVelocity(std::vector<double> &state,
+    	    		               std::vector<double> &ee_velocity) {
+	MatrixXd j = propagator_->get_ee_jacobian(state);
+	MatrixXd vel(state.size() / 2, 1);
+	for (size_t i = 0; i < state.size() / 2; i++) {
+		vel(i, 0) = state[i + state.size() / 2];
+	}
+	
+	MatrixXd res = j * vel;
+	ee_velocity.clear();
+	for (size_t i = 0; i < 6; i++) { 
+		ee_velocity.push_back(res(i, 0));
+	}	
+}
+
 bool Robot::propagate(std::vector<double> &current_state,
 		              std::vector<double> &control_input,
 		              std::vector<double> &control_error,
@@ -804,6 +819,7 @@ BOOST_PYTHON_MODULE(librobot) {
 						.def("constraintsEnforced", &Robot::constraintsEnforced)
 						.def("setGravityConstant", &Robot::setGravityConstant)
 						.def("setExternalForce", &Robot::setExternalForce)
+						.def("getEndEffectorVelocity", &Robot::getEndEffectorVelocity)
                         //.def("setup", &Integrate::setup)                        
     ;
 }
