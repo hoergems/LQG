@@ -432,7 +432,7 @@ class LQG:
             in_collision = False
             for o in self.obstacles:
                 print o.inCollisionDiscrete(collision_objects)                
-                '''if(o.inCollisionDiscrete(ee_collision_objects) and o.isTraversable()):
+                if(o.inCollisionDiscrete(ee_collision_objects) and o.isTraversable()):
                     in_collision = True
                     
                     ###Get the end effector velocity vector                                       
@@ -443,7 +443,7 @@ class LQG:
                     force_vector = -ext_force * ee_linear_velocity
                     print "ee_linear_velocity " + str(ee_linear_velocity)
                     print "force vector: " + str(force_vector)
-                    self.robot.setExternalForce(force_vector[0], force_vector[1], force_vector[2])'''
+                    self.robot.setExternalForce(force_vector[0], force_vector[1], force_vector[2])
             if not in_collision:
                 self.robot.setExternalForce(fx, fy, fz)
                 #self.robot.setExternalForce(0.0, 0.0, 0.0)
