@@ -25,11 +25,7 @@ class LQG:
         logging_level = logging.WARN
         if config['verbose']:
             logging_level = logging.DEBUG
-        logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)
-        print "======================"
-        print "Destroy"
-        #RaveDestroy()
-        print "======================"
+        logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)        
         np.set_printoptions(precision=16)
         dir = "stats/lqg"
         self.clear_stats(dir)
@@ -47,6 +43,7 @@ class LQG:
             return
         #self.robot.setupViewer(urdf_model_file, environment_file)
         #self.show_state_distribution(urdf_model_file, environment_file)
+        print "setting up viewer"
         self.robot.setupViewer(urdf_model_file, environment_file)
         self.run_viewer(urdf_model_file, environment_file)       
                 
@@ -394,25 +391,25 @@ class LQG:
         sleep
         
     def run_viewer(self, model_file, env_file):
+        print "setup viewer"
         self.robot.setupViewer(model_file, env_file)
+        print "viewer setup"
         fx = 0.0
-        fy = 0.0
+        fy = 2.0
         fz = 0.0
         
         x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         while True:            
-            #u_in = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            u_in = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             current_state = v_double()
             current_state[:] = x
-            control = v_double()
-            print "copy"
-            control[:] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-            print "copied"           
+            control = v_double()            
+            control[:] = u_in
+                       
             control_error = v_double()
             ce = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             control_error[:] = ce
-            result = v_double()
-            print "propagate" 
+            result = v_double()             
             self.robot.propagate(current_state,
                                  control,
                                  control_error,
@@ -433,12 +430,12 @@ class LQG:
             ee_collision_objects = self.robot.createEndEffectorCollisionObject(joint_angles)
             
             in_collision = False
-            for o in self.obstacles:                
-                if(o.inCollisionDiscrete(ee_collision_objects) and o.isTraversable()):
+            for o in self.obstacles:
+                print o.inCollisionDiscrete(collision_objects)                
+                '''if(o.inCollisionDiscrete(ee_collision_objects) and o.isTraversable()):
                     in_collision = True
-                    '''
-                    Get the end effector velocity vector
-                    '''                    
+                    
+                    ###Get the end effector velocity vector                                       
                     ee_velocity = v_double()
                     self.robot.getEndEffectorVelocity(result, ee_velocity)
                     ee_linear_velocity = np.array([ee_velocity[i] for i in xrange(len(ee_velocity) / 2)])
@@ -446,7 +443,7 @@ class LQG:
                     force_vector = -ext_force * ee_linear_velocity
                     print "ee_linear_velocity " + str(ee_linear_velocity)
                     print "force vector: " + str(force_vector)
-                    self.robot.setExternalForce(force_vector[0], force_vector[1], force_vector[2])
+                    self.robot.setExternalForce(force_vector[0], force_vector[1], force_vector[2])'''
             if not in_collision:
                 self.robot.setExternalForce(fx, fy, fz)
                 #self.robot.setExternalForce(0.0, 0.0, 0.0)
