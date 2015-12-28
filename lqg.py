@@ -395,6 +395,7 @@ class LQG:
         
     def run_viewer(self, model_file, env_file):
         self.robot.setupViewer(model_file, env_file)
+        self.robot.setExternalForce(0.0, 2.0, 0.0)
         x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         while True:
             u = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]

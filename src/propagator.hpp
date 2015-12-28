@@ -36,7 +36,15 @@ namespace shared {
 	   
 	   void enforce_constraints(bool enforce);
 	   
+	   /**
+	    * Set the gravity constant
+	    */
 	   void set_gravity_constant(double &gravity_constant);
+	   
+	   /**
+	    * Set the external force acting on the end_effector
+	    */
+	   void set_external_force(double &f_x, double &f_y, double &f_z);
 	   
    private:
 	   std::shared_ptr<Integrate> integrator_;

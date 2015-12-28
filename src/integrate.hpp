@@ -28,7 +28,15 @@ namespace shared {
     	
     	Integrate();
     	
+    	/**
+    	 * Sets the gravity constant
+    	 */
     	void setGravityConstant(double g);
+    	
+    	/**
+    	 * Sets the external forces acting on the end-effector
+    	 */
+    	void setExternalForce(double &f_x, double &f_y, double &f_z);
     	
     	void do_integration(std::vector<double> &x,
     			            std::vector<double> &control,
@@ -79,6 +87,13 @@ MatrixXd getA0(const state_type &x, const state_type &rho, const state_type &zet
     	 * Gravity constant
     	 */
     	mutable double g_;
+    	
+    	/**
+    	 * External force components
+    	 */
+    	mutable double f_x_;
+    	mutable double f_y_;
+    	mutable double f_z_;
     	
     	mutable std::vector<double> rho_;
     	

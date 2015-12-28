@@ -139,7 +139,15 @@ struct Joint {
     	    
     	    bool constraintsEnforced();
     	    
-    	    void setGravityConstant(double gravity_constant);    	    
+    	    /**
+    	     * Set the gravity constant
+    	     */
+    	    void setGravityConstant(double gravity_constant);
+    	    
+    	    /**
+    	     * Set the external force acting on the end-effector
+    	     */
+    	    void setExternalForce(double f_x, double f_y, double f_z);
     
         private:
     	    std::vector<shared::Link> links_;

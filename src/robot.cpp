@@ -531,6 +531,10 @@ void Robot::setGravityConstant(double gravity_constant) {
 	propagator_->set_gravity_constant(gravity_constant);
 }
 
+void Robot::setExternalForce(double f_x, double f_y, double f_z) {
+	propagator_->set_external_force(f_x, f_y, f_z);
+}
+
 bool Robot::propagate(std::vector<double> &current_state,
 		              std::vector<double> &control_input,
 		              std::vector<double> &control_error,
@@ -799,6 +803,7 @@ BOOST_PYTHON_MODULE(librobot) {
 						.def("enforceConstraints", &Robot::enforceConstraints)
 						.def("constraintsEnforced", &Robot::constraintsEnforced)
 						.def("setGravityConstant", &Robot::setGravityConstant)
+						.def("setExternalForce", &Robot::setExternalForce)
                         //.def("setup", &Integrate::setup)                        
     ;
 }

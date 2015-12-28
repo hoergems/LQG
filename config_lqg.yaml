@@ -95,7 +95,7 @@ continuous_collision_check: False
 # Dynamic problem and parameters
 #########################################
 dynamic_problem: True
-gravity: -9.81
+gravity: 9.81
 simulation_step_size: 0.1
 num_control_samples: 1
 min_control_duration: 1

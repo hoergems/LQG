@@ -27,6 +27,10 @@ void Propagator::set_gravity_constant(double &gravity_constant) {
 	integrator_->setGravityConstant(gravity_constant);
 }
 
+void Propagator::set_external_force(double &f_x, double &f_y, double &f_z) {
+	integrator_->setExternalForce(f_x, f_y, f_z);
+}
+
 void Propagator::enforce_constraints(bool enforce) {
 	enforce_constraints_ = enforce;
 }

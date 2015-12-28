@@ -23,7 +23,19 @@ class Test:
         g_symb = symbols("g_")
         g = Matrix([[0],
                     [0],
-                    [g_symb]])     
+                    [g_symb]])
+        
+        """
+        F is a 6 dimensional external force vector (fx, fy, fz, mx, my, mz), consisting of 
+        pull f and twist m
+        """
+        f_x, f_y, f_z = symbols("f_x_ f_y_ f_z_")
+        F = Matrix([[f_x],
+                    [f_y],
+                    [f_z],
+                    [0],
+                    [0],
+                    [0]])     
         """
         Get the Jacobians of the links expressed in the robot's base frame
         """        
@@ -46,18 +58,8 @@ class Test:
         C = self.calc_coriolis_matrix(self.q, self.qdot, M)
         if self.simplifying:
             C = trigsimp(C)             
-        print "Calculating normal forces" 
+        print "Calculating normal forces"         
         
-        """
-        F is a 6 dimensional external force vector (fx, fy, fz, mx, my, mz), consisting of 
-        pull f and twist m
-        """
-        F = Matrix([[0],
-                    [0],
-                    [1],
-                    [0],
-                    [0],
-                    [0]])
         N = self.calc_generalized_forces(self.q,
                                          self.qdot, 
                                          Ocs, 
