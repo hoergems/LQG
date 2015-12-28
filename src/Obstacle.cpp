@@ -41,8 +41,7 @@ bool Obstacle::isTraversable() const{
 
 bool Obstacle::in_collision(std::vector<double> &point) const{
     Vec3f p_vec(point[0], point[1], point[2]);
-    return collision_object_ptr_->getAABB().contain(p_vec);
-    //return collision_structure_.contain(p_vec);
+    return collision_object_ptr_->getAABB().contain(p_vec);    
 }
 
 bool Obstacle::in_collision(std::vector<std::shared_ptr<fcl::CollisionObject const>> &other_collision_objects) const {	
@@ -54,16 +53,6 @@ bool Obstacle::in_collision(std::vector<std::shared_ptr<fcl::CollisionObject con
 	
 	return false;
 }
-
-/**bool Obstacle::in_collision(std::vector<fcl::AABB> &other_collision_structures) const{	
-    for (size_t i = 0; i < other_collision_structures.size(); i++) {        
-        if (collision_object_ptr_->getAABB().overlap(other_collision_structures[i])) {            
-            return true;
-        }
-    }
-    
-    return false;
-}*/
 
 bool Obstacle::in_collision(const std::vector<std::shared_ptr<Obstacle> > &other_obstacles) const{        
     for (size_t i = 0; i < other_obstacles.size(); i++) {
@@ -106,10 +95,6 @@ bool Obstacle::in_collision_continuous(boost::python::list &ns) {
     		boost::python::extract<std::shared_ptr<fcl::CollisionObject const>>(ns[1]);
     return in_collision(collision_object_start, collision_object_goal);
 }
-
-/**std::shared_ptr<fcl::AABB> Obstacle::getCollisionStructure() const {
-    return std::make_shared<fcl::AABB>(collision_object_->getAABB());
-}*/
 
 std::shared_ptr<fcl::CollisionObject const> Obstacle::getCollisionObject() const {
 	return collision_object_ptr_;

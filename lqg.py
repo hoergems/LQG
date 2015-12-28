@@ -1,23 +1,4 @@
-'''import numpy as np
-import plot as Plot
-import os
-import glob
-import sys
-#import libutil
-import logging
-import scipy
-from libutil import *
-import librobot
-from serializer import Serializer
-from libobstacle import *
-from util_py import *
-import kalman as kalman
-from path_evaluator import PathEvaluator
-from simulator import Simulator
-from path_planning_interface import PathPlanningInterface
-from EMD import *
-from xml.dom import minidom
-from history_entry import *'''
+
 import sys
 import time
 import numpy as np
@@ -415,7 +396,7 @@ class LQG:
         self.robot.setupViewer(model_file, env_file)
         x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         while True:
-            u = [0.0, -70.0, 0.0, 0.0, 0.0, 0.0]
+            u = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             current_state = v_double()
             current_state[:] = x
             control = v_double()

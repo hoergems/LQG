@@ -2,8 +2,8 @@
  *
  * Defines the RockSampleState class, which represents a state of the RockSample problem.
  */
-#ifndef BOX_OBSTACLE_HPP_
-#define BOX_OBSTACLE_HPP_
+#ifndef SPHERE_OBSTACLE_HPP_
+#define SPHERE_OBSTACLE_HPP_
 #include "Obstacle.hpp"
 #include <vector>
 #include <unistd.h>
@@ -18,9 +18,9 @@
 
 namespace shared {
 
-class BoxObstacle: public Obstacle  {
+class SphereObstacle: public Obstacle  {
     public:    
-        BoxObstacle(double pos_x, double pos_y, double pos_z, double size_x, double size_y, double size_z, const Terrain &terrain);
+        SphereObstacle(double pos_x, double pos_y, double pos_z, double radius, const Terrain &terrain);
                 
         virtual void createCollisionObject() override;
 
@@ -28,10 +28,7 @@ class BoxObstacle: public Obstacle  {
         double pos_x_;
         double pos_y_;
         double pos_z_;
-        double size_x_;
-        double size_y_;
-        double size_z_;
-        
+        double radius_;
 };
 
 }

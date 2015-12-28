@@ -44,22 +44,4 @@ void BoxObstacle::createCollisionObject() {
     collision_object_ptr_ = std::make_shared<fcl::CollisionObject>(fcl::CollisionObject(boost::shared_ptr<CollisionGeometry>(box), box_tf));*/
 }
 
-/**void BoxObstacle::createCollisionStructure() {    
-    Vec3f p1(pos_x_ - size_x_, 
-             pos_y_ - size_y_, 
-             pos_z_ - size_z_);
-    Vec3f p2(pos_x_ + size_x_, 
-             pos_y_ + size_y_, 
-             pos_z_ + size_z_);
-    AABB collision_structure(p1, p2);
-    Matrix3f rot(1.0, 0.0, 0.0,
-                 0.0, 1.0, 0.0,
-                 0.0, 0.0, 1.0);
-    Vec3f trans(0.0, 0.0, 0.0);
-    Transform3f rotate_transform(rot, trans);
-    convertBV(collision_structure, rotate_transform, collision_structure_);    
-}*/
-
-
-
 }

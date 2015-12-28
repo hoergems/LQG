@@ -28,7 +28,8 @@ add_library(util SHARED
             utils.cpp
             Terrain.cpp
             Obstacle.cpp
-            BoxObstacle.cpp)
+            BoxObstacle.cpp
+            SphereObstacle.cpp)
 
 add_library(area SHARED
             Area.cpp)
@@ -71,7 +72,8 @@ add_library(path_planner SHARED
             utils.cpp
             Terrain.cpp
             Obstacle.cpp
-            BoxObstacle.cpp)
+            BoxObstacle.cpp
+            SphereObstacle.cpp)
 
 add_library(dynamic_path_planner SHARED 
             dynamic_path_planner.cpp
@@ -90,6 +92,7 @@ add_library(dynamic_path_planner SHARED
             viewer.cpp
             Obstacle.cpp
             BoxObstacle.cpp
+            SphereObstacle.cpp
             Terrain.cpp
             torque_damper.cpp
             control_space.cpp

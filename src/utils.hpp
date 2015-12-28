@@ -1,9 +1,10 @@
 #ifndef UTILS_HPP_
 #define UTILS_HPP_
-
+#include <assert.h>
 #include <memory>
 #include "Obstacle.hpp"
 #include "BoxObstacle.hpp"
+#include "SphereObstacle.hpp"
 #include "Terrain.hpp"
 #include <iostream> 
 #include <fstream>

@@ -42,12 +42,14 @@ class Obstacle {
         //bool in_collision(std::vector<fcl::AABB> &other_collision_structures) const;
         
         /**
-         * Checks id this obstacle collides with a CollisionObject 
+         * Checks if this obstacle collides with a CollisionObject 
          */
         bool in_collision(std::vector<std::shared_ptr<fcl::CollisionObject const>> &other_collision_objects) const; 
         
         /**
-         * Continuous collision
+         * Checks if the obstacle collides with another moving collision object.
+         * The motion of of the other collision object is determined by a start
+         * and goal transformation
          */
         bool in_collision(std::shared_ptr<fcl::CollisionObject const> &collision_object_start, 
         		std::shared_ptr<fcl::CollisionObject const>  &collision_object_goal) const;
@@ -67,6 +69,9 @@ class Obstacle {
          */
         virtual bool in_collision_continuous(boost::python::list &ns); 
 
+        /**
+         * Get the terrain this obstacle consists of
+         */
         std::shared_ptr<Terrain> getTerrain() const;
         
         //std::shared_ptr<fcl::AABB> getCollisionStructure() const;
@@ -76,6 +81,9 @@ class Obstacle {
          */
         std::shared_ptr<fcl::CollisionObject const> getCollisionObject() const;
 
+        /**
+         * Determines if the obstacle is traversable
+         */
         bool isTraversable() const;
                  
         /**
