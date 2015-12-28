@@ -156,7 +156,7 @@ void Utils::loadObstaclesXML(std::string &obstacles_file,
 					}
 				}
 				
-				if (terrain_xml) {
+				if (terrain_xml) {					
 					TerrainStruct terrain;
 					std::string terrain_name(terrain_xml->Attribute("name"));					
 					TiXmlElement *damping_xml = terrain_xml->FirstChildElement("Damping");
@@ -164,8 +164,8 @@ void Utils::loadObstaclesXML(std::string &obstacles_file,
 					TiXmlElement *cost_xml = terrain_xml->FirstChildElement("Cost");
 					double cost = boost::lexical_cast<double>(cost_xml->GetText());
 					TiXmlElement *traversable_xml = terrain_xml->FirstChildElement("Traversable");
-					bool traversable = false;
-					if (traversable_xml->GetText() == "true") {
+					bool traversable = false;					
+					if (boost::lexical_cast<std::string>(traversable_xml->GetText()) == "true") {						
 						traversable = true;
 					}
 					terrain.name = terrain_name;

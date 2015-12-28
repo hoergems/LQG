@@ -77,7 +77,11 @@ class Obstacle {
          */
         std::shared_ptr<Terrain> getTerrain() const;
         
-        //std::shared_ptr<fcl::AABB> getCollisionStructure() const;
+        /**
+         * Gets the external force (proportional to the end effector velocity)
+         * the underlying obstacles induces on the end effector.
+         */
+        virtual double getExternalForce();
         
         /**
          * Get the underlying collision object
@@ -123,6 +127,10 @@ public:
 	
 	bool in_collision_point(std::vector<double> &point) {
 		this->get_override("in_collision_point")(point);
+	}
+	
+	double getExternalForce() {
+		this->get_override("getExternalForce")();
 	}
 };
 

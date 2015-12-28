@@ -39,6 +39,10 @@ bool Obstacle::isTraversable() const{
     return terrain_.isTraversable();
 }
 
+double Obstacle::getExternalForce() {
+	return terrain_.getVelocityDamping();
+}
+
 bool Obstacle::in_collision(std::vector<double> &point) {
     Vec3f p_vec(point[0], point[1], point[2]);
     return collision_object_ptr_->getAABB().contain(p_vec);    
@@ -143,6 +147,7 @@ BOOST_PYTHON_MODULE(libobstacle)
          .def("inCollisionContinuous", in_collision_c)
 		 .def("inCollisionPoint", in_collision_p)
          .def("isTraversable", &ObstacleWrapper::isTraversable)
+		 .def("getExternalForce", &ObstacleWrapper::getExternalForce)
 		 .def("createCollisionObject", boost::python::pure_virtual(&ObstacleWrapper::createCollisionObject))
     ;
 }

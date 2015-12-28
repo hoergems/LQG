@@ -395,30 +395,30 @@ class LQG:
         
     def run_viewer(self, model_file, env_file):
         self.robot.setupViewer(model_file, env_file)
-        self.robot.setExternalForce(0.0, 1.0, 0.0)
+        fx = 0.0
+        fy = 0.0
+        fz = 0.0
+        
         x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        while True:
-            u = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        while True:            
+            #u_in = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             current_state = v_double()
             current_state[:] = x
             control = v_double()
-            control[:] = u            
+            print "copy"
+            control[:] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            print "copied"           
             control_error = v_double()
             ce = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             control_error[:] = ce
-            result = v_double() 
+            result = v_double()
+            print "propagate" 
             self.robot.propagate(current_state,
                                  control,
                                  control_error,
                                  self.simulation_step_size,
                                  0.03,
                                  result)
-            
-            '''
-            Get the end effector velocity vector
-            '''
-            ee_velocity = v_double()
-            self.robot.getEndEffectorVelocity(result, ee_velocity)
             #print "ee_velocity " + str([ee_velocity[i] for i in xrange(len(ee_velocity))])
             
             '''
@@ -432,9 +432,25 @@ class LQG:
             collision_objects = self.robot.createRobotCollisionObjects(joint_angles)
             ee_collision_objects = self.robot.createEndEffectorCollisionObject(joint_angles)
             
-            for o in self.obstacles:
-                print "collides " + str(o.inCollisionDiscrete(collision_objects))
-                print "ee collides " + str(o.inCollisionDiscrete(ee_collision_objects))
+            in_collision = False
+            for o in self.obstacles:                
+                if(o.inCollisionDiscrete(ee_collision_objects) and o.isTraversable()):
+                    in_collision = True
+                    '''
+                    Get the end effector velocity vector
+                    '''                    
+                    ee_velocity = v_double()
+                    self.robot.getEndEffectorVelocity(result, ee_velocity)
+                    ee_linear_velocity = np.array([ee_velocity[i] for i in xrange(len(ee_velocity) / 2)])
+                    ext_force = o.getExternalForce()
+                    force_vector = -ext_force * ee_linear_velocity
+                    print "ee_linear_velocity " + str(ee_linear_velocity)
+                    print "force vector: " + str(force_vector)
+                    self.robot.setExternalForce(force_vector[0], force_vector[1], force_vector[2])
+            if not in_collision:
+                self.robot.setExternalForce(fx, fy, fz)
+                #self.robot.setExternalForce(0.0, 0.0, 0.0)
+                    
                 #print o.inCollisionPoint(ee_position)                                               
             x = np.array([result[i] for i in xrange(len(result))])
             cjvals = v_double()
