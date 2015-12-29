@@ -26,7 +26,7 @@ class LQG:
         if config['verbose']:
             logging_level = logging.DEBUG
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)        
-        np.set_printoptions(precision=16)
+        #np.set_printoptions(precision=16)
         dir = "stats/lqg"
         self.clear_stats(dir)
         self.utils = Utils()
@@ -36,12 +36,7 @@ class LQG:
         self.init_robot(urdf_model_file)
         environment_file = os.path.join("environment", "env.xml")        
         if not self.setup_scene("environment", "env.xml", self.robot):
-            return  
-        #self.robot.setupViewer(urdf_model_file, environment_file)
-        #self.show_state_distribution(urdf_model_file, environment_file)
-        print "setting up viewer1"
-        '''if self.show_viewer:
-            self.robot.setupViewer(urdf_model_file, environment_file)'''
+            return
         #self.run_viewer(urdf_model_file, environment_file)      
         
         logging.info("Start up simulator")
@@ -145,10 +140,13 @@ class LQG:
                     """
                     The process noise covariance matrix
                     """
-                    M = m_covs[j] * np.identity(2 * self.robot_dof)
+                    ''''M = m_covs[j] * np.identity(2 * self.robot_dof)
+                    N = self.min_observation_covariance * np.identity(2 * self.robot_dof)'''
+                    
+                    M = m_covs[j] * np.identity(self.robot_dof)
                     N = self.min_observation_covariance * np.identity(2 * self.robot_dof)
                 elif self.inc_covariance == "observation":
-                    M = self.min_process_covariance * np.identity(2 * self.robot_dof)
+                    M = self.min_process_covariance * np.identity(self.robot_dof)
                     N = m_covs[j] * np.identity(2 * self.robot_dof)               
                 
                 
@@ -514,16 +512,16 @@ class LQG:
     def problem_setup(self, delta_t, num_links):
         A = np.identity(num_links * 2)
         H = np.identity(num_links * 2)
-        B = delta_t * np.identity(num_links * 2)
-        #B = np.vstack((B, np.zeros((num_links, num_links))))        
-        V = np.identity(num_links * 2)
         W = np.identity(num_links * 2)
+        #B = delta_t * np.identity(num_links * 2)
+        B = delta_t * np.vstack((np.identity(num_links),
+                                 np.zeros((num_links, num_links))))
+        V = np.vstack((np.identity(num_links),
+                       np.zeros((num_links, num_links))))        
+        #V = np.identity(num_links * 2)
         C = self.path_deviation_cost * np.identity(num_links * 2)
+        D = self.control_deviation_cost * np.identity(num_links)
         
-        D = self.control_deviation_cost * np.identity(num_links * 2)
-        #D  = np.vstack((D, np.zeros((num_links, num_links))))
-        
-        #D = 1.0 * np.identity(num_links * 2)
         return A, H, B, V, W, C, D
             
     def get_avg_path_length(self, paths):

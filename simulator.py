@@ -94,39 +94,45 @@ class Simulator:
         Ms = []
         Hs = []
         Ws = []
-        Ns = []        
-        if self.dynamic_problem:
+        Ns = []
+        if self.dynamic_problem:            
+            '''As.append(np.identity((len(state_path[0]))))
+            Bs.append(np.identity((len(state_path[0]))))            
+            Vs.append(np.identity((len(state_path[0]))))
+            Ms.append(np.identity((len(state_path[0]))))
+            Hs.append(np.identity((len(state_path[0]))))
+            Ws.append(np.identity((len(state_path[0]))))
+            Ns.append(np.identity((len(state_path[0]))))'''
             for i in xrange(len(state_path)):
                 state = v_double()
                 control = v_double()
                 state[:] = state_path[i]
                 control[:] = control_path[i]
-                
-                t0 = time.time()                
-                A = self.robot.getProcessMatrices(state, control, control_durations[i])                
+                A = self.robot.getProcessMatrices(state, control, control_durations[i])       
                 Matr_list = [A[j] for j in xrange(len(A))]
+                start_index = len(state)**2
+                A_list = np.array([Matr_list[j] for j in xrange(start_index)]) 
+                               
+                B_list = np.array([Matr_list[j] for j in xrange(start_index, 
+                                                                start_index + (len(state) * (len(state) / 2)))])
                 
-                A_list = np.array([Matr_list[j] for j in xrange(len(state)**2)])
+                
+                start_index = start_index + (len(state) * (len(state) / 2))
+                V_list = np.array([Matr_list[j] for j in xrange(start_index, 
+                                                                start_index + (len(state) * (len(state) / 2)))])
+                A_Matr = A_list.reshape(len(state), len(state)).T
+                V_Matr = V_list.reshape(len(state), len(state) / 2)
+                B_Matr = B_list.reshape(len(state), len(state) / 2)
                            
-                B_list = np.array([Matr_list[j] for j in xrange(len(state)**2, 2 * len(state)**2)])
-                              
-                V_list = np.array([Matr_list[j] for j in xrange(2 * len(state)**2, 
-                                                                3 * len(state)**2)])
-               
-                A_Matr = A_list.reshape(len(state), len(state)).T                
-                V_Matr = V_list.reshape(len(state), len(state)).T
-                B_Matr = B_list.reshape(len(state), len(state)).T 
-                
                 As.append(A_Matr)
                 Bs.append(B_Matr)
-                Vs.append(V_Matr)
-                
+                Vs.append(V_Matr)                
                 Ms.append(self.M)
                 Hs.append(self.H)
                 Ws.append(self.W)
                 Ns.append(self.N)
         else:
-            for i in xrange(len(state_path)):
+            for i in xrange(len(state_path) + 1):
                 As.append(self.A)
                 Bs.append(self.B)
                 Vs.append(self.V)
@@ -210,10 +216,11 @@ class Simulator:
                                                     False,
                                                     False,
                                                     False,
-                                                    0.0))                               
-                u_dash = np.dot(Ls[i], x_tilde) 
+                                                    0.0))                         
+                u_dash = np.dot(Ls[i], x_tilde)
+                print "u dash " + str(u_dash) 
                 u = u_dash + us[i] 
-                u, u_dash = self.enforce_control_constraints(u, us[i])                          
+                #u, u_dash = self.enforce_control_constraints(u, us[i])                          
                 history_entries[-1].set_action(u)
                 t0 = time.time()
                 x_true_temp, ce = self.apply_control(x_true, 
@@ -222,8 +229,7 @@ class Simulator:
                                                      As[i], 
                                                      Bs[i], 
                                                      Vs[i], 
-                                                     Ms[i],
-                                                     False)
+                                                     Ms[i])
                 
                 #x_dash_temp = np.subtract(x_true_temp, xs[i + 1])              
                 x_dash_linear_temp = self.get_linearized_next_state(x_dash_linear, u_dash, ce, As[i], Bs[i], Vs[i])
@@ -281,8 +287,7 @@ class Simulator:
                                                     Hs[i], 
                                                     P_dash, 
                                                     Ws[i], 
-                                                    Ns[i], 
-                                                    2 * self.robot_dof)                            
+                                                    Ns[i])                            
                 x_estimate_new = x_tilde + xs[i + 1]
                 if self.enforce_constraints:     
                     x_estimate_new = self.check_constraints(x_estimate_new) 
@@ -397,52 +402,9 @@ class Simulator:
                       A, 
                       B, 
                       V, 
-                      M, 
-                      apply_zero_torque=False):
+                      M):
         x_new = None
-        ce = None
-        if apply_zero_torque:
-            prop_times = []        
-            for i in xrange(10000):                
-                u = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-                current_state = v_double()
-                current_state[:] = x
-                control = v_double()
-                control[:] = u            
-                control_error = v_double()
-                ce = self.sample_control_error(M)
-                
-                control_error[:] = ce
-                result = v_double() 
-                t0 = time.time()
-                self.robot.propagate(current_state,
-                                     control,
-                                     control_error,
-                                     self.simulation_step_size,
-                                     control_duration,
-                                     result)
-                prop_times.append(time.time() - t0)                                            
-                x = np.array([result[i] for i in xrange(len(result))])
-                cjvals = v_double()
-                cjvels = v_double()
-                cjvals_arr = [x[i] for i in xrange(len(x) / 2)]
-                cjvels_arr = [x[i] for i in xrange(len(x) / 2, len(x))]
-                cjvals[:] = cjvals_arr
-                cjvels[:] = cjvels_arr
-                particle_joint_values = v2_double()
-        
-                self.robot.updateViewerValues(cjvals, 
-                                              cjvels, 
-                                              particle_joint_values,
-                                              particle_joint_values)
-                #time.sleep(self.control_duration)
-                '''if self.first_update:
-                    print "PREPARE YOUR RECORDER!!!!!"
-                    time.sleep(30)
-                    self.first_update = False '''
-            print "mean " + str(sum(prop_times) / len(prop_times))
-            sleep
-            
+        ce = None    
         if self.dynamic_problem:
             current_state = v_double()
             current_state[:] = x
@@ -460,7 +422,7 @@ class Simulator:
                                  result)                               
             x_new = np.array([result[i] for i in xrange(len(result))])
         else:               
-            ce = self.get_random_joint_angles([0.0 for i in xrange(2 * self.robot_dof)], M)
+            ce = self.get_random_joint_angles([0.0 for i in xrange(M.shape[0])], M)
             '''print "A " + str(A)
             print "x " + str(x)
             print "B " + str(B)
@@ -511,8 +473,8 @@ class Simulator:
                                           particle_joint_colors)
             time.sleep(control_duration)
     
-    def sample_control_error(self, M):
-        mu = np.array([0.0 for i in xrange(2 * self.robot_dof)])
+    def sample_control_error(self, M):        
+        mu = np.array([0.0 for i in xrange(M.shape[0])])
         return np.random.multivariate_normal(mu, M)
     
     def get_random_joint_angles(self, mu, cov):        
@@ -526,7 +488,7 @@ class Simulator:
     
     def get_observation(self, true_theta, H, N, W):
         return np.add(np.dot(H, true_theta), 
-                      np.dot(W, self.get_random_joint_angles([0.0 for i in xrange(2 * self.robot_dof)], N)))
+                      np.dot(W, self.get_random_joint_angles([0.0 for i in xrange(N.shape[0])], N)))
     
 if __name__ == "__main__":
     Simulator()
