@@ -87,7 +87,7 @@ class LQG:
                                                self.max_control_duration,
                                                self.add_intermediate_states)       
         path_planner.set_start_and_goal(self.start_state, goal_states, self.goal_position, self.goal_radius)         
-        A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.robot_dof)
+        A, H, B, V, W, C, D, M_base, N_base = self.problem_setup(self.delta_t, self.robot_dof)
         
         if check_positive_definite([C, D]):
             m_covs = None
@@ -103,7 +103,7 @@ class LQG:
             emds = []
             mean_planning_times = []
             time_to_generate_paths = 0.0
-            paths = [self.serializer.deserialize_path("test_path.txt")]
+            paths = [self.serializer.deserialize_path("test_path.txt", True)]
             '''if self.use_paths_from_file and len(glob.glob(os.path.join(dir, "paths.yaml"))) == 1:
                 logging.info("LQG: Loading paths from file")
                 in_paths = self.serializer.load_paths("paths.yaml", path=dir) 
@@ -150,11 +150,11 @@ class LQG:
                     """
                     The process noise covariance matrix
                     """
-                    M = m_covs[j] * np.identity(2 * self.robot_dof)
-                    N = self.min_observation_covariance * np.identity(2 * self.robot_dof)
+                    M = m_covs[j] * M_base
+                    N = self.min_observation_covariance * N_base
                 elif self.inc_covariance == "observation":
-                    M = self.min_process_covariance * np.identity(2 * self.robot_dof)
-                    N = m_covs[j] * np.identity(2 * self.robot_dof)               
+                    M = self.min_process_covariance * M_base
+                    N = m_covs[j] * N_base               
                 
                 
                 P_t = np.array([[0.0 for k in xrange(2 * self.robot_dof)] for l in xrange(2 * self.robot_dof)]) 
@@ -520,18 +520,24 @@ class LQG:
         A = np.identity(num_links * 2)
         H = np.identity(num_links * 2)
         W = np.identity(num_links * 2)
-        
-        B = delta_t * np.identity(num_links * 2)
-        #B = np.vstack((B, np.zeros((num_links, num_links))))        
-        V = np.identity(num_links * 2)
-        
         C = self.path_deviation_cost * np.identity(num_links * 2)
         
-        D = self.control_deviation_cost * np.identity(num_links * 2)
-        #D  = np.vstack((D, np.zeros((num_links, num_links))))
+        B = delta_t * np.identity(num_links * 2)                
+        V = np.identity(num_links * 2)
+        D = self.control_deviation_cost * np.identity(num_links * 2)        
+        M_base = np.identity(2 * self.robot_dof)
+        N_base = np.identity(2 * self.robot_dof)
         
-        #D = 1.0 * np.identity(num_links * 2)
-        return A, H, B, V, W, C, D
+        ''''B = delta_t * np.vstack((np.identity(num_links),
+                                 np.zeros((num_links, num_links))))
+        V = np.vstack((np.identity(num_links),
+                       np.zeros((num_links, num_links))))
+        D = self.control_deviation_cost * np.identity(num_links)
+        M_base = np.identity(self.robot_dof)
+        N_base = np.identity(2 * self.robot_dof)'''
+        
+        
+        return A, H, B, V, W, C, D, M_base, N_base
             
     def get_avg_path_length(self, paths):
         avg_length = 0.0

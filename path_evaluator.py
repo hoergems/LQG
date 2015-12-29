@@ -202,13 +202,31 @@ class PathEvaluator:
                 control[:] = control_path[i]
                 A = self.robot.getProcessMatrices(state, control, control_durations[i])       
                 Matr_list = [A[j] for j in xrange(len(A))]
+                
                 A_list = np.array([Matr_list[j] for j in xrange(len(state)**2)])
                 B_list = np.array([Matr_list[j] for j in xrange(len(state)**2, 2 * len(state)**2)])
                 V_list = np.array([Matr_list[j] for j in xrange(2 * len(state)**2, 
                                                                 3 * len(state)**2)])
                 A_Matr = A_list.reshape(len(state), len(state)).T
                 V_Matr = V_list.reshape(len(state), len(state)).T
-                B_Matr = B_list.reshape(len(state), len(state)).T                
+                B_Matr = B_list.reshape(len(state), len(state)).T
+                
+                '''A_list = np.array([Matr_list[j] for j in xrange(len(state)**2)])
+                start_index = len(state)**2
+                B_list = np.array([Matr_list[j] for j in xrange(start_index, 
+                                                                start_index + (len(state) * (len(state) / 2)))])
+                start_index = start_index + (len(state) * (len(state) / 2))
+                V_list = np.array([Matr_list[j] for j in xrange(start_index, 
+                                                                start_index + (len(state) * (len(state) / 2)))])
+                A_Matr = A_list.reshape(len(state), len(state)).T
+                V_Matr = V_list.reshape(len(state), len(state) / 2)
+                B_Matr = B_list.reshape(len(state), len(state) / 2)
+                
+                print "Am " + str(A_Matr)
+                print "Bm " + str(B_Matr)
+                print "Vm " + str(V_Matr)
+                sleep'''
+                                
                 As.append(A_Matr)
                 Bs.append(B_Matr)
                 Vs.append(V_Matr)                
@@ -274,8 +292,9 @@ class PathEvaluator:
             L = np.identity(2 * self.robot_dof)
             if i != horizon_L - 1:
                 L = Ls[i]
-                
-            Gamma_t = np.vstack((np.hstack((np.identity(L.shape[0]), np.zeros((L.shape[0], L.shape[1])))), 
+            print "L " + str(L)
+            print " "  
+            Gamma_t = np.vstack((np.hstack((np.identity(L.shape[1]), np.zeros((L.shape[1], L.shape[1])))), 
                                  np.hstack((np.zeros((L.shape[0], L.shape[1])), L))))                 
             Cov = np.dot(Gamma_t, np.dot(R_t, Gamma_t.T))                       
             cov_state = np.array([[Cov[j, k] for k in xrange(2 * self.robot_dof)] for j in xrange(2 * self.robot_dof)])            
