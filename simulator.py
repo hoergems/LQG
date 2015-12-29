@@ -4,7 +4,6 @@ import kalman as kalman
 import logging
 import time
 from scipy.stats import multivariate_normal
-from libintegrate import *
 from librobot import v_string, v2_double
 from history_entry import *
 

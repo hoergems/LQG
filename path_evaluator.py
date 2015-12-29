@@ -2,7 +2,6 @@ import numpy as np
 import scipy
 import kalman as kalman
 from scipy.stats import multivariate_normal
-from libintegrate import *
 from librobot import v_string
 from multiprocessing import Process, Queue, cpu_count
 import collections

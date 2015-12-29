@@ -29,10 +29,6 @@ class LQG:
         np.set_printoptions(precision=16)
         dir = "stats/lqg"
         self.clear_stats(dir)
-        logging.info("Start up simulator")
-        sim = Simulator()
-        path_evaluator = PathEvaluator()
-        path_planner = PathPlanningInterface()
         self.utils = Utils()
         
         model_file = "model/test.xml"
@@ -40,12 +36,18 @@ class LQG:
         self.init_robot(urdf_model_file)
         environment_file = os.path.join("environment", "env.xml")        
         if not self.setup_scene("environment", "env.xml", self.robot):
-            return
+            return  
         #self.robot.setupViewer(urdf_model_file, environment_file)
         #self.show_state_distribution(urdf_model_file, environment_file)
         print "setting up viewer"
         self.robot.setupViewer(urdf_model_file, environment_file)
-        self.run_viewer(urdf_model_file, environment_file)       
+        self.run_viewer(urdf_model_file, environment_file)      
+        
+        logging.info("Start up simulator")
+        sim = Simulator()
+        path_evaluator = PathEvaluator()
+        path_planner = PathPlanningInterface()
+        
                 
         logging.info("LQG: Generating goal states...")
         goal_states = get_goal_states("lqg",
@@ -426,15 +428,16 @@ class LQG:
             joint_angles[:] = [result[i] for i in xrange(len(result) / 2)]
             self.robot.getEndEffectorPosition(joint_angles, ee_position)      
             
+            t0 = time.time()
             collision_objects = self.robot.createRobotCollisionObjects(joint_angles)
             ee_collision_objects = self.robot.createEndEffectorCollisionObject(joint_angles)
             
             in_collision = False
+            
             for o in self.obstacles:
-                print o.inCollisionDiscrete(collision_objects)                
+                #in_collision = o.inCollisionDiscrete(collision_objects)                        
                 if(o.inCollisionDiscrete(ee_collision_objects) and o.isTraversable()):
-                    in_collision = True
-                    
+                    in_collision = True                    
                     ###Get the end effector velocity vector                                       
                     ee_velocity = v_double()
                     self.robot.getEndEffectorVelocity(result, ee_velocity)                   
@@ -446,12 +449,9 @@ class LQG:
                     print "force vector: " + str(force_vector)
                     self.robot.setExternalForce(force_vector[0], 
                                                 force_vector[1], 
-                                                force_vector[2])
+                                                force_vector[2])            
             if not in_collision:
-                self.robot.setExternalForce(fx, fy, fz)
-                #self.robot.setExternalForce(0.0, 0.0, 0.0)
-                    
-                #print o.inCollisionPoint(ee_position)                                               
+                self.robot.setExternalForce(fx, fy, fz)                                                              
             x = np.array([result[i] for i in xrange(len(result))])
             cjvals = v_double()
             cjvels = v_double()

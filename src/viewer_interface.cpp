@@ -9,10 +9,9 @@ namespace shared {
 
 ViewerInterface::ViewerInterface ():
 	viewer_setup_(false),
-	env_(nullptr),
+	env_(),
 	robot_(nullptr),
-	urdf_loader_(){
-	
+	urdf_loader_() {
 }
 
 bool ViewerInterface::setupViewer(std::string model_file,
@@ -21,10 +20,13 @@ bool ViewerInterface::setupViewer(std::string model_file,
 		return false;
     }
 	
-	model_file_ = model_file;
-	OpenRAVE::RaveSetDebugLevel(4);
-	//OpenRAVE::RaveInitialize(false);	
+	model_file_ = model_file;	
+	OpenRAVE::RaveInitialize(true);	
+	OpenRAVE::RaveSetDebugLevel(OpenRAVE::Level_Verbose);
 	env_ = OpenRAVE::RaveCreateEnvironment();
+	env_->SetPhysicsEngine(nullptr);
+	env_->SetCollisionChecker(nullptr);
+	env_->StopSimulation();
 	cout << "loading " << environment_file << endl;
 	env_->Load(environment_file);	
 	cout << "loaded environment" << endl;	

@@ -47,13 +47,6 @@ add_library(robot SHARED
             integrate.cpp
             Kinematics.cpp)
 
-add_library(integrate SHARED integrate.cpp)
-
-add_library(propagator SHARED 
-            propagator.cpp
-            torque_damper.cpp            
-            integrate.cpp)
-
 add_library(obstacle SHARED
             Obstacle.cpp
             Terrain.cpp)
@@ -93,8 +86,7 @@ add_library(dynamic_path_planner SHARED
             Obstacle.cpp
             BoxObstacle.cpp
             SphereObstacle.cpp
-            Terrain.cpp
-            torque_damper.cpp
+            Terrain.cpp            
             control_space.cpp
             control_sampler.cpp)
 
@@ -109,12 +101,6 @@ target_link_libraries(area
                       boost_system
                       boost_python
                       python2.7)
-
-#target_link_libraries(kinematics
-#                      boost_system
-#                      boost_python
-#                      python2.7
-#                      tinyxml)
 
 target_link_libraries(path_planner
                       boost_system
@@ -146,18 +132,6 @@ target_link_libraries (robot
                        fcl
                        tinyxml
                        urdf)
-
-target_link_libraries (integrate
-                       boost_system
-                       boost_python
-                       python2.7)
-                       
-target_link_libraries (propagator
-                       boost_system
-                       boost_python
-                       python2.7
-                       openrave0.9
-                       openrave0.9-core)
 
 target_link_libraries (dynamic_path_planner                        
                        openrave0.9 

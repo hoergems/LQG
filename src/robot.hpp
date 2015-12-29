@@ -106,9 +106,6 @@ struct Joint {
     	    void addPermanentViewerParticles(const std::vector<std::vector<double>> &particle_joint_values,
 									         const std::vector<std::vector<double>> &particle_colors);
     	    
-    	    void getOpenRAVEDescription(std::vector<OpenRAVE::KinBody::LinkInfoPtr> &link_infos,
-                                        std::vector<OpenRAVE::KinBody::JointInfoPtr> &joint_infos);
-    	    
     	    void setupViewer(std::string model_file, std::string environment_file);
     	    
     	    int getDOF();
@@ -246,7 +243,15 @@ struct Joint {
             
             void quatFromRPY(double &roll, double &pitch, double &y, std::vector<double> &quat);
     
-    	
+            /**
+             * Initialize the collision objects for the active links
+             */
+    	    void initCollisionObjects();
+    	    
+    	    /**
+    	     * A vector holding the collision objects of the active links
+    	     */
+    	    std::vector<std::shared_ptr<fcl::CollisionObject>> collision_objects_;
     };
     		
 }

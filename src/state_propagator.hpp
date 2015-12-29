@@ -11,10 +11,6 @@
 #include <ompl/control/StatePropagator.h>
 #include <ompl/base/State.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
-
-#include <openrave-core.h>
-#include <openrave/environment.h>
-
 #include "propagator.hpp"
 #include "robot.hpp"
 

@@ -4,8 +4,6 @@
 #include <boost/timer.hpp>
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
-#include <openrave-core.h>
-#include <openrave/environment.h>
 #include <iostream>
 #include "integrate.hpp"
 

@@ -9,7 +9,6 @@
 #include "ManipulatorSpaceInformation.hpp"
 #include "state_propagator.hpp"
 #include "ManipulatorGoalRegion.hpp"
-#include "torque_damper.hpp"
 #include "control_space.hpp"
 #include "Obstacle.hpp"
 
@@ -77,8 +76,6 @@ namespace shared {
                 
                 ompl::base::MotionValidatorPtr motionValidator_;
                 
-                boost::shared_ptr<TorqueDamper> damper_;
-                
                 double accepted_ = 0.0;
                 
                 double rejected_ = 0.0;
@@ -109,9 +106,7 @@ namespace shared {
                 // The planner
                 ompl::base::PlannerPtr planner_;
                 
-                ompl::control::StatePropagatorPtr state_propagator_;
-
-                OpenRAVE::EnvironmentBasePtr env_;
+                ompl::control::StatePropagatorPtr state_propagator_;                
                 
                 std::vector<std::shared_ptr<Obstacle> > obstacles_;
                 
