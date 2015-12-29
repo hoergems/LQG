@@ -13,6 +13,40 @@ class Serializer:
     def __init__(self):
         pass
     
+    def deserialize_path(self, filename):
+        xs = []
+        us = []
+        zs = []
+        control_durations = []
+        with open(filename, 'r') as f:
+            for line in f.readlines():
+                arr = line.replace("\n", "").split(" ")                
+                arr_float = [float(a) for a in arr[0:19]]
+                xs.append([arr_float[i] for i in xrange(6)])
+                us.append([arr_float[i] for i in xrange(6, 12)])
+                zs.append([arr_float[i] for i in xrange(12, 18)])
+                
+                control_durations.append(arr_float[18])
+        return xs, us, zs, control_durations     
+            
+    
+    def serialize_path(self, filename, xs, us, zs, control_durations):
+        with open(filename, "a+") as f:
+            for i in xrange(len(xs)):
+                p = []
+                for j in xrange(len(xs[i])):
+                    p.append(xs[i][j])
+                for j in xrange(len(us[i])):
+                    p.append(us[i][j])
+                for j in xrange(len(zs[i])):
+                    p.append(zs[i][j])                
+                p.append(control_durations[i])
+                string = ""
+                for k in p:
+                    string += str(k) + " "
+                string += " \n"
+                f.write(string)
+    
     def write_line(self, filename, path, line):
         with open(os.path.join(path, filename), 'a+') as f:
             f.write(line)

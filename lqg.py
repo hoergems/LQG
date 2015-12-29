@@ -103,7 +103,8 @@ class LQG:
             emds = []
             mean_planning_times = []
             time_to_generate_paths = 0.0
-            if self.use_paths_from_file and len(glob.glob(os.path.join(dir, "paths.yaml"))) == 1:
+            paths = [self.serializer.deserialize_path("test_path.txt")]
+            '''if self.use_paths_from_file and len(glob.glob(os.path.join(dir, "paths.yaml"))) == 1:
                 logging.info("LQG: Loading paths from file")
                 in_paths = self.serializer.load_paths("paths.yaml", path=dir) 
                 paths = []               
@@ -127,7 +128,11 @@ class LQG:
                 print "LQG: Time to generate paths: " + str(time_to_generate_paths) + " seconds"
                 if self.plot_paths:                
                     self.serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path=dir)               
-            
+            self.serializer.serialize_path("test_path.txt", 
+                                           paths[0][0],
+                                           paths[0][1],
+                                           paths[0][2],
+                                           paths[0][3])'''
             
             """ Determine average path length """
             avg_path_length = self.get_avg_path_length(paths)            
