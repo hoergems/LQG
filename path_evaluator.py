@@ -287,7 +287,7 @@ class PathEvaluator:
             G_t_l_r = np.dot(K_t, Ws[i])
             G_t_u_r = np.zeros((Vs[i].shape[0], G_t_l_r.shape[1]))                        
             G_t = np.vstack((np.hstack((Vs[i], G_t_u_r)), 
-                             np.hstack((np.dot(np.dot(K_t, Hs[i]), Vs[i]), G_t_l_r))))                
+                             np.hstack((np.dot(K_t, np.dot(Hs[i], Vs[i])), G_t_l_r))))                
             R_t = np.dot(F_t, np.dot(R_t, F_t.T)) + np.dot(G_t, np.dot(Q_t, G_t.T)) 
             L = np.identity(2 * self.robot_dof)
             if i != horizon_L - 1:

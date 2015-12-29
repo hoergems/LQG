@@ -94,9 +94,9 @@ void Integrate::getProcessMatrices(std::vector<double> &x,
 	cout << "A: " << A_matrx1 << endl;
 	cout << "B: " << B_matrx << endl;
 	cout << "V: " << B_matrx << endl;*/
-	//MatrixXd B_matrx_temp = MatrixXd::Identity(B_matrx.rows(), B_matrx.cols() * 2);
-	//MatrixXd V_matrx_temp = MatrixXd::Identity(VMatrix.rows(), VMatrix.cols() * 2);
-    /**MatrixXd B_matrx_temp = MatrixXd::Zero(B_matrx.rows(), B_matrx.cols() * 2);
+	/**MatrixXd B_matrx_temp = MatrixXd::Identity(B_matrx.rows(), B_matrx.cols() * 2);
+	MatrixXd V_matrx_temp = MatrixXd::Identity(VMatrix.rows(), VMatrix.cols() * 2);
+    MatrixXd B_matrx_temp = MatrixXd::Zero(B_matrx.rows(), B_matrx.cols() * 2);
 	MatrixXd V_matrx_temp = MatrixXd::Zero(V_matrx.rows(), V_matrx.cols() * 2);
 			
 	for (size_t i = 0; i < B_matrx.rows(); i++) {

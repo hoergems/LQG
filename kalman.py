@@ -31,7 +31,7 @@ def compute_gain(A, B, C, D, l):
     B = B[0:l][::-1]    
     Ls = []   
     for i in xrange(l):             
-        L = -np.dot(linalg.inv(np.dot(B[i].T, np.dot(S, B[i])) + D), np.dot(B[i].T, np.dot(S, A[i])))
+        L = -np.dot(linalg.inv(np.dot(B[i].T, np.dot(S, B[i])) + D), np.dot(B[i].T, np.dot(S, A[i])))        
         Ls.append(L)
         S = C + np.dot(A[i].T, np.dot(S, A[i])) + np.dot(A[i].T, np.dot(S, np.dot(B[i], L)))
         
