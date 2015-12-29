@@ -256,8 +256,7 @@ class PathEvaluator:
         collision_probs = []
         path_rewards = []
         path_rewards.append(np.power(self.discount, current_step) * self.get_expected_state_reward(xs[0], P_t)[0])
-        Cov = 0 
-        print "start evaluating"               
+        Cov = 0   
         for i in xrange(1, horizon_L):                              
             P_hat_t = kalman.compute_p_hat_t(As[i], P_t, Vs[i], Ms[i])            
             K_t = kalman.compute_kalman_gain(Hs[i], P_hat_t, Ws[i], Ns[i])
