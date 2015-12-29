@@ -31,7 +31,7 @@ class IKSolutionGenerator:
         Generate the obstacles
         """      
         #RaveDestroy()
-        #RaveInitialize(True)
+        RaveInitialize(True)
         self.manipulator = manipulator        
         logging.info("IKSolutionGenerator: Setup")
         self.link_dimensions = v2_double()

@@ -104,7 +104,7 @@ void Integrate::getProcessMatrices(std::vector<double> &x,
 	
 	matrices.push_back(A_matrx1);
 	matrices.push_back(B_matrx_temp);
-	matrices.push_back(V_matrx_temp);
+	matrices.push_back(V_matrx_temp);	
 }
 
 std::vector<double> Integrate::getProcessMatricesVec(std::vector<double> &x, 
@@ -114,7 +114,7 @@ std::vector<double> Integrate::getProcessMatricesVec(std::vector<double> &x,
 	getProcessMatrices(x, rho, t_e, matrices);
 	std::vector<double> res;
 	
-	for (size_t i = 0; i < matrices[0].size(); i++) {
+	for (size_t i = 0; i < matrices[0].size(); i++) {		
 		res.push_back(matrices[0](i));
 	}
 		
@@ -125,8 +125,8 @@ std::vector<double> Integrate::getProcessMatricesVec(std::vector<double> &x,
 	for (size_t i = 0; i < matrices[2].size(); i++) {
 		res.push_back(matrices[2](i));
 	}
-	return res;
 	
+	return res;
 }
 
 std::vector<double> Integrate::getProcessMatricesSteadyStatesVec(std::vector<double> &x, double t_e) const {

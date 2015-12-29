@@ -54,6 +54,11 @@ namespace shared {
 	    */
 	   void setJointDamping(std::vector<double> &viscous);
 	   
+	   /**
+	    * Gets the underlying integrator
+	    */
+	   std::shared_ptr<Integrate> getIntegrator();
+	   
    private:
 	   std::shared_ptr<Integrate> integrator_;
 	   

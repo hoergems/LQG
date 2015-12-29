@@ -6,7 +6,7 @@ def kalman_predict(x_tilde, u, A, B, P_t, V, M):
     P_hat_t = compute_p_hat_t(A, P_t, V, M)    
     return x_tilde_dash_t, P_hat_t
     
-def compute_p_hat_t(A, P_t, V, M):    
+def compute_p_hat_t(A, P_t, V, M):     
     return np.dot(A, np.dot(P_t, A.T)) + np.dot(np.dot(V, M), V.T)
     
 def kalman_update(x_tilde_dash_t, z_dash_t, H, P_dash_t, W, N, num_links):

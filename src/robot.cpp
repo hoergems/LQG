@@ -514,6 +514,10 @@ void Robot::addPermanentViewerParticles(const std::vector<std::vector<double>> &
 			                      particle_colors);	
 }
 
+void Robot::removePermanentViewerParticles() {
+	viewer_.removePermanentParticles();
+}
+
 void Robot::updateViewerValues(const std::vector<double> &current_joint_values,
                                const std::vector<double> &current_joint_velocities,
 							   const std::vector<std::vector<double>> &particle_joint_values,
@@ -773,6 +777,12 @@ int Robot::getDOF() {
 	return active_joints_.size();
 }
 
+std::vector<double> Robot::getProcessMatrices(std::vector<double> &x, 
+                                              std::vector<double> &rho, 
+				                              double t_e) {
+	return propagator_->getIntegrator()->getProcessMatricesVec(x, rho, t_e);
+}
+
 BOOST_PYTHON_MODULE(librobot) {
     using namespace boost::python;
     
@@ -823,6 +833,7 @@ BOOST_PYTHON_MODULE(librobot) {
                         .def("setupViewer", &Robot::setupViewer)
                         .def("updateViewerValues", &Robot::updateViewerValues)
 						.def("addPermanentViewerParticles", &Robot::addPermanentViewerParticles)
+						.def("removePermanentViewerParticles", &Robot::removePermanentViewerParticles)
                         .def("test", &Robot::test)
                         .def("getDOF", &Robot::getDOF)
 						.def("getJointLowerPositionLimits", &Robot::getJointLowerPositionLimits)
@@ -834,6 +845,7 @@ BOOST_PYTHON_MODULE(librobot) {
 						.def("setGravityConstant", &Robot::setGravityConstant)
 						.def("setExternalForce", &Robot::setExternalForce)
 						.def("getEndEffectorVelocity", &Robot::getEndEffectorVelocity)
+						.def("getProcessMatrices", &Robot::getProcessMatrices)
                         //.def("setup", &Integrate::setup)                        
     ;
 }

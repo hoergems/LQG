@@ -60,6 +60,18 @@ bool ViewerInterface::setupViewer(std::string model_file,
 	
 }
 
+void ViewerInterface::removePermanentParticles() {
+	std::vector<OpenRAVE::KinBodyPtr> bodies;
+    env_->GetBodies(bodies);
+    // Remove the particle bodies from the scene
+    std::string particle_string = "permanent_";
+    for (auto &body: bodies) {		
+    	if (body->GetName().find(particle_string) != std::string::npos) {			
+    		env_->Remove(body);
+    	}		
+    }
+}
+
 void ViewerInterface::addPermanentParticles(const std::vector<std::vector<double>> &particle_joint_values,
 		                                    const std::vector<std::vector<double>> &particle_colors) {	
 	double num_plot = particle_joint_values.size();
@@ -127,21 +139,19 @@ void ViewerInterface::updateRobotValues(const std::vector<double> &current_joint
 	}
 	
 	std::vector<OpenRAVE::KinBody::LinkPtr> links = robot_to_use->GetLinks();
-	std::vector<OpenRAVE::KinBody::JointPtr> joints = robot_to_use->GetJoints();
-	
+	std::vector<OpenRAVE::KinBody::JointPtr> joints = robot_to_use->GetJoints();	
 	std::vector<OpenRAVE::KinBody::LinkInfo> link_infos;
-	std::vector<OpenRAVE::KinBody::JointInfo> joint_infos;
-	
+	std::vector<OpenRAVE::KinBody::JointInfo> joint_infos;	
 	for (auto &link: links) {
 		link_infos.push_back(link->GetInfo());
 	}
 	
 	for (auto &joint: joints) {
 		joint_infos.push_back(joint->GetInfo());
-	}	
+	}
 	
 	std::vector<OpenRAVE::dReal> newJointValues;
-	for (size_t i = 0; i < current_joint_values.size(); i++) {
+	for (size_t i = 0; i < current_joint_values.size(); i++) {		
 		if (current_joint_values[i] < -M_PI) {
 			newJointValues.push_back(2.0 * M_PI + current_joint_values[i]);
 		}
@@ -151,9 +161,9 @@ void ViewerInterface::updateRobotValues(const std::vector<double> &current_joint
 		else {
 			newJointValues.push_back(current_joint_values[i]);
 		}
-	}
+	}	
 		
-	newJointValues.push_back(0);			
+	newJointValues.push_back(0);	
 	robot_to_use->SetDOFValues(newJointValues);
 	size_t num_plot = 50;
 	if (particle_joint_values.size() < num_plot) {
@@ -172,10 +182,8 @@ void ViewerInterface::updateRobotValues(const std::vector<double> &current_joint
         	joint_vals.push_back(k);
         }
         
-        joint_vals.push_back(0);
-        
-        robot_ptr->SetDOFValues(joint_vals);
-        
+        joint_vals.push_back(0);        
+        robot_ptr->SetDOFValues(joint_vals);        
         const std::vector<OpenRAVE::KinBody::LinkPtr> links = robot_ptr->GetLinks();
         for (auto &link: links) {
         	const std::vector<OpenRAVE::KinBody::Link::GeometryPtr> link_geometries = link->GetGeometries();

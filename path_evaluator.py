@@ -2,12 +2,13 @@ import numpy as np
 import scipy
 import kalman as kalman
 from scipy.stats import multivariate_normal
-from librobot import v_string
+from librobot import v_string, v_double, v2_double
 from multiprocessing import Process, Queue, cpu_count
 import collections
 import time
 import logging
 from threading import Lock
+import util_py
 
 class PathEvaluator:
     def __init__(self):
@@ -18,7 +19,10 @@ class PathEvaluator:
               sample_size, 
               obstacles,
               goal_position,
-              goal_radius):
+              goal_radius,              
+              show_viewer,
+              model_file,
+              env_file):
         self.robot = robot       
         self.A = A
         self.B = B
@@ -51,9 +55,11 @@ class PathEvaluator:
         #self.num_cores = 2 
         self.goal_position = goal_position 
         self.goal_radius = goal_radius
-        self.mutex = Lock()
-        self.integrate = Integrate()
-        self.dynamic_problem = False
+        self.mutex = Lock()        
+        self.dynamic_problem = False        
+        self.show_viewer = show_viewer
+        self.model_file = model_file
+        self.env_file = env_file
         
     def setup_dynamic_problem(self):
         self.dynamic_problem = True             
@@ -83,8 +89,8 @@ class PathEvaluator:
     
     def get_expected_state_reward(self, mean, cov):
         with self.mutex:
-            np.random.seed()              
-        samples = multivariate_normal.rvs(mean, cov, self.sample_size)        
+            np.random.seed()        
+        samples = self.sample_multivariate_normal(mean, cov, self.sample_size)
         pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True) 
         pdf /= sum(pdf)        
         expected_reward = 0.0
@@ -101,7 +107,7 @@ class PathEvaluator:
             
             collision_objects = self.robot.createRobotCollisionObjects(joint_angles)
             for obstacle in self.obstacles:
-                if obstacle.inCollisionDiscrete(collision_objects):                                            
+                if obstacle.inCollisionDiscrete(collision_objects) and not obstacle.isTraversable():                                            
                     expected_reward -= pdf[i] * self.collision_penalty                        
                     collides = True
                     break
@@ -113,6 +119,25 @@ class PathEvaluator:
                     expected_reward -= pdf[i] * self.step_penalty
                        
         return (expected_reward, terminal)
+    
+    def show_nominal_path(self, robot, path):                
+        if self.show_viewer:
+            robot.removePermanentViewerParticles()
+            particle_joint_values = v2_double()
+            particle_joint_colors = v2_double()
+            pjvs = []
+            for p in path:
+                particle = v_double()
+                particle[:] = [p[i] for i in xrange(len(p) / 2)]
+                pjvs.append(particle)
+                
+                color = v_double()
+                color[:] = [0.0, 0.0, 0.0, 0.7]
+                particle_joint_colors.append(color)            
+            particle_joint_values[:] = pjvs
+            robot.addPermanentViewerParticles(particle_joint_values,
+                                              particle_joint_colors) 
+            print "Permanent particles added"           
         
     def evaluate_path(self, path, P_t, current_step, horizon=-1):       
         objective_p = self.evaluate(0, path, P_t, current_step, horizon)
@@ -128,7 +153,7 @@ class PathEvaluator:
                 paths_tmp.append(paths[i])
         for i in xrange(len(paths_tmp)):            
             logging.info("PathEvaluator: Evaluate path " + str(i))            
-            p = Process(target=self.evaluate, args=(i, paths_tmp[i], P_t, current_step, horizon, eval_queue,))
+            p = Process(target=self.evaluate, args=(i, paths_tmp[i], P_t, current_step, horizon, self.robot, eval_queue,))
             p.start()
             jobs.append(p)           
                 
@@ -175,29 +200,18 @@ class PathEvaluator:
                 control = v_double()
                 state[:] = state_path[i]
                 control[:] = control_path[i]
-                
-                
-                t0 = time.time()
-                
-                A = self.integrate.getProcessMatrices(state, control, control_durations[i])  
-                         
+                A = self.robot.getProcessMatrices(state, control, control_durations[i])       
                 Matr_list = [A[j] for j in xrange(len(A))]
-                
                 A_list = np.array([Matr_list[j] for j in xrange(len(state)**2)])
-                           
                 B_list = np.array([Matr_list[j] for j in xrange(len(state)**2, 2 * len(state)**2)])
-                              
-                V_list = np.array([Matr_list[j] for i in xrange(2 * len(state)**2, 
+                V_list = np.array([Matr_list[j] for j in xrange(2 * len(state)**2, 
                                                                 3 * len(state)**2)])
-               
                 A_Matr = A_list.reshape(len(state), len(state)).T
                 V_Matr = V_list.reshape(len(state), len(state)).T
-                B_Matr = B_list.reshape(len(state), len(state)).T 
-                
+                B_Matr = B_list.reshape(len(state), len(state)).T                
                 As.append(A_Matr)
                 Bs.append(B_Matr)
-                Vs.append(V_Matr)
-                
+                Vs.append(V_Matr)                
                 Ms.append(self.M)
                 Hs.append(self.H)
                 Ws.append(self.W)
@@ -214,17 +228,19 @@ class PathEvaluator:
             
         return As, Bs, Vs, Ms, Hs, Ws, Ns
     
-    def evaluate(self, index, path, P_t, current_step, horizon, eval_queue=None):
+    def evaluate(self, index, path, P_t, current_step, horizon, robot, eval_queue=None):
+        if self.show_viewer:
+            robot.setupViewer(self.model_file, self.env_file)
         xs = path[0]
         us = path[1]
-        zs = path[2]  
+        zs = path[2] 
+        self.show_nominal_path(robot, xs) 
         control_durations = path[3]      
         horizon_L = horizon + 1 
         if horizon == -1 or len(xs) < horizon_L:            
             horizon_L = len(xs)
         
         As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, us, control_durations)        
-        
         #Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, horizon_L - 1)
         Ls = kalman.compute_gain(As, Bs, self.C, self.D, horizon_L - 1)
         
@@ -239,14 +255,13 @@ class PathEvaluator:
         ee_approx_distr = []
         collision_probs = []
         path_rewards = []
-        path_rewards.append(np.power(self.discount, current_step) * self.get_expected_state_reward(xs[0], P_t)[0])        
-        #sleep
-        Cov = 0                
+        path_rewards.append(np.power(self.discount, current_step) * self.get_expected_state_reward(xs[0], P_t)[0])
+        Cov = 0 
+        print "start evaluating"               
         for i in xrange(1, horizon_L):                              
-            P_hat_t = kalman.compute_p_hat_t(As[i], P_t, Vs[i], Ms[i])
+            P_hat_t = kalman.compute_p_hat_t(As[i], P_t, Vs[i], Ms[i])            
             K_t = kalman.compute_kalman_gain(Hs[i], P_hat_t, Ws[i], Ns[i])
-            P_t = kalman.compute_P_t(K_t, Hs[i], P_hat_t, 2 * self.robot_dof)
-            
+            P_t = kalman.compute_P_t(K_t, Hs[i], P_hat_t, 2 * self.robot_dof)            
             F_0 = np.hstack((As[i], np.dot(Bs[i], Ls[i - 1])))
             F_1 = np.hstack((np.dot(K_t, np.dot(Hs[i], As[i])), 
                              As[i] + np.dot(Bs[i], Ls[i - 1]) - np.dot(K_t, np.dot(Hs[i], As[i]))))            
@@ -262,15 +277,14 @@ class PathEvaluator:
                 L = Ls[i]
                 
             Gamma_t = np.vstack((np.hstack((np.identity(2 * self.robot_dof), NU)), 
-                                 np.hstack((NU, L))))
-                             
+                                 np.hstack((NU, L))))                 
             Cov = np.dot(Gamma_t, np.dot(R_t, Gamma_t.T))                       
-            cov_state = np.array([[Cov[j, k] for k in xrange(2 * self.robot_dof)] for j in xrange(2 * self.robot_dof)])
-            
-            (state_reward, terminal) = self.get_expected_state_reward(xs[i], cov_state)
-            path_rewards.append(np.power(self.discount, current_step + i) * state_reward)
-            '''if terminal:
-                break'''             
+            cov_state = np.array([[Cov[j, k] for k in xrange(2 * self.robot_dof)] for j in xrange(2 * self.robot_dof)])            
+            (state_reward, terminal) = self.get_expected_state_reward(xs[i], cov_state)            
+            path_rewards.append(np.power(self.discount, current_step + i) * state_reward)            
+            if self.show_viewer:
+                self.show_state_and_cov(xs[i], cov_state)                
+                time.sleep(1.0)
         path_reward = sum(path_rewards)  
         print "PathEvaluator: Path " + str(index) + " evaluated"             
         logging.info("========================================")
@@ -283,6 +297,30 @@ class PathEvaluator:
             eval_queue.put((path_reward, path, Cov))
         else:
             return path_reward
+        
+    def sample_multivariate_normal(self, mean, cov, num):
+        return multivariate_normal.rvs(mean, cov, num)
+    
+    def show_state_and_cov(self, state, cov):        
+        joint_values = v_double()
+        joint_values[:] = [state[i] for i in xrange(len(state) / 2)]
+        joint_velocities = v_double()
+        joint_velocities[:] = [state[i] for i in xrange(len(state) / 2, len(state))]
+        particles = v2_double() 
+        particle_joint_colors = v2_double()       
+        samples = self.sample_multivariate_normal(state, cov, 50)
+        for s in samples:
+            particle = v_double()
+            particle_color = v_double()
+            particle[:] = [s[i] for i in xrange(len(s) / 2)]
+            particle_color[:] = [0.5, 0.5, 0.5, 0.5]
+            particles.append(particle)
+            particle_joint_colors.append(particle_color)
+        
+        self.robot.updateViewerValues(joint_values,
+                                      joint_velocities,
+                                      particles,
+                                      particle_joint_colors)
         
 
 if __name__ == "__main__":

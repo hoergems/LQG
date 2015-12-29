@@ -26,8 +26,16 @@ public:
 						   const std::vector<std::vector<double>> &particle_colors,
 		   	   			   OpenRAVE::RobotBasePtr robot);
 	
+	/**
+	 * Add particles that are independent of viewer updates
+	 */
 	void addPermanentParticles(const std::vector<std::vector<double>> &particle_joint_values,
 			                   const std::vector<std::vector<double>> &particle_colors);
+	
+	/**
+	 * Remove the permanently added particles
+	 */
+	void removePermanentParticles();
 
 
 private:

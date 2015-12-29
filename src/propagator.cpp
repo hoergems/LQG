@@ -45,6 +45,10 @@ void Propagator::enforce_constraints(bool enforce) {
 	enforce_constraints_ = enforce;
 }
 
+std::shared_ptr<Integrate> Propagator::getIntegrator() {
+	return integrator_;
+}
+
 bool Propagator::propagate_linear(const std::vector<double> &current_joint_values,
                                   const std::vector<double> &control,
                                   const std::vector<double> &control_error,				             		             

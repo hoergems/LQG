@@ -4,7 +4,7 @@ import kalman as kalman
 import logging
 import time
 from scipy.stats import multivariate_normal
-from librobot import v_string, v2_double
+from librobot import v_string, v_double, v2_double
 from history_entry import *
 
 
@@ -64,15 +64,12 @@ class Simulator:
         
         self.enforce_constraints = robot.constraintsEnforced()
         self.dynamic_problem = False
-        self.integrate = Integrate()
         self.show_viewer = show_viewer
         active_joints = v_string()
         self.robot.getActiveJoints(active_joints)
-        self.robot_dof = self.robot.getDOF()
-        print "showing viewer"
+        self.robot_dof = self.robot.getDOF()      
         if show_viewer:
             self.robot.setupViewer(model_file, env_file)
-        print "shown"
         self.first_update = True
         
     def setup_dynamic_problem(self,                           
@@ -106,7 +103,7 @@ class Simulator:
                 control[:] = control_path[i]
                 
                 t0 = time.time()                
-                A = self.integrate.getProcessMatrices(state, control, control_durations[i])                
+                A = self.robot.getProcessMatrices(state, control, control_durations[i])                
                 Matr_list = [A[j] for j in xrange(len(A))]
                 
                 A_list = np.array([Matr_list[j] for j in xrange(len(state)**2)])
@@ -260,8 +257,8 @@ class Simulator:
                 x_dash = np.subtract(x_true, xs[i + 1])
                 x_dash_linear = np.subtract(x_true_linear , xs[i + 1])                
                 
-                '''print "x_dash " + str(x_dash)
-                print "x_dash_linear " + str(x_dash_linear)'''
+                #print "x_dash " + str(x_dash)
+                #print "x_dash_linear " + str(x_dash_linear)
                 
                 state = v_double()
                 state[:] = [x_true[j] for j in xrange(len(x_true) / 2)]
@@ -357,11 +354,11 @@ class Simulator:
         Is the given end effector position in collision with an obstacle?
         """
         #previous_state = []
-                    
+        collidable_obstacles = [o for o in self.obstacles if not o.isTraversable()]
         joint_angles_goal = v_double()
         joint_angles_goal[:] = [state[i] for i in xrange(self.robot_dof)]
         collision_objects = self.robot.createRobotCollisionObjects(joint_angles_goal)
-        for obstacle in self.obstacles:
+        for obstacle in collidable_obstacles:
             if obstacle.inCollisionDiscrete(collision_objects):                               
                 return True
         return False  
@@ -375,7 +372,7 @@ class Simulator:
             
             collision_objects_start = self.robot.createRobotCollisionObjects(joint_angles_start)
             collision_objects_goal = self.robot.createRobotCollisionObjects(joint_angles_goal)
-            for obstacle in self.obstacles:
+            for obstacle in collidable_obstacles:
                 for i in xrange(len(collision_objects_start)):
                     if obstacle.inCollisionContinuous([collision_objects_start[i], collision_objects_goal[i]]):
                         return True
@@ -481,6 +478,7 @@ class Simulator:
     
     def show_nominal_path(self, path):        
         if self.show_viewer and self.first_update:
+            self.robot.removePermanentViewerParticles()
             particle_joint_values = v2_double()
             particle_joint_colors = v2_double()
             pjvs = []
@@ -498,8 +496,7 @@ class Simulator:
             self.first_update = False
     
     def update_viewer(self, x, control_duration, path):
-        if self.show_viewer:
-            
+        if self.show_viewer:            
             cjvals = v_double()
             cjvels = v_double()
             cjvals_arr = [x[i] for i in xrange(len(x) / 2)]

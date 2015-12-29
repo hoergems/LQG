@@ -39,9 +39,10 @@ class LQG:
             return  
         #self.robot.setupViewer(urdf_model_file, environment_file)
         #self.show_state_distribution(urdf_model_file, environment_file)
-        print "setting up viewer"
-        self.robot.setupViewer(urdf_model_file, environment_file)
-        self.run_viewer(urdf_model_file, environment_file)      
+        print "setting up viewer1"
+        '''if self.show_viewer:
+            self.robot.setupViewer(urdf_model_file, environment_file)'''
+        #self.run_viewer(urdf_model_file, environment_file)      
         
         logging.info("Start up simulator")
         sim = Simulator()
@@ -160,7 +161,10 @@ class LQG:
                                      self.sample_size, 
                                      self.obstacles,
                                      self.goal_position,
-                                     self.goal_radius)
+                                     self.goal_radius,
+                                     self.show_viewer,
+                                     urdf_model_file,
+                                     environment_file)
                 if self.dynamic_problem:
                     path_evaluator.setup_dynamic_problem()
                 path_evaluator.setup_reward_function(self.step_penalty, self.illegal_move_penalty, self.exit_reward, self.discount_factor)
@@ -228,24 +232,7 @@ class LQG:
                             num_collisions += 1 
                     num_steps += history_entries[-1].t                                         
                     self.serializer.write_line("log.log", "tmp/lqg", "Reward: " + str(total_reward) + " \n") 
-                    self.serializer.write_line("log.log", "tmp/lqg", "\n")             
-                                          
-                '''(cartesian_coords, 
-                 rewards, 
-                 successful_runs, 
-                 all_collisions,
-                 state_covariances,
-                 estimated_states) = sim.simulate(xs, us, zs, m_covs[j])                
-                                
-                cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])
-                try:                             
-                    emds.append(calc_EMD(cartesian_coords, 
-                                         self.num_bins, 
-                                         self.goal_position, 
-                                         self.link_dimensions))
-                except:
-                    pass
-                '''
+                    self.serializer.write_line("log.log", "tmp/lqg", "\n")
                 
                 self.serializer.write_line("log.log", "tmp/lqg", "################################# \n")
                 self.serializer.write_line("log.log",
@@ -411,45 +398,53 @@ class LQG:
             control_error = v_double()
             ce = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             control_error[:] = ce
-            result = v_double()             
+            result = v_double()
+            ja_start = v_double()
+            ja_start[:] = [current_state[i] for i in xrange(len(current_state) / 2)]
+            collision_objects_start = self.robot.createRobotCollisionObjects(ja_start)             
             self.robot.propagate(current_state,
                                  control,
                                  control_error,
                                  self.simulation_step_size,
                                  0.03,
                                  result)
+            joint_angles = v_double()
+            joint_angles[:] = [result[i] for i in xrange(len(result) / 2)]
+            collision_objects_goal = self.robot.createRobotCollisionObjects(joint_angles)
             #print "ee_velocity " + str([ee_velocity[i] for i in xrange(len(ee_velocity))])
             
             '''
             Get the end effector position
             '''
-            ee_position = v_double()
-            joint_angles = v_double()
-            joint_angles[:] = [result[i] for i in xrange(len(result) / 2)]
-            self.robot.getEndEffectorPosition(joint_angles, ee_position)      
-            
-            t0 = time.time()
-            collision_objects = self.robot.createRobotCollisionObjects(joint_angles)
+            ee_position = v_double()            
+            self.robot.getEndEffectorPosition(joint_angles, ee_position)            
             ee_collision_objects = self.robot.createEndEffectorCollisionObject(joint_angles)
+            #collision_objects = self.robot.createRobotCollisionObjects(joint_angles)
+            
             
             in_collision = False
             
             for o in self.obstacles:
-                #in_collision = o.inCollisionDiscrete(collision_objects)                        
-                if(o.inCollisionDiscrete(ee_collision_objects) and o.isTraversable()):
-                    in_collision = True                    
-                    ###Get the end effector velocity vector                                       
-                    ee_velocity = v_double()
-                    self.robot.getEndEffectorVelocity(result, ee_velocity)                   
-                    ee_linear_velocity = np.array([ee_velocity[i] for i in xrange(len(ee_velocity) / 2)])
+                #in_collision = o.inCollisionDiscrete(collision_objects)
+                if o.inCollisionDiscrete(collision_objects_goal):
+                    print "in collision!!!"
+                    break;
+                for i in xrange(len(collision_objects_start)):                        
+                    if o.inCollisionContinuous([collision_objects_start[i], collision_objects_goal[i]]):
+                        '''in_collision = True                    
+                        ###Get the end effector velocity vector                                       
+                        ee_velocity = v_double()
+                        self.robot.getEndEffectorVelocity(result, ee_velocity)                   
+                        ee_linear_velocity = np.array([ee_velocity[i] for i in xrange(len(ee_velocity) / 2)])
                     
-                    ext_force = o.getExternalForce()
-                    force_vector = -ext_force * ee_linear_velocity
-                    print "ee_linear_velocity " + str(ee_linear_velocity)
-                    print "force vector: " + str(force_vector)
-                    self.robot.setExternalForce(force_vector[0], 
-                                                force_vector[1], 
-                                                force_vector[2])            
+                        ext_force = o.getExternalForce()
+                        force_vector = -ext_force * ee_linear_velocity
+                        print "ee_linear_velocity " + str(ee_linear_velocity)
+                        print "force vector: " + str(force_vector)
+                        self.robot.setExternalForce(force_vector[0], 
+                                                    force_vector[1], 
+                                                    force_vector[2]) '''
+                        print "in collision!!!"           
             if not in_collision:
                 self.robot.setExternalForce(fx, fy, fz)                                                              
             x = np.array([result[i] for i in xrange(len(result))])

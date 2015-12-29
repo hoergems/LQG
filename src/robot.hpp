@@ -103,8 +103,17 @@ struct Joint {
 									const std::vector<std::vector<double>> &particle_joint_values,
 									const std::vector<std::vector<double>> &particle_colors);
     	    
+    	    
+    	    /**
+    	     * Add particles to the viewer which remain when the viewer is updated
+    	     */
     	    void addPermanentViewerParticles(const std::vector<std::vector<double>> &particle_joint_values,
 									         const std::vector<std::vector<double>> &particle_colors);
+    	    
+    	    /**
+    	     * Removes any permanent particles
+    	     */
+    	    void removePermanentViewerParticles();
     	    
     	    void setupViewer(std::string model_file, std::string environment_file);
     	    
@@ -164,7 +173,15 @@ struct Joint {
     	     * Gets the end-effector velocity for a given state
     	     */
     	    void getEndEffectorVelocity(std::vector<double> &state,
-    	    		                    std::vector<double> &ee_velocity);	    
+    	    		                    std::vector<double> &ee_velocity);
+    	    
+    	    /**
+    	     * Gets the process matrices in vector form for state x,
+    	     * control rho and control duration t_e
+    	     */
+    	    std::vector<double> getProcessMatrices(std::vector<double> &x, 
+                                                   std::vector<double> &rho, 
+				                                   double t_e);
     
         private:
     	    std::vector<shared::Link> links_;
