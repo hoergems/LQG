@@ -514,10 +514,12 @@ class LQG:
     def problem_setup(self, delta_t, num_links):
         A = np.identity(num_links * 2)
         H = np.identity(num_links * 2)
+        W = np.identity(num_links * 2)
+        
         B = delta_t * np.identity(num_links * 2)
         #B = np.vstack((B, np.zeros((num_links, num_links))))        
         V = np.identity(num_links * 2)
-        W = np.identity(num_links * 2)
+        
         C = self.path_deviation_cost * np.identity(num_links * 2)
         
         D = self.control_deviation_cost * np.identity(num_links * 2)

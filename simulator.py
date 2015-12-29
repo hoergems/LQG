@@ -222,8 +222,7 @@ class Simulator:
                                                      As[i], 
                                                      Bs[i], 
                                                      Vs[i], 
-                                                     Ms[i],
-                                                     False)
+                                                     Ms[i])
                 
                 #x_dash_temp = np.subtract(x_true_temp, xs[i + 1])              
                 x_dash_linear_temp = self.get_linearized_next_state(x_dash_linear, u_dash, ce, As[i], Bs[i], Vs[i])
@@ -281,8 +280,7 @@ class Simulator:
                                                     Hs[i], 
                                                     P_dash, 
                                                     Ws[i], 
-                                                    Ns[i], 
-                                                    2 * self.robot_dof)                            
+                                                    Ns[i])                            
                 x_estimate_new = x_tilde + xs[i + 1]
                 if self.enforce_constraints:     
                     x_estimate_new = self.check_constraints(x_estimate_new) 
@@ -397,52 +395,9 @@ class Simulator:
                       A, 
                       B, 
                       V, 
-                      M, 
-                      apply_zero_torque=False):
+                      M):
         x_new = None
-        ce = None
-        if apply_zero_torque:
-            prop_times = []        
-            for i in xrange(10000):                
-                u = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-                current_state = v_double()
-                current_state[:] = x
-                control = v_double()
-                control[:] = u            
-                control_error = v_double()
-                ce = self.sample_control_error(M)
-                
-                control_error[:] = ce
-                result = v_double() 
-                t0 = time.time()
-                self.robot.propagate(current_state,
-                                     control,
-                                     control_error,
-                                     self.simulation_step_size,
-                                     control_duration,
-                                     result)
-                prop_times.append(time.time() - t0)                                            
-                x = np.array([result[i] for i in xrange(len(result))])
-                cjvals = v_double()
-                cjvels = v_double()
-                cjvals_arr = [x[i] for i in xrange(len(x) / 2)]
-                cjvels_arr = [x[i] for i in xrange(len(x) / 2, len(x))]
-                cjvals[:] = cjvals_arr
-                cjvels[:] = cjvels_arr
-                particle_joint_values = v2_double()
-        
-                self.robot.updateViewerValues(cjvals, 
-                                              cjvels, 
-                                              particle_joint_values,
-                                              particle_joint_values)
-                #time.sleep(self.control_duration)
-                '''if self.first_update:
-                    print "PREPARE YOUR RECORDER!!!!!"
-                    time.sleep(30)
-                    self.first_update = False '''
-            print "mean " + str(sum(prop_times) / len(prop_times))
-            sleep
-            
+        ce = None    
         if self.dynamic_problem:
             current_state = v_double()
             current_state[:] = x

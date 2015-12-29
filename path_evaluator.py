@@ -188,13 +188,13 @@ class PathEvaluator:
         Ws = []
         Ns = []
         if self.dynamic_problem:            
-            As.append(np.identity((len(state_path[0]))))
+            '''As.append(np.identity((len(state_path[0]))))
             Bs.append(np.identity((len(state_path[0]))))
             Vs.append(np.identity((len(state_path[0]))))
             Ms.append(np.identity((len(state_path[0]))))
             Hs.append(np.identity((len(state_path[0]))))
             Ws.append(np.identity((len(state_path[0]))))
-            Ns.append(np.identity((len(state_path[0]))))
+            Ns.append(np.identity((len(state_path[0]))))'''
             for i in xrange(len(state_path)):
                 state = v_double()
                 control = v_double()
@@ -225,7 +225,8 @@ class PathEvaluator:
                 Hs.append(self.H)
                 Ws.append(self.W)
                 Ns.append(self.N)
-            
+        print "len state path " + str(len(state_path))
+        print "len as " + str(len(As))   
         return As, Bs, Vs, Ms, Hs, Ws, Ns
     
     def evaluate(self, index, path, P_t, current_step, horizon, robot, eval_queue=None):
@@ -234,7 +235,7 @@ class PathEvaluator:
         xs = path[0]
         us = path[1]
         zs = path[2] 
-        self.show_nominal_path(robot, xs) 
+        #self.show_nominal_path(robot, xs) 
         control_durations = path[3]      
         horizon_L = horizon + 1 
         if horizon == -1 or len(xs) < horizon_L:            
@@ -242,14 +243,11 @@ class PathEvaluator:
         
         As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, us, control_durations)        
         #Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, horizon_L - 1)
-        Ls = kalman.compute_gain(As, Bs, self.C, self.D, horizon_L - 1)
-        
-        NU = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])
-                
-        Q_t = np.vstack((np.hstack((self.M, NU)), 
-                         np.hstack((NU, self.N))))
-        R_t = np.vstack((np.hstack((np.copy(P_t), NU)),
-                         np.hstack((NU, NU))))       
+        Ls = kalman.compute_gain(As, Bs, self.C, self.D, horizon_L - 1)        
+        Q_t = np.vstack((np.hstack((self.M, np.zeros((self.M.shape[0], self.N.shape[1])))), 
+                         np.hstack((np.zeros((self.N.shape[0], self.M.shape[1])), self.N))))
+        R_t = np.vstack((np.hstack((np.copy(P_t), np.zeros((P_t.shape[0], P_t.shape[1])))),
+                         np.hstack((np.zeros((P_t.shape[0], P_t.shape[1])), np.zeros((P_t.shape[0], P_t.shape[1]))))))       
         
         ee_distributions = []
         ee_approx_distr = []
@@ -260,30 +258,32 @@ class PathEvaluator:
         for i in xrange(1, horizon_L):                              
             P_hat_t = kalman.compute_p_hat_t(As[i], P_t, Vs[i], Ms[i])            
             K_t = kalman.compute_kalman_gain(Hs[i], P_hat_t, Ws[i], Ns[i])
-            P_t = kalman.compute_P_t(K_t, Hs[i], P_hat_t, 2 * self.robot_dof)            
+            P_t = kalman.compute_P_t(K_t, Hs[i], P_hat_t)            
             F_0 = np.hstack((As[i], np.dot(Bs[i], Ls[i - 1])))
             F_1 = np.hstack((np.dot(K_t, np.dot(Hs[i], As[i])), 
                              As[i] + np.dot(Bs[i], Ls[i - 1]) - np.dot(K_t, np.dot(Hs[i], As[i]))))            
-            F_t = np.vstack((F_0, F_1))                              
-            G_t = np.vstack((np.hstack((Vs[i], NU)), 
-                             np.hstack((np.dot(np.dot(K_t, Hs[i]), Vs[i]), np.dot(K_t, Ws[i])))))
-            G_t_1 = np.vstack((np.hstack((Vs[i], NU)),
-                               np.hstack((np.dot(K_t, np.dot(Hs[i], Vs[i])), np.dot(K_t, Ws[i])))))            
+            F_t = np.vstack((F_0, F_1)) 
+            
+            G_t_l_r = np.dot(K_t, Ws[i])
+            G_t_u_r = np.zeros((Vs[i].shape[0], G_t_l_r.shape[1]))                                         
+            G_t = np.vstack((np.hstack((Vs[i], G_t_u_r)), 
+                             np.hstack((np.dot(K_t, np.dot(Hs[i], Vs[i])), G_t_l_r))))            
+                        
             """ Compute R """    
             R_t = np.dot(F_t, np.dot(R_t, F_t.T)) + np.dot(G_t, np.dot(Q_t, G_t.T)) 
             L = np.identity(2 * self.robot_dof)
             if i != horizon_L - 1:
                 L = Ls[i]
                 
-            Gamma_t = np.vstack((np.hstack((np.identity(2 * self.robot_dof), NU)), 
-                                 np.hstack((NU, L))))                 
+            Gamma_t = np.vstack((np.hstack((np.identity(L.shape[0]), np.zeros((L.shape[0], L.shape[1])))), 
+                                 np.hstack((np.zeros((L.shape[0], L.shape[1])), L))))                 
             Cov = np.dot(Gamma_t, np.dot(R_t, Gamma_t.T))                       
             cov_state = np.array([[Cov[j, k] for k in xrange(2 * self.robot_dof)] for j in xrange(2 * self.robot_dof)])            
             (state_reward, terminal) = self.get_expected_state_reward(xs[i], cov_state)            
             path_rewards.append(np.power(self.discount, current_step + i) * state_reward)            
             if self.show_viewer:
                 self.show_state_and_cov(xs[i], cov_state)                
-                time.sleep(1.0)
+                time.sleep(0.2)
         path_reward = sum(path_rewards)  
         print "PathEvaluator: Path " + str(index) + " evaluated"             
         logging.info("========================================")

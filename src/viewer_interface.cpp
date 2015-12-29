@@ -22,7 +22,7 @@ bool ViewerInterface::setupViewer(std::string model_file,
 	
 	model_file_ = model_file;	
 	OpenRAVE::RaveInitialize(true);	
-	OpenRAVE::RaveSetDebugLevel(OpenRAVE::Level_Verbose);
+	OpenRAVE::RaveSetDebugLevel(OpenRAVE::Level_Error);
 	env_ = OpenRAVE::RaveCreateEnvironment();
 	env_->SetPhysicsEngine(nullptr);
 	env_->SetCollisionChecker(nullptr);
