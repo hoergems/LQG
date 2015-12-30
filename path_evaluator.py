@@ -220,12 +220,13 @@ class PathEvaluator:
                                                                 start_index + (len(state) * (len(state) / 2)))])
                 A_Matr = A_list.reshape(len(state), len(state)).T
                 V_Matr = V_list.reshape(len(state), len(state) / 2)
-                B_Matr = B_list.reshape(len(state), len(state) / 2)
+                B_Matr = B_list.reshape(len(state), len(state) / 2)'''
                 
-                print "Am " + str(A_Matr)
-                print "Bm " + str(B_Matr)
-                print "Vm " + str(V_Matr)
-                sleep'''
+                
+                if i == 0:                
+                    print "Am " + str(A_Matr)
+                    print "Bm " + str(B_Matr)
+                    print "Vm " + str(V_Matr)
                                 
                 As.append(A_Matr)
                 Bs.append(B_Matr)

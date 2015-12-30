@@ -132,6 +132,8 @@ MatrixXd getA0(const state_type &x, const state_type &rho, const state_type &zet
     	
     	mutable bool steady_states_setup_;
     	
+    	mutable bool printed_;
+    	
     };
 
     
