@@ -70,7 +70,7 @@ class PathEvaluator:
         self.exit_reward = exit_reward
         self.discount = discount
         
-    def check_constraints(self, sample):      
+    def check_constraints(self, sample):        
         for i in xrange(len(sample) / 2):
             if ((sample[i] < self.lower_position_constraints[i] or 
                  sample[i] > self.upper_position_constraints[i] or
@@ -85,41 +85,71 @@ class PathEvaluator:
         ee_position = np.array([ee_position_arr[j] for j in xrange(len(ee_position_arr))])        
         if np.linalg.norm(ee_position - self.goal_position) < self.goal_radius:                                   
             return True        
-        return False        
+        return False
+    
+    def sample_valid_states(self, mean, cov, num):
+        """ Sample 'num' states that do not validate the system constraints.
+        Uses rejection sampling
+        """
+        deficit = num
+        samples_temp = []        
+        while deficit > 0:
+            samples = None
+            if deficit == 1:            
+                samples = [self.sample_multivariate_normal(mean, cov, deficit)]
+            else:
+                samples = self.sample_multivariate_normal(mean, cov, deficit)           
+            for sample in samples:
+                if self.enforce_constraints:
+                    if self.check_constraints(sample):
+                        samples_temp.append(sample)
+                else:
+                    samples_temp.append(sample)                
+            deficit = num - len(samples_temp)            
+        return samples_temp
+    
+    def sample_multivariate_normal(self, mean, cov, num):
+        return multivariate_normal.rvs(mean, cov, num)
     
     def get_expected_state_reward(self, mean, cov):
         with self.mutex:
-            np.random.seed()        
-        samples = self.sample_multivariate_normal(mean, cov, self.sample_size)
+            np.random.seed()
+        samples = self.sample_valid_states(mean, cov, self.sample_size)
         pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True) 
         pdf /= sum(pdf)        
         expected_reward = 0.0
-        terminal = False        
+        num_collisions = 0
+        terminal = False         
         for i in xrange(len(samples)):
-            if self.enforce_constraints:
-                if not self.check_constraints(samples[i]):
-                    continue            
             vec = [samples[i][j] for j in xrange(self.robot_dof)]
             joint_angles = v_double()
             joint_angles[:] = vec
             collides = False
             terminal = False
-            
             collision_objects = self.robot.createRobotCollisionObjects(joint_angles)
             for obstacle in self.obstacles:
-                if obstacle.inCollisionDiscrete(collision_objects) and not obstacle.isTraversable():
-                    print "in COLLISION!!!!"                                            
+                if obstacle.inCollisionDiscrete(collision_objects) and not obstacle.isTraversable():                                                      
                     expected_reward -= pdf[i] * self.collision_penalty                        
                     collides = True
+                    num_collisions += 1
                     break
             if not collides:
                 if self.is_terminal(joint_angles):
                     expected_reward += pdf[i] * self.exit_reward
                     terminal = True
                 else:
+                    #print "pdf[i] " + str(pdf[i])
                     expected_reward -= pdf[i] * self.step_penalty
-                       
-        return (expected_reward, terminal)
+        
+        '''print "========"
+        print "num collisions " + str(num_collisions)
+        print "mean num collisions " + str(float(num_collisions / float(self.sample_size)))
+        print "expected reward " + str(expected_reward)
+        print "========"'''
+        #time.sleep(3)
+        
+                          
+        return (expected_reward, terminal, float(num_collisions / float(self.sample_size)))
     
     def show_nominal_path(self, robot, path):                
         if self.show_viewer:
@@ -255,8 +285,12 @@ class PathEvaluator:
         ee_approx_distr = []
         collision_probs = []
         path_rewards = []
-        path_rewards.append(np.power(self.discount, current_step) * self.get_expected_state_reward(xs[0], P_t)[0])
-        Cov = 0   
+        total_num_collisions = 0  
+        (state_reward, terminal, num_collisions_step) = self.get_expected_state_reward(xs[0], P_t)
+        total_num_collisions += num_collisions_step
+        path_rewards.append(np.power(self.discount, current_step) * state_reward)
+        Cov = 0 
+        
         for i in xrange(1, horizon_L):                              
             P_hat_t = kalman.compute_p_hat_t(As[i], P_t, Vs[i], Ms[i])            
             K_t = kalman.compute_kalman_gain(Hs[i], P_hat_t, Ws[i], Ns[i])
@@ -279,13 +313,15 @@ class PathEvaluator:
                                  np.hstack((np.zeros((L.shape[0], L.shape[1])), L))))                 
             Cov = np.dot(Gamma_t, np.dot(R_t, Gamma_t.T))                       
             cov_state = np.array([[Cov[j, k] for k in xrange(2 * self.robot_dof)] for j in xrange(2 * self.robot_dof)])            
-            (state_reward, terminal) = self.get_expected_state_reward(xs[i], cov_state)            
+            (state_reward, terminal, num_collisions_step) = self.get_expected_state_reward(xs[i], cov_state) 
+            total_num_collisions += num_collisions_step           
             path_rewards.append(np.power(self.discount, current_step + i) * state_reward)            
             if self.show_viewer:
                 self.show_state_and_cov(xs[i], cov_state)                
                 time.sleep(0.2)
         path_reward = sum(path_rewards)  
-        print "PathEvaluator: Path " + str(index) + " evaluated"             
+        print "PathEvaluator: Path " + str(index) + " evaluated. Reward: " + str(path_reward) + ", mean num collisions: " + str(float(total_num_collisions / (len(xs))))
+             
         logging.info("========================================")
         logging.info("PathEvaluator: reward for path " + 
                      str(index) + 
@@ -296,9 +332,6 @@ class PathEvaluator:
             eval_queue.put((path_reward, path, Cov))
         else:
             return path_reward
-        
-    def sample_multivariate_normal(self, mean, cov, num):
-        return multivariate_normal.rvs(mean, cov, num)
     
     def show_state_and_cov(self, state, cov):        
         joint_values = v_double()

@@ -175,6 +175,7 @@ class LQG:
                 
                 sim.setup_problem(A, B, C, D, H, V, W, M, N,
                                   self.robot, 
+                                  self.enforce_control_constraints,
                                   self.obstacles, 
                                   self.goal_position, 
                                   self.goal_radius,
@@ -547,6 +548,7 @@ class LQG:
         self.exit_reward = config['exit_reward']
         self.stop_when_terminal = config['stop_when_terminal']        
         self.enforce_constraints = config['enforce_constraints']
+        self.enforce_control_constraints = config['enforce_control_constraints']
         self.sample_size = config['sample_size']
         self.plot_paths = config['plot_paths']
         self.planning_algortihm = config['planning_algorithm']

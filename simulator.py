@@ -24,6 +24,7 @@ class Simulator:
                       M,
                       N,
                       robot,
+                      enforce_control_constraints,
                       obstacles,
                       goal_position,
                       goal_radius,
@@ -63,6 +64,7 @@ class Simulator:
         self.torque_limits = [torque_limits[i] for i in xrange(len(torque_limits))]
         
         self.enforce_constraints = robot.constraintsEnforced()
+        self.enforce_constrol_constraints = enforce_control_constraints
         self.dynamic_problem = False
         self.show_viewer = show_viewer
         active_joints = v_string()
@@ -214,7 +216,8 @@ class Simulator:
                 u = u_dash + us[i] 
                 
                 """ Enforce the control constraints on 'u' and 'u_dash' """
-                u, u_dash = self.enforce_control_constraints(u, us[i])                          
+                if self.enforce_constrol_constraints:                    
+                    u, u_dash = self.enforce_control_constraints(u, us[i])                          
                 history_entries[-1].set_action(u)
                 
                 """ Apply the control 'u' and propagate the state 'x_true' """
