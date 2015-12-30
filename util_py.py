@@ -7,12 +7,21 @@ import time
 from difflib import Differ
 from gen_ik_solution import IKSolutionGenerator
 
+def dist(x1, x2):
+    """ Calulate the L2-norm between state x1 and x2 """
+    sum = 0.0
+    for i in xrange(len(x1)):
+        sum += np.power((x1[i] - x2[i]), 2)
+    return np.sqrt(sum)
+
 def check_positive_definite(matrices):
+    """ Check if the matrices are positive-definite
+    """
     for m in matrices:
         try:
             np.linalg.cholesky(m)
         except:
-            logging.error("MPC: Matrices are not positive definite. Fix that!")
+            logging.error("Cost matrices are not positive definite. Fix that!")
             return False
     return True
 

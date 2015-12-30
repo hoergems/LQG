@@ -1,5 +1,5 @@
-
 import sys
+import argparse
 import time
 import numpy as np
 import os
@@ -16,12 +16,11 @@ from path_planning_interface import PathPlanningInterface
 from libobstacle import Obstacle, Terrain
 
 class LQG:
-    def __init__(self, plot):
+    def __init__(self, show_scene):
         """ Reading the config """
         self.init_serializer()
         config = self.serializer.read_config("config_lqg.yaml")
-        self.set_params(config) 
-        
+        self.set_params(config)
         logging_level = logging.WARN
         if config['verbose']:
             logging_level = logging.DEBUG
@@ -30,20 +29,15 @@ class LQG:
         dir = "stats/lqg"
         self.clear_stats(dir)
         self.utils = Utils()
-        
         model_file = "model/test.xml"
         urdf_model_file = "model/test.urdf"
         self.init_robot(urdf_model_file)
         environment_file = os.path.join("environment", "env.xml")        
         if not self.setup_scene("environment", "env.xml", self.robot):
-            return  
-        #self.robot.setupViewer(urdf_model_file, environment_file)
+            return
         #self.show_state_distribution(urdf_model_file, environment_file)
-        print "setting up viewer1"
-        '''if self.show_viewer:
-            self.robot.setupViewer(urdf_model_file, environment_file)'''
-        #self.run_viewer(urdf_model_file, environment_file)      
-        
+        if show_scene:
+            self.run_viewer(urdf_model_file, environment_file)
         logging.info("Start up simulator")
         sim = Simulator()
         path_evaluator = PathEvaluator()
@@ -98,13 +92,12 @@ class LQG:
             elif self.inc_covariance == "observation":          
                 m_covs = np.linspace(self.min_observation_covariance, 
                                      self.max_observation_covariance,
-                                     self.covariance_steps)
-            #m_covs = np.array([np.around(m_covs[i], 5) for i in xrange(len(m_covs))])            
+                                     self.covariance_steps)            
             emds = []
             mean_planning_times = []
             time_to_generate_paths = 0.0
-            paths = [self.serializer.deserialize_path("test_path.txt", True)]
-            '''if self.use_paths_from_file and len(glob.glob(os.path.join(dir, "paths.yaml"))) == 1:
+            #paths = [self.serializer.deserialize_path("test_path.txt", True)]
+            if self.use_paths_from_file and len(glob.glob(os.path.join(dir, "paths.yaml"))) == 1:
                 logging.info("LQG: Loading paths from file")
                 in_paths = self.serializer.load_paths("paths.yaml", path=dir) 
                 paths = []               
@@ -128,7 +121,7 @@ class LQG:
                 print "LQG: Time to generate paths: " + str(time_to_generate_paths) + " seconds"
                 if self.plot_paths:                
                     self.serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path=dir)               
-            self.serializer.serialize_path("test_path.txt", 
+            '''self.serializer.serialize_path("test_path.txt", 
                                            paths[0][0],
                                            paths[0][1],
                                            paths[0][2],
@@ -147,20 +140,15 @@ class LQG:
                 M = None
                 N = None
                 if self.inc_covariance == "process":
-                    """
-                    The process noise covariance matrix
-                    """
+                    """ The process noise covariance matrix """
                     M = m_covs[j] * M_base
+                    
+                    """ The observation error covariance matrix """
                     N = self.min_observation_covariance * N_base
                 elif self.inc_covariance == "observation":
                     M = self.min_process_covariance * M_base
-                    N = m_covs[j] * N_base               
-                
-                
+                    N = m_covs[j] * N_base
                 P_t = np.array([[0.0 for k in xrange(2 * self.robot_dof)] for l in xrange(2 * self.robot_dof)]) 
-                
-               
-                
                 path_evaluator.setup(A, B, C, D, H, M, N, V, W,                                     
                                      self.robot, 
                                      self.sample_size, 
@@ -178,7 +166,6 @@ class LQG:
                 te = time.time() - t0
                 print "LQG: Time to evaluate " + str(len(paths)) + " paths: " + str(te) + "s"
                 mean_planning_time = time_to_generate_paths + te
-                #mean_planning_times.append(time_to_generate_paths + (time.time() - t0))
                 print "LQG: Best objective value: " + str(objective)
                 print "LQG: Length of best path: " + str(len(xs))  
                 best_paths.append([[xs[i] for i in xrange(len(xs))], 
@@ -194,12 +181,10 @@ class LQG:
                                   self.max_velocity,                                  
                                   self.show_viewer,
                                   urdf_model_file,
-                                  environment_file) 
-                print "problem setup"               
+                                  environment_file)                              
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
                 if self.dynamic_problem:
-                    sim.setup_dynamic_problem(self.simulation_step_size)
-                
+                    sim.setup_dynamic_problem(self.simulation_step_size)                
                 successes = 0
                 num_collisions = 0 
                 rewards_cov = []
@@ -384,17 +369,14 @@ class LQG:
                        z_scale=  [z_min, z_max])
         sleep
         
-    def run_viewer(self, model_file, env_file):
-        print "setup viewer"
-        self.robot.setupViewer(model_file, env_file)
-        print "viewer setup"
+    def run_viewer(self, model_file, env_file):        
+        self.robot.setupViewer(model_file, env_file)        
         fx = 0.0
-        fy = 2.0
-        fz = 0.0
-        
+        fy = 0.0
+        fz = 0.0        
         x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         while True:            
-            u_in = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            u_in = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             current_state = v_double()
             current_state[:] = x
             control = v_double()            
@@ -431,8 +413,7 @@ class LQG:
             
             for o in self.obstacles:
                 #in_collision = o.inCollisionDiscrete(collision_objects)
-                if o.inCollisionDiscrete(collision_objects_goal):
-                    print "in collision!!!"
+                if o.inCollisionDiscrete(collision_objects_goal):                    
                     break;
                 for i in xrange(len(collision_objects_start)):                        
                     if o.inCollisionContinuous([collision_objects_start[i], collision_objects_goal[i]]):
@@ -522,19 +503,19 @@ class LQG:
         W = np.identity(num_links * 2)
         C = self.path_deviation_cost * np.identity(num_links * 2)
         
-        B = delta_t * np.identity(num_links * 2)                
+        '''B = delta_t * np.identity(num_links * 2)                
         V = np.identity(num_links * 2)
         D = self.control_deviation_cost * np.identity(num_links * 2)        
         M_base = np.identity(2 * self.robot_dof)
-        N_base = np.identity(2 * self.robot_dof)
+        N_base = np.identity(2 * self.robot_dof)'''
         
-        ''''B = delta_t * np.vstack((np.identity(num_links),
+        B = delta_t * np.vstack((np.identity(num_links),
                                  np.zeros((num_links, num_links))))
         V = np.vstack((np.identity(num_links),
                        np.zeros((num_links, num_links))))
         D = self.control_deviation_cost * np.identity(num_links)
         M_base = np.identity(self.robot_dof)
-        N_base = np.identity(2 * self.robot_dof)'''
+        N_base = np.identity(2 * self.robot_dof)
         
         
         return A, H, B, V, W, C, D, M_base, N_base
@@ -584,11 +565,10 @@ class LQG:
         self.gravity_constant = config['gravity']
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        if "plot" in sys.argv[1]:
-            LQG(True)
-            sys.exit()
-        print "Unrecognized command line argument: " + str(sys.argv[1]) 
-        sys.exit()   
-    LQG(False)    
+    parser = argparse.ArgumentParser(description='LQG-MP.')
+    parser.add_argument("-s", "--show", 
+                        help="Show the scene without executing LQG-MP", 
+                        action="store_true") 
+    args = parser.parse_args()  
+    LQG(args.show)    
     

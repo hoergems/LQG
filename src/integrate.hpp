@@ -131,9 +131,6 @@ MatrixXd getA0(const state_type &x, const state_type &rho, const state_type &zet
     	mutable std::pair<AB_funct, std::pair<AB_funct, AB_funct>> ab_functions_;
     	
     	mutable bool steady_states_setup_;
-    	
-    	mutable bool printed_;
-    	
     };
 
     

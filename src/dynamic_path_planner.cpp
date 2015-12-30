@@ -294,9 +294,9 @@ std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<dou
             }
             
             cout << "Duration: " << control_durations[i] << endl;
-            for (size_t j = 0; j < state_space_dimension_ / 2; j++) { 
+            /**for (size_t j = 0; j < state_space_dimension_ / 2; j++) { 
             	solution_state.push_back(0.0);
-            }
+            }*/
             
             cout << endl;
             

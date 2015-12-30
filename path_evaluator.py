@@ -107,7 +107,8 @@ class PathEvaluator:
             
             collision_objects = self.robot.createRobotCollisionObjects(joint_angles)
             for obstacle in self.obstacles:
-                if obstacle.inCollisionDiscrete(collision_objects) and not obstacle.isTraversable():                                            
+                if obstacle.inCollisionDiscrete(collision_objects) and not obstacle.isTraversable():
+                    print "in COLLISION!!!!"                                            
                     expected_reward -= pdf[i] * self.collision_penalty                        
                     collides = True
                     break
@@ -130,7 +131,6 @@ class PathEvaluator:
                 particle = v_double()
                 particle[:] = [p[i] for i in xrange(len(p) / 2)]
                 pjvs.append(particle)
-                
                 color = v_double()
                 color[:] = [0.0, 0.0, 0.0, 0.7]
                 particle_joint_colors.append(color)            
@@ -187,14 +187,7 @@ class PathEvaluator:
         Hs = []
         Ws = []
         Ns = []
-        if self.dynamic_problem:            
-            '''As.append(np.identity((len(state_path[0]))))
-            Bs.append(np.identity((len(state_path[0]))))
-            Vs.append(np.identity((len(state_path[0]))))
-            Ms.append(np.identity((len(state_path[0]))))
-            Hs.append(np.identity((len(state_path[0]))))
-            Ws.append(np.identity((len(state_path[0]))))
-            Ns.append(np.identity((len(state_path[0]))))'''
+        if self.dynamic_problem:
             for i in xrange(len(state_path)):
                 state = v_double()
                 control = v_double()
@@ -203,15 +196,15 @@ class PathEvaluator:
                 A = self.robot.getProcessMatrices(state, control, control_durations[i])       
                 Matr_list = [A[j] for j in xrange(len(A))]
                 
-                A_list = np.array([Matr_list[j] for j in xrange(len(state)**2)])
+                '''A_list = np.array([Matr_list[j] for j in xrange(len(state)**2)])
                 B_list = np.array([Matr_list[j] for j in xrange(len(state)**2, 2 * len(state)**2)])
                 V_list = np.array([Matr_list[j] for j in xrange(2 * len(state)**2, 
                                                                 3 * len(state)**2)])
                 A_Matr = A_list.reshape(len(state), len(state)).T
                 V_Matr = V_list.reshape(len(state), len(state)).T
-                B_Matr = B_list.reshape(len(state), len(state)).T
+                B_Matr = B_list.reshape(len(state), len(state)).T'''
                 
-                '''A_list = np.array([Matr_list[j] for j in xrange(len(state)**2)])
+                A_list = np.array([Matr_list[j] for j in xrange(len(state)**2)])
                 start_index = len(state)**2
                 B_list = np.array([Matr_list[j] for j in xrange(start_index, 
                                                                 start_index + (len(state) * (len(state) / 2)))])
@@ -219,14 +212,8 @@ class PathEvaluator:
                 V_list = np.array([Matr_list[j] for j in xrange(start_index, 
                                                                 start_index + (len(state) * (len(state) / 2)))])
                 A_Matr = A_list.reshape(len(state), len(state)).T
-                V_Matr = V_list.reshape(len(state), len(state) / 2)
-                B_Matr = B_list.reshape(len(state), len(state) / 2)'''
-                
-                
-                if i == 0:                
-                    print "Am " + str(A_Matr)
-                    print "Bm " + str(B_Matr)
-                    print "Vm " + str(V_Matr)
+                B_Matr = B_list.reshape(len(state)/ 2, len(state)).T
+                V_Matr = V_list.reshape(len(state) / 2, len(state)).T
                                 
                 As.append(A_Matr)
                 Bs.append(B_Matr)
@@ -243,9 +230,7 @@ class PathEvaluator:
                 Ms.append(self.M)
                 Hs.append(self.H)
                 Ws.append(self.W)
-                Ns.append(self.N)
-        print "len state path " + str(len(state_path))
-        print "len as " + str(len(As))   
+                Ns.append(self.N)        
         return As, Bs, Vs, Ms, Hs, Ws, Ns
     
     def evaluate(self, index, path, P_t, current_step, horizon, robot, eval_queue=None):
@@ -253,21 +238,19 @@ class PathEvaluator:
             robot.setupViewer(self.model_file, self.env_file)
         xs = path[0]
         us = path[1]
-        zs = path[2] 
+        zs = path[2]        
         #self.show_nominal_path(robot, xs) 
         control_durations = path[3]      
         horizon_L = horizon + 1 
         if horizon == -1 or len(xs) < horizon_L:            
             horizon_L = len(xs)
         
-        As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, us, control_durations)        
-        #Ls = kalman.compute_gain(self.A, self.B, self.C, self.D, horizon_L - 1)
+        As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, us, control_durations)
         Ls = kalman.compute_gain(As, Bs, self.C, self.D, horizon_L - 1)        
         Q_t = np.vstack((np.hstack((self.M, np.zeros((self.M.shape[0], self.N.shape[1])))), 
                          np.hstack((np.zeros((self.N.shape[0], self.M.shape[1])), self.N))))
         R_t = np.vstack((np.hstack((np.copy(P_t), np.zeros((P_t.shape[0], P_t.shape[1])))),
-                         np.hstack((np.zeros((P_t.shape[0], P_t.shape[1])), np.zeros((P_t.shape[0], P_t.shape[1]))))))       
-        
+                         np.hstack((np.zeros((P_t.shape[0], P_t.shape[1])), np.zeros((P_t.shape[0], P_t.shape[1]))))))
         ee_distributions = []
         ee_approx_distr = []
         collision_probs = []
@@ -281,8 +264,7 @@ class PathEvaluator:
             F_0 = np.hstack((As[i], np.dot(Bs[i], Ls[i - 1])))
             F_1 = np.hstack((np.dot(K_t, np.dot(Hs[i], As[i])), 
                              As[i] + np.dot(Bs[i], Ls[i - 1]) - np.dot(K_t, np.dot(Hs[i], As[i]))))            
-            F_t = np.vstack((F_0, F_1)) 
-            
+            F_t = np.vstack((F_0, F_1))
             G_t_l_r = np.dot(K_t, Ws[i])
             G_t_u_r = np.zeros((Vs[i].shape[0], G_t_l_r.shape[1]))                                         
             G_t = np.vstack((np.hstack((Vs[i], G_t_u_r)), 
@@ -293,8 +275,6 @@ class PathEvaluator:
             L = np.identity(2 * self.robot_dof)
             if i != horizon_L - 1:
                 L = Ls[i]
-            print "L " + str(L)
-            print " "  
             Gamma_t = np.vstack((np.hstack((np.identity(L.shape[1]), np.zeros((L.shape[1], L.shape[1])))), 
                                  np.hstack((np.zeros((L.shape[0], L.shape[1])), L))))                 
             Cov = np.dot(Gamma_t, np.dot(R_t, Gamma_t.T))                       
@@ -335,12 +315,10 @@ class PathEvaluator:
             particle_color[:] = [0.5, 0.5, 0.5, 0.5]
             particles.append(particle)
             particle_joint_colors.append(particle_color)
-        
         self.robot.updateViewerValues(joint_values,
                                       joint_velocities,
                                       particles,
                                       particle_joint_colors)
-        
 
 if __name__ == "__main__":
     PathEvaluator()

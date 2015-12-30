@@ -25,8 +25,7 @@ Integrate::Integrate():
 	f_x_(0.0),
 	f_y_(0.0),
 	f_z_(0.0),
-	viscous_(),
-	printed_(false){
+	viscous_(){
 	setupSteadyStates();
 }
 
@@ -91,7 +90,7 @@ void Integrate::getProcessMatrices(std::vector<double> &x,
 	MatrixXd B_matrx = A_matrx1 * integral * BMatrix;
 	MatrixXd V_matrx = A_matrx1 * integral * VMatrix;
 	
-    MatrixXd B_matrx_temp = MatrixXd::Zero(B_matrx.rows(), B_matrx.cols() * 2);
+    /**MatrixXd B_matrx_temp = MatrixXd::Zero(B_matrx.rows(), B_matrx.cols() * 2);
 	MatrixXd V_matrx_temp = MatrixXd::Zero(V_matrx.rows(), V_matrx.cols() * 2);			
 	for (size_t i = 0; i < B_matrx.rows(); i++) {
 		for (size_t j = 0; j < B_matrx.cols(); j++) {
@@ -108,17 +107,10 @@ void Integrate::getProcessMatrices(std::vector<double> &x,
 	    cout << "B " << B_matrx_temp << endl;
 	    cout << "V " << V_matrx_temp << endl;
 	    printed_ = true;
-	}
-	/**matrices.push_back(A_matrx1);
+	}*/
+	matrices.push_back(A_matrx1);
     matrices.push_back(B_matrx);
 	matrices.push_back(V_matrx);
-	
-	if (!printed_) {
-	    cout << "A " << A_matrx1 << endl;
-	    cout << "B " << B_matrx << endl;
-	    cout << "V " << V_matrx << endl;
-	    printed_ = true;
-	}*/
 }
 
 std::vector<double> Integrate::getProcessMatricesVec(std::vector<double> &x, 
