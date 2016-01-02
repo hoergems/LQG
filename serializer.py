@@ -11,27 +11,91 @@ from xml.dom import minidom
 
 class Serializer:
     def __init__(self):
-        pass
+        pass    
     
-    def deserialize_path(self, filename, method2=False):
+    def deserialize_path(self, filename, robot_dof):
         xs = []
         us = []
         zs = []
+        l = 5 * robot_dof + 1
         control_durations = []
         with open(filename, 'r') as f:
             for line in f.readlines():
-                arr = line.replace("\n", "").split(" ")                
-                arr_float = [float(a) for a in arr[0:19]]
-                xs.append([arr_float[i] for i in xrange(6)])
-                if method2:
-                    us.append([arr_float[i] for i in xrange(6, 9)])
+                arr = line.replace("\n", "").split(" ")                                               
+                arr_float = [float(a) for a in arr[0:l]]                
+                xs.append([arr_float[i] for i in xrange(robot_dof * 2)])                
+                us.append([arr_float[i] for i in xrange(robot_dof * 2, robot_dof * 3)])                
+                zs.append([arr_float[i] for i in xrange(robot_dof * 3, robot_dof * 5)])                
+                control_durations.append(arr_float[robot_dof * 5])
+        return xs, us, zs, control_durations
+    
+    def deserialize_paths(self, filename, robot_dof):
+        if not os.path.exists(filename):
+            return []
+        l = 5 * robot_dof + 1
+        paths = []
+        path = []
+        xs = []
+        us = []
+        zs = []
+        cd = []
+        with open(filename, "r") as f:
+            for line in f.readlines():                
+                if line == "\n":
+                    path.append(xs)
+                    path.append(us)
+                    path.append(zs)
+                    path.append(cd)
+                    paths.append(path)
+                    path = []
+                    xs = []
+                    us = []
+                    zs = []
+                    cd = []
+                elif "END" in line:
+                    path.append(xs)
+                    path.append(us)
+                    path.append(zs)
+                    path.append(cd)
+                    paths.append(path)
+                    return paths
+                else:                    
+                    arr = line.replace("\n", "").split(" ")                                               
+                    arr_float = [float(a) for a in arr[0:l]]
+                    xs.append([arr_float[i] for i in xrange(robot_dof * 2)])                
+                    us.append([arr_float[i] for i in xrange(robot_dof * 2, robot_dof * 3)])                
+                    zs.append([arr_float[i] for i in xrange(robot_dof * 3, robot_dof * 5)])                
+                    cd.append(arr_float[robot_dof * 5])
+        return paths
+                     
+           
+    def serialize_paths(self, filename, paths):
+        if os.path.exists(filename):
+            os.remove(filename)
+        with open(filename, "a+") as f:
+            for l in xrange(len(paths)):
+                xs = paths[l][0]
+                us = paths[l][1]
+                zs = paths[l][2]
+                cd = paths[l][3]
+                for i in xrange(len(xs)):
+                    p = []
+                    for j in xrange(len(xs[i])):
+                        p.append(xs[i][j])
+                    for j in xrange(len(us[i])):
+                        p.append(us[i][j])
+                    for j in xrange(len(zs[i])):
+                        p.append(zs[i][j])
+                    p.append(cd[i])
+                    string = ""
+                    for k in p:
+                        string += str(k) + " "
+                    string += " \n"
+                    f.write(string)
+                if l == len(paths) - 1:
+                    f.write("END")
                 else:
-                    us.append([arr_float[i] for i in xrange(6, 12)])
-                zs.append([arr_float[i] for i in xrange(12, 18)])
-                
-                control_durations.append(arr_float[18])
-        return xs, us, zs, control_durations     
-            
+                    f.write("\n")            
     
     def serialize_path(self, filename, xs, us, zs, control_durations):
         with open(filename, "a+") as f:

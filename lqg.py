@@ -16,7 +16,7 @@ from path_planning_interface import PathPlanningInterface
 from libobstacle import Obstacle, Terrain
 
 class LQG:
-    def __init__(self, show_scene):
+    def __init__(self, show_scene, deserialize):
         """ Reading the config """
         self.init_serializer()
         config = self.serializer.read_config("config_lqg.yaml")
@@ -96,21 +96,11 @@ class LQG:
             emds = []
             mean_planning_times = []
             time_to_generate_paths = 0.0
-            #paths = [self.serializer.deserialize_path("test_path.txt", True)]
-            if self.use_paths_from_file and len(glob.glob(os.path.join(dir, "paths.yaml"))) == 1:
-                logging.info("LQG: Loading paths from file")
-                in_paths = self.serializer.load_paths("paths.yaml", path=dir) 
-                paths = []               
-                for path in in_paths:
-                    xs = []
-                    us = []
-                    zs = []
-                    for j in xrange(len(path)):
-                        xs.append([path[j][i] for i in xrange(self.robot_dof)])
-                        us.append([path[j][self.robot_dof + i] for i in xrange(self.robot_dof)])
-                        zs.append([path[j][2 * self.robot_dof + i] for i in xrange(self.robot_dof)])
-                    paths.append([xs, us, zs])
-            else:
+            
+            paths = []
+            if deserialize:
+                paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)
+            if len(paths) == 0:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
                 t0 = time.time()
                 paths = path_planner.plan_paths(self.num_paths, 0)
@@ -120,12 +110,9 @@ class LQG:
                 time_to_generate_paths = time.time() - t0 
                 print "LQG: Time to generate paths: " + str(time_to_generate_paths) + " seconds"
                 if self.plot_paths:                
-                    self.serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path=dir)               
-            '''self.serializer.serialize_path("test_path.txt", 
-                                           paths[0][0],
-                                           paths[0][1],
-                                           paths[0][2],
-                                           paths[0][3])'''
+                    self.serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path=dir)                
+                if deserialize:
+                    self.serializer.serialize_paths("paths.txt", paths)
             
             """ Determine average path length """
             avg_path_length = self.get_avg_path_length(paths)            
@@ -539,9 +526,7 @@ class LQG:
         self.max_process_covariance = config['max_process_covariance']
         self.covariance_steps = config['covariance_steps']
         self.min_observation_covariance = config['min_observation_covariance']
-        self.max_observation_covariance = config['max_observation_covariance']        
-        self.use_paths_from_file = config['use_paths_from_file']        
-        self.overwrite_paths_file = config['overwrite_paths_file']
+        self.max_observation_covariance = config['max_observation_covariance']       
         self.discount_factor = config['discount_factor']
         self.illegal_move_penalty = config['illegal_move_penalty']
         self.step_penalty = config['step_penalty']
@@ -570,7 +555,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='LQG-MP.')
     parser.add_argument("-s", "--show", 
                         help="Show the scene without executing LQG-MP", 
+                        action="store_true")
+    d_help_str = "Get the paths from 'paths.txt'. If no such file exists, generate the paths and serialize them."    
+    parser.add_argument("-d", "--deserialize", 
+                        help=d_help_str, 
                         action="store_true") 
     args = parser.parse_args()  
-    LQG(args.show)    
+    LQG(args.show, args.deserialize)    
     
