@@ -132,14 +132,14 @@ bool Propagator::propagate_nonlinear(const std::vector<double> &current_joint_va
 	}
 	
 	// Normalize joint angles to be within [-pi, pi]
-	for (size_t i = 0; i < newJointValues.size(); i++) {
+	/**for (size_t i = 0; i < newJointValues.size(); i++) {
 		if (newJointValues[i] > M_PI) {
 			newJointValues[i] = newJointValues[i] - 2.0 * M_PI;
 		}
 		else if (newJointValues[i] < -M_PI) {
 			newJointValues[i] = newJointValues[i] + 2.0 * M_PI;
 		}
-	}
+	}*/
 	
 	for (size_t i = 0; i < newJointValues.size(); i++) {
 		result.push_back(newJointValues[i]);
