@@ -29,13 +29,13 @@ class Test:
         F is a 6 dimensional external force vector (fx, fy, fz, mx, my, mz), consisting of 
         pull f and twist m
         """
-        f_x, f_y, f_z = symbols("f_x_ f_y_ f_z_")
+        f_x, f_y, f_z, f_roll, f_pitch, f_yaw = symbols("f_x_ f_y_ f_z_ f_roll_ f_pitch_ f_yaw_")
         F = Matrix([[f_x],
                     [f_y],
                     [f_z],
-                    [0],
-                    [0],
-                    [0]])     
+                    [f_roll],
+                    [f_pitch],
+                    [f_yaw]])     
         """
         Get the Jacobians of the links expressed in the robot's base frame
         """        
@@ -611,10 +611,7 @@ class Test:
         '''
         The joint friction forces
         '''       
-        K = N + Matrix([[viscous[i] * dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
-        print K.shape
-        print ee_jacobian.shape
-        print F.shape
+        K = N + Matrix([[viscous[i] * dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])        
         K = K - ee_jacobian.transpose() * F
         return K      
         

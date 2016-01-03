@@ -36,7 +36,12 @@ namespace shared {
     	/**
     	 * Sets the external forces acting on the end-effector
     	 */
-    	void setExternalForce(double &f_x, double &f_y, double &f_z);
+    	void setExternalForce(double &f_x, 
+    			              double &f_y, 
+							  double &f_z,
+							  double &f_roll,
+							  double &f_pitch,
+							  double &f_yaw);
     	
     	/**
     	 * Sets the viscous joint damping constants
@@ -102,6 +107,9 @@ MatrixXd getA0(const state_type &x, const state_type &rho, const state_type &zet
     	mutable double f_x_;
     	mutable double f_y_;
     	mutable double f_z_;
+    	mutable double f_roll_;
+    	mutable double f_pitch_;
+    	mutable double f_yaw_;
     	
     	/**
     	 * Viscous joint dampings

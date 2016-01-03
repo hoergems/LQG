@@ -72,10 +72,10 @@ class PathEvaluator:
         
     def check_constraints(self, sample):        
         for i in xrange(len(sample) / 2):
-            if ((sample[i] < self.lower_position_constraints[i] or 
-                 sample[i] > self.upper_position_constraints[i] or
-                 sample[i + len(sample) / 2] < -self.velocity_constraints[i] or
-                 sample[i + len(sample) / 2] > self.velocity_constraints[i])):
+            if ((sample[i] < self.lower_position_constraints[i] - 0.000001 or 
+                 sample[i] > self.upper_position_constraints[i] + 0.000001 or
+                 sample[i + len(sample) / 2] < -self.velocity_constraints[i] - 0.000001 or
+                 sample[i + len(sample) / 2] > self.velocity_constraints[i] + 0.000001)):
                 return False
         return True
     
@@ -92,7 +92,9 @@ class PathEvaluator:
         Uses rejection sampling
         """
         deficit = num
-        samples_temp = []        
+        samples_temp = []
+        samples_temp.append(mean) 
+        t0 = time.time()       
         while deficit > 0:
             samples = None
             if deficit == 1:            
@@ -104,7 +106,12 @@ class PathEvaluator:
                     if self.check_constraints(sample):
                         samples_temp.append(sample)
                 else:
-                    samples_temp.append(sample)                
+                    samples_temp.append(sample)
+            delta = time.time() - t0    
+            if delta > 5.0:
+                logging.warn("PathEvaluator: Timeout while sampling valid states. Returning " + str(len(samples_temp)))
+                print mean
+                break            
             deficit = num - len(samples_temp)            
         return samples_temp
     
@@ -115,8 +122,11 @@ class PathEvaluator:
         with self.mutex:
             np.random.seed()
         samples = self.sample_valid_states(mean, cov, self.sample_size)
-        pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True) 
-        pdf /= sum(pdf)        
+        pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True)
+        if np.isscalar(pdf):            
+            pdf = [pdf]
+        else:
+            pdf /= sum(pdf)                
         expected_reward = 0.0
         num_collisions = 0
         terminal = False         
@@ -149,7 +159,10 @@ class PathEvaluator:
         #time.sleep(3)
         
                           
-        return (expected_reward, terminal, float(num_collisions / float(self.sample_size)))
+        return (expected_reward, 
+                terminal, 
+                float(num_collisions / float(self.sample_size)),
+                samples)
     
     def show_nominal_path(self, robot, path):                
         if self.show_viewer:
@@ -286,7 +299,7 @@ class PathEvaluator:
         collision_probs = []
         path_rewards = []
         total_num_collisions = 0  
-        (state_reward, terminal, num_collisions_step) = self.get_expected_state_reward(xs[0], P_t)
+        (state_reward, terminal, num_collisions_step, samples) = self.get_expected_state_reward(xs[0], P_t)
         total_num_collisions += num_collisions_step
         path_rewards.append(np.power(self.discount, current_step) * state_reward)
         Cov = 0 
@@ -313,11 +326,11 @@ class PathEvaluator:
                                  np.hstack((np.zeros((L.shape[0], L.shape[1])), L))))                 
             Cov = np.dot(Gamma_t, np.dot(R_t, Gamma_t.T))                       
             cov_state = np.array([[Cov[j, k] for k in xrange(2 * self.robot_dof)] for j in xrange(2 * self.robot_dof)])            
-            (state_reward, terminal, num_collisions_step) = self.get_expected_state_reward(xs[i], cov_state) 
+            (state_reward, terminal, num_collisions_step, samples) = self.get_expected_state_reward(xs[i], cov_state) 
             total_num_collisions += num_collisions_step           
             path_rewards.append(np.power(self.discount, current_step + i) * state_reward)            
             if self.show_viewer:
-                self.show_state_and_cov(xs[i], cov_state)                
+                self.show_state_and_cov(xs[i], cov_state, samples)                
                 time.sleep(0.2)
         path_reward = sum(path_rewards)  
         print "PathEvaluator: Path " + str(index) + " evaluated. Reward: " + str(path_reward) + ", mean num collisions: " + str(float(total_num_collisions / (len(xs))))
@@ -333,14 +346,14 @@ class PathEvaluator:
         else:
             return path_reward
     
-    def show_state_and_cov(self, state, cov):        
+    def show_state_and_cov(self, state, cov, samples):        
         joint_values = v_double()
         joint_values[:] = [state[i] for i in xrange(len(state) / 2)]
         joint_velocities = v_double()
         joint_velocities[:] = [state[i] for i in xrange(len(state) / 2, len(state))]
         particles = v2_double() 
         particle_joint_colors = v2_double()       
-        samples = self.sample_multivariate_normal(state, cov, 50)
+        #samples = self.sample_multivariate_normal(state, cov, 50)
         for s in samples:
             particle = v_double()
             particle_color = v_double()

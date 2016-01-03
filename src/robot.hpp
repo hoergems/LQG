@@ -167,7 +167,12 @@ struct Joint {
     	    /**
     	     * Set the external force acting on the end-effector
     	     */
-    	    void setExternalForce(double f_x, double f_y, double f_z);
+    	    void setExternalForce(double f_x, 
+    	    		              double f_y, 
+								  double f_z,
+								  double f_roll,
+								  double f_pitch,
+								  double f_yaw);
     	    
     	    /**
     	     * Gets the end-effector velocity for a given state

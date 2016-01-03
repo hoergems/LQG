@@ -35,24 +35,9 @@ namespace shared {
 	   void enforce_constraints(bool enforce);
 	   
 	   /**
-	    * Set the gravity constant
-	    */
-	   void set_gravity_constant(double &gravity_constant);
-	   
-	   /**
-	    * Set the external force acting on the end_effector
-	    */
-	   void set_external_force(double &f_x, double &f_y, double &f_z);
-	   
-	   /**
 	    * Gets the state dependent end-effector jacobian
 	    */
 	   MatrixXd get_ee_jacobian(std::vector<double> &state);
-	   
-	   /**
-	    * Sets the joint viscous frictions
-	    */
-	   void setJointDamping(std::vector<double> &viscous);
 	   
 	   /**
 	    * Gets the underlying integrator

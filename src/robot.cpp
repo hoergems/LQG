@@ -364,7 +364,7 @@ Robot::Robot(std::string robot_file):
 	kinematics_->setJointOrigins(active_joint_origins_);
 	kinematics_->setLinkDimensions(active_link_dimensions_);
 	
-	propagator_->setJointDamping(joint_dampings_);
+	propagator_->getIntegrator()->setJointDamping(joint_dampings_);
 	initCollisionObjects();
 }
 
@@ -545,11 +545,16 @@ bool Robot::propagate_linear(std::vector<double> &current_state,
 }
 
 void Robot::setGravityConstant(double gravity_constant) {
-	propagator_->set_gravity_constant(gravity_constant);
+	propagator_->getIntegrator()->setGravityConstant(gravity_constant);	
 }
 
-void Robot::setExternalForce(double f_x, double f_y, double f_z) {
-	propagator_->set_external_force(f_x, f_y, f_z);
+void Robot::setExternalForce(double f_x, 
+		                     double f_y, 
+							 double f_z,
+							 double f_roll,
+							 double f_pitch,
+							 double f_yaw) {
+	propagator_->getIntegrator()->setExternalForce(f_x, f_y, f_z, f_roll, f_pitch, f_yaw);	
 }
 
 void Robot::getEndEffectorVelocity(std::vector<double> &state,

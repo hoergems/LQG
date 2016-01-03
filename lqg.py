@@ -100,6 +100,7 @@ class LQG:
             paths = []
             if deserialize:
                 paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)
+                #paths = [paths[92]]
             if len(paths) == 0:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
                 t0 = time.time()
@@ -180,6 +181,7 @@ class LQG:
                 print "LQG: Running " + str(self.num_simulation_runs) + " simulations..."              
                 for k in xrange(self.num_simulation_runs):
                     self.serializer.write_line("log.log", "tmp/lqg", "RUN #" + str(k + 1) + " \n")
+                    print "simulation run: " + str(k)
                     (x_true, 
                      x_tilde,
                      x_tilde_linear, 
@@ -360,10 +362,14 @@ class LQG:
     def run_viewer(self, model_file, env_file):        
         self.robot.setupViewer(model_file, env_file)        
         fx = 0.0
-        fy = 0.0
-        fz = 0.0        
+        fy = 3.0
+        fz = 0.0
+        f_roll = 0.0
+        f_pitch = 0.0
+        f_yaw = 0.0        
         x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         while True:            
+            #u_in = [3.0, 1.5, 0.0, 0.0, 0.0, 0.0]
             u_in = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             current_state = v_double()
             current_state[:] = x
@@ -401,26 +407,29 @@ class LQG:
             
             for o in self.obstacles:
                 #in_collision = o.inCollisionDiscrete(collision_objects)
-                if o.inCollisionDiscrete(collision_objects_goal):                    
-                    break;
+                if o.inCollisionDiscrete(ee_collision_objects):                    
+                    in_collision = True                    
+                    ###Get the end effector velocity vector                                       
+                    ee_velocity = v_double()
+                    self.robot.getEndEffectorVelocity(result, ee_velocity)                   
+                    ee_velocity_vec = np.array([ee_velocity[i] for i in xrange(len(ee_velocity))])
+                    
+                    ext_force = o.getExternalForce()
+                    force_vector = -ext_force * ee_velocity_vec
+                    print "ee_velocity " + str(ee_velocity_vec)
+                    print "force vector: " + str(force_vector)
+                    self.robot.setExternalForce(fx + force_vector[0], 
+                                                fy + force_vector[1], 
+                                                fz + force_vector[2],
+                                                f_roll + force_vector[3],
+                                                f_pitch + force_vector[4],
+                                                f_yaw + force_vector[5])
+                    print "in collision!!!"           
                 for i in xrange(len(collision_objects_start)):                        
                     if o.inCollisionContinuous([collision_objects_start[i], collision_objects_goal[i]]):
-                        '''in_collision = True                    
-                        ###Get the end effector velocity vector                                       
-                        ee_velocity = v_double()
-                        self.robot.getEndEffectorVelocity(result, ee_velocity)                   
-                        ee_linear_velocity = np.array([ee_velocity[i] for i in xrange(len(ee_velocity) / 2)])
-                    
-                        ext_force = o.getExternalForce()
-                        force_vector = -ext_force * ee_linear_velocity
-                        print "ee_linear_velocity " + str(ee_linear_velocity)
-                        print "force vector: " + str(force_vector)
-                        self.robot.setExternalForce(force_vector[0], 
-                                                    force_vector[1], 
-                                                    force_vector[2]) '''
-                        print "in collision!!!"           
+                        pass          
             if not in_collision:
-                self.robot.setExternalForce(fx, fy, fz)                                                              
+                self.robot.setExternalForce(fx, fy, fz, f_roll, f_pitch, f_yaw)                                                              
             x = np.array([result[i] for i in xrange(len(result))])
             cjvals = v_double()
             cjvels = v_double()

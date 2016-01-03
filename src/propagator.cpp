@@ -23,22 +23,10 @@ void Propagator::setup(std::vector<double> &jointsLowerPositionLimit,
 	enforce_constraints_ = enforce_constraints;
 }
 
-void Propagator::set_gravity_constant(double &gravity_constant) {
-	integrator_->setGravityConstant(gravity_constant);
-}
-
-void Propagator::set_external_force(double &f_x, double &f_y, double &f_z) {
-	integrator_->setExternalForce(f_x, f_y, f_z);
-}
-
 MatrixXd Propagator::get_ee_jacobian(std::vector<double> &state) {
 	const std::vector<double> rho;
 	const std::vector<double> zeta;
 	return integrator_->get_end_effector_jacobian(state, rho, zeta);
-}
-
-void Propagator::setJointDamping(std::vector<double> &viscous) {
-	integrator_->setJointDamping(viscous);
 }
 
 void Propagator::enforce_constraints(bool enforce) {
