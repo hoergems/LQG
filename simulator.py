@@ -164,6 +164,7 @@ class Simulator:
     
     def simulate_n_steps(self,
                          xs, us, zs,
+                         state_covariances
                          control_durations,
                          x_true,                         
                          x_tilde,

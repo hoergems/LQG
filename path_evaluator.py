@@ -214,13 +214,20 @@ class PathEvaluator:
         path_rewards = [evaluated_paths[i][0] for i in xrange(len(evaluated_paths))]               
         
         best_path = evaluated_paths[0][1]        
-        best_objective = path_rewards[0]        
+        best_objective = path_rewards[0] 
+        s_covariances = evaluated_paths[0][3]       
         for i in xrange(1, len(path_rewards)):                        
             if path_rewards[i] > best_objective:
                 best_objective = path_rewards[i]
                 best_path = evaluated_paths[i][1]
+                s_covariances = evaluated_paths[i][3]
         logging.info("PathEvaluator: Objective value for the best path is " + str(best_objective))
-        return best_path[0], best_path[1], best_path[2], best_path[3], best_objective
+        return (best_path[0], 
+                best_path[1], 
+                best_path[2], 
+                best_path[3], 
+                best_objective, 
+                s_covariances)
     
     def get_linear_model_matrices(self, state_path, control_path, control_durations):
         As = []
@@ -274,7 +281,7 @@ class PathEvaluator:
                 Hs.append(self.H)
                 Ws.append(self.W)
                 Ns.append(self.N)        
-        return As, Bs, Vs, Ms, Hs, Ws, Ns
+        return As, Bs, Vs, Ms, Hs, Ws, Ns    
     
     def evaluate(self, index, path, P_t, current_step, horizon, robot, eval_queue=None):
         if self.show_viewer:
@@ -303,7 +310,8 @@ class PathEvaluator:
         total_num_collisions += num_collisions_step
         path_rewards.append(np.power(self.discount, current_step) * state_reward)
         Cov = 0 
-        
+        state_covariances = []
+        state_covariances.append(np.array([[0.0 for i in xrange(2 * self.robot_dof)] for j in xrange(2 * self.robot_dof)]))
         for i in xrange(1, horizon_L):                              
             P_hat_t = kalman.compute_p_hat_t(As[i], P_t, Vs[i], Ms[i])            
             K_t = kalman.compute_kalman_gain(Hs[i], P_hat_t, Ws[i], Ns[i])
@@ -325,7 +333,8 @@ class PathEvaluator:
             Gamma_t = np.vstack((np.hstack((np.identity(L.shape[1]), np.zeros((L.shape[1], L.shape[1])))), 
                                  np.hstack((np.zeros((L.shape[0], L.shape[1])), L))))                 
             Cov = np.dot(Gamma_t, np.dot(R_t, Gamma_t.T))                       
-            cov_state = np.array([[Cov[j, k] for k in xrange(2 * self.robot_dof)] for j in xrange(2 * self.robot_dof)])            
+            cov_state = np.array([[Cov[j, k] for k in xrange(2 * self.robot_dof)] for j in xrange(2 * self.robot_dof)])
+            state_covariances.append(cov_state)            
             (state_reward, terminal, num_collisions_step, samples) = self.get_expected_state_reward(xs[i], cov_state) 
             total_num_collisions += num_collisions_step           
             path_rewards.append(np.power(self.discount, current_step + i) * state_reward)            
@@ -341,8 +350,8 @@ class PathEvaluator:
                      " is " + 
                      str(path_reward))
         logging.info("========================================")        
-        if not eval_queue==None:
-            eval_queue.put((path_reward, path, Cov))
+        if not eval_queue==None:            
+            eval_queue.put((path_reward, path, Cov, state_covariances))
         else:
             return path_reward
     

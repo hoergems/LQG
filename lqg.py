@@ -149,8 +149,15 @@ class LQG:
                 if self.dynamic_problem:
                     path_evaluator.setup_dynamic_problem()
                 path_evaluator.setup_reward_function(self.step_penalty, self.illegal_move_penalty, self.exit_reward, self.discount_factor)
-                t0 = time.time() 
-                xs, us, zs, control_durations, objective = path_evaluator.evaluate_paths(paths, P_t, 0)
+                t0 = time.time()
+                 
+                (xs, 
+                 us, 
+                 zs, 
+                 control_durations, 
+                 objective, 
+                 state_covariances) = path_evaluator.evaluate_paths(paths, P_t, 0)
+                 
                 te = time.time() - t0
                 print "LQG: Time to evaluate " + str(len(paths)) + " paths: " + str(te) + "s"
                 mean_planning_time = time_to_generate_paths + te
@@ -193,7 +200,8 @@ class LQG:
                      terminal,
                      estimated_s,
                      estimated_c,                     
-                     history_entries) = sim.simulate_n_steps(xs, us, zs, 
+                     history_entries) = sim.simulate_n_steps(xs, us, zs,
+                                                             state_covariances, 
                                                              control_durations,
                                                              xs[0],
                                                              np.array([0.0 for i in xrange(2 * self.robot_dof)]),
@@ -413,7 +421,7 @@ class LQG:
                     ee_velocity = v_double()
                     self.robot.getEndEffectorVelocity(result, ee_velocity)                   
                     ee_velocity_vec = np.array([ee_velocity[i] for i in xrange(len(ee_velocity))])
-                    
+                    #ee_velocity_vec /= np.linalg.norm(ee_velocity_vec)
                     ext_force = o.getExternalForce()
                     force_vector = -ext_force * ee_velocity_vec
                     print "ee_velocity " + str(ee_velocity_vec)
