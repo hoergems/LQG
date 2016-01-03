@@ -370,7 +370,7 @@ class LQG:
     def run_viewer(self, model_file, env_file):        
         self.robot.setupViewer(model_file, env_file)        
         fx = 0.0
-        fy = 3.0
+        fy = 0.0
         fz = 0.0
         f_roll = 0.0
         f_pitch = 0.0
@@ -378,7 +378,7 @@ class LQG:
         x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         while True:            
             #u_in = [3.0, 1.5, 0.0, 0.0, 0.0, 0.0]
-            u_in = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            u_in = [-2.0, 10.0, 0.0, 0.0, 0.0, 0.0]
             current_state = v_double()
             current_state[:] = x
             control = v_double()            
@@ -439,6 +439,7 @@ class LQG:
             if not in_collision:
                 self.robot.setExternalForce(fx, fy, fz, f_roll, f_pitch, f_yaw)                                                              
             x = np.array([result[i] for i in xrange(len(result))])
+            print "x " + str(x)
             cjvals = v_double()
             cjvels = v_double()
             cjvals_arr = [x[i] for i in xrange(len(x) / 2)]

@@ -74,7 +74,7 @@ exit_reward: 1000.0
 sample_size: 1
 
 # Enforce the position and velocity constraints
-enforce_constraints: True
+enforce_constraints: False
 
 # Enforce the control constraints
 enforce_control_constraints: True
