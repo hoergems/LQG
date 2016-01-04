@@ -20,9 +20,14 @@ class PlotStats:
             os.makedirs(dir)       
         self.save = save        
         serializer = Serializer()
-        self.process_covariances = []
+        config = serializer.read_config(path=dir)
+        self.inc_covariance = config['inc_covariance']        
+        self.covariances = []
         for logfile in glob.glob(dir + "/*.log"):
-            self.process_covariances.append(serializer.read_process_covariance(logfile))
+            if "process" in self.inc_covariance:
+                self.covariances.append(serializer.read_process_covariance(logfile))
+            elif "observation" in self.inc_covariance:
+                self.covariances.append(serializer.read_observation_covariance(logfile))       
              
         #self.create_video(serializer, dir)
         print "Setting up robot"
@@ -423,6 +428,9 @@ class PlotStats:
         data = []
         color_map = []
         d = dict()
+        cov_str = "Process covariance:"
+        if "observation" in self.inc_covariance:
+            cov_str = "Observation covariance:"
         for file in sorted(files):
             file_str = file.split("/")[2].split("_")[1]
             if not file_str in d:
@@ -432,7 +440,7 @@ class PlotStats:
             with open(file, "r") as f:
                 print file                   
                 for line in f:                                       
-                    if "Process covariance:" in line:                        
+                    if cov_str in line:                        
                         m_cov = float(line.split(" ")[2])                        
                     elif stat_str in line:                        
                         float_found = False                        

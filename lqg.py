@@ -16,7 +16,7 @@ from path_planning_interface import PathPlanningInterface
 from libobstacle import Obstacle, Terrain
 
 class LQG:
-    def __init__(self, show_scene, deserialize):
+    def __init__(self, show_scene, deserialize, append_paths):
         """ Reading the config """
         self.init_serializer()
         config = self.serializer.read_config("config_lqg.yaml")
@@ -98,9 +98,11 @@ class LQG:
             time_to_generate_paths = 0.0
             
             paths = []
-            if deserialize:
+            if ((not append_paths) and deserialize):
                 paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)
+                #paths = [paths[i] for i in xrange(15)]
                 #paths = [paths[92]]
+            
             if len(paths) == 0:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
                 t0 = time.time()
@@ -112,8 +114,9 @@ class LQG:
                 print "LQG: Time to generate paths: " + str(time_to_generate_paths) + " seconds"
                 if self.plot_paths:                
                     self.serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path=dir)                
-                if deserialize:
-                    self.serializer.serialize_paths("paths.txt", paths)
+                if deserialize or append_paths:                    
+                    self.serializer.serialize_paths("paths.txt", paths, append_paths, self.robot_dof)
+                    paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)
             
             """ Determine average path length """
             avg_path_length = self.get_avg_path_length(paths)            
@@ -124,7 +127,7 @@ class LQG:
             all_rewards = []
             successes = []                   
             for j in xrange(len(m_covs)):
-                print "LQG: Evaluating paths for covariance value " + str(m_covs[j]) + "..."
+                print "LQG: Evaluating " + str(len(paths)) + " paths for covariance value " + str(m_covs[j]) + "..."
                 M = None
                 N = None
                 if self.inc_covariance == "process":
@@ -577,7 +580,11 @@ if __name__ == "__main__":
     d_help_str = "Get the paths from 'paths.txt'. If no such file exists, generate the paths and serialize them."    
     parser.add_argument("-d", "--deserialize", 
                         help=d_help_str, 
+                        action="store_true")
+    d_help_str = "Append generated paths to the current paths file."    
+    parser.add_argument("-a", "--append_paths", 
+                        help=d_help_str, 
                         action="store_true") 
     args = parser.parse_args()  
-    LQG(args.show, args.deserialize)    
+    LQG(args.show, args.deserialize, args.append_paths)    
     

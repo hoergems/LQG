@@ -195,7 +195,7 @@ void ViewerInterface::updateRobotValues(const std::vector<double> &current_joint
 										   particle_colors[i][3]);
         			geometry->SetDiffuseColor(color);
 					geometry->SetAmbientColor(color);
-        			geometry->SetTransparency(0.75);
+        			geometry->SetTransparency(particle_colors[i][3]);
         		}
         	}
         }

@@ -49,7 +49,7 @@ class PathEvaluator:
         self.upper_position_constraints = [upper_position_constraints[i] for i in xrange(len(upper_position_constraints))]
         self.velocity_constraints = [velocity_constraints[i] for i in xrange(len(velocity_constraints))]
         
-        self.enforce_constraints = robot.constraintsEnforced()
+        self.constraints_enforced = robot.constraintsEnforced()
         self.sample_size = sample_size
         self.num_cores = cpu_count()
         #self.num_cores = 2 
@@ -70,7 +70,25 @@ class PathEvaluator:
         self.exit_reward = exit_reward
         self.discount = discount
         
-    def check_constraints(self, sample):        
+    def enforce_constraints(self, sample):
+        sample_temp = [0.0 for i in xrange(len(sample))] 
+        for i in xrange(len(sample) / 2):
+            if sample[i] < self.lower_position_constraints[i] - 0.0000001:
+                sample_temp[i] = self.lower_position_constraints[i]
+                sample_temp[i + len(sample) / 2] = 0.0
+            elif sample[i] > self.upper_position_constraints[i] + 0.0000001:
+                sample_temp[i] = self.upper_position_constraints[i] 
+                sample_temp[i + len(sample) / 2] = 0.0
+            else:
+                sample_temp[i] = sample[i]
+                if sample_temp[i + len(sample) / 2] < -self.velocity_constraints[i] - 0.0000001:
+                    sample_temp[i + len(sample) / 2] = -self.velocity_constraints[i]
+                elif sample_temp[i + len(sample) / 2] > self.velocity_constraints[i] + 0.0000001:
+                    sample_temp[i + len(sample) / 2] = self.velocity_constraints[i]
+                else:
+                    sample_temp[i + len(sample) / 2] = sample[i + len(sample) / 2]
+        return np.array(sample_temp)
+         
         for i in xrange(len(sample) / 2):
             if ((sample[i] < self.lower_position_constraints[i] - 0.000001 or 
                  sample[i] > self.upper_position_constraints[i] + 0.000001 or
@@ -102,9 +120,8 @@ class PathEvaluator:
             else:
                 samples = self.sample_multivariate_normal(mean, cov, deficit)           
             for sample in samples:
-                if self.enforce_constraints:
-                    if self.check_constraints(sample):
-                        samples_temp.append(sample)
+                if self.constraints_enforced:                    
+                    samples_temp.append(self.enforce_constraints(sample))
                 else:
                     samples_temp.append(sample)
             delta = time.time() - t0    
@@ -340,7 +357,7 @@ class PathEvaluator:
             path_rewards.append(np.power(self.discount, current_step + i) * state_reward)            
             if self.show_viewer:
                 self.show_state_and_cov(xs[i], cov_state, samples)                
-                time.sleep(0.2)
+                #time.sleep(0.2)
         path_reward = sum(path_rewards)  
         print "PathEvaluator: Path " + str(index) + " evaluated. Reward: " + str(path_reward) + ", mean num collisions: " + str(float(total_num_collisions / (len(xs))))
              

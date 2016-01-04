@@ -55,6 +55,9 @@ class Simulator:
         
         self.lower_position_constraints = [lower_position_constraints[i] for i in xrange(len(lower_position_constraints))]
         self.upper_position_constraints = [upper_position_constraints[i] for i in xrange(len(upper_position_constraints))]
+        velocity_constraints = v_double()
+        robot.getJointVelocityLimits(active_joints, velocity_constraints)
+        self.velocity_constraints = [velocity_constraints[i] for i in xrange(len(velocity_constraints))]
         
         self.max_joint_velocities = [joint_velocity_limit for i in xrange(2 * len(active_joints))]
         torque_limits = v_double()
@@ -233,6 +236,8 @@ class Simulator:
                 """ Calc the linearized next state (used to compare with x_true) """             
                 x_dash_linear_temp = self.get_linearized_next_state(x_dash_linear, u_dash, ce, As[i], Bs[i], Vs[i])
                 x_true_linear_temp = np.add(x_dash_linear_temp, xs[i+1])
+                if self.enforce_constraints:
+                    x_true_linear_temp = self.check_constraints(x_true_linear_temp)
                 
                 discount = np.power(self.discount_factor, current_step + i)   
                 
@@ -259,9 +264,6 @@ class Simulator:
                         x_true_linear[j] = 0.0                  
                 else:
                     x_true_linear = x_true_linear_temp
-                    
-                """ Update the viewer to display the true state """                       
-                self.update_viewer(x_true, control_durations[i])
                 
                 """ Calculate the state deviation from the nominal path """                           
                 x_dash = np.subtract(x_true, xs[i + 1])
@@ -279,6 +281,9 @@ class Simulator:
                 z = self.get_observation(x_true, Hs[i + 1], Ns[i + 1], Ws[i + 1])
                 z_dash = np.subtract(z, zs[i+1])
                 history_entries[-1].set_observation(z)
+                
+                """ Update the viewer to display the true state """                       
+                self.update_viewer(x_true, z, control_durations[i])
                 
                 """ Kalman prediction and update """                   
                 x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u_dash, As[i], Bs[i], P_t, Vs[i], Ms[i])
@@ -357,6 +362,19 @@ class Simulator:
         """ Checks if a state satisfies the system constraints.
         Furthermore, enforce the constraints if they are violated
         """
+        for i in xrange(len(state) / 2):
+            if state[i] < self.lower_position_constraints[i] - 0.0000001:
+                state[i] = self.lower_position_constraints[i]
+                state[i + len(state) / 2] = 0.0
+            elif state[i] > self.upper_position_constraints[i] - 0.0000001:
+                state[i] = self.upper_position_constraints[i]
+                state[i + len(state) / 2] = 0.0
+            else:
+                if state[i + len(state) / 2] < -self.velocity_constraints[i] - 0.0000001:
+                    state[i + len(state) / 2] = -self.velocity_constraints[i]
+                elif state[i + len(state) / 2] > self.velocity_constraints[i] - 0.0000001:
+                    state[i + len(state) / 2] = self.velocity_constraints[i]
+        return state
         for i in xrange(len(state) / 2):                          
             if state[i] < self.lower_position_constraints[i]:
                 state[i] = self.lower_position_constraints[i] + 0.00001
@@ -405,7 +423,7 @@ class Simulator:
         """ Apply the linear(ized) model matrices to calcuate
         delta_x_new (the linearized deviation from the nominal path)
         """
-        delta_x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, control_error) 
+        delta_x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, control_error)        
         return delta_x_new
        
     def apply_control(self, 
@@ -480,7 +498,7 @@ class Simulator:
             self.robot.addPermanentViewerParticles(particle_joint_values,
                                                    particle_joint_colors)            
     
-    def update_viewer(self, x, control_duration=None):
+    def update_viewer(self, x, z, control_duration=None):
         """ Update the viewer to display the state 'x' of the robot 
         Optionally sleep for 'control_duration'
         """
@@ -492,7 +510,13 @@ class Simulator:
             cjvals[:] = cjvals_arr
             cjvels[:] = cjvels_arr
             particle_joint_values = v2_double()
+            pjv = v_double()
+            pjv[:] = [z[i] for i in xrange(len(z))]
+            particle_joint_values.append(pjv)
             particle_joint_colors = v2_double()
+            pja = v_double()            
+            pja[:] = [0.5, 0.5, 0.9, 0.0]
+            particle_joint_colors.append(pja)
             self.robot.updateViewerValues(cjvals, 
                                           cjvels, 
                                           particle_joint_values,
@@ -520,8 +544,9 @@ class Simulator:
         which is disturbed by Gaussian distributed noise. 'N' is the covariance matrix for the
         Gaussian distribution
         """
-        return np.add(np.dot(H, x), 
-                      np.dot(W, self.get_random_joint_angles([0.0 for i in xrange(N.shape[0])], N)))
+        res = np.add(np.dot(H, x), 
+                     np.dot(W, self.get_random_joint_angles([0.0 for i in xrange(N.shape[0])], N)))        
+        return res        
     
 if __name__ == "__main__":
     Simulator()

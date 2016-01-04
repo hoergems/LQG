@@ -69,7 +69,12 @@ class Serializer:
         return paths
                      
            
-    def serialize_paths(self, filename, paths):
+    def serialize_paths(self, filename, paths, append, robot_dof):
+        print "len 1 " + str(len(paths))
+        if append:
+            paths2 = self.deserialize_paths(filename, robot_dof)
+            paths.extend(paths2)
+        print "len 2 " + str(len(paths))
         if os.path.exists(filename):
             os.remove(filename)
         with open(filename, "a+") as f:
@@ -123,6 +128,13 @@ class Serializer:
             os.makedirs("tmp/" + str(alg))
         for file in glob.glob(os.path.join("tmp/" + alg, "log.log")):
             os.remove(file)
+            
+    def read_observation_covariance(self, path, filename=None):
+        if filename == None:
+            with open(path, 'r') as f:
+                for line in f:
+                    if "Observation covariance:" in line:
+                        return float(line.strip().split(": ")[1])
             
     def read_process_covariance(self, path, filename=None):
         if filename == None:
