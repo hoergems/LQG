@@ -99,10 +99,8 @@ class LQG:
             
             paths = []
             if ((not append_paths) and deserialize):
-                paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)
-                #paths = [paths[i] for i in xrange(15)]
-                #paths = [paths[92]]
-            
+                paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)                
+                #paths = [paths[236], paths[386]]
             if len(paths) == 0:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
                 t0 = time.time()
@@ -154,7 +152,8 @@ class LQG:
                 path_evaluator.setup_reward_function(self.step_penalty, self.illegal_move_penalty, self.exit_reward, self.discount_factor)
                 t0 = time.time()
                  
-                (xs, 
+                (path_index,
+                 xs, 
                  us, 
                  zs, 
                  control_durations, 
@@ -165,7 +164,8 @@ class LQG:
                 print "LQG: Time to evaluate " + str(len(paths)) + " paths: " + str(te) + "s"
                 mean_planning_time = time_to_generate_paths + te
                 print "LQG: Best objective value: " + str(objective)
-                print "LQG: Length of best path: " + str(len(xs))  
+                print "LQG: Length of best path: " + str(len(xs))
+                print "LQG: Best path has index " + str(path_index)  
                 best_paths.append([[xs[i] for i in xrange(len(xs))], 
                                    [us[i] for i in xrange(len(us))],
                                    [zs[i] for i in xrange(len(zs))],

@@ -228,18 +228,21 @@ class PathEvaluator:
                 q_size = eval_queue.qsize()
                 for j in xrange(q_size):                     
                     evaluated_paths.append(eval_queue.get())
-        path_rewards = [evaluated_paths[i][0] for i in xrange(len(evaluated_paths))]               
+        path_rewards = [evaluated_paths[i][1] for i in xrange(len(evaluated_paths))]               
         
-        best_path = evaluated_paths[0][1]        
+        best_index = evaluated_paths[0][0]
+        best_path = evaluated_paths[0][2]        
         best_objective = path_rewards[0] 
-        s_covariances = evaluated_paths[0][3]       
+        s_covariances = evaluated_paths[0][4]       
         for i in xrange(1, len(path_rewards)):                        
             if path_rewards[i] > best_objective:
+                best_index = [i][0]
                 best_objective = path_rewards[i]
-                best_path = evaluated_paths[i][1]
-                s_covariances = evaluated_paths[i][3]
+                best_path = evaluated_paths[i][2]
+                s_covariances = evaluated_paths[i][4]
         logging.info("PathEvaluator: Objective value for the best path is " + str(best_objective))
-        return (best_path[0], 
+        return (best_index,
+                best_path[0], 
                 best_path[1], 
                 best_path[2], 
                 best_path[3], 
@@ -368,7 +371,7 @@ class PathEvaluator:
                      str(path_reward))
         logging.info("========================================")        
         if not eval_queue==None:            
-            eval_queue.put((path_reward, path, Cov, state_covariances))
+            eval_queue.put((index, path_reward, path, Cov, state_covariances))
         else:
             return path_reward
     
