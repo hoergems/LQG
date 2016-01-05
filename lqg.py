@@ -26,8 +26,7 @@ class LQG:
             logging_level = logging.DEBUG
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)        
         np.set_printoptions(precision=16)
-        dir = "stats/lqg"
-        self.clear_stats(dir)
+        dir = "stats/lqg"        
         self.utils = Utils()
         model_file = "model/test.xml"
         urdf_model_file = "model/test.urdf"
@@ -38,6 +37,7 @@ class LQG:
         #self.show_state_distribution(urdf_model_file, environment_file)
         if show_scene:
             self.run_viewer(urdf_model_file, environment_file)
+        self.clear_stats(dir)
         logging.info("Start up simulator")
         sim = Simulator()
         path_evaluator = PathEvaluator()
@@ -95,8 +95,7 @@ class LQG:
                                      self.covariance_steps)            
             emds = []
             mean_planning_times = []
-            time_to_generate_paths = 0.0
-            
+            time_to_generate_paths = 0.0            
             paths = []
             if ((not append_paths) and deserialize):
                 paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)                
@@ -118,12 +117,12 @@ class LQG:
             
             """ Determine average path length """
             avg_path_length = self.get_avg_path_length(paths)            
-            self.serializer.save_avg_path_lengths(avg_path_length, path=dir)
-                                       
+            self.serializer.save_avg_path_lengths(avg_path_length, path=dir)                                       
             cart_coords = []  
             best_paths = []
             all_rewards = []
-            successes = []                   
+            successes = []            
+                                           
             for j in xrange(len(m_covs)):
                 print "LQG: Evaluating " + str(len(paths)) + " paths for covariance value " + str(m_covs[j]) + "..."
                 M = None
@@ -266,7 +265,7 @@ class LQG:
                 self.serializer.write_line("log.log", 
                                       "tmp/lqg", 
                                       "Reward standard deviation: " + str(np.sqrt(var)) + " \n")
-                cmd = "mv tmp//lqg/log.log " + dir + "/log_lqg_" + str(m_covs[j]) + ".log"
+                cmd = "mv tmp/lqg/log.log " + dir + "/log_lqg_" + str(m_covs[j]) + ".log"
                 os.system(cmd)
                 
             
@@ -381,7 +380,7 @@ class LQG:
         x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         while True:            
             #u_in = [3.0, 1.5, 0.0, 0.0, 0.0, 0.0]
-            u_in = [-2.0, 10.0, 0.0, 0.0, 0.0, 0.0]
+            u_in = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             current_state = v_double()
             current_state[:] = x
             control = v_double()            
@@ -418,7 +417,8 @@ class LQG:
             
             for o in self.obstacles:
                 #in_collision = o.inCollisionDiscrete(collision_objects)
-                if o.inCollisionDiscrete(ee_collision_objects):                    
+                if o.inCollisionDiscrete(ee_collision_objects):
+                    sleep                    
                     in_collision = True                    
                     ###Get the end effector velocity vector                                       
                     ee_velocity = v_double()
@@ -442,7 +442,7 @@ class LQG:
             if not in_collision:
                 self.robot.setExternalForce(fx, fy, fz, f_roll, f_pitch, f_yaw)                                                              
             x = np.array([result[i] for i in xrange(len(result))])
-            print "x " + str(x)
+            
             cjvals = v_double()
             cjvels = v_double()
             cjvals_arr = [x[i] for i in xrange(len(x) / 2)]
@@ -483,8 +483,7 @@ class LQG:
             
     def init_serializer(self):
         self.serializer = Serializer()
-        self.serializer.create_temp_dir("lqg")
-        
+        self.serializer.create_temp_dir("lqg")        
             
     def clear_stats(self, dir):        
         if os.path.isdir(dir):

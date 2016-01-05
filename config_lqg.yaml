@@ -11,7 +11,7 @@ path_timeout: 1000000.0
 use_linear_path: False
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 100
+num_simulation_runs: 1000
 
 # Maximum angular velocity of the joints for the kinematic problem (in rad/sec)
 max_velocity: 4.0
