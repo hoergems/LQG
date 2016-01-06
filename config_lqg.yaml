@@ -106,5 +106,5 @@ add_intermediate_states: True
 #########################################
 # Visualization
 #########################################
-show_viewer: False
+show_viewer: True
 
