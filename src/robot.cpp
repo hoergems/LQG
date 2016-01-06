@@ -348,7 +348,7 @@ Robot::Robot(std::string robot_file):
 	enforce_constraints_(false),
 	propagator_(new Propagator()),
 	kinematics_(new Kinematics()),
-	viewer_(){
+	viewer_(new ViewerInterface()){
 	
 	TiXmlDocument xml_doc;
 	xml_doc.LoadFile(robot_file);	
@@ -502,20 +502,20 @@ void Robot::getEndEffectorPosition(const std::vector<double> &joint_angles, std:
 	kinematics_->getEndEffectorPosition(joint_angles, end_effector_position);
 }
 
-void Robot::setupViewer(std::string model_file, std::string environment_file) {
-	viewer_.setupViewer(model_file, environment_file);
+void Robot::setupViewer(std::string model_file, std::string environment_file) {	
+	viewer_->setupViewer(model_file, environment_file);	
 }
 
 void Robot::addPermanentViewerParticles(const std::vector<std::vector<double>> &particle_joint_values,
 							            const std::vector<std::vector<double>> &particle_colors) {
 	assert(particle_joint_values.size() == particle_colors.size() &&  
 		   "Number of particles must be the same as number of colours!");
-	viewer_.addPermanentParticles(particle_joint_values,
-			                      particle_colors);	
+	viewer_->addPermanentParticles(particle_joint_values,
+			                       particle_colors);	
 }
 
 void Robot::removePermanentViewerParticles() {
-	viewer_.removePermanentParticles();
+	viewer_->removePermanentParticles();
 }
 
 void Robot::updateViewerValues(const std::vector<double> &current_joint_values,
@@ -525,11 +525,23 @@ void Robot::updateViewerValues(const std::vector<double> &current_joint_values,
 	assert(particle_joint_values.size() == particle_colors.size() &&  
 		   "Number of particles must be the same as number of colours!");
 	// particle_color = {r, g, b, a}
-	viewer_.updateRobotValues(current_joint_values, 
-			                  current_joint_velocities,							  
-							  particle_joint_values,
-							  particle_colors,
-							  nullptr);
+	viewer_->updateRobotValues(current_joint_values, 
+			                   current_joint_velocities,							  
+							   particle_joint_values,
+							   particle_colors,
+							   nullptr);
+}
+
+void Robot::setViewerSize(int x, int y) {
+	viewer_->setViewerSize(x, y);
+}
+
+void Robot::setViewerBackgroundColor(double r, double g, double b) {
+	viewer_->setBackgroundColor(r, g, b);
+}
+
+void Robot::setViewerCameraTransform(std::vector<double> &rot, std::vector<double> &trans) {
+	viewer_->setCameraTransform(rot, trans);
 }
 
 bool Robot::propagate_linear(std::vector<double> &current_state,
@@ -851,6 +863,9 @@ BOOST_PYTHON_MODULE(librobot) {
 						.def("setExternalForce", &Robot::setExternalForce)
 						.def("getEndEffectorVelocity", &Robot::getEndEffectorVelocity)
 						.def("getProcessMatrices", &Robot::getProcessMatrices)
+						.def("setViewerSize", &Robot::setViewerSize)
+						.def("setViewerBackgroundColor", &Robot::setViewerBackgroundColor)
+						.def("setViewerCameraTransform", &Robot::setViewerCameraTransform)
                         //.def("setup", &Integrate::setup)                        
     ;
 }

@@ -187,6 +187,21 @@ struct Joint {
     	    std::vector<double> getProcessMatrices(std::vector<double> &x, 
                                                    std::vector<double> &rho, 
 				                                   double t_e);
+    	    
+    	    /**
+    	     * Set the size of the attached viewer
+    	     */
+    	    void setViewerSize(int x, int y);
+    	    
+    	    /**
+    	     * Set the background color of the viewer
+    	     */
+    	    void setViewerBackgroundColor(double r, double g, double b);
+    	    
+    	    /**
+    	     * Set the viewer camera transformation
+    	     */
+    	    void setViewerCameraTransform(std::vector<double> &rot, std::vector<double> &trans);
     
         private:
     	    std::vector<shared::Link> links_;
@@ -261,7 +276,7 @@ struct Joint {
             
             std::shared_ptr<shared::Kinematics> kinematics_;
             
-            shared::ViewerInterface viewer_;
+            std::shared_ptr<shared::ViewerInterface> viewer_;
             
             void quatFromRPY(double &roll, double &pitch, double &y, std::vector<double> &quat);
     

@@ -100,6 +100,8 @@ class LQG:
             if ((not append_paths) and deserialize):
                 paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)                
                 #paths = [paths[236], paths[386]]
+                #paths = [paths[386]]
+                paths = [paths[0]]
             if len(paths) == 0:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
                 t0 = time.time()
@@ -112,7 +114,7 @@ class LQG:
                 if self.plot_paths:                
                     self.serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path=dir)                
                 if deserialize or append_paths:                    
-                    self.serializer.serialize_paths("paths.txt", paths, append_paths, self.robot_dof)
+                    self.serializer.serialize_paths("paths.txt", paths, append_paths, self.robot_dof)                    
                     paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)
             
             """ Determine average path length """
@@ -369,15 +371,23 @@ class LQG:
                        z_scale=  [z_min, z_max])
         sleep
         
-    def run_viewer(self, model_file, env_file):        
-        self.robot.setupViewer(model_file, env_file)        
+    def run_viewer(self, model_file, env_file):
+        rot = v_double()
+        trans = v_double()
+        rot[:] = [-1.0, 0.0, 0.0, 0.0]
+        trans[:] = [0.0, 0.0, 3.0]
+        #self.robot.setViewerCameraTransform(rot, trans)
+        self.robot.setViewerBackgroundColor(0.6, 0.8, 0.6)
+        self.robot.setViewerSize(1280, 768)
+        self.robot.setupViewer(model_file, env_file)
         fx = 0.0
         fy = 0.0
         fz = 0.0
         f_roll = 0.0
         f_pitch = 0.0
-        f_yaw = 0.0        
-        x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        f_yaw = 0.0 
+        x = [2.44, 0.2, 1.0, 0.0, 0.0, 0.0]       
+        #x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         while True:            
             #u_in = [3.0, 1.5, 0.0, 0.0, 0.0, 0.0]
             u_in = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]

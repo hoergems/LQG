@@ -36,7 +36,21 @@ public:
 	 * Remove the permanently added particles
 	 */
 	void removePermanentParticles();
+	
+    /**
+     * Set the size of the viewer attached to the environment
+     */
+    void setViewerSize(int x, int y);
 
+    /**
+     * Set the background color of the viewer
+     */
+    void setBackgroundColor(double &r, double &g, double &b);
+    
+    /**
+     * Set the camera transform
+     */
+    void setCameraTransform(std::vector<double> &rot, std::vector<double> &trans);
 
 private:
     bool viewer_setup_;
@@ -49,6 +63,8 @@ private:
     OpenRAVE::RobotBasePtr getRobot();
     
     std::shared_ptr<shared::URDFLoader> urdf_loader_;
+    
+    std::shared_ptr<shared::RaveViewer> viewer_;
     
 };
 

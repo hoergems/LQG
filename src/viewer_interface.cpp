@@ -11,7 +11,8 @@ ViewerInterface::ViewerInterface ():
 	viewer_setup_(false),
 	env_(),
 	robot_(nullptr),
-	urdf_loader_() {
+	urdf_loader_(),
+	viewer_(new shared::RaveViewer()){
 }
 
 bool ViewerInterface::setupViewer(std::string model_file,
@@ -52,12 +53,24 @@ bool ViewerInterface::setupViewer(std::string model_file,
 	}
 	
 	
-	shared::RaveViewer viewer;
-	viewer.testView(env_);
+	//shared::RaveViewer viewer;
+	viewer_->testView(env_);
 	cout << "Initialized viewer" << endl;
 	viewer_setup_ = true;
 	return true;
 	
+}
+
+void ViewerInterface::setViewerSize(int x, int y) {
+	viewer_->setViewerSize(x, y);
+}
+
+void ViewerInterface::setBackgroundColor(double &r, double &g, double &b) {
+	viewer_->setBackgroundColor(r, g, b);
+}
+
+void ViewerInterface::setCameraTransform(std::vector<double> &rot, std::vector<double> &trans) {
+	viewer_->setCameraTransform(rot, trans);
 }
 
 void ViewerInterface::removePermanentParticles() {
