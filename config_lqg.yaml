@@ -11,7 +11,7 @@ path_timeout: 1000000.0
 use_linear_path: False
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 100
+num_simulation_runs: 1000
 
 # Maximum angular velocity of the joints for the kinematic problem (in rad/sec)
 max_velocity: 4.0
@@ -33,17 +33,17 @@ num_bins: 201
 min_process_covariance: 30.0
 
 # The maximum joint state covariance
-max_process_covariance: 60.0
+max_process_covariance: 30.0
 
 # The minimum observation covariance
 min_observation_covariance: 0.0001
 
 # The maximum observation covariance
-max_observation_covariance: 0.0001
+max_observation_covariance: 0.2
 
 #Determines which parameter (process covariance or observation
 #covariance should be increased during simulation)
-inc_covariance: process
+inc_covariance: observation
 
 # The number of covariance steps
 covariance_steps: 10
