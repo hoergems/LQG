@@ -383,30 +383,41 @@ class LQG:
         fz = 0.0
         f_roll = 0.0
         f_pitch = 0.0
-        f_yaw = 0.0 
-        x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]       
+        f_yaw = 0.0         
+        x = [0.0 for i in xrange(2 * self.robot_dof)] 
+        times = []      
         #x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        y = 0
         while True:            
             #u_in = [3.0, 1.5, 0.0, 0.0, 0.0, 0.0]
-            u_in = [3.0, 1.0, 0.0, 0.0, 0.0, 0.0]
+            u_in = [0.0 for i in xrange(self.robot_dof)]
+            #u_in[3] = 10.0
             current_state = v_double()
             current_state[:] = x
             control = v_double()            
             control[:] = u_in
                        
             control_error = v_double()
-            ce = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            ce = [0.0 for i in xrange(self.robot_dof)]
             control_error[:] = ce
             result = v_double()
             ja_start = v_double()
             ja_start[:] = [current_state[i] for i in xrange(len(current_state) / 2)]
-            collision_objects_start = self.robot.createRobotCollisionObjects(ja_start)             
+            collision_objects_start = self.robot.createRobotCollisionObjects(ja_start) 
+            t0 = time.time()            
             self.robot.propagate(current_state,
                                  control,
                                  control_error,
                                  self.simulation_step_size,
                                  0.03,
                                  result)
+            t = time.time() - t0
+            times.append(t)
+            if y == 500:
+                t_sum = sum(times)
+                t_mean = t_sum / len(times)
+                print t_mean
+                sleep
             joint_angles = v_double()
             joint_angles[:] = [result[i] for i in xrange(len(result) / 2)]
             collision_objects_goal = self.robot.createRobotCollisionObjects(joint_angles)
@@ -462,6 +473,8 @@ class LQG:
                                           particle_joint_values,
                                           particle_joint_values)
             time.sleep(0.03) 
+            y += 1
+            print y
             
     """
     ================================================================

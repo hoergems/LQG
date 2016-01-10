@@ -51,7 +51,11 @@ class Test:
         print "Calculating inertia matrix"
         M = self.calc_inertia_matrix(Jvs, M_is)
         
+        print "Inverting inertia matrix"
+        M_inv = self.inertia_inverse(M, symbolic=True)
+        
         if self.simplifying:
+            print "Simplifying inertia matrix"
             M = trigsimp(M)
             M = nsimplify(M, tolerance=1e-7)        
         print "Calculating coriolis matrix"
@@ -71,7 +75,7 @@ class Test:
         if self.simplifying:      
             N = trigsimp(N)
         t0 = time.time()
-        f, M_inv = self.get_dynamic_model(M, C, N, self.q, self.qdot, self.rho, self.zeta)
+        f = self.get_dynamic_model(M, M_inv, C, N, self.q, self.qdot, self.rho, self.zeta)
         print "Build taylor approximation" 
         steady_states = self.get_steady_states()
         print "Get partial derivatives"
@@ -94,11 +98,12 @@ class Test:
                 A, B, V = self.substitude_steady_states2(A, B, V, steady_states[i])
                 self.gen_cpp_code2(A, "A" + str(i), header_src, imple_src)
                 self.gen_cpp_code2(B, "B" + str(i), header_src, imple_src)
-                self.gen_cpp_code2(V, "V" + str(i), header_src, imple_src)
+                self.gen_cpp_code2(V, "V" + str(i), header_src, imple_src)                
         else:
             self.gen_cpp_code2(A, "A0", header_src, imple_src)
             self.gen_cpp_code2(B, "B0", header_src, imple_src)
             self.gen_cpp_code2(V, "V0", header_src, imple_src)
+            self.gen_cpp_code2(M, "M0", header_src, imple_src)
             self.gen_cpp_code2(f, "F0", header_src, imple_src)
             self.gen_cpp_code2(ee_jacobian, "EEJacobian", header_src, imple_src)
         print "Building model took " + str(time.time() - t_start) + " seconds"  
@@ -107,6 +112,19 @@ class Test:
             cmd = "cd src/build && cmake .. && make -j8"           
             os.system(cmd)
         print "Done"
+        
+    def inertia_inverse(self, M, symbolic=False):
+        if symbolic:
+            M_inv = Matrix.zeros(M.shape[0], M.shape[1])
+            for i in xrange(M.shape[0]):
+                for j in xrange(M.shape[1]):
+                    strr = "M_inv_(" + str(i) + ", " + str(j) + ")" 
+                    s = Symbol(strr)
+                    M_inv[i, j] = s
+            return M_inv
+        else:
+            return M.inv()        
+        
         
     def test(self, A1, A2, B1, B2):
         for i in xrange(len(self.q)):
@@ -376,6 +394,7 @@ class Test:
                 "MatrixXd Integrate::getB" in lines[i] or 
                 "MatrixXd Integrate::getV" in lines[i] or
                 "MatrixXd Integrate::getF" in lines[i] or
+                "MatrixXd Integrate::getM" in lines[i] or
                 "MatrixXd Integrate::getEEJacobian" in lines[i]):
                 idx1 = i                
                 breaking = True
@@ -402,7 +421,8 @@ class Test:
             if ("MatrixXd getA" in lines_header[i] or 
                 "MatrixXd getB" in lines_header[i] or 
                 "MatrixXd getV" in lines_header[i] or
-                "MatrixXd getF" in lines_header[i] or 
+                "MatrixXd getF" in lines_header[i] or
+                "MatrixXd getM" in lines_header[i] or 
                 "MatrixXd getEEJacobian" in lines_header[i]):
                 idxs.append(i)
         for i in xrange(len(lines_header)):
@@ -491,12 +511,8 @@ class Test:
             for line in lines_header:
                 f.write(line)   
         
-    def get_dynamic_model(self, M, C, N, thetas, dot_thetas, rs, zetas): 
-        print "Inverting inertia matrix"              
-        t0 = time.time()
-        #M_inv = M.inv("LU")
-        M_inv = M.inv()      
-        print "time to invert: " + str(time.time() - t0)        
+    def get_dynamic_model(self, M, M_inv, C, N, thetas, dot_thetas, rs, zetas):             
+        #print "time to invert: " + str(time.time() - t0)        
         Thetas = Matrix([[thetas[i]] for i in xrange(len(thetas) - 1)])
         Dotthetas = Matrix([[dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
         Rs = Matrix([[rs[i]] for i in xrange(len(rs) - 1)])
@@ -509,7 +525,7 @@ class Test:
         else:'''
         m_lower = M_inv * ((Rs + Zetas) - C * Dotthetas - N)
         h = m_upper.col_join(m_lower)        
-        return h, M_inv
+        return h
     
     def substitude_steady_states2(self, A, B, V, steady_states):                            
         for i in xrange(len(self.rho)):
@@ -621,6 +637,7 @@ class Test:
             for j in xrange(len(thetas) - 1):
                 val = 0.0
                 for k in xrange(len(thetas) - 1): 
+                    print (i, j, k)
                     if self.simplifying:                                             
                         val += trigsimp(self.calc_christoffel_symbol(i, j, k, thetas, M) * dot_thetas[k])
                     else:                        
@@ -820,7 +837,7 @@ class Test:
         
         
         Jv = Matrix([[0.0 for m in xrange(len(thetas) - 1)] for n in xrange(6)])
-        for i in xrange(3):
+        for i in xrange(len(thetas) - 1):
             r1 = 0.0
             if self.simplifying:
                 r1 = trigsimp(Matrix(zs[i].cross(Os[-1] - Os[i])))
@@ -829,9 +846,8 @@ class Test:
             for t in xrange(3):
                 Jv[t, i] = r1[t, 0]
                 Jv[t + 3, i] = zs[i][t, 0]
-        return nsimplify(Jv, tolerance=1e-4) 
-        
-    
+        Jv_s = nsimplify(Jv, tolerance=1e-4)        
+        return Jv_s
     
     def transform(self, x, y, z, r, p, yaw):
         trans = Matrix([[1.0, 0.0, 0.0, x],

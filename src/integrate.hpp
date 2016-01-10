@@ -2,14 +2,19 @@
 #define INTEGRATE_HPP_
 #include <Eigen/Dense>
 #include <list>
+#include <boost/timer.hpp>
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include <boost/numeric/odeint/integrate/integrate.hpp>
 #include <boost/numeric/odeint/stepper/runge_kutta4.hpp>
+#include <boost/numeric/odeint/stepper/adams_bashforth.hpp>
+#include <boost/numeric/odeint/stepper/adams_bashforth_moulton.hpp>
+
 //#include <boost/numeric/odeint/stepper/runge_kutta_fehlberg78.hpp>
 
 #include <boost/numeric/odeint/stepper/euler.hpp>
 #include <boost/numeric/odeint/stepper/runge_kutta_dopri5.hpp>
+
 #include <boost/numeric/odeint/stepper/bulirsch_stoer.hpp>
 #include <boost/numeric/odeint/integrate/integrate_const.hpp>
 #include <unsupported/Eigen/MatrixFunctions>
@@ -76,6 +81,7 @@ namespace shared {
     private:
 MatrixXd getEEJacobian(const state_type &x, const state_type &rho, const state_type &zeta) const; 
 MatrixXd getF0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
+MatrixXd getM0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
 MatrixXd getV0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
 MatrixXd getB0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
 MatrixXd getA0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
@@ -87,6 +93,8 @@ MatrixXd getA0(const state_type &x, const state_type &rho, const state_type &zet
     	typedef ABFuncType Integrate::* AB_funct;
     	
     	MatrixXd power_series_(MatrixXd &m, double t, int depth) const;
+    	
+    	void calc_inverse_inertia_matrix(MatrixXd &M) const;
     	
     	double factorial_(int num) const;
     	
@@ -139,6 +147,8 @@ MatrixXd getA0(const state_type &x, const state_type &rho, const state_type &zet
     	mutable std::pair<AB_funct, std::pair<AB_funct, AB_funct>> ab_functions_;
     	
     	mutable bool steady_states_setup_;
+    	
+    	mutable MatrixXd M_inv_;
     };
 
     
