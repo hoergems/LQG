@@ -99,7 +99,7 @@ class LQG:
             paths = []
             if ((not append_paths) and deserialize):
                 paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)
-                #paths = [paths[236], paths[386]]
+                paths = [paths[236], paths[386]]
             if len(paths) == 0:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
                 t0 = time.time()
@@ -384,11 +384,11 @@ class LQG:
         f_roll = 0.0
         f_pitch = 0.0
         f_yaw = 0.0 
-        x = [2.44, 0.2, 1.0, 0.0, 0.0, 0.0]       
+        x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]       
         #x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         while True:            
             #u_in = [3.0, 1.5, 0.0, 0.0, 0.0, 0.0]
-            u_in = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            u_in = [3.0, 1.0, 0.0, 0.0, 0.0, 0.0]
             current_state = v_double()
             current_state[:] = x
             control = v_double()            
@@ -425,8 +425,7 @@ class LQG:
             
             for o in self.obstacles:
                 #in_collision = o.inCollisionDiscrete(collision_objects)
-                if o.inCollisionDiscrete(ee_collision_objects):
-                    sleep                    
+                if o.inCollisionDiscrete(ee_collision_objects):                                        
                     in_collision = True                    
                     ###Get the end effector velocity vector                                       
                     ee_velocity = v_double()
