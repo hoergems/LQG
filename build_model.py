@@ -39,12 +39,12 @@ class Test:
         """
         Get the Jacobians of the links expressed in the robot's base frame
         """        
-        print "Calculating Jacobian matrices"
+        print "Calculating end-effector Jacobian matrix"
         t_start = time.time()
         
         ee_jacobian = self.get_end_effector_jacobian(self.joint_origins, self.joint_axis, self.q)
-        print ee_jacobian.transpose().shape
-        #sleep
+        
+        print "Calculating link Jacobian matrices"
         Jvs, Ocs = self.get_link_jacobians(self.joint_origins, self.inertial_poses, self.joint_axis, self.q)
         
         M_is = self.construct_link_inertia_matrices(self.link_masses, self.Is)        
@@ -61,6 +61,7 @@ class Test:
         print "Calculating coriolis matrix"
         C = self.calc_coriolis_matrix(self.q, self.qdot, M)
         if self.simplifying:
+            print "Simplify coriolis matrix"
             C = trigsimp(C)             
         print "Calculating normal forces"         
         
@@ -72,16 +73,15 @@ class Test:
                                          self.viscous,
                                          ee_jacobian,
                                          F)        
-        if self.simplifying:      
+        if self.simplifying: 
+            print "Simplify general forces forces vector"     
             N = trigsimp(N)
         t0 = time.time()
         f = self.get_dynamic_model(M, M_inv, C, N, self.q, self.qdot, self.rho, self.zeta)
         print "Build taylor approximation" 
-        steady_states = self.get_steady_states()
-        print "Get partial derivatives"
-        t0 = time.time()           
-        f, A, B, V = self.partial_derivatives(f, M_inv, C, N)
-        print "t1 " + str(time.time() - t0)
+        #steady_states = self.get_steady_states()
+        print "Calculate partial derivatives"                  
+        f, A, B, V = self.partial_derivatives(f, M_inv, C, N)        
           
         print "Clean cpp code"
         header_src = "src/integrate.hpp"
@@ -106,7 +106,7 @@ class Test:
             self.gen_cpp_code2(M, "M0", header_src, imple_src)
             self.gen_cpp_code2(f, "F0", header_src, imple_src)
             self.gen_cpp_code2(ee_jacobian, "EEJacobian", header_src, imple_src)
-        print "Building model took " + str(time.time() - t_start) + " seconds"  
+        print "Generating dynamic model took " + str(time.time() - t_start) + " seconds"  
         if buildcpp:
             print "Build c++ code..."
             cmd = "cd src/build && cmake .. && make -j8"           
@@ -517,7 +517,7 @@ class Test:
         Dotthetas = Matrix([[dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
         Rs = Matrix([[rs[i]] for i in xrange(len(rs) - 1)])
         Zetas = Matrix([[zetas[i]] for i in xrange(len(zetas) - 1)])
-        print "Constructing non-linear differential equation"
+        print "Constructing 2nd-order ODE"
         m_upper = Matrix([[dot_thetas[i]] for i in xrange(len(dot_thetas) - 1)])
         m_lower = 0
         '''if self.simplifying:
@@ -617,8 +617,7 @@ class Test:
         V = 0.0                
         for i in xrange(len(Ocs)):            
             el = ms[i + 1] * g.transpose() * Ocs[i]                                                
-            V += el[0]
-        print V               
+            V += el[0]                       
         N = 0
         if self.simplifying:    
             N = Matrix([[trigsimp(diff(V, thetas[i]))] for i in xrange(len(thetas) - 1)]) 

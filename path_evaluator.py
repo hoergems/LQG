@@ -237,7 +237,9 @@ class PathEvaluator:
         for i in xrange(1, len(path_rewards)):                        
             if path_rewards[i] > best_objective:
                 best_index = [i][0]
+                print "best index " + str(best_index)
                 best_objective = path_rewards[i]
+                print "best objective " + str(best_objective)
                 best_path = evaluated_paths[i][2]
                 s_covariances = evaluated_paths[i][4]
         logging.info("PathEvaluator: Objective value for the best path is " + str(best_objective))

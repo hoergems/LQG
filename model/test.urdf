@@ -74,7 +74,7 @@
     </collision>    
   </link>
 
-  <link name="link4">
+  <!--link name="link4">
     <inertial>
       <origin rpy="0 0 0" xyz="0.5 0 0"/>
       <mass value="1"/>
@@ -96,7 +96,7 @@
       </geometry>
       <material name="Grey"/>
     </collision>    
-  </link>
+  </link-->
 
   <!--link name="link5">
     <inertial>
@@ -159,14 +159,14 @@
     <dynamics damping="5.0"/>
   </joint>
 
-  <joint name="joint4" type="revolute">
+  <!--joint name="joint4" type="revolute">
     <parent link="link3"/>
     <child link="link4"/>
     <origin rpy="1.57079632679489661923 0 0" xyz="1 0 0"/>
     <axis xyz="0 0 1"/>
     <limit effort="40" lower="-3.14159265358979323846" upper="3.14159265358979323846" velocity="10"/>    
     <dynamics damping="5.0"/>
-  </joint>
+  </joint-->
 
   <!--joint name="joint5" type="revolute">
     <parent link="link4"/>
@@ -177,8 +177,8 @@
     <dynamics damping="5.0"/>
   </joint-->
 
-  <joint name="joint5" type="fixed">
-    <parent link="link4"/>
+  <joint name="joint4" type="fixed">
+    <parent link="link3"/>
     <child link="end_effector"/>
     <origin rpy="0 0 0" xyz="1 0 0"/>
     <axis xyz="0 0 1"/>

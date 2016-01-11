@@ -99,7 +99,8 @@ class LQG:
             paths = []
             if ((not append_paths) and deserialize):
                 paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)
-                paths = [paths[236], paths[386]]
+                #paths = [paths[17]]
+                
             if len(paths) == 0:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
                 t0 = time.time()
@@ -251,6 +252,7 @@ class LQG:
                 print "total num collisions " + str(num_collisions)    
                 print "mean num collisions " + str(float(num_collisions) / float(self.num_simulation_runs))
                 self.serializer.write_line("log.log", "tmp/lqg", "Length best path: " + str(len(xs)) + " \n")
+                self.serializer.write_line("log.log", "tmp/lqg", "Index of best path: " + str(path_index) + " \n")
                 self.serializer.write_line("log.log", 
                                       "tmp/lqg", 
                                       "Average distance to goal area: 0 \n")
@@ -384,7 +386,8 @@ class LQG:
         f_roll = 0.0
         f_pitch = 0.0
         f_yaw = 0.0         
-        x = [0.0 for i in xrange(2 * self.robot_dof)] 
+        #x = [0.0 for i in xrange(2 * self.robot_dof)]
+        x = self.start_state 
         times = []      
         #x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         y = 0
