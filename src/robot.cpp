@@ -360,8 +360,7 @@ Robot::Robot(std::string robot_file):
 			           active_upper_joint_limits_,
 			           active_joint_velocity_limits_,
 					   enforce_constraints_);
-	
-	kinematics_->setJointOrigins(active_joint_origins_);
+	kinematics_->setJointOrigins(joint_origins_);
 	kinematics_->setLinkDimensions(active_link_dimensions_);
 	
 	propagator_->getIntegrator()->setJointDamping(joint_dampings_);
@@ -463,7 +462,7 @@ void Robot::initCollisionObjects() {
 }
 
 void Robot::createRobotCollisionObjects(const std::vector<double> &joint_angles, 
-		                                std::vector<std::shared_ptr<fcl::CollisionObject const>> &collision_objects) { 
+		                                std::vector<std::shared_ptr<fcl::CollisionObject const>> &collision_objects) {	
 	for (size_t i = 0; i < joint_angles.size(); i++) {
 	    const std::pair<fcl::Vec3f, fcl::Matrix3f> pose_link_n = kinematics_->getPoseOfLinkN(joint_angles, i);
 	    fcl::Transform3f trans(pose_link_n.second, pose_link_n.first); 

@@ -35,7 +35,7 @@ class LQG:
         if not self.setup_scene("environment", "env.xml", self.robot):
             return
         #self.show_state_distribution(urdf_model_file, environment_file)
-        if show_scene:
+        if show_scene:            
             self.run_viewer(urdf_model_file, environment_file)
         self.clear_stats(dir)
         logging.info("Start up simulator")
@@ -386,15 +386,17 @@ class LQG:
         f_roll = 0.0
         f_pitch = 0.0
         f_yaw = 0.0         
-        #x = [0.0 for i in xrange(2 * self.robot_dof)]
-        x = self.start_state 
+        x = [0.0 for i in xrange(2 * self.robot_dof)]
+        #x[0] = 0.0
+        #x[1] = -np.pi / 2       
+        #x = self.start_state 
         times = []      
         #x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         y = 0
         while True:            
             #u_in = [3.0, 1.5, 0.0, 0.0, 0.0, 0.0]
             u_in = [0.0 for i in xrange(self.robot_dof)]
-            #u_in[3] = 10.0
+            u_in[0] = 1.0
             current_state = v_double()
             current_state[:] = x
             control = v_double()            
@@ -405,9 +407,9 @@ class LQG:
             control_error[:] = ce
             result = v_double()
             ja_start = v_double()
-            ja_start[:] = [current_state[i] for i in xrange(len(current_state) / 2)]
-            collision_objects_start = self.robot.createRobotCollisionObjects(ja_start) 
-            t0 = time.time()            
+            ja_start[:] = [current_state[i] for i in xrange(len(current_state) / 2)]            
+            collision_objects_start = self.robot.createRobotCollisionObjects(ja_start)
+            t0 = time.time()                    
             self.robot.propagate(current_state,
                                  control,
                                  control_error,
@@ -416,7 +418,7 @@ class LQG:
                                  result)
             t = time.time() - t0
             times.append(t)
-            if y == 500:
+            if y == 50000:
                 t_sum = sum(times)
                 t_mean = t_sum / len(times)
                 print t_mean
@@ -430,13 +432,11 @@ class LQG:
             Get the end effector position
             '''
             ee_position = v_double()            
-            self.robot.getEndEffectorPosition(joint_angles, ee_position)            
+            self.robot.getEndEffectorPosition(joint_angles, ee_position)
+            #print "joint angles " + str([joint_angles[i] for i in xrange(len(joint_angles))]) 
+            #print "ee_position " + str([ee_position[i] for i in xrange(len(ee_position))])           
             ee_collision_objects = self.robot.createEndEffectorCollisionObject(joint_angles)
-            #collision_objects = self.robot.createRobotCollisionObjects(joint_angles)
-            
-            
             in_collision = False
-            
             for o in self.obstacles:
                 #in_collision = o.inCollisionDiscrete(collision_objects)
                 if o.inCollisionDiscrete(ee_collision_objects):                                        
@@ -448,17 +448,17 @@ class LQG:
                     #ee_velocity_vec /= np.linalg.norm(ee_velocity_vec)
                     ext_force = o.getExternalForce()
                     force_vector = -ext_force * ee_velocity_vec
-                    print "ee_velocity " + str(ee_velocity_vec)
-                    print "force vector: " + str(force_vector)
+                    #print "ee_velocity " + str(ee_velocity_vec)
+                    #print "force vector: " + str(force_vector)
                     self.robot.setExternalForce(fx + force_vector[0], 
                                                 fy + force_vector[1], 
                                                 fz + force_vector[2],
                                                 f_roll + force_vector[3],
                                                 f_pitch + force_vector[4],
-                                                f_yaw + force_vector[5])
-                    print "in collision!!!"           
+                                                f_yaw + force_vector[5])                              
                 for i in xrange(len(collision_objects_start)):                        
                     if o.inCollisionContinuous([collision_objects_start[i], collision_objects_goal[i]]):
+                        print "in collision!!!" 
                         pass          
             if not in_collision:
                 self.robot.setExternalForce(fx, fy, fz, f_roll, f_pitch, f_yaw)                                                              
