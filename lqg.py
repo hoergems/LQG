@@ -99,7 +99,7 @@ class LQG:
             paths = []
             if ((not append_paths) and deserialize):
                 paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)
-                #paths = [paths[17]]
+                paths = [paths[2]]
                 
             if len(paths) == 0:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
@@ -372,14 +372,15 @@ class LQG:
         sleep
         
     def run_viewer(self, model_file, env_file):
+        show_viewer = True
         rot = v_double()
         trans = v_double()
         rot[:] = [-1.0, 0.0, 0.0, 0.0]
         trans[:] = [0.0, 0.0, 3.0]
-        #self.robot.setViewerCameraTransform(rot, trans)
-        self.robot.setViewerBackgroundColor(0.6, 0.8, 0.6)
-        self.robot.setViewerSize(1280, 768)
-        self.robot.setupViewer(model_file, env_file)
+        if show_viewer:
+            self.robot.setViewerBackgroundColor(0.6, 0.8, 0.6)
+            self.robot.setViewerSize(1280, 768)
+            self.robot.setupViewer(model_file, env_file)
         fx = 0.0
         fy = 0.0
         fz = 0.0
@@ -387,6 +388,7 @@ class LQG:
         f_pitch = 0.0
         f_yaw = 0.0         
         x = [0.0 for i in xrange(2 * self.robot_dof)]
+        x_true = [0.0 for i in xrange(2 * self.robot_dof)]
         #x[0] = 0.0
         #x[1] = -np.pi / 2       
         #x = self.start_state 
@@ -396,9 +398,12 @@ class LQG:
         while True:            
             #u_in = [3.0, 1.5, 0.0, 0.0, 0.0, 0.0]
             u_in = [0.0 for i in xrange(self.robot_dof)]
-            u_in[0] = 1.0
+            #u_in[0] = 150.0
+            #u_in[1] = 70.0
             current_state = v_double()
+            current_state_true = v_double()
             current_state[:] = x
+            current_state_true[:] = x_true
             control = v_double()            
             control[:] = u_in
                        
@@ -406,9 +411,16 @@ class LQG:
             ce = [0.0 for i in xrange(self.robot_dof)]
             control_error[:] = ce
             result = v_double()
+            result_true = v_double()
             ja_start = v_double()
             ja_start[:] = [current_state[i] for i in xrange(len(current_state) / 2)]            
             collision_objects_start = self.robot.createRobotCollisionObjects(ja_start)
+            '''self.robot.propagate(current_state_true,
+                                 control,
+                                 control_error,
+                                 0.000005,
+                                 0.03,
+                                 result_true)'''
             t0 = time.time()                    
             self.robot.propagate(current_state,
                                  control,
@@ -418,7 +430,7 @@ class LQG:
                                  result)
             t = time.time() - t0
             times.append(t)
-            if y == 50000:
+            if y == 500:
                 t_sum = sum(times)
                 t_mean = t_sum / len(times)
                 print t_mean
@@ -437,7 +449,7 @@ class LQG:
             #print "ee_position " + str([ee_position[i] for i in xrange(len(ee_position))])           
             ee_collision_objects = self.robot.createEndEffectorCollisionObject(joint_angles)
             in_collision = False
-            for o in self.obstacles:
+            '''for o in self.obstacles:
                 #in_collision = o.inCollisionDiscrete(collision_objects)
                 if o.inCollisionDiscrete(ee_collision_objects):                                        
                     in_collision = True                    
@@ -461,8 +473,10 @@ class LQG:
                         print "in collision!!!" 
                         pass          
             if not in_collision:
-                self.robot.setExternalForce(fx, fy, fz, f_roll, f_pitch, f_yaw)                                                              
+                self.robot.setExternalForce(fx, fy, fz, f_roll, f_pitch, f_yaw)'''                                                              
             x = np.array([result[i] for i in xrange(len(result))])
+            x_true = np.array([result_true[i] for i in xrange(len(result_true))])
+            #print "dist " + str(np.linalg.norm(x - x_true))
             
             cjvals = v_double()
             cjvels = v_double()
@@ -471,10 +485,11 @@ class LQG:
             cjvals[:] = cjvals_arr
             cjvels[:] = cjvels_arr
             particle_joint_values = v2_double()
-            self.robot.updateViewerValues(cjvals, 
-                                          cjvels,
-                                          particle_joint_values,
-                                          particle_joint_values)
+            if show_viewer:
+                self.robot.updateViewerValues(cjvals, 
+                                              cjvels,
+                                              particle_joint_values,
+                                              particle_joint_values)
             time.sleep(0.03) 
             y += 1
             print y
