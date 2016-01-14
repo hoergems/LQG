@@ -144,6 +144,15 @@ def plot_2d_n_sets(sets,
     plt.show()
     plt.close('all')'''
     
+def plot_histogram_from_data(data, save=False):
+    print "min " + str(min(data))
+    print "max " + str(max(data))
+    print "range " + str(max(data) - min(data))    
+    plt.hist(data, bins=int(max(data) - min(data)) / 5)
+    plt.title("Gaussian Histogram")
+    plt.xlabel("Value")
+    plt.ylabel("Frequency")
+    plt.show()
     
     
 def plot_histogram(H, xedges, yedges, save=False, barlabel="Probability", path="", filename="hist1.png"):

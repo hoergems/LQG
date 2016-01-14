@@ -145,6 +145,7 @@ class PathEvaluator:
         else:
             pdf /= sum(pdf)                
         expected_reward = 0.0
+        expected_reward2 = 0.0
         num_collisions = 0
         terminal = False         
         for i in xrange(len(samples)):
@@ -155,26 +156,35 @@ class PathEvaluator:
             terminal = False
             collision_objects = self.robot.createRobotCollisionObjects(joint_angles)
             for obstacle in self.obstacles:
-                if obstacle.inCollisionDiscrete(collision_objects) and not obstacle.isTraversable():                                                      
-                    expected_reward -= pdf[i] * self.collision_penalty                        
+                if obstacle.inCollisionDiscrete(collision_objects) and not obstacle.isTraversable():
+                    expected_reward -= self.collision_penalty 
+                    #expected_reward2 -= pdf[i] * self.collision_penalty                      
                     collides = True
                     num_collisions += 1
                     break
             if not collides:
                 if self.is_terminal(joint_angles):
-                    expected_reward += pdf[i] * self.exit_reward
+                    expected_reward += self.exit_reward
+                    #expected_reward2 += pdf[i] * self.exit_reward
                     terminal = True
                 else:
+                    expected_reward -= self.step_penalty
+                    #expected_reward2 -= pdf[i] * self.step_penalty
                     #print "pdf[i] " + str(pdf[i])
-                    expected_reward -= pdf[i] * self.step_penalty
-        
+                    #expected_reward -= pdf[i] * self.step_penalty
+        expected_reward /= len(samples)        
         '''print "========"
         print "num collisions " + str(num_collisions)
-        print "mean num collisions " + str(float(num_collisions / float(self.sample_size)))
+        print "expected num collisions " + str(float(num_collisions / float(self.sample_size)))
         print "expected reward " + str(expected_reward)
         print "========"'''
         #time.sleep(3)
         
+        """
+        Note that the X = collision is a binary random variable, therefore E[X] = p, p = P(X=1)
+        where X = 1 denotes collision
+        """
+        expected_num_collisions = float(num_collisions / self.sample_size)
                           
         return (expected_reward, 
                 terminal, 
@@ -327,11 +337,12 @@ class PathEvaluator:
         ee_approx_distr = []
         collision_probs = []
         path_rewards = []
-        total_num_collisions = 0  
-        (state_reward, terminal, num_collisions_step, samples) = self.get_expected_state_reward(xs[0], P_t)
-        total_num_collisions += num_collisions_step
+        expected_num_collisions_path = 0  
+        (state_reward, terminal, expected_num_collisions_step, samples) = self.get_expected_state_reward(xs[0], P_t)
+        expected_num_collisions_path += expected_num_collisions_step
         path_rewards.append(np.power(self.discount, current_step) * state_reward)
         Cov = 0 
+        CPi = []
         state_covariances = []
         state_covariances.append(np.array([[0.0 for i in xrange(2 * self.robot_dof)] for j in xrange(2 * self.robot_dof)]))
         for i in xrange(1, horizon_L):                              
@@ -357,15 +368,26 @@ class PathEvaluator:
             Cov = np.dot(Gamma_t, np.dot(R_t, Gamma_t.T))                       
             cov_state = np.array([[Cov[j, k] for k in xrange(2 * self.robot_dof)] for j in xrange(2 * self.robot_dof)])
             state_covariances.append(cov_state)            
-            (state_reward, terminal, num_collisions_step, samples) = self.get_expected_state_reward(xs[i], cov_state) 
-            total_num_collisions += num_collisions_step           
+            (state_reward, terminal, expected_num_collisions_step, samples) = self.get_expected_state_reward(xs[i], cov_state) 
+            CPi.append(expected_num_collisions_step)
+            expected_num_collisions_path += expected_num_collisions_step           
             path_rewards.append(np.power(self.discount, current_step + i) * state_reward)            
             if self.show_viewer:
                 self.show_state_and_cov(xs[i], cov_state, samples)                
                 #time.sleep(0.2)
-        path_reward = sum(path_rewards)  
-        print "PathEvaluator: Path " + str(index) + " evaluated. Reward: " + str(path_reward) + ", mean num collisions: " + str(float(total_num_collisions / (len(xs))))
-             
+        path_reward = sum(path_rewards)
+        product = 1.0
+        for i in xrange(len(CPi)):
+            product *= (1.0 - CPi[i])
+            
+        '''
+        CP is the probability that the nominal path collides, approximated using a multiplicative approach
+        '''    
+        CP = 1 - product 
+        #CP = sum(CPi) 
+        print "PathEvaluator: Path " + str(index) + " evaluated. Reward: " + str(path_reward) + ", mean num collisions: " + str(expected_num_collisions_path) + " " \
+              "CP " + str(CP)
+        
         logging.info("========================================")
         logging.info("PathEvaluator: reward for path " + 
                      str(index) + 

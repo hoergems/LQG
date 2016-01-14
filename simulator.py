@@ -166,8 +166,7 @@ class Simulator:
         return u, u_dash                
     
     def simulate_n_steps(self,
-                         xs, us, zs,
-                         state_covariances,
+                         xs, us, zs,                         
                          control_durations,
                          x_true,                         
                          x_tilde,
@@ -198,11 +197,13 @@ class Simulator:
                 linearization_error = utils.dist(x_dash, x_dash_linear)                
                 history_entries.append(HistoryEntry(current_step + i,
                                                     x_true, 
+                                                    xs[i],
                                                     x_true_linear,
                                                     x_estimate,
                                                     x_dash,
                                                     x_dash_linear,
                                                     linearization_error, 
+                                                    None,
                                                     None,
                                                     None,
                                                     P_t,
@@ -223,6 +224,7 @@ class Simulator:
                 if self.enforce_constrol_constraints:                    
                     u, u_dash = self.enforce_control_constraints(u, us[i])                          
                 history_entries[-1].set_action(u)
+                history_entries[-1].set_nominal_action(us[i])
                 
                 """ Apply the control 'u' and propagate the state 'x_true' """
                 x_true_temp, ce = self.apply_control(x_true, 
@@ -319,11 +321,13 @@ class Simulator:
                 if self.is_terminal(ee_position):                    
                     history_entries.append(HistoryEntry(current_step + i + 1,
                                                         x_true,
+                                                        xs[i + 1],
                                                         x_true_linear, 
                                                         x_estimate, 
                                                         x_dash,
                                                         x_dash_linear,
                                                         0.0,
+                                                        None,
                                                         None,
                                                         z,
                                                         P_t,

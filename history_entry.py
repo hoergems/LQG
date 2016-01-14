@@ -5,25 +5,30 @@ class HistoryEntry:
     def __init__(self, 
                  t, 
                  x_true,
+                 x_nominal,
                  x_true_linear, 
                  x_estimate,
                  x_dash,
                  x_dash_linear,
                  linearization_error,
                  action,
+                 nominal_action,
                  observation,
                  covariance,
                  collided,
                  estimate_collided,
                  terminal,
-                 reward):
+                 reward,
+                 estimated_covariance=None):
         self.t = t        
         self.x_true = x_true
+        self.x_nominal = x_nominal
         self.x_true_linear = x_true_linear
         self.x_estimate = x_estimate
         self.x_dash = x_dash
         self.x_dash_linear = x_dash_linear
         self.action = action
+        self.nominal_action = nominal_action
         self.observation = observation
         self.covariance = covariance
         self.collided = collided
@@ -31,9 +36,13 @@ class HistoryEntry:
         self.terminal = terminal
         self.reward = reward
         self.linearization_error = linearization_error
+        self.estimated_covariance = estimated_covariance
         
     def set_action(self, action):
         self.action = action
+        
+    def set_nominal_action(self, nominal_action):
+        self.nominal_action = nominal_action
         
     def set_observation(self, observation):
         self.observation = observation
@@ -53,6 +62,9 @@ class HistoryEntry:
     def set_linearization_error(self, error):
         self.linearization_error = error
         
+    def set_estimated_covariance(self, estimated_covariance):        
+        self.estimated_covariance = estimated_covariance
+        
     def serialize(self, path, file):        
         with open(os.path.join(path, file), 'a') as f:                    
             f.write("t = " + str(self.t) + " \n")
@@ -60,6 +72,11 @@ class HistoryEntry:
             state_str = "S: " 
             for i in xrange(len(self.x_true)):
                 state_str += str(self.x_true[i]) + " "
+            f.write(state_str + " \n")
+            
+            state_str = "S_NOMINAL: "
+            for i in xrange(len(self.x_nominal)):
+                state_str += str(self.x_nominal[i]) + " "
             f.write(state_str + " \n")
             
             state_str = "S_LINEAR: "
@@ -86,6 +103,12 @@ class HistoryEntry:
             for i in xrange(len(self.covariance)):
                 for j in xrange(len(self.covariance[i])):
                     p_str += str(self.covariance[i][j]) + " "
+            f.write(p_str + " \n")
+            
+            p_str = "ESTIMATED_COVARIANCE: "
+            for i in xrange(len(self.estimated_covariance)):
+                for j in xrange(len(self.estimated_covariance[i])):
+                    p_str += str(self.estimated_covariance[i][j]) + " "
             f.write(p_str + " \n") 
             
             if not self.terminal:
@@ -94,6 +117,10 @@ class HistoryEntry:
                     action_str += str(self.action[i]) + " "
                 f.write(action_str + " \n")
             
+                action_str = "NOMINAL_ACTION: "
+                for i in xrange(len(self.nominal_action)):
+                    action_str += str(self.nominal_action[i]) + " "
+                f.write(action_str + " \n")
             
                 obs_str = "O: " 
                 for i in xrange(len(self.observation)):
