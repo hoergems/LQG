@@ -162,7 +162,9 @@ class LQG:
                  zs, 
                  control_durations, 
                  objective, 
-                 state_covariances) = path_evaluator.evaluate_paths(paths, P_t, 0)
+                 state_covariances,
+                 deviation_covariances,
+                 estimated_deviation_covariances) = path_evaluator.evaluate_paths(paths, P_t, 0)
                  
                 te = time.time() - t0
                 print "LQG: Time to evaluate " + str(len(paths)) + " paths: " + str(te) + "s"
@@ -217,7 +219,9 @@ class LQG:
                                                              np.array([[0.0 for k in xrange(2 * self.robot_dof)] for l in xrange(2 * self.robot_dof)]),
                                                              0.0,                                                           
                                                              0,
-                                                             len(xs) - 1)
+                                                             len(xs) - 1,
+                                                             deviation_covariances,
+                                                             estimated_deviation_covariances)
                     if success:
                         successes += 1
                     rewards_cov.append(total_reward)

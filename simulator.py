@@ -175,7 +175,9 @@ class Simulator:
                          P_t,
                          total_reward,                         
                          current_step,
-                         n_steps):
+                         n_steps,
+                         deviation_covariances,
+                         estimated_deviation_covariances):
         history_entries = []        
         terminal_state_reached = False
         success = False
@@ -295,6 +297,16 @@ class Simulator:
                                                     P_dash, 
                                                     Ws[i], 
                                                     Ns[i])
+                
+                print "==============="
+                print P_t
+                print " "
+                print P_dash
+                print " "
+                print deviation_covariances[i + 1]
+                print " "
+                print estimated_deviation_covariances[i + 1]
+                time.sleep(1)
                 
                 """ x_estimate_new is the estimated state """                            
                 x_estimate_new = x_tilde + xs[i + 1]

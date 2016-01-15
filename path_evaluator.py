@@ -243,15 +243,17 @@ class PathEvaluator:
         best_index = evaluated_paths[0][0]
         best_path = evaluated_paths[0][2]        
         best_objective = path_rewards[0] 
-        s_covariances = evaluated_paths[0][4]       
+        s_covariances = evaluated_paths[0][4] 
+        deviation_covariances = evaluated_paths[0][5]
+        estimated_deviation_covariances = evaluated_paths[0][6]
         for i in xrange(1, len(path_rewards)):                        
             if path_rewards[i] > best_objective:
-                best_index = [i][0]
-                print "best index " + str(best_index)
-                best_objective = path_rewards[i]
-                print "best objective " + str(best_objective)
+                best_index = [i][0]                
+                best_objective = path_rewards[i]                
                 best_path = evaluated_paths[i][2]
                 s_covariances = evaluated_paths[i][4]
+                deviation_covariances = evaluated_paths[i][5]
+                estimated_deviation_covariances = evaluated_paths[i][6]
         logging.info("PathEvaluator: Objective value for the best path is " + str(best_objective))
         return (best_index,
                 best_path[0], 
@@ -259,7 +261,9 @@ class PathEvaluator:
                 best_path[2], 
                 best_path[3], 
                 best_objective, 
-                s_covariances)
+                s_covariances,
+                deviation_covariances,
+                estimated_deviation_covariances)
     
     def get_linear_model_matrices(self, state_path, control_path, control_durations):
         As = []
@@ -344,7 +348,11 @@ class PathEvaluator:
         Cov = 0 
         CPi = []
         state_covariances = []
+        deviation_covariances = []
+        estimated_deviation_covariances = []
         state_covariances.append(np.array([[0.0 for i in xrange(2 * self.robot_dof)] for j in xrange(2 * self.robot_dof)]))
+        deviation_covariances.append(np.zeros((2 * self.robot_dof, 2 * self.robot_dof)))
+        estimated_deviation_covariances.append(np.zeros((2 * self.robot_dof, 2 * self.robot_dof)))
         for i in xrange(1, horizon_L):                              
             P_hat_t = kalman.compute_p_hat_t(As[i], P_t, Vs[i], Ms[i])            
             K_t = kalman.compute_kalman_gain(Hs[i], P_hat_t, Ws[i], Ns[i])
@@ -356,10 +364,15 @@ class PathEvaluator:
             G_t_l_r = np.dot(K_t, Ws[i])
             G_t_u_r = np.zeros((Vs[i].shape[0], G_t_l_r.shape[1]))                                         
             G_t = np.vstack((np.hstack((Vs[i], G_t_u_r)), 
-                             np.hstack((np.dot(K_t, np.dot(Hs[i], Vs[i])), G_t_l_r))))            
-                        
-            """ Compute R """    
+                             np.hstack((np.dot(K_t, np.dot(Hs[i], Vs[i])), G_t_l_r)))) 
+             
+            """ R_t is the covariance matrix of [x_dash_t, x_tilde_t]^T
+            """   
             R_t = np.dot(F_t, np.dot(R_t, F_t.T)) + np.dot(G_t, np.dot(Q_t, G_t.T)) 
+            deviation_covariance = np.array([[R_t[j, k] for k in xrange(R_t.shape[1] / 2)] for j in xrange(R_t.shape[0] / 2)])            
+            deviation_covariances.append(deviation_covariance) 
+            estimated_deviation_covariance = np.array([[R_t[j, k] for k in xrange(R_t.shape[1] / 2, R_t.shape[1])] for j in xrange(R_t.shape[0] / 2, R_t.shape[0])])
+            estimated_deviation_covariances.append(estimated_deviation_covariance)
             L = np.identity(2 * self.robot_dof)
             if i != horizon_L - 1:
                 L = Ls[i]
@@ -395,7 +408,7 @@ class PathEvaluator:
                      str(path_reward))
         logging.info("========================================")        
         if not eval_queue==None:            
-            eval_queue.put((index, path_reward, path, Cov, state_covariances))
+            eval_queue.put((index, path_reward, path, Cov, state_covariances, deviation_covariances, estimated_deviation_covariances))
         else:
             return path_reward
     
