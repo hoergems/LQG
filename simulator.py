@@ -298,16 +298,6 @@ class Simulator:
                                                     Ws[i], 
                                                     Ns[i])
                 
-                print "==============="
-                print P_t
-                print " "
-                print P_dash
-                print " "
-                print deviation_covariances[i + 1]
-                print " "
-                print estimated_deviation_covariances[i + 1]
-                time.sleep(1)
-                
                 """ x_estimate_new is the estimated state """                            
                 x_estimate_new = x_tilde + xs[i + 1]
                 
@@ -560,8 +550,7 @@ class Simulator:
         which is disturbed by Gaussian distributed noise. 'N' is the covariance matrix for the
         Gaussian distribution
         """
-        res = np.add(np.dot(H, x), 
-                     np.dot(W, self.get_random_joint_angles([0.0 for i in xrange(N.shape[0])], N)))        
+        res = np.dot(H, x) + np.dot(W, self.get_random_joint_angles([0.0 for i in xrange(N.shape[0])], N))        
         return res        
     
 if __name__ == "__main__":

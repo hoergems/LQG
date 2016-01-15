@@ -103,7 +103,7 @@ class LQG:
             if ((not append_paths) and deserialize):
                 paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)
                 #paths = [paths[3], paths[14]]
-                paths=[paths[14]]
+                #paths=[paths[4]]
                 
             if len(paths) == 0:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."

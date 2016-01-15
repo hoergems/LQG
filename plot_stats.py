@@ -38,6 +38,8 @@ class PlotStats:
         #self.plot_paths(serializer, dir=dir)
         #self.plot_paths(serializer, best_paths=True, dir=dir)
         
+        self.show_distr_at_time_t(20, dir=dir)
+        
         logging.info("PlotStats: plotting average distance to goal")
         self.plot_stat("Average distance to goal area", "avg_distance", dir=dir)
         logging.info("PlotStats: plotting mean rewards")
@@ -75,6 +77,114 @@ class PlotStats:
         self.plot_emd_graph(serializer, cart_coords, dir=dir)
         logging.info("PlotStats: plotting histograms...")        
         self.save_histogram_plots(serializer, cart_coords, dir=dir)'''
+        
+    def show_distr_at_time_t(self, t, dir="stats"):
+        files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
+        particles = []
+        for file in files:
+            file_str = file.split("/")[2].split("_")[1]
+            with open(file, 'r') as f:
+                t_found = False                
+                for line in f:
+                    if t_found:
+                        if "S: " in line:
+                            line_str = line.split(" ")
+                            #line_arr = line_str[1:len(line_str) - 2]
+                            line_arr = line_str[1:len(line_str) - 2]
+                            particles.append(np.array([float(l) for l in line_arr][0:3]))                            
+                    if "t = " in line:
+                        if "t = " + str(t) + " " in line:                            
+                            t_found = True
+                    else:
+                        t_found = False
+            min_x = particles[0][0]
+            min_y = particles[0][1]
+            min_z = particles[0][2]
+            max_x = particles[0][0]
+            max_y = particles[0][1]
+            max_z = particles[0][2]
+            for p in particles:
+                if p[0] < min_x:
+                    min_x = p[0]
+                if p[0] > max_x:
+                    max_x = p[0]
+                if p[1] < min_y:
+                    min_y = p[1]
+                if p[1] > max_y:
+                    max_y = p[1]
+                if p[2] < min_z:
+                    min_z = p[2]
+                if p[2] > max_z:
+                    max_z = p[2]
+            Plot.plot_3d_points(np.array(particles), [min_x, max_x], [min_y, max_y], [min_z, max_z])
+            
+        
+        
+    def plot_stat(self, stat_str, output_file_str, dir="stats", y_label=""):
+        if y_label == "":
+            y_label = stat_str
+        files = glob.glob(os.path.join(os.path.join(dir, "*.log")))            
+        num_succ_runs = [] 
+        num_succ_runs_sets = [] 
+        labels = []
+        m_covs = []
+        data = []
+        color_map = []
+        d = dict()
+        cov_str = "Process covariance:"
+        if "observation" in self.inc_covariance:
+            cov_str = "Observation covariance:"
+        for file in sorted(files):
+            file_str = file.split("/")[2].split("_")[1]
+            if not file_str in d:
+                d[file_str] = []                 
+            m_cov = -1
+            succ = -1
+            with open(file, "r") as f:
+                print file                   
+                for line in f:                                       
+                    if cov_str in line:                        
+                        m_cov = float(line.split(" ")[2])                        
+                    elif stat_str in line:                        
+                        float_found = False                        
+                        succ_l = line.split(" ")
+                        for s in succ_l:
+                            if not float_found:
+                                try:
+                                    succ = float(s)
+                                    float_found = True
+                                except:
+                                    pass
+            if m_cov != -1:                        
+                m_covs.append(m_cov)
+                num_succ_runs.append(succ)
+                d[file_str].append([m_cov, succ])        
+        for k in d:
+            color_map.append(self.gen_random_color())
+            from operator import itemgetter            
+            d[k] = sorted(d[k], key=itemgetter(0))
+            d[k] = [np.array(d[k][i]) for i in xrange(len(d[k]))]
+            num_succ_runs_sets.append(np.array(d[k]))
+            labels.append(k) 
+        min_m = min(num_succ_runs)
+        if min_m > 0:
+            min_m = 0.0
+        else:
+            min_m -= -0.1 * min_m 
+        max_m = max(num_succ_runs) 
+        min_cov = min(m_covs)
+        max_cov = max(m_covs)
+        Plot.plot_2d_n_sets(num_succ_runs_sets,
+                            labels=labels,
+                            xlabel="joint covariance",
+                            ylabel=y_label,
+                            x_range=[min(m_covs), max(m_covs)],
+                            y_range=[min_m, max_m * 1.05],
+                            show_legend=True,
+                            lw=3,
+                            color_map=color_map,
+                            save=self.save,
+                            filename=dir + "/" + output_file_str + ".png")
         
     def setup_robot(self, dir='stats'):
         model_file = os.getcwd() + "/" + dir + "/model/test.urdf"
@@ -416,72 +526,6 @@ class PlotStats:
                                                 save=self.save, 
                                                 path="stats", 
                                                 filename="particles" + str(i) + "_" + str(j) + "_" + str(k) + ".png")
-    
-    def plot_stat(self, stat_str, output_file_str, dir="stats", y_label=""):
-        if y_label == "":
-            y_label = stat_str
-        files = glob.glob(os.path.join(os.path.join(dir, "*.log")))            
-        num_succ_runs = [] 
-        num_succ_runs_sets = [] 
-        labels = []
-        m_covs = []
-        data = []
-        color_map = []
-        d = dict()
-        cov_str = "Process covariance:"
-        if "observation" in self.inc_covariance:
-            cov_str = "Observation covariance:"
-        for file in sorted(files):
-            file_str = file.split("/")[2].split("_")[1]
-            if not file_str in d:
-                d[file_str] = []                 
-            m_cov = -1
-            succ = -1
-            with open(file, "r") as f:
-                print file                   
-                for line in f:                                       
-                    if cov_str in line:                        
-                        m_cov = float(line.split(" ")[2])                        
-                    elif stat_str in line:                        
-                        float_found = False                        
-                        succ_l = line.split(" ")
-                        for s in succ_l:
-                            if not float_found:
-                                try:
-                                    succ = float(s)
-                                    float_found = True
-                                except:
-                                    pass
-            if m_cov != -1:                        
-                m_covs.append(m_cov)
-                num_succ_runs.append(succ)
-                d[file_str].append([m_cov, succ])        
-        for k in d:
-            color_map.append(self.gen_random_color())
-            from operator import itemgetter            
-            d[k] = sorted(d[k], key=itemgetter(0))
-            d[k] = [np.array(d[k][i]) for i in xrange(len(d[k]))]
-            num_succ_runs_sets.append(np.array(d[k]))
-            labels.append(k) 
-        min_m = min(num_succ_runs)
-        if min_m > 0:
-            min_m = 0.0
-        else:
-            min_m -= -0.1 * min_m 
-        max_m = max(num_succ_runs) 
-        min_cov = min(m_covs)
-        max_cov = max(m_covs)
-        Plot.plot_2d_n_sets(num_succ_runs_sets,
-                            labels=labels,
-                            xlabel="joint covariance",
-                            ylabel=y_label,
-                            x_range=[min(m_covs), max(m_covs)],
-                            y_range=[min_m, max_m * 1.05],
-                            show_legend=True,
-                            lw=3,
-                            color_map=color_map,
-                            save=self.save,
-                            filename=dir + "/" + output_file_str + ".png")
         
     def gen_random_color(self):
         return "#%06x" % random.randint(0, 0xFFFFFF)
