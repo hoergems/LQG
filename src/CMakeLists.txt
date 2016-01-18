@@ -1,18 +1,22 @@
 cmake_minimum_required (VERSION 2.6)
 
 project (lqg)
-set(CMAKE_BUILD_TYPE DEBUG)
+#set(CMAKE_BUILD_TYPE RELASE)
 #set(CMAKE_CXX_FLAGS "-g -std=c++11 -pg")
-set(CMAKE_CXX_FLAGS "-g -std=c++11")
+#set(CMAKE_CXX_FLAGS "-g -std=c++11")
 #SET(CMAKE_EXE_LINKER_FLAGS "-pg")
 #SET(CMAKE_SHARED_LINKER_FLAGS "-pg")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -std=c++11")
-set(CMAKE_CXX_FLAGS_RELEASE "-g -std=c++11")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -std=c++11 -O3 -fopenmp")
+#set(CMAKE_CXX_FLAGS_RELEASE "-g -std=c++11 -O3 -DEIGEN_NO_DEBUG -mavx -mfma -fopenmp")
+#set(CMAKE_CXX_FLAGS_RELEASE "-g -std=c++11")
+set(CMAKE_CXX_FLAGS_RELEASE "-g -std=c++11 -O3 -DEIGEN_NO_DEBUG")
 
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${lqg_SOURCE_DIR})
 SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${lqg_SOURCE_DIR}/..)
 
-include_directories(/usr/include/eigen3 
+#message(${CMAKE_CXX_FLAGS})
+
+include_directories(/usr/local/include/eigen3 
                     /usr/inclue/boost 
                     /usr/include/python2.7
                     /usr/include/jsoncpp

@@ -1,3 +1,5 @@
+gcc 4.8.3 required
+
 This package implements LQG-MP (Van der Berg et. al.) for a simple 3-link manipulator toy problem.
 
 Use the config file to configure the parameters. Running "python lqg.py" will create a set of RRT paths in joint space from 

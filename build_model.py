@@ -109,7 +109,7 @@ class Test:
         print "Generating dynamic model took " + str(time.time() - t_start) + " seconds"  
         if buildcpp:
             print "Build c++ code..."
-            cmd = "cd src/build && cmake .. && make -j8"           
+            cmd = "cd src/build && cmake -DCMAKE_BUILD_TYPE=Release .. && make -j8"           
             os.system(cmd)
         print "Done"
         
