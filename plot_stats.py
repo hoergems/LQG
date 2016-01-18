@@ -38,7 +38,7 @@ class PlotStats:
         #self.plot_paths(serializer, dir=dir)
         #self.plot_paths(serializer, best_paths=True, dir=dir)
         
-        self.show_distr_at_time_t(20, dir=dir)
+        self.show_distr_at_time_t(5, dir=dir)
         
         logging.info("PlotStats: plotting average distance to goal")
         self.plot_stat("Average distance to goal area", "avg_distance", dir=dir)
@@ -78,45 +78,73 @@ class PlotStats:
         logging.info("PlotStats: plotting histograms...")        
         self.save_histogram_plots(serializer, cart_coords, dir=dir)'''
         
-    def show_distr_at_time_t(self, t, dir="stats"):
+    def show_distr_at_time_t(self, t, dir="stats"):        
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
-        particles = []
+        dim = (0, 3)        
         for file in files:
-            file_str = file.split("/")[2].split("_")[1]
+            num_steps = 0
             with open(file, 'r') as f:
-                t_found = False                
                 for line in f:
-                    if t_found:
-                        if "S: " in line:
-                            line_str = line.split(" ")
-                            #line_arr = line_str[1:len(line_str) - 2]
-                            line_arr = line_str[1:len(line_str) - 2]
-                            particles.append(np.array([float(l) for l in line_arr][0:3]))                            
-                    if "t = " in line:
-                        if "t = " + str(t) + " " in line:                            
-                            t_found = True
-                    else:
-                        t_found = False
-            min_x = particles[0][0]
-            min_y = particles[0][1]
-            min_z = particles[0][2]
-            max_x = particles[0][0]
-            max_y = particles[0][1]
-            max_z = particles[0][2]
-            for p in particles:
-                if p[0] < min_x:
-                    min_x = p[0]
-                if p[0] > max_x:
-                    max_x = p[0]
-                if p[1] < min_y:
-                    min_y = p[1]
-                if p[1] > max_y:
-                    max_y = p[1]
-                if p[2] < min_z:
-                    min_z = p[2]
-                if p[2] > max_z:
-                    max_z = p[2]
-            Plot.plot_3d_points(np.array(particles), [min_x, max_x], [min_y, max_y], [min_z, max_z])
+                    if "Length best path: " in line:
+                        num_steps = int(line.split(" ")[3])            
+            file_str = file.split("/")[2].split("_")[1]
+            for n in xrange(num_steps):
+                print n
+                particles = []
+                state_nominal = None
+                covariance = None
+                with open(file, 'r') as f:
+                    t_found = False                
+                    for line in f:
+                        if t_found:                        
+                            if "S: " in line:                            
+                                line_str = line.split(" ")
+                                #line_arr = line_str[1:len(line_str) - 2]
+                                line_arr = line_str[1:len(line_str) - 2]
+                                particles.append(np.array([float(l) for l in line_arr][dim[0]:dim[1]])) 
+                            elif "S_NOMINAL: " in line:                            
+                                line_str = line.split(" ")
+                                line_arr = line_str[1:len(line_str) - 2]
+                                state_nominal = np.array([float(l) for l in line_arr][0:6]) 
+                            elif "ESTIMATED_COVARIANCE: " in line:
+                                line_str = line.split(" ")
+                                line_arr = line_str[1:len(line_str) - 2]                             
+                                line_arr = np.array([float(el) for el in line_arr])
+                                covariance = line_arr.reshape((6, 6))
+                                                    
+                        if "t = " in line:
+                            if "t = " + str(n) + " " in line:                            
+                                t_found = True
+                            else:
+                                t_found = False
+                #mult_normal = multivariate_normal.pdf(particles, state_nominal, covariance)
+                samples = multivariate_normal.rvs(state_nominal, covariance, 1000)
+                samples = [sample[dim[0]:dim[1]] for sample in samples]
+                min_x = particles[0][0]
+                min_y = particles[0][1]
+                min_z = particles[0][2]
+                max_x = particles[0][0]
+                max_y = particles[0][1]
+                max_z = particles[0][2]
+                for p in particles:
+                    if p[0] < min_x:
+                        min_x = p[0]
+                    if p[0] > max_x:
+                        max_x = p[0]
+                    if p[1] < min_y:
+                        min_y = p[1]
+                    if p[1] > max_y:
+                        max_y = p[1]
+                    if p[2] < min_z:
+                        min_z = p[2]
+                    if p[2] > max_z:
+                        max_z = p[2]            
+                sets = [np.array(particles), np.array(samples)]                
+                Plot.plot_3d_sets(sets,
+                                  x_scale=[min_x, max_x],
+                                  y_scale=[min_y, max_y],
+                                  z_scale=[min_z, max_z], 
+                                  colormap=['r', 'g'])
             
         
         
@@ -174,6 +202,7 @@ class PlotStats:
         max_m = max(num_succ_runs) 
         min_cov = min(m_covs)
         max_cov = max(m_covs)
+        print num_succ_runs_sets
         Plot.plot_2d_n_sets(num_succ_runs_sets,
                             labels=labels,
                             xlabel="joint covariance",

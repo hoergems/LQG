@@ -7,17 +7,6 @@ from scipy import stats
 import glob
 import os
 
-def plot_2d_three_sets(sets, axis='xy', xrange=[0.0, 1.0], yrange=[0.0, 1.0]):
-    if axis == 'xy':
-        plt.plot(sets[0][:,0], sets[0][:,1], 'ro', 
-                 sets[1][:,0], sets[1][:,1], 'go', 
-                 sets[2][:,0], sets[2][:,1], 'bo')
-        plt.xlabel('x')
-        plt.ylabel('y')
-    plt.xlim([xrange[0], xrange[1]])
-    plt.ylim([yrange[0], yrange[1]])
-    plt.show()
-
 def plot_2d_n_sets(sets,
                    circles=[], 
                    labels=[], 
@@ -224,6 +213,33 @@ def plot_heat_2d(m1, m2, xmin, xmax, ymin, ymax):
     ax.set_xlim([xmin, xmax])
     ax.set_ylim([ymin, ymax])
     plt.show()
+    
+def plot_3d_sets(sets, 
+                 x_scale=[-4.0, 4.0], 
+                 y_scale=[-4.0, 4.0], 
+                 z_scale=[-4.0, 4.0],
+                 colormap=[]):
+    if len(colormap) < len(sets):
+        colormap = ['r' for i in xrange(len(sets))]
+    fig = plt.figure()
+    ax = Axes3D(fig)
+    xs = []
+    ys = []
+    zs = []
+    for set in sets:
+        xs.append(set[:,0])
+        ys.append(set[:,1])
+        zs.append(set[:,2])
+    ax.set_xlabel("x1")
+    ax.set_ylabel("x2")
+    ax.set_zlabel("x3")
+    ax.view_init(elev=25.0, azim=56.0)
+    for i in xrange(len(xs)):
+        ax.scatter(xs[i], ys[i], zs[i], c=colormap[i])
+    ax.auto_scale_xyz(x_scale, y_scale, z_scale)
+    plt.show()
+    plt.close('all')
+     
         
 def plot_3d_points(points, x_scale=[-4.0, 4.0], y_scale=[-4.0, 4.0], z_scale=[-4.0, 4.0]):
     fig = p.figure()
