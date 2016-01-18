@@ -16,7 +16,7 @@ SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${lqg_SOURCE_DIR}/..)
 
 #message(${CMAKE_CXX_FLAGS})
 
-include_directories(/usr/local/include/eigen3 
+include_directories(/usr/include/eigen3 
                     /usr/inclue/boost 
                     /usr/include/python2.7
                     /usr/include/jsoncpp

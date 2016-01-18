@@ -30,8 +30,7 @@ class LQG:
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)        
         np.set_printoptions(precision=16)
         dir = "stats/lqg"        
-        self.utils = Utils()
-        model_file = "model/test.xml"
+        self.utils = Utils()        
         urdf_model_file = "model/test.urdf"
         self.init_robot(urdf_model_file)
         environment_file = os.path.join("environment", "env.xml")        
@@ -50,8 +49,7 @@ class LQG:
         logging.info("LQG: Generating goal states...")
         goal_states = get_goal_states("lqg",
                                       self.serializer, 
-                                      self.obstacles,
-                                      model_file,                                      
+                                      self.obstacles,                                                                           
                                       self.robot,                                    
                                       self.max_velocity,
                                       self.delta_t,
@@ -60,6 +58,7 @@ class LQG:
                                       self.goal_radius,
                                       self.planning_algortihm,
                                       self.path_timeout)
+        
           
         if len(goal_states) == 0:
             logging.error("LQG: Couldn't generate any goal states. Problem seems to be infeasible")
@@ -310,9 +309,7 @@ class LQG:
                 os.makedirs(dir + "/model")
                 
             cmd = "cp " + urdf_model_file + " " + dir + "/model"
-            os.system(cmd)
-            cmd = "cp " + model_file + " " + dir + "/model"
-            os.system(cmd)         
+            os.system(cmd)                    
         print "Done"
         
     def init_robot(self, urdf_model_file):
@@ -420,6 +417,7 @@ class LQG:
         while True:            
             #u_in = [3.0, 1.5, 0.0, 0.0, 0.0, 0.0]
             u_in = [0.0 for i in xrange(self.robot_dof)]
+            
             #u_in[0] = 150.0
             #u_in[1] = 70.0
             current_state = v_double()
@@ -512,7 +510,8 @@ class LQG:
                                               cjvels,
                                               particle_joint_values,
                                               particle_joint_values)
-            time.sleep(0.03) 
+            time.sleep(0.03)
+            #time.sleep(0.1) 
             y += 1
             print y
             

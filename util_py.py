@@ -25,14 +25,13 @@ def check_positive_definite(matrices):
             return False
     return True
 
-def compareEnvironmentToTmpFiles(problem, model_file):
+def compareEnvironmentToTmpFiles(problem):
     if not os.path.exists("tmp/" + problem):
         os.makedirs("tmp/" + problem)                   
         return False
         
     if not (os.path.exists('tmp/' + problem + '/env.xml') and
-            os.path.exists('tmp/' + problem + '/config_' + str(problem) + '.yaml') and
-            os.path.exists(model_file)):                
+            os.path.exists('tmp/' + problem + '/config_' + str(problem) + '.yaml')):                
         return False
         
     with open("environment/env.xml", 'r') as f1, open('tmp/' + problem + '/env.xml', 'r') as f2:
@@ -41,16 +40,7 @@ def compareEnvironmentToTmpFiles(problem, model_file):
             if diff.startswith('-')
         ]
         if len(missing_from_b) != 0:                
-            return False
-        
-    with open(model_file, 'r') as f1, open(model_file, 'r') as f2:               
-        missing_from_b = [
-            diff[2:] for diff in Differ().compare(f1.readlines(), f2.readlines())
-            if diff.startswith('-')
-        ]
-        if len(missing_from_b) != 0:                
-            return False
-            
+            return False    
         
     with open('config_' + str(problem) + '.yaml', 'r') as f1, open('tmp/' + problem + '/config_' + str(problem) + '.yaml', 'r') as f2:
         missing_from_b = [
@@ -73,8 +63,7 @@ def compareEnvironmentToTmpFiles(problem, model_file):
 
 def get_goal_states(problem, 
                     serializer, 
-                    obstacles,
-                    model_file,                     
+                    obstacles,                                         
                     robot,
                     max_velocity,
                     delta_t,
@@ -83,18 +72,15 @@ def get_goal_states(problem,
                     goal_threshold,
                     planning_algorithm,
                     path_timeout):     
-    if not compareEnvironmentToTmpFiles(problem, model_file):        
+    if not compareEnvironmentToTmpFiles(problem):        
         ik_solution_generator = IKSolutionGenerator()          
         ik_solution_generator.setup(robot,
                                     obstacles,
                                     max_velocity,
                                     delta_t,
-                                    model_file,
-                                    "environment/env.xml",
                                     planning_algorithm,
                                     path_timeout)
-        ik_solutions = ik_solution_generator.generate(start_state, goal_position, goal_threshold)
-        ik_solution_generator.destroy()
+        ik_solutions = ik_solution_generator.generate(start_state, goal_position, goal_threshold)        
         if len(ik_solutions) == 0:
             return []
         serializer.serialize_ik_solutions([ik_solutions[i] for i in xrange(len(ik_solutions))], path='tmp/' + problem, file='goalstates.txt')

@@ -568,6 +568,23 @@ void Robot::setExternalForce(double f_x,
 	propagator_->getIntegrator()->setExternalForce(f_x, f_y, f_z, f_roll, f_pitch, f_yaw);	
 }
 
+void Robot::getEndEffectorJacobian(const std::vector<double> &joint_angles, 
+    	    		               std::vector<std::vector<double>> &ee_jacobian) {
+	std::vector<double> state;
+	for (auto &k: joint_angles) {
+		state.push_back(k);
+	}
+	
+	MatrixXd jacobian = propagator_->get_ee_jacobian(state);	
+	for (size_t i = 0; i < jacobian.rows(); i++) {
+		std::vector<double> row;
+		for (size_t j = 0; j < jacobian.cols(); j++) {			
+			row.push_back(jacobian(i, j));
+		}		
+		ee_jacobian.push_back(row);
+	}
+}
+
 void Robot::getEndEffectorVelocity(std::vector<double> &state,
     	    		               std::vector<double> &ee_velocity) {
 	MatrixXd j = propagator_->get_ee_jacobian(state);
@@ -865,6 +882,7 @@ BOOST_PYTHON_MODULE(librobot) {
 						.def("setViewerSize", &Robot::setViewerSize)
 						.def("setViewerBackgroundColor", &Robot::setViewerBackgroundColor)
 						.def("setViewerCameraTransform", &Robot::setViewerCameraTransform)
+						.def("getEndEffectorJacobian", &Robot::getEndEffectorJacobian)
                         //.def("setup", &Integrate::setup)                        
     ;
 }

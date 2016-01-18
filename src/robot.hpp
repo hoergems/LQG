@@ -96,7 +96,10 @@ struct Joint {
     	    
     	    void getPositionOfLinkN(const std::vector<double> &joint_angles, const int &n, std::vector<double> &position);
     	    
-    	    void getEndEffectorPosition(const std::vector<double> &joint_angles, std::vector<double> &end_effector_position);    	    
+    	    void getEndEffectorPosition(const std::vector<double> &joint_angles, std::vector<double> &end_effector_position); 
+    	    
+    	    void getEndEffectorJacobian(const std::vector<double> &joint_angles, 
+    	    		                    std::vector<std::vector<double>> &ee_jacobian);
     	    
     	    void updateViewerValues(const std::vector<double> &current_joint_values,
                                     const std::vector<double> &current_joint_velocities,
