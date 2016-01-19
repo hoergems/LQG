@@ -25,8 +25,10 @@ def get_goal_states(robot, goal_position, obstacles, num=1):
             if old_dist - dist < 1e-10:
                 breaking = True
                 break
-        if not breaking:
+        if not breaking:            
             if check_constraints(robot, state) and not in_collision(robot, state, obstacles):
+                #print state
+                #sleep
                 solutions.append([state[k] for k in xrange(len(state))])
     
     return solutions

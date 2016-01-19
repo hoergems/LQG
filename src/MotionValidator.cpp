@@ -27,14 +27,7 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
                                   const std::vector<double> &s2, 
                                   const bool &continuous_collision) const {	
 	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects_goal;
-	robot_->createRobotCollisionObjects(s2, collision_objects_goal);	
-    for (size_t i = 0; i < obstacles_.size(); i++) {        
-        if (!obstacles_[i]->isTraversable()) {
-        	if (obstacles_[i]->in_collision(collision_objects_goal)) {        		
-        		return false;
-        	}
-        }        
-    }
+	robot_->createRobotCollisionObjects(s2, collision_objects_goal);    
     
     if (continuous_collision) {    	
     	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects_start;    	
@@ -48,7 +41,16 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
                 }
             }
         } 
-    }     
+    }
+    else {
+    	for (size_t i = 0; i < obstacles_.size(); i++) {        
+    	    if (!obstacles_[i]->isTraversable()) {
+    	        if (obstacles_[i]->in_collision(collision_objects_goal)) {        		
+    	            return false;
+    	        }
+    	    }        
+    	}
+    }
     
     return true;
 }

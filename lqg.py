@@ -57,8 +57,7 @@ class LQG:
                                       self.goal_position,
                                       self.goal_radius,
                                       self.planning_algortihm,
-                                      self.path_timeout)
-          
+                                      self.path_timeout)  
         if len(goal_states) == 0:
             logging.error("LQG: Couldn't generate any goal states. Problem seems to be infeasible")
             return
@@ -330,7 +329,8 @@ class LQG:
         active_joints = v_string()
         self.robot.getActiveJoints(active_joints)
         self.robot_dof = len(active_joints)
-        x = [0.0, -np.pi / 2.0, 0.0, 0.0, 0.0, 0.0]
+        
+        #x = [0.0, -np.pi / 2.0, 0.0, 0.0, 0.0, 0.0]
         states = []
         for z in xrange(2000):
             u = [70.0, 70.0, 70.0, 0.0, 0.0, 0.0]
@@ -405,39 +405,34 @@ class LQG:
         f_pitch = 0.0
         f_yaw = 0.0         
         x = [0.0 for i in xrange(2 * self.robot_dof)]
+        x = [np.pi / 2.0, 0.0, 0.0, 0.0,
+             0.0,
+             0.0,
+             0.0,
+             0.0]
         x_true = [0.0 for i in xrange(2 * self.robot_dof)]
         #x[0] = 0.0
         #x[1] = -np.pi / 2       
         #x = self.start_state 
-        times = []      
+        integration_times = [] 
+        collision_check_times = []     
         #x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         y = 0
         while True:            
             #u_in = [3.0, 1.5, 0.0, 0.0, 0.0, 0.0]
             u_in = [0.0 for i in xrange(self.robot_dof)]
-            u_in[0] = 150.0
+            #u_in[0] = 150.0
             #u_in[1] = 70.0
-            current_state = v_double()
-            current_state_true = v_double()
-            current_state[:] = x
-            current_state_true[:] = x_true
+            current_state = v_double()            
+            current_state[:] = x            
             control = v_double()            
             control[:] = u_in
                        
             control_error = v_double()
             ce = [0.0 for i in xrange(self.robot_dof)]
             control_error[:] = ce
-            result = v_double()
-            result_true = v_double()
-            ja_start = v_double()
-            ja_start[:] = [current_state[i] for i in xrange(len(current_state) / 2)]            
-            collision_objects_start = self.robot.createRobotCollisionObjects(ja_start)
-            '''self.robot.propagate(current_state_true,
-                                 control,
-                                 control_error,
-                                 0.000005,
-                                 0.03,
-                                 result_true)'''
+            result = v_double()            
+            
             t0 = time.time()                    
             self.robot.propagate(current_state,
                                  control,
@@ -446,12 +441,20 @@ class LQG:
                                  0.03,
                                  result)
             t = time.time() - t0
-            times.append(t)
+            integration_times.append(t)
             if y == 100:
-                t_sum = sum(times)
-                t_mean = t_sum / len(times)
-                print t_mean
+                t_sum = sum(integration_times)
+                t_mean = t_sum / len(integration_times)
+                print "mean integration times: " + str(t_mean)
+                t_sum = sum(collision_check_times)
+                t_mean = t_sum / len(collision_check_times)
+                print "mean collision check times " + str(t_mean)
                 sleep
+            
+            t_c = time.time()
+            ja_start = v_double()            
+            ja_start[:] = [current_state[i] for i in xrange(len(current_state) / 2)]                     
+            collision_objects_start = self.robot.createRobotCollisionObjects(ja_start)
             joint_angles = v_double()
             joint_angles[:] = [result[i] for i in xrange(len(result) / 2)]
             collision_objects_goal = self.robot.createRobotCollisionObjects(joint_angles)
@@ -460,41 +463,25 @@ class LQG:
             '''
             Get the end effector position
             '''
-            ee_position = v_double()            
-            self.robot.getEndEffectorPosition(joint_angles, ee_position)
-            #print "joint angles " + str([joint_angles[i] for i in xrange(len(joint_angles))]) 
-            #print "ee_position " + str([ee_position[i] for i in xrange(len(ee_position))])           
-            ee_collision_objects = self.robot.createEndEffectorCollisionObject(joint_angles)
-            in_collision = False
-            '''for o in self.obstacles:
-                #in_collision = o.inCollisionDiscrete(collision_objects)
-                if o.inCollisionDiscrete(ee_collision_objects):                                        
-                    in_collision = True                    
-                    ###Get the end effector velocity vector                                       
-                    ee_velocity = v_double()
-                    self.robot.getEndEffectorVelocity(result, ee_velocity)                   
-                    ee_velocity_vec = np.array([ee_velocity[i] for i in xrange(len(ee_velocity))])
-                    #ee_velocity_vec /= np.linalg.norm(ee_velocity_vec)
-                    ext_force = o.getExternalForce()
-                    force_vector = -ext_force * ee_velocity_vec
-                    #print "ee_velocity " + str(ee_velocity_vec)
-                    #print "force vector: " + str(force_vector)
-                    self.robot.setExternalForce(fx + force_vector[0], 
-                                                fy + force_vector[1], 
-                                                fz + force_vector[2],
-                                                f_roll + force_vector[3],
-                                                f_pitch + force_vector[4],
-                                                f_yaw + force_vector[5])                              
+            #ee_position = v_double()            
+            #self.robot.getEndEffectorPosition(joint_angles, ee_position)                      
+            #ee_collision_objects = self.robot.createEndEffectorCollisionObject(joint_angles)
+            in_collision = False            
+            for o in self.obstacles:
+                '''if o.inCollisionDiscrete(ee_collision_objects):                                        
+                    in_collision = True'''                              
                 for i in xrange(len(collision_objects_start)):                        
                     if o.inCollisionContinuous([collision_objects_start[i], collision_objects_goal[i]]):
-                        print "in collision!!!" 
-                        pass          
-            if not in_collision:
-                self.robot.setExternalForce(fx, fy, fz, f_roll, f_pitch, f_yaw)'''                                                              
+                        in_collision = True
+                        break
+                if in_collision:
+                    break
+                    
+            t = time.time() - t_c
+            collision_check_times.append(t)          
+                                
+                                                                          
             x = np.array([result[i] for i in xrange(len(result))])
-            x_true = np.array([result_true[i] for i in xrange(len(result_true))])
-            #print "dist " + str(np.linalg.norm(x - x_true))
-            
             cjvals = v_double()
             cjvels = v_double()
             cjvals_arr = [x[i] for i in xrange(len(x) / 2)]
@@ -508,7 +495,7 @@ class LQG:
                                               particle_joint_values,
                                               particle_joint_values)
             time.sleep(0.03) 
-            #time.sleep(0.1)
+            #time.sleep(0.5)
             y += 1
             print y
             

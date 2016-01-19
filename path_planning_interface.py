@@ -301,6 +301,7 @@ class PathPlanningInterface:
         ss_vec = v_double()
         ss_vec[:] = self.start_state
         if not path_planner2.isValid(ss_vec):
+            logging.warn("Path planning interface: Start state not valid")            
             return [], [], [], [], False
               
         '''
@@ -309,9 +310,11 @@ class PathPlanningInterface:
         for i in xrange(len(self.goal_states)):            
             goal_state = v_double()                  
             goal_state[:] = [self.goal_states[i][j] for j in xrange(len(self.goal_states[i]))]                    
-            if path_planner2.isValid(goal_state):                                
-                gs.append(goal_state)                       
-        if len(gs) == 0:                        
+            if path_planner2.isValid(goal_state):                                             
+                gs.append(goal_state)            
+                              
+        if len(gs) == 0:
+            logging.warn("PathPlanningInterface: No valid goal states")                        
             return [], [], [], [], False               
         goal_states[:] = gs 
         

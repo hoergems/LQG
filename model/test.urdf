@@ -37,8 +37,8 @@
       <geometry>
         <box size="1 0.15 0.15"/>
       </geometry>
-      <material name="red">
-        <color rgba=".9 .1 .1 1"/>
+      <material name="orange">
+        <color rgba=".9 .6 .0 1"/>
       </material>
     </visual>
     <collision>
@@ -61,8 +61,8 @@
       <geometry>
         <box size="1 0.15 0.15"/>
       </geometry>
-      <material name="orange">
-        <color rgba=".9 .6 .0 1"/>
+      <material name="red">
+        <color rgba=".9 .1 .1 1"/>
       </material>
     </visual>
     <collision>
