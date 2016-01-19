@@ -90,6 +90,5 @@ def get_goal_states(problem,
     return ik_solutions
 
 def copyToTmp(problem):
-    shutil.copy2("environment/env.xml", 'tmp/' + problem + '/env.xml')
-    shutil.copy2("model/test.xml", 'tmp/' + problem + '/test.xml')    
+    shutil.copy2("environment/env.xml", 'tmp/' + problem + '/env.xml')        
     shutil.copy2('config_' + str(problem) + '.yaml', 'tmp/' + problem + '/config_' + str(problem) + '.yaml')
