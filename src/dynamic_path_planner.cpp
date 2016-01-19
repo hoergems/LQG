@@ -80,7 +80,7 @@ void DynamicPathPlanner::addIntermediateStates(bool add_intermediate_states) {
 bool DynamicPathPlanner::setup_ompl_(double &simulation_step_size,
 		                             bool &verbose) {
     state_space_bounds_ = ompl::base::RealVectorBounds(state_space_dimension_);    
-    space_information_->setStateValidityChecker(boost::bind(&DynamicPathPlanner::isValid, this, _1));
+    //space_information_->setStateValidityChecker(boost::bind(&DynamicPathPlanner::isValid, this, _1));
     space_information_->setMotionValidator(motionValidator_);
     space_information_->setMinMaxControlDuration(1, 1);
     space_information_->setPropagationStepSize(control_duration_);

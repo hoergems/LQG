@@ -11,9 +11,16 @@ RRTControl::RRTControl(const ompl::control::SpaceInformationPtr &si):
 	
 }
 
+unsigned int RRTControl::propagateWhileValid(const ompl::base::State *state, 
+		    		                         const ompl::control::Control *control, 
+											 int steps, 
+											 ompl::base::State *result) const {
+	
+}
+
 ompl::base::PlannerStatus RRTControl::solve(const ompl::base::PlannerTerminationCondition &ptc)
-{
-    checkValidity();
+{    
+	checkValidity();
     ompl::base::Goal                   *goal = pdef_->getGoal().get();
     ompl::base::GoalSampleableRegion *goal_s = dynamic_cast<ompl::base::GoalSampleableRegion*>(goal);
 
@@ -65,7 +72,8 @@ ompl::base::PlannerStatus RRTControl::solve(const ompl::base::PlannerTermination
 
         if (addIntermediateStates_)
         {
-            // this code is contributed by Jennifer Barry
+            cout << "ADDING INTERMEDIATE" << endl;
+        	// this code is contributed by Jennifer Barry
             std::vector<ompl::base::State *> pstates;
             cd = siC_->propagateWhileValid(nmotion->state, rctrl, cd, pstates, true);
 
@@ -113,30 +121,33 @@ ompl::base::PlannerStatus RRTControl::solve(const ompl::base::PlannerTermination
         }
         else
         {
-            if (cd >= siC_->getMinControlDuration())
-            {
-                /* create a motion */
-                Motion *motion = new Motion(siC_);
-                si_->copyState(motion->state, rmotion->state);
-                siC_->copyControl(motion->control, rctrl);
-                motion->steps = cd;
-                motion->parent = nmotion;
-
-                nn_->add(motion);
-                double dist = 0.0;
-                bool solv = goal->isSatisfied(motion->state, &dist);
-                if (solv)
-                {
-                    approxdif = dist;
-                    solution = motion;
-                    break;
-                }
-                if (dist < approxdif)
-                {
-                    approxdif = dist;
-                    approxsol = motion;
-                }
-            }
+            //cout << "CHECK MOTION" << endl;
+        	if (siC_->checkMotion(nmotion->state, rmotion->state)) {        	
+				if (cd >= siC_->getMinControlDuration())
+				{
+					/* create a motion */
+					Motion *motion = new Motion(siC_);
+					si_->copyState(motion->state, rmotion->state);
+					siC_->copyControl(motion->control, rctrl);
+					motion->steps = cd;
+					motion->parent = nmotion;
+	
+					nn_->add(motion);
+					double dist = 0.0;
+					bool solv = goal->isSatisfied(motion->state, &dist);
+					if (solv)
+					{
+						approxdif = dist;
+						solution = motion;
+						break;
+					}
+					if (dist < approxdif)
+					{
+						approxdif = dist;
+						approxsol = motion;
+					}
+				}
+        	}
         }
     }
 

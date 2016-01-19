@@ -57,7 +57,8 @@ class LQG:
                                       self.goal_position,
                                       self.goal_radius,
                                       self.planning_algortihm,
-                                      self.path_timeout)  
+                                      self.path_timeout,
+                                      self.num_generated_goal_states)  
         if len(goal_states) == 0:
             logging.error("LQG: Couldn't generate any goal states. Problem seems to be infeasible")
             return
@@ -613,6 +614,7 @@ class LQG:
         self.inc_covariance = config['inc_covariance'] 
         self.add_intermediate_states = config['add_intermediate_states']
         self.gravity_constant = config['gravity']
+        self.num_generated_goal_states = config['num_generated_goal_states']
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='LQG-MP.')

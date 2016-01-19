@@ -273,7 +273,7 @@ class PathPlanningInterface:
             path_planner2.setup()            
         else:            
             path_planner2 = libdynamic_path_planner.DynamicPathPlanner(robot,                                                                       
-                                                                       self.verbose)
+                                                                       self.verbose)            
             path_planner2.setupMotionValidator(self.continuous_collision)
             logging.info("PathPlanningInterface: Set up motion validator. Setting kinematics...")            
             

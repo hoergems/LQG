@@ -71,7 +71,8 @@ def get_goal_states(problem,
                     goal_position,
                     goal_threshold,
                     planning_algorithm,
-                    path_timeout):     
+                    path_timeout,
+                    num_generated_goal_states):     
     if not compareEnvironmentToTmpFiles(problem):        
         ik_solution_generator = IKSolutionGenerator()          
         ik_solution_generator.setup(robot,
@@ -80,7 +81,10 @@ def get_goal_states(problem,
                                     delta_t,
                                     planning_algorithm,
                                     path_timeout)
-        ik_solutions = ik_solution_generator.generate(start_state, goal_position, goal_threshold)        
+        ik_solutions = ik_solution_generator.generate(start_state, 
+                                                      goal_position, 
+                                                      goal_threshold,
+                                                      num_generated_goal_states)        
         if len(ik_solutions) == 0:
             return []
         serializer.serialize_ik_solutions([ik_solutions[i] for i in xrange(len(ik_solutions))], path='tmp/' + problem, file='goalstates.txt')

@@ -20,15 +20,15 @@ MotionValidator::MotionValidator(const ompl::base::SpaceInformationPtr &si,
 {	
     if (dynamics) {
     	dim_ = si_->getStateSpace()->getDimension() / 2;
-    }    
+    }
+    
 }
 
 bool MotionValidator::checkMotion(const std::vector<double> &s1, 
                                   const std::vector<double> &s2, 
-                                  const bool &continuous_collision) const {	
+                                  const bool &continuous_collision) const {		
 	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects_goal;
-	robot_->createRobotCollisionObjects(s2, collision_objects_goal);    
-    
+	robot_->createRobotCollisionObjects(s2, collision_objects_goal);
     if (continuous_collision) {    	
     	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects_start;    	
     	robot_->createRobotCollisionObjects(s1, collision_objects_start);
@@ -41,7 +41,7 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
                 }
             }
         } 
-    }
+    } 
     else {
     	for (size_t i = 0; i < obstacles_.size(); i++) {        
     	    if (!obstacles_[i]->isTraversable()) {
@@ -62,7 +62,8 @@ bool MotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base:
     for (unsigned int i = 0; i < dim_; i++) {
         angles1.push_back(s1->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);        
         angles2.push_back(s2->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
-    }    
+    }  
+    //cout << "check motion1" << endl;
     return checkMotion(angles1, angles2, continuous_collision_);
 }
 
@@ -70,11 +71,12 @@ bool MotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base:
 bool MotionValidator::checkMotion(const ompl::base::State *s1, 
                                   const ompl::base::State *s2, 
                                   std::pair< ompl::base::State *, double > &/*lastValid*/) const {
+	//cout << "check motion" << endl;
     return checkMotion(s1, s2);
 }
 
-bool MotionValidator::isValid(const std::vector<double> &s1) const {
-	std::vector<double> joint_angles;	
+bool MotionValidator::isValid(const std::vector<double> &s1) const {	
+	std::vector<double> joint_angles;
 	for (size_t i = 0; i < dim_; i++) {
 		joint_angles.push_back(s1[i]);
 	}

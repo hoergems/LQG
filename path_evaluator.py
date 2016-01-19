@@ -52,7 +52,7 @@ class PathEvaluator:
         self.constraints_enforced = robot.constraintsEnforced()
         self.sample_size = sample_size
         self.num_cores = cpu_count()
-        #self.num_cores = 2 
+        self.num_cores = 2 
         self.goal_position = goal_position 
         self.goal_radius = goal_radius
         self.mutex = Lock()        
@@ -387,7 +387,7 @@ class PathEvaluator:
             path_rewards.append(np.power(self.discount, current_step + i) * state_reward)            
             if self.show_viewer:
                 self.show_state_and_cov(xs[i], cov_state, samples)                
-                #time.sleep(0.2)
+                time.sleep(0.2)
         path_reward = sum(path_rewards)
         product = 1.0
         for i in xrange(len(CPi)):

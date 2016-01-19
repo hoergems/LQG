@@ -46,12 +46,19 @@ class IKSolutionGenerator:
         goal_position = [goal_position[i] - joint_origin_first_joint[i] for i in xrange(len(goal_position))]
         return goal_position   
 
-    def generate(self, start_state, goal_position, goal_threshold): 
+    def generate(self, 
+                 start_state, 
+                 goal_position, 
+                 goal_threshold,
+                 num_generated_goal_states): 
         """
         Goal position is w.r.t. base frame
         """       
-        goal_position = self.transform_goal(goal_position) 
-        possible_ik_solutions = ik.get_goal_states(self.robot, goal_position, self.obstacles, num=1)            
+        goal_position = self.transform_goal(goal_position)         
+        possible_ik_solutions = ik.get_goal_states(self.robot, 
+                                                   goal_position, 
+                                                   self.obstacles, 
+                                                   num=num_generated_goal_states)            
         solutions = []
         n = 0
         logging.warn("IKSolutionGenerator: " + str(len(possible_ik_solutions)) + " possible ik solutions found")

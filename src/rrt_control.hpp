@@ -14,6 +14,11 @@ namespace shared {
     class RRTControl : public ompl::control::RRT {
         public:
 		    RRTControl(const ompl::control::SpaceInformationPtr &si);
+		    
+		    unsigned int propagateWhileValid(const ompl::base::State *state, 
+		    		                         const ompl::control::Control *control, 
+											 int steps, 
+											 ompl::base::State *result) const;
 	    
 	        ompl::base::PlannerStatus solve(const ompl::base::PlannerTerminationCondition &ptc);
 	
