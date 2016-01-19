@@ -80,7 +80,7 @@ class PlotStats:
         
     def show_distr_at_time_t(self, t, dir="stats"):        
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
-        dim = (0, 3)        
+        dim = (0, 6)        
         for file in files:
             num_steps = 0
             with open(file, 'r') as f:
@@ -118,6 +118,42 @@ class PlotStats:
                             else:
                                 t_found = False
                 #mult_normal = multivariate_normal.pdf(particles, state_nominal, covariance)
+                """ Calculate 2D histogram
+                """
+                if n != 0:
+                    particles_data= [[particles[i][j] for j in xrange(len(particles[i]))] for i in xrange(len(particles))]                                      
+                    H, edges = np.histogramdd(np.array(particles_data), bins=20)
+                    print edges[0]
+                    print edges[1]
+                    print edges[2] 
+                    coords = []
+                    values = []
+                    print "len " + str(len(edges[0]))                  
+                    for x1 in xrange(len(H)):
+                        for x2 in xrange(len(H[x1])):
+                            for x3 in xrange(len(H[x1, x2])):
+                                for x4 in xrange(len(H[x1, x2, x3])):
+                                    for x5 in xrange(len(H[x1, x2, x3, x4])):
+                                        for x6 in xrange(len(H[x1, x2, x3, x4, x5])):
+                                            if H[x1, x2, x3, x4, x5, x6] != 0.0:
+                                                coords.append([edges[0][x1] + (edges[0][x1 + 1] - edges[0][x1]) / 2.0,
+                                                               edges[1][x2] + (edges[1][x2 + 1] - edges[1][x2]) / 2.0,
+                                                               edges[2][x3] + (edges[2][x3 + 1] - edges[2][x3]) / 2.0,
+                                                               edges[3][x4] + (edges[3][x4 + 1] - edges[3][x4]) / 2.0,
+                                                               edges[4][x5] + (edges[4][x5 + 1] - edges[4][x5]) / 2.0,
+                                                               edges[5][x6] + (edges[5][x6 + 1] - edges[5][x6]) / 2.0]) 
+                                                values.append(H[x1, x2, x3, x4, x5, x6])                              
+                                
+                    values /= sum(values)
+                    values_gauss = []
+                    p = multivariate_normal(state_nominal, covariance, allow_singular=True)                    
+                    for i in xrange(len(values)):                        
+                        values_gauss.append(p.pdf(coords[i]))                        
+                    values_gauss /= sum(values_gauss)
+                    
+                    sleep
+                    #print H[0]
+                    #print edges
                 samples = multivariate_normal.rvs(state_nominal, covariance, 1000)
                 samples = [sample[dim[0]:dim[1]] for sample in samples]
                 min_x = particles[0][0]

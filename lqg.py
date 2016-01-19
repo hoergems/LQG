@@ -58,7 +58,6 @@ class LQG:
                                       self.goal_radius,
                                       self.planning_algortihm,
                                       self.path_timeout)
-        
           
         if len(goal_states) == 0:
             logging.error("LQG: Couldn't generate any goal states. Problem seems to be infeasible")
@@ -224,8 +223,7 @@ class LQG:
                     if success:
                         successes += 1
                     rewards_cov.append(total_reward)
-                    n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))
-                    print "var " + str(var)
+                    n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))                    
                     collided = False
                     for l in xrange(len(history_entries)):
                         history_entries[l].set_estimated_covariance(state_covariances[l])                        
@@ -309,7 +307,7 @@ class LQG:
                 os.makedirs(dir + "/model")
                 
             cmd = "cp " + urdf_model_file + " " + dir + "/model"
-            os.system(cmd)                    
+            os.system(cmd)                   
         print "Done"
         
     def init_robot(self, urdf_model_file):
@@ -417,8 +415,7 @@ class LQG:
         while True:            
             #u_in = [3.0, 1.5, 0.0, 0.0, 0.0, 0.0]
             u_in = [0.0 for i in xrange(self.robot_dof)]
-            
-            #u_in[0] = 150.0
+            u_in[0] = 150.0
             #u_in[1] = 70.0
             current_state = v_double()
             current_state_true = v_double()
@@ -450,7 +447,7 @@ class LQG:
                                  result)
             t = time.time() - t0
             times.append(t)
-            if y == 500:
+            if y == 100:
                 t_sum = sum(times)
                 t_mean = t_sum / len(times)
                 print t_mean
@@ -510,8 +507,8 @@ class LQG:
                                               cjvels,
                                               particle_joint_values,
                                               particle_joint_values)
-            time.sleep(0.03)
-            #time.sleep(0.1) 
+            time.sleep(0.03) 
+            #time.sleep(0.1)
             y += 1
             print y
             

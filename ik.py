@@ -1,7 +1,7 @@
 import numpy as np
 from librobot import v_double, v2_double, v_string
 
-def get_goal_states(robot, goal_position, num=1):
+def get_goal_states(robot, goal_position, obstacles, num=1):
     """ Get 'num' states for which the end-effector is close to the goal position
     """
     solutions = []    
@@ -26,9 +26,20 @@ def get_goal_states(robot, goal_position, num=1):
                 breaking = True
                 break
         if not breaking:
-            if check_constraints(robot, state):
+            if check_constraints(robot, state) and not in_collision(robot, state, obstacles):
                 solutions.append([state[k] for k in xrange(len(state))])
+    
     return solutions
+
+def in_collision(robot, state, obstacles):
+    collidable_obstacles = [o for o in obstacles if not o.isTraversable()]
+    joint_angles = v_double()
+    joint_angles[:] = [state[i] for i in xrange(len(state))]
+    collision_objects = robot.createRobotCollisionObjects(joint_angles)
+    for obstacle in collidable_obstacles:
+        if obstacle.inCollisionDiscrete(collision_objects):                               
+            return True
+    return False
     
 def check_constraints(robot, state):
     active_joints = v_string()    

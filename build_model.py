@@ -35,7 +35,10 @@ class Test:
                     [f_z],
                     [f_roll],
                     [f_pitch],
-                    [f_yaw]])     
+                    [f_yaw]])
+        print F.shape
+        F = Matrix([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])  
+        print F.shape   
         """
         Get the Jacobians of the links expressed in the robot's base frame
         """        
@@ -77,11 +80,13 @@ class Test:
             print "Simplify general forces forces vector"     
             N = trigsimp(N)
         t0 = time.time()
-        f = self.get_dynamic_model(M, M_inv, C, N, self.q, self.qdot, self.rho, self.zeta)
+        
+        f = self.get_dynamic_model(M, M_inv, C, N, self.q, self.qdot, self.rho, self.zeta)        
+        
         print "Build taylor approximation" 
         #steady_states = self.get_steady_states()
         print "Calculate partial derivatives"                  
-        f, A, B, V = self.partial_derivatives(f, M_inv, C, N)        
+        A, B, V = self.partial_derivatives(M_inv, C, N)        
           
         print "Clean cpp code"
         header_src = "src/integrate.hpp"
@@ -105,6 +110,8 @@ class Test:
             self.gen_cpp_code2(V, "V0", header_src, imple_src)
             self.gen_cpp_code2(M, "M0", header_src, imple_src)
             self.gen_cpp_code2(f, "F0", header_src, imple_src)
+            #self.gen_cpp_code2(C, "C0", header_src, imple_src)
+            #self.gen_cpp_code2(N, "N0", header_src, imple_src)
             self.gen_cpp_code2(ee_jacobian, "EEJacobian", header_src, imple_src)
         print "Generating dynamic model took " + str(time.time() - t_start) + " seconds"  
         if buildcpp:
@@ -123,33 +130,7 @@ class Test:
                     M_inv[i, j] = s
             return M_inv
         else:
-            return M.inv()        
-        
-        
-    def test(self, A1, A2, B1, B2):
-        for i in xrange(len(self.q)):
-            A1 = A1.subs(self.q[i], 1.0)
-            A2 = A2.subs(self.q[i], 1.0)
-            B1 = B1.subs(self.q[i], 1.0)
-            B2 = B2.subs(self.q[i], 1.0)
-        for i in xrange(len(self.qdot)):
-            A1 = A1.subs(self.qdot[i], 1.0)
-            A2 = A2.subs(self.qdot[i], 1.0)
-            B1 = B1.subs(self.qdot[i], 1.0)
-            B2 = B2.subs(self.qdot[i], 1.0)
-        for i in xrange(len(self.rho)):
-            A1 = A1.subs(self.rho[i], 1.0)
-            A2 = A2.subs(self.rho[i], 1.0)
-            B1 = B1.subs(self.rho[i], 1.0)
-            B2 = B2.subs(self.rho[i], 1.0)
-        for i in xrange(len(self.zeta)):
-            A1 = A1.subs(self.zeta[i], 1.0)
-            A2 = A2.subs(self.zeta[i], 1.0)
-            B1 = B1.subs(self.zeta[i], 1.0)
-            B2 = B2.subs(self.zeta[i], 1.0)
-        print A1
-        print "================"
-        print A2
+            return M.inv()
         
     def get_steady_states(self):
         steady_states = []             
@@ -249,9 +230,6 @@ class Test:
         
         sleep        
         return steady_states[0]
-        
-    
-    
         
     def parse_urdf(self, xml_file):
         robot = Robot(xml_file)
@@ -395,6 +373,8 @@ class Test:
                 "MatrixXd Integrate::getV" in lines[i] or
                 "MatrixXd Integrate::getF" in lines[i] or
                 "MatrixXd Integrate::getM" in lines[i] or
+                "MatrixXd Integrate::getC" in lines[i] or
+                "MatrixXd Integrate::getN" in lines[i] or
                 "MatrixXd Integrate::getEEJacobian" in lines[i]):
                 idx1 = i                
                 breaking = True
@@ -422,7 +402,9 @@ class Test:
                 "MatrixXd getB" in lines_header[i] or 
                 "MatrixXd getV" in lines_header[i] or
                 "MatrixXd getF" in lines_header[i] or
-                "MatrixXd getM" in lines_header[i] or 
+                "MatrixXd getM" in lines_header[i] or
+                "MatrixXd getC" in lines_header[i] or
+                "MatrixXd getN" in lines_header[i] or 
                 "MatrixXd getEEJacobian" in lines_header[i]):
                 idxs.append(i)
         for i in xrange(len(lines_header)):
@@ -554,23 +536,9 @@ class Test:
         
         B = zeros(len(self.q) - 1)
         B = B.col_join(C1)
-        return f, A, B
+        return f, A, B    
     
-    def partial_derivatives3(self, f):
-        A1 = f.jacobian([self.q[i] for i in xrange(len(self.q) - 1)])
-        A2 = f.jacobian([self.qdot[i] for i in xrange(len(self.qdot) - 1)])
-        B = f.jacobian([self.rho[i] for i in xrange(len(self.rho) - 1)])
-        C = f.jacobian([self.zeta[i] for i in xrange(len(self.rho) - 1)])
-        
-        A = A1.row_join(A2)
-        for i in xrange(len(self.zeta)):
-            A = A.subs(self.zeta[i], 0.0)
-            B = B.subs(self.zeta[i], 0.0)
-            C = C.subs(self.zeta[i], 0.0)
-        return f, A, B, C
-        
-    
-    def partial_derivatives(self, f, M_inv, C, N):        
+    def partial_derivatives(self, M_inv, C, N):        
         r = Matrix([[self.rho[i]] for i in xrange(len(self.rho) - 1)])
         x1 = Matrix([[self.q[i]] for i in xrange(len(self.q) - 1)])
         x2 = Matrix([[self.qdot[i]] for i in xrange(len(self.qdot) - 1)])
@@ -603,7 +571,7 @@ class Test:
             B = B.subs(self.zeta[i], 0.0)
             C = C.subs(self.zeta[i], 0.0)            
         
-        return f, A, B, C
+        return A, B, C
         
     def calc_generalized_forces(self, 
                                 thetas, 

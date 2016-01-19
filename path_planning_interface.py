@@ -290,10 +290,8 @@ class PathPlanningInterface:
                                            self.max_control_duration]
             path_planner2.setMinMaxControlDuration(min_max_control_duration)
             path_planner2.addIntermediateStates(self.add_intermediate_states)
-            logging.info("PathPlanningInterface: Path planner setup")
-        print "setting obstacles"        
-        path_planner2.setObstacles(obstacles)        
-        #print "set obstacles"
+            logging.info("PathPlanningInterface: Path planner setup")              
+        path_planner2.setObstacles(obstacles)
         goal_states = v2_double()
         gs = [] 
         
@@ -306,9 +304,9 @@ class PathPlanningInterface:
             return [], [], [], [], False
               
         '''
-        Check of the goa states are valid
+        Check of the goal states are valid
         '''
-        for i in xrange(len(self.goal_states)):
+        for i in xrange(len(self.goal_states)):            
             goal_state = v_double()                  
             goal_state[:] = [self.goal_states[i][j] for j in xrange(len(self.goal_states[i]))]                    
             if path_planner2.isValid(goal_state):                                

@@ -64,8 +64,6 @@ namespace shared {
     			                double t_e,
     			                std::vector<MatrixXd> &matrices) const;
     	
-    	MatrixXd get_F(const state_type &x, const state_type &rho, const state_type &zeta) const;
-    	
     	MatrixXd get_end_effector_jacobian(const state_type &x, const state_type &rho, const state_type &zeta) const;
     	
     	std::vector<double> getProcessMatricesSteadyStatesVec(std::vector<double> &x, double t_e) const;
@@ -149,6 +147,10 @@ MatrixXd getA0(const state_type &x, const state_type &rho, const state_type &zet
     	mutable bool steady_states_setup_;
     	
     	mutable MatrixXd M_inv_;
+    	
+    	mutable VectorXd rho_vec_;
+    	
+    	mutable VectorXd vel_;
     };
 
     

@@ -25,6 +25,7 @@ class IKSolutionGenerator:
         self.link_dimensions = v2_double()
         self.robot.getActiveLinkDimensions(self.link_dimensions)        
         self.path_planner = PathPlanningInterface()
+        self.obstacles = obstacles
         self.path_planner.setup(robot, 
                                 obstacles, 
                                 max_velocity, 
@@ -50,7 +51,7 @@ class IKSolutionGenerator:
         Goal position is w.r.t. base frame
         """       
         goal_position = self.transform_goal(goal_position) 
-        possible_ik_solutions = ik.get_goal_states(self.robot, goal_position)    
+        possible_ik_solutions = ik.get_goal_states(self.robot, goal_position, self.obstacles, num=1)    
         solutions = []
         n = 0
         logging.warn("IKSolutionGenerator: " + str(len(possible_ik_solutions)) + " possible ik solutions found")
