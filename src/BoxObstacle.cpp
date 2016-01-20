@@ -23,7 +23,7 @@ BoxObstacle::BoxObstacle(double pos_x, double pos_y, double pos_z, double size_x
     createCollisionObject();    
 }
 
-void BoxObstacle::createCollisionObject() {
+void BoxObstacle::createCollisionObject() {	
 	fcl::AABB box_aabb(fcl::Vec3f(pos_x_ - size_x_,
 			                      pos_y_ - size_y_,
 								  pos_z_ - size_z_),
@@ -32,10 +32,10 @@ void BoxObstacle::createCollisionObject() {
 								  pos_z_ + size_z_));
 	fcl::Box* box = new fcl::Box();
 	fcl::Transform3f box_tf;
-	fcl::Transform3f trans;
-	fcl::constructBox(box_aabb, trans, *box, box_tf);
+	fcl::Transform3f trans;	
+	fcl::constructBox(box_aabb, trans, *box, box_tf);	
 	collision_object_ptr_ = std::make_shared<fcl::CollisionObject>(boost::shared_ptr<CollisionGeometry>(box),
-			                                                       box_tf);
+			                                                       box_tf);	
 	/**cout << "size_x_" << size_x_ << endl;
 	cout << "size_y_" << size_y_ << endl;
 	cout << "size_z_" << size_z_ << endl;

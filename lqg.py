@@ -30,13 +30,14 @@ class LQG:
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)        
         np.set_printoptions(precision=16)
         dir = "stats/lqg"        
-        self.utils = Utils()        
-        #urdf_model_file = "model/test.urdf"
-        self.init_robot(self.robot_file)
-        #environment_file = os.path.join("environment", "env.xml")        
+        self.utils = Utils()
+        if not self.init_robot(self.robot_file):
+            logging.error("LQG: Couldn't initialize robot")
+            return               
         if not self.setup_scene(self.environment_file, self.robot):
             return
         #self.show_state_distribution(urdf_model_file, environment_file)
+        #self.check_continuous_collide(self.robot_file, self.environment_file)
         if show_scene:            
             self.run_viewer(self.robot_file, self.environment_file)
         self.clear_stats(dir)
@@ -58,7 +59,8 @@ class LQG:
                                       self.goal_radius,
                                       self.planning_algortihm,
                                       self.path_timeout,
-                                      self.num_generated_goal_states)  
+                                      self.num_generated_goal_states,
+                                      self.continuous_collision)  
         if len(goal_states) == 0:
             logging.error("LQG: Couldn't generate any goal states. Problem seems to be infeasible")
             return
@@ -70,13 +72,13 @@ class LQG:
                            self.delta_t, 
                            self.use_linear_path,
                            self.planning_algortihm,
-                           self.path_timeout)
+                           self.path_timeout,
+                           self.continuous_collision)
         
         if self.dynamic_problem:
             path_planner.setup_dynamic_problem(self.robot_file,
                                                self.environment_file,
-                                               self.simulation_step_size,                                               
-                                               self.continuous_collision,
+                                               self.simulation_step_size,
                                                self.num_control_samples,
                                                self.min_control_duration,
                                                self.max_control_duration,
@@ -101,7 +103,7 @@ class LQG:
             if ((not append_paths) and deserialize):
                 paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)
                 #paths = [paths[3], paths[14]]
-                #paths=[paths[4]]
+                #paths=[paths[1]]
                 
             if len(paths) == 0:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
@@ -315,12 +317,19 @@ class LQG:
         self.robot = Robot(urdf_model_file)
         self.robot.enforceConstraints(self.enforce_constraints)
         self.robot.setGravityConstant(self.gravity_constant)
+        """ Setup operations """
+        self.robot_dof = self.robot.getDOF()
+        if len(self.start_state) != 2 * self.robot_dof:
+            logging.error("LQG: Start state dimension doesn't fit to the robot state space dimension")
+            return False
+        return True
         
     """
     Analyzing functions (will be removed later)
     =====================================================================
     """
-        
+           
+           
     def sample_control_error(self, M):
         mu = np.array([0.0 for i in xrange(2 * self.robot_dof)])
         return np.random.multivariate_normal(mu, M)
@@ -389,6 +398,81 @@ class LQG:
                        y_scale = [y_min, y_max], 
                        z_scale=  [z_min, z_max])
         sleep
+        
+    def check_continuous_collide(self, model_file, env_file):
+        self.robot.setViewerBackgroundColor(0.6, 0.8, 0.6)
+        self.robot.setViewerSize(1280, 768)
+        self.robot.setupViewer(model_file, env_file)
+        x1 = [2.2400013118235629,
+             0.2621598024448645,
+             -1.0982654508690488,
+             -0.5631577761974319,
+             -9.7390468635597838,
+             10.0,
+             1.1112004027925497,
+             1.1317584820346522]
+        x1 = [2.2400013118235629,
+             0.2621598024448645,
+             -1.0982654508690488,
+             -0.5631577761974319,
+             -9.7390468635597838,
+             10.0,
+             1.1112004027925497,
+             1.1317584820346522]
+        x2 = [1.8611065087843459, 
+              0.6726534222796512, 
+              -0.9864293631758916,
+              -0.6308273460200361,
+              -10.0,
+              10.0,
+              6.0644666961615297,
+              -3.1460624087499878]
+        #x1 = [np.pi - np.pi / 4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        #x1 = [np.pi / 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        x2 = [np.pi / 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        
+        
+        while True:            
+            cjvals = v_double()
+            cjvels = v_double()
+            cjvals_arr = [x1[i] for i in xrange(len(x1) / 2)]
+            cjvels_arr = [x1[i] for i in xrange(len(x1) / 2, len(x1))]
+            cjvals[:] = cjvals_arr
+            cjvels[:] = cjvels_arr
+            particle_joint_values = v2_double()
+            
+            ja_start = v_double()
+            ja_goal = v_double()
+            ja_start[:] = [x1[i] for i in xrange(len(x1) / 2)]
+            ja_goal[:] = [x2[i] for i in xrange(len(x2) / 2)]
+            collision_objects_start = self.robot.createRobotCollisionObjects(ja_start)
+            collision_objects_goal = self.robot.createRobotCollisionObjects(ja_goal)
+            in_collision_discrete = False
+            in_collision_continuous = False 
+            print len(collision_objects_start)           
+            for o in self.obstacles:
+                in_collision_discrete = o.inCollisionDiscrete(collision_objects_start)
+                for i in xrange(len(collision_objects_start)):
+                    in_collision_continuous = o.inCollisionContinuous([collision_objects_start[i], collision_objects_goal[i]])
+                    if in_collision_continuous:
+                        break               
+                if in_collision_discrete:                    
+                    print "collides discrete"
+                    break
+                if in_collision_continuous:
+                    print "collides continuous"
+                    break                     
+            print "in collision discrete " + str(in_collision_discrete)
+            print "in collision continuous " + str(in_collision_continuous)
+            
+            
+            self.robot.updateViewerValues(cjvals, 
+                                          cjvels,
+                                          particle_joint_values,
+                                          particle_joint_values)
+            time.sleep(10)
+            time.sleep(0.03) 
+            
         
     def run_viewer(self, model_file, env_file):
         show_viewer = True
@@ -519,10 +603,7 @@ class LQG:
             print "ERROR: Your environment file doesn't define a goal area"
             return False
         self.goal_position = [goal_area[i] for i in xrange(0, 3)]
-        self.goal_radius = goal_area[3] 
-        
-        """ Setup operations """
-        self.robot_dof = robot.getDOF()        
+        self.goal_radius = goal_area[3]        
         return True
             
     def init_serializer(self):

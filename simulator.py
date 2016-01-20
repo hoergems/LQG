@@ -249,7 +249,7 @@ class Simulator:
                 If yes, the true state is set to the previous state with 0 velocity.
                 If not, set the true state to the propagated state
                 """
-                collided = False                                     
+                collided = False                                                    
                 if self.is_in_collision(x_true, x_true_temp):                    
                     for j in xrange(len(x_true) / 2, len(x_true)):
                         x_true[j] = 0.0                  

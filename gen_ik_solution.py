@@ -16,7 +16,8 @@ class IKSolutionGenerator:
               max_velocity, 
               delta_t,
               planning_algorithm,
-              path_timeout):        
+              path_timeout,
+              continuous_collision):        
         """
         Generate the obstacles
         """                
@@ -32,7 +33,8 @@ class IKSolutionGenerator:
                                 delta_t, 
                                 False,
                                 planning_algorithm,
-                                path_timeout)        
+                                path_timeout,
+                                continuous_collision)        
         
     def transform_goal(self, goal_position):
         """

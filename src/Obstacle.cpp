@@ -61,7 +61,7 @@ bool Obstacle::in_collision(std::vector<std::shared_ptr<fcl::CollisionObject con
 				     collision_object_ptr_.get(),
 					 request,
 					 result);
-		if (result.isCollision()) {
+		if (result.isCollision()) {			
 			return true;
 		}
 		/**fcl::AABB overlap;

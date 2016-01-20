@@ -54,6 +54,9 @@ std::pair<fcl::Vec3f, fcl::Matrix3f> Kinematics::getPoseOfLinkN(const std::vecto
    if (n != 0) {
 	   transformations.push_back(getTransformationMatr(joint_angles[n], 0.0, 0.0, 0.0));
    }
+   else {
+	   transformations.push_back(getTransformationMatr(joint_angles[0], 0.0, 0.0, 0.0));
+   }
    
    for (int i = transformations.size() - 1; i >= 0; i--) {	   
 	   res = transformations[i] * res;	  

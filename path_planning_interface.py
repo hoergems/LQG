@@ -76,7 +76,8 @@ class PathPlanningInterface:
               delta_t, 
               use_linear_path,
               planning_algorithm,
-              path_timeout):
+              path_timeout,
+              continuous_collision):
         self.robot = robot
         self.robot_dof = self.robot.getDOF()
         self.num_cores = cpu_count() 
@@ -91,13 +92,13 @@ class PathPlanningInterface:
             self.verbose = True        
         self.planning_algorithm = planning_algorithm
         self.dynamic_problem = False
-        self.path_timeout = path_timeout        
+        self.path_timeout = path_timeout 
+        self.continuous_collision = continuous_collision       
         
     def setup_dynamic_problem(self, 
                               urdf_model,
                               environment_model, 
-                              simulation_step_size,                              
-                              continuous_collision,
+                              simulation_step_size,
                               num_control_samples,
                               min_control_duration,
                               max_control_duration,
@@ -105,8 +106,7 @@ class PathPlanningInterface:
         self.dynamic_problem = True
         self.model_file = urdf_model
         self.environment_file = environment_model
-        self.simulation_step_size = simulation_step_size        
-        self.continuous_collision = continuous_collision
+        self.simulation_step_size = simulation_step_size
         self.num_control_samples = num_control_samples
         self.min_control_duration = min_control_duration
         self.max_control_duration = max_control_duration
@@ -264,7 +264,7 @@ class PathPlanningInterface:
         if not self.dynamic_problem:
             path_planner2 = libpath_planner.PathPlanner(robot,                                                        
                                                         self.delta_t,
-                                                        True,
+                                                        self.continuous_collision,
                                                         self.max_velocity,                                 
                                                         1.0,                                                    
                                                         self.use_linear_path,

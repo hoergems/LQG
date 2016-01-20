@@ -42,8 +42,8 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
             }
         } 
     } 
-    else {
-    	for (size_t i = 0; i < obstacles_.size(); i++) {        
+    else {    	
+        for (size_t i = 0; i < obstacles_.size(); i++) {        
     	    if (!obstacles_[i]->isTraversable()) {
     	        if (obstacles_[i]->in_collision(collision_objects_goal)) {        		
     	            return false;
@@ -67,19 +67,7 @@ bool MotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base:
     if (!satisfiesConstraints(angles2)) {
     	return false;
     }
-    /**cout << "angles1: ";
-    for (auto &k: angles1) {
-    	cout << k << ", ";
-    }    		
-    cout << endl;
     
-    cout << "angles2: ";
-    for (auto &k: angles2) {
-        cout << k << ", ";
-    }    		
-    cout << endl;*/
-    
-    //cout << "check motion1" << endl;
     return checkMotion(angles1, angles2, continuous_collision_);
 }
 

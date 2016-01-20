@@ -52,7 +52,7 @@ class PathEvaluator:
         self.constraints_enforced = robot.constraintsEnforced()
         self.sample_size = sample_size
         self.num_cores = cpu_count()
-        self.num_cores = 2 
+        #self.num_cores = 2 
         self.goal_position = goal_position 
         self.goal_radius = goal_radius
         self.mutex = Lock()        

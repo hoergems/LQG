@@ -432,12 +432,18 @@ void Robot::initCollisionObjects() {
 	// Init the link collision objects
 	std::vector<fcl::AABB> link_aabbs;
 	for (size_t i = 0; i < active_link_dimensions_.size(); i++) {
-	    link_aabbs.push_back(fcl::AABB(fcl::Vec3f(0.0, 
+	    /**link_aabbs.push_back(fcl::AABB(fcl::Vec3f(0.0, 
 	        		                              -active_link_dimensions_[i][1] / 2.0, 
 											      -active_link_dimensions_[i][2] / 2.0),
 	                                   fcl::Vec3f(active_link_dimensions_[i][0], 
 	                                    		  active_link_dimensions_[i][1] / 2.0, 
-											      active_link_dimensions_[i][2] / 2.0)));
+											      active_link_dimensions_[i][2] / 2.0)));*/
+		link_aabbs.push_back(fcl::AABB(fcl::Vec3f(-active_link_dimensions_[i][0] / 2.0, 
+			        		                      -active_link_dimensions_[i][1] / 2.0, 
+											      -active_link_dimensions_[i][2] / 2.0),
+			                           fcl::Vec3f(active_link_dimensions_[i][0] / 2.0, 
+			                                      active_link_dimensions_[i][1] / 2.0, 
+												  active_link_dimensions_[i][2] / 2.0)));
 	}
 	for (size_t i = 0; i < active_link_dimensions_.size(); i++) {
 		fcl::Box* box = new fcl::Box();
@@ -447,7 +453,7 @@ void Robot::initCollisionObjects() {
 		collision_objects_.push_back(std::make_shared<fcl::CollisionObject>(boost::shared_ptr<fcl::CollisionGeometry>(box), box_tf));
 	}
 	
-	// Inite the end-effector collision object
+	// Init the end-effector collision object
 	fcl::AABB aabb(fcl::Vec3f(0.0,
 				              -active_link_dimensions_[active_link_dimensions_.size() - 1][1] / 2.0, 
 			                  -active_link_dimensions_[active_link_dimensions_.size() - 1][2] / 2.0),
@@ -464,17 +470,49 @@ void Robot::initCollisionObjects() {
 void Robot::createRobotCollisionObjects(const std::vector<double> &joint_angles, 
 		                                std::vector<std::shared_ptr<fcl::CollisionObject const>> &collision_objects) {	
 	for (size_t i = 0; i < joint_angles.size(); i++) {
-	    const std::pair<fcl::Vec3f, fcl::Matrix3f> pose_link_n = kinematics_->getPoseOfLinkN(joint_angles, i);
+		const std::pair<fcl::Vec3f, fcl::Matrix3f> pose_link_n = kinematics_->getPoseOfLinkN(joint_angles, i);
+		fcl::Transform3f trans(pose_link_n.second, pose_link_n.first); 
+		
+		
+		fcl::AABB link_aabb(fcl::Vec3f(0.0, 
+					        		   -active_link_dimensions_[i][1] / 2.0, 
+				                       -active_link_dimensions_[i][2] / 2.0),
+					        fcl::Vec3f(active_link_dimensions_[i][0], 
+					                   active_link_dimensions_[i][1] / 2.0, 
+			                           active_link_dimensions_[i][2] / 2.0));
+		
+		fcl::Box* box = new fcl::Box();  
+		fcl::Transform3f box_tf;		
+		fcl::constructBox(link_aabb, trans, *box, box_tf);		
+		std::shared_ptr<fcl::CollisionObject const> coll_obj = 
+				std::make_shared<fcl::CollisionObject>(boost::shared_ptr<fcl::CollisionGeometry>(box), box_tf);
+		//fcl::CollisionObject coll_obj(geom, box_tf);
+		
+		collision_objects.push_back(coll_obj);		
+		
+	    /**const std::pair<fcl::Vec3f, fcl::Matrix3f> pose_link_n = kinematics_->getPoseOfLinkN(joint_angles, i);
+	    cout << "pose trans" << i << ": " << pose_link_n.first << endl;
+	    cout << "pose rot" << i << ": " << pose_link_n.second << endl;
 	    fcl::Transform3f trans(pose_link_n.second, pose_link_n.first); 
-	    fcl::Transform3f trans_res = trans * fcl::Transform3f(collision_objects_[i]->getAABB().center());
-	    collision_objects_[i]->setTransform(trans_res);	    
-        collision_objects.push_back(collision_objects_[i]);
-	}
+	    fcl::Vec3f center(0.5, 0.0, 0.0);
+	    //fcl::Transform3f trans_res = trans * fcl::Transform3f(collision_objects_[i]->getAABB().center());
+	    fcl::Transform3f trans_res = trans * fcl::Transform3f(center);
+	    cout << "trans " << i << ": " << trans_res.getTranslation() << endl;
+	    fcl::Vec3f null_vec = fcl::Vec3f(0.0, 0.0, 0.0);
+	    fcl::Vec3f res_vec = trans_res.transform(null_vec);
+	    cout << "res vec " << i << ": " << res_vec<< endl;	    
+	    collision_objects_[i]->setTransform(trans_res);
+	    //collision_objects_[i]->computeAABB();
+	    cout << "min " << collision_objects_[i]->getAABB().min_ << endl;
+	    cout << "max " << collision_objects_[i]->getAABB().max_ << endl;
+	    cout << endl;
+        collision_objects.push_back(collision_objects_[i]);*/
+	}	
 }
 
 void Robot::createEndEffectorCollisionObject(const std::vector<double> &joint_angles,
     	    		std::vector<std::shared_ptr<fcl::CollisionObject const>> &collision_objects) {
-	const std::pair<fcl::Vec3f, fcl::Matrix3f> pose_ee = kinematics_->getPoseOfLinkN(joint_angles, 3);
+	const std::pair<fcl::Vec3f, fcl::Matrix3f> pose_ee = kinematics_->getPoseOfLinkN(joint_angles, active_link_dimensions_.size());
 	fcl::Transform3f trans(pose_ee.second, pose_ee.first);
 	fcl::Transform3f trans_res = trans * fcl::Transform3f(collision_objects_[collision_objects_.size() - 1]->getAABB().center());
 	collision_objects_[collision_objects_.size() - 1]->setTransform(trans_res);
