@@ -37,6 +37,8 @@ class HistoryEntry:
         self.reward = reward
         self.linearization_error = linearization_error
         self.estimated_covariance = estimated_covariance
+        self.s_tilde = None
+        self.u_dash = None
         
     def set_action(self, action):
         self.action = action
@@ -64,6 +66,12 @@ class HistoryEntry:
         
     def set_estimated_covariance(self, estimated_covariance):        
         self.estimated_covariance = estimated_covariance
+        
+    def set_s_dash_estimated(self, s_tilde):
+        self.s_tilde = s_tilde
+        
+    def set_u_dash(self, u_dash):
+        self.u_dash = u_dash
         
     def serialize(self, path, file):        
         with open(os.path.join(path, file), 'a') as f:                    
@@ -98,6 +106,18 @@ class HistoryEntry:
             for i in xrange(len(self.x_dash)):
                 state_dash_linear_string += str(self.x_dash_linear[i]) + " "
             f.write(state_dash_linear_string + " \n")
+            
+            if self.s_tilde != None: 
+                state_dash_string = "S_DASH_ESTIMATED: "
+                for i in xrange(len(self.s_tilde)):
+                    state_dash_string += str(self.s_tilde[i]) + " "
+                f.write(state_dash_string + " \n")
+                
+            if self.u_dash != None:
+                gain_str = "U_DASH: "
+                for i in xrange(len(self.u_dash)):
+                    gain_str += str(self.u_dash[i]) + " "
+                f.write(gain_str + " \n")
             
             p_str = "COVARIANCE: " 
             for i in xrange(len(self.covariance)):

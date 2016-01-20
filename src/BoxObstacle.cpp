@@ -39,7 +39,7 @@ void BoxObstacle::createCollisionObject() {
 	/**cout << "size_x_" << size_x_ << endl;
 	cout << "size_y_" << size_y_ << endl;
 	cout << "size_z_" << size_z_ << endl;
-	sleep(1);
+	
 	Box* box = new Box(size_x_, size_y_, size_z_);
 	Vec3f trans(pos_x_, pos_y_, pos_z_);
 	Matrix3f rot(1.0, 0.0, 0.0,

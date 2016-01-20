@@ -213,11 +213,13 @@ class Simulator:
                                                     False,
                                                     False,
                                                     0.0))
+                history_entries[-1].set_s_dash_estimated(x_tilde)
                 
                 """ Calc u_dash from the estimated deviation of the state from the nominal path 'x_tilde'
-                using the optimal gain L 
-                """                               
-                u_dash = np.dot(Ls[i], x_tilde)
+                using the optimal gain L
+                """                      
+                u_dash = np.dot(Ls[i], x_tilde)                
+                history_entries[-1].set_u_dash(u_dash)
                 
                 """ Calc the actual control input """ 
                 u = u_dash + us[i] 
@@ -298,6 +300,7 @@ class Simulator:
                                                     Ws[i], 
                                                     Ns[i])
                 
+                
                 """ x_estimate_new is the estimated state """                            
                 x_estimate_new = x_tilde + xs[i + 1]
                 
@@ -345,8 +348,7 @@ class Simulator:
                     logging.info("Terminal state reached: reward = " + str(total_reward))                    
                 history_entries[-1].set_collided(collided)
                 history_entries[-1].set_estimate_collided(estimate_collided)
-                history_entries[-1].set_terminal(terminal_state_reached)
-                #time.sleep(1)
+                history_entries[-1].set_terminal(terminal_state_reached)                
         #print "========================================"
         #print "======= Simulation done"
         #print "========================================"

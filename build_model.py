@@ -228,7 +228,7 @@ class Test:
         
         print steady_states
         
-        sleep        
+               
         return steady_states[0]
         
     def parse_urdf(self, xml_file):

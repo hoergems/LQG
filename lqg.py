@@ -85,7 +85,7 @@ class LQG:
                                                self.add_intermediate_states)       
         path_planner.set_start_and_goal(self.start_state, goal_states, self.goal_position, self.goal_radius)         
         A, H, B, V, W, C, D, M_base, N_base = self.problem_setup(self.delta_t, self.robot_dof)
-        
+        time_to_generate_paths = 0.0
         if check_positive_definite([C, D]):
             m_covs = None
             if self.inc_covariance == "process":
@@ -103,7 +103,7 @@ class LQG:
             if ((not append_paths) and deserialize):
                 paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)
                 #paths = [paths[3], paths[14]]
-                #paths=[paths[1]]
+                #paths=[paths[861]]
                 
             if len(paths) == 0:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
@@ -310,7 +310,8 @@ class LQG:
                 os.makedirs(dir + "/model")
                 
             cmd = "cp " + self.robot_file + " " + dir + "/model"
-            os.system(cmd)                   
+            os.system(cmd)
+        print "LQG: Time to generate paths: " + str(time_to_generate_paths) + " seconds"                   
         print "Done"
         
     def init_robot(self, urdf_model_file):
@@ -528,7 +529,7 @@ class LQG:
                                  result)
             t = time.time() - t0
             integration_times.append(t)
-            if y == 1000000:
+            if y == 100:
                 t_sum = sum(integration_times)
                 t_mean = t_sum / len(integration_times)
                 print "mean integration times: " + str(t_mean)
