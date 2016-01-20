@@ -12,10 +12,54 @@ RRTControl::RRTControl(const ompl::control::SpaceInformationPtr &si):
 }
 
 unsigned int RRTControl::propagateWhileValid(const ompl::base::State *state, 
-		    		                         const ompl::control::Control *control, 
+		                                     const ompl::control::Control *control, 
 											 int steps, 
-											 ompl::base::State *result) const {
-	
+											 std::vector<ompl::base::State*> &result, 
+											 bool alloc) const {
+	double signedStepSize = steps > 0 ? siC_->getPropagationStepSize() : -siC_->getPropagationStepSize();
+	steps = abs(steps);
+
+	if (alloc)
+	    result.resize(steps);
+	else {
+	    if (result.empty())
+	        return 0;
+	    steps = std::min(steps, (int)result.size());
+	}
+
+	int st = 0;
+
+	if (st < steps) {
+	    if (alloc)
+	        result[st] = siC_->allocState();
+	    siC_->propagate(state, control, signedStepSize, result[st]);        
+	    if (siC_->checkMotion(state, result[st])) {
+	        ++st;
+	        while (st < steps) {
+	            if (alloc)
+	                result[st] = siC_->allocState();
+	            siC_->propagate(result[st-1], control, signedStepSize, result[st]);
+
+	            if (!siC_->checkMotion(state, result[st])) {
+	                if (alloc) {
+	                    siC_->freeState(result[st]);
+	                    result.resize(st);
+	                }
+	                break;
+	            }
+	            else
+	                ++st;
+	        }
+	    }
+	    else {
+	        if (alloc) {
+	            siC_->freeState(result[st]);
+	            result.resize(st);
+	        }
+	    }
+	}
+
+	return st;
 }
 
 ompl::base::PlannerStatus RRTControl::solve(const ompl::base::PlannerTerminationCondition &ptc)
@@ -72,11 +116,11 @@ ompl::base::PlannerStatus RRTControl::solve(const ompl::base::PlannerTermination
 
         if (addIntermediateStates_)
         {
-            cout << "ADDING INTERMEDIATE" << endl;
+            //cout << "ADDING INTERMEDIATE" << endl;
         	// this code is contributed by Jennifer Barry
             std::vector<ompl::base::State *> pstates;
-            cd = siC_->propagateWhileValid(nmotion->state, rctrl, cd, pstates, true);
-
+            cd = propagateWhileValid(nmotion->state, rctrl, cd, pstates, true);
+            
             if (cd >= siC_->getMinControlDuration())
             {
                 Motion *lastmotion = nmotion;
@@ -94,6 +138,7 @@ ompl::base::PlannerStatus RRTControl::solve(const ompl::base::PlannerTermination
                     motion->parent = lastmotion;
                     lastmotion = motion;
                     nn_->add(motion);
+                    
                     double dist = 0.0;
                     solved = goal->isSatisfied(motion->state, &dist);
                     if (solved)
