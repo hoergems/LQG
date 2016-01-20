@@ -8,18 +8,13 @@
 #include <ompl/control/Control.h>
 #include <ompl/control/PathControl.h>
 #include "ManipulatorSpaceInformation.hpp"
+#include "MotionValidator.hpp"
 #include <iostream>
 
 namespace shared {
     class RRTControl : public ompl::control::RRT {
         public:
 		    RRTControl(const ompl::control::SpaceInformationPtr &si);
-		    
-		    unsigned int propagateWhileValid(const ompl::base::State *state, 
-                                             const ompl::control::Control *control, 
-					                         int steps, 
-					                         std::vector<ompl::base::State*> &result, 
-					                         bool alloc) const;
 	    
 	        ompl::base::PlannerStatus solve(const ompl::base::PlannerTerminationCondition &ptc);
 	

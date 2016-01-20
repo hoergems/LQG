@@ -11,59 +11,10 @@ RRTControl::RRTControl(const ompl::control::SpaceInformationPtr &si):
 	
 }
 
-unsigned int RRTControl::propagateWhileValid(const ompl::base::State *state, 
-		                                     const ompl::control::Control *control, 
-											 int steps, 
-											 std::vector<ompl::base::State*> &result, 
-											 bool alloc) const {
-	double signedStepSize = steps > 0 ? siC_->getPropagationStepSize() : -siC_->getPropagationStepSize();
-	steps = abs(steps);
-
-	if (alloc)
-	    result.resize(steps);
-	else {
-	    if (result.empty())
-	        return 0;
-	    steps = std::min(steps, (int)result.size());
-	}
-
-	int st = 0;
-
-	if (st < steps) {
-	    if (alloc)
-	        result[st] = siC_->allocState();
-	    siC_->propagate(state, control, signedStepSize, result[st]);        
-	    if (siC_->checkMotion(state, result[st])) {
-	        ++st;
-	        while (st < steps) {
-	            if (alloc)
-	                result[st] = siC_->allocState();
-	            siC_->propagate(result[st-1], control, signedStepSize, result[st]);
-
-	            if (!siC_->checkMotion(state, result[st])) {
-	                if (alloc) {
-	                    siC_->freeState(result[st]);
-	                    result.resize(st);
-	                }
-	                break;
-	            }
-	            else
-	                ++st;
-	        }
-	    }
-	    else {
-	        if (alloc) {
-	            siC_->freeState(result[st]);
-	            result.resize(st);
-	        }
-	    }
-	}
-
-	return st;
-}
-
 ompl::base::PlannerStatus RRTControl::solve(const ompl::base::PlannerTerminationCondition &ptc)
 {    
+	ManipulatorSpaceInformation const * msiC_ = static_cast<ManipulatorSpaceInformation const *>(siC_);
+	MotionValidator const * motion_validator_ = static_cast<MotionValidator const *>(siC_->getMotionValidator().get());
 	checkValidity();
     ompl::base::Goal                   *goal = pdef_->getGoal().get();
     ompl::base::GoalSampleableRegion *goal_s = dynamic_cast<ompl::base::GoalSampleableRegion*>(goal);
@@ -72,7 +23,7 @@ ompl::base::PlannerStatus RRTControl::solve(const ompl::base::PlannerTermination
     {
         Motion *motion = new Motion(siC_);
         si_->copyState(motion->state, st);
-        siC_->nullControl(motion->control);
+        msiC_->nullControl(motion->control);
         nn_->add(motion);
     }
 
@@ -85,7 +36,7 @@ ompl::base::PlannerStatus RRTControl::solve(const ompl::base::PlannerTermination
     if (!sampler_)
         sampler_ = si_->allocStateSampler();
     if (!controlSampler_) {
-    	controlSampler_ = static_cast<ManipulatorSpaceInformation const *>(siC_)->allocDirectedControlSampler();
+    	controlSampler_ = msiC_->allocDirectedControlSampler();
         //controlSampler_ = siC_->allocDirectedControlSampler();
     }
 
@@ -95,48 +46,51 @@ ompl::base::PlannerStatus RRTControl::solve(const ompl::base::PlannerTermination
     Motion *approxsol = NULL;
     double  approxdif = std::numeric_limits<double>::infinity();
 
-    Motion      *rmotion = new Motion(siC_);
+    Motion      *rmotion = new Motion(msiC_);
     ompl::base::State  *rstate = rmotion->state;
     ompl::control::Control       *rctrl = rmotion->control;
     ompl::base::State  *xstate = si_->allocState();
+    bool valid = false;
 
     while (ptc == false)
     {
-        /* sample random state (with goal biasing) */
+        /* sample random state (with goal biasing) */    	
         if (goal_s && rng_.uniform01() < goalBias_ && goal_s->canSample())
             goal_s->sampleGoal(rstate);
         else
-            sampler_->sampleUniform(rstate);
+        	valid = false;
+        	while (!valid) {
+                sampler_->sampleUniform(rstate);
+                valid = motion_validator_->isValid(rstate);
+        	}
 
-        /* find closest state in the tree */
+        /* find closest state in the tree */        
         Motion *nmotion = nn_->nearest(rmotion);
 
-        /* sample a random control that attempts to go towards the random state, and also sample a control duration */
-        unsigned int cd = controlSampler_->sampleTo(rctrl, nmotion->control, nmotion->state, rmotion->state);
-
+        /* sample a random control that attempts to go towards the random state, and also sample a control duration */        
+        unsigned int cd = controlSampler_->sampleTo(rctrl, nmotion->control, nmotion->state, rmotion->state);        
         if (addIntermediateStates_)
-        {
-            //cout << "ADDING INTERMEDIATE" << endl;
+        {            
         	// this code is contributed by Jennifer Barry
-            std::vector<ompl::base::State *> pstates;
-            cd = propagateWhileValid(nmotion->state, rctrl, cd, pstates, true);
+            std::vector<ompl::base::State *> pstates;            
+            cd = msiC_->propagateWhileValid(nmotion->state, rctrl, cd, pstates, true);            
             
-            if (cd >= siC_->getMinControlDuration())
+            if (cd >= msiC_->getMinControlDuration())
             {
                 Motion *lastmotion = nmotion;
                 bool solved = false;
                 size_t p = 0;
                 for ( ; p < pstates.size(); ++p)
                 {
-                    /* create a motion */
+                    /* create a motion */                	
                     Motion *motion = new Motion();
                     motion->state = pstates[p];
                     //we need multiple copies of rctrl
-                    motion->control = siC_->allocControl();
-                    siC_->copyControl(motion->control, rctrl);
+                    motion->control = msiC_->allocControl();
+                    msiC_->copyControl(motion->control, rctrl);
                     motion->steps = 1;
                     motion->parent = lastmotion;
-                    lastmotion = motion;
+                    lastmotion = motion;                    
                     nn_->add(motion);
                     
                     double dist = 0.0;
@@ -155,25 +109,28 @@ ompl::base::PlannerStatus RRTControl::solve(const ompl::base::PlannerTermination
                 }
 
                 //free any states after we hit the goal
+                
                 while (++p < pstates.size())
                     si_->freeState(pstates[p]);
                 if (solved)
                     break;
             }
-            else
-                for (size_t p = 0 ; p < pstates.size(); ++p)
+            else {            	
+                for (size_t p = 0 ; p < pstates.size(); ++p) {
                     si_->freeState(pstates[p]);
+                }
+            }            
         }
         else
         {
             //cout << "CHECK MOTION" << endl;
-        	if (siC_->checkMotion(nmotion->state, rmotion->state)) {        	
-				if (cd >= siC_->getMinControlDuration())
+        	if (msiC_->checkMotion(nmotion->state, rmotion->state)) {        	
+				if (cd >= msiC_->getMinControlDuration())
 				{
 					/* create a motion */
-					Motion *motion = new Motion(siC_);
+					Motion *motion = new Motion(msiC_);
 					si_->copyState(motion->state, rmotion->state);
-					siC_->copyControl(motion->control, rctrl);
+					msiC_->copyControl(motion->control, rctrl);
 					motion->steps = cd;
 					motion->parent = nmotion;
 	
@@ -230,7 +187,7 @@ ompl::base::PlannerStatus RRTControl::solve(const ompl::base::PlannerTermination
     if (rmotion->state)
         si_->freeState(rmotion->state);
     if (rmotion->control)
-        siC_->freeControl(rmotion->control);
+        msiC_->freeControl(rmotion->control);
     delete rmotion;
     si_->freeState(xstate);
 

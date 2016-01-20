@@ -58,11 +58,27 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
 /** Check if a motion between two states is valid. This assumes that state s1 is valid */
 bool MotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base::State *s2) const {	
     std::vector<double> angles1;
-    std::vector<double> angles2;    
+    std::vector<double> angles2; 
+    
     for (unsigned int i = 0; i < dim_; i++) {
         angles1.push_back(s1->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);        
-        angles2.push_back(s2->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
-    }  
+        angles2.push_back(s2->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);        
+    }
+    if (!satisfiesConstraints(angles2)) {
+    	return false;
+    }
+    /**cout << "angles1: ";
+    for (auto &k: angles1) {
+    	cout << k << ", ";
+    }    		
+    cout << endl;
+    
+    cout << "angles2: ";
+    for (auto &k: angles2) {
+        cout << k << ", ";
+    }    		
+    cout << endl;*/
+    
     //cout << "check motion1" << endl;
     return checkMotion(angles1, angles2, continuous_collision_);
 }
@@ -70,12 +86,11 @@ bool MotionValidator::checkMotion(const ompl::base::State *s1, const ompl::base:
 /** Check if a motion between two states is valid. This assumes that state s1 is valid */
 bool MotionValidator::checkMotion(const ompl::base::State *s1, 
                                   const ompl::base::State *s2, 
-                                  std::pair< ompl::base::State *, double > &/*lastValid*/) const {
-	//cout << "check motion" << endl;
+                                  std::pair< ompl::base::State *, double > &/*lastValid*/) const {	
     return checkMotion(s1, s2);
 }
 
-bool MotionValidator::isValid(const std::vector<double> &s1) const {	
+bool MotionValidator::satisfiesConstraints(const std::vector<double> &s1) const {
 	std::vector<double> joint_angles;
 	for (size_t i = 0; i < dim_; i++) {
 		joint_angles.push_back(s1[i]);
@@ -83,14 +98,34 @@ bool MotionValidator::isValid(const std::vector<double> &s1) const {
 	std::vector<double> lower_bounds = si_->getStateSpace()->as<ompl::base::RealVectorStateSpace>()->getBounds().low;
 	std::vector<double> upper_bounds = si_->getStateSpace()->as<ompl::base::RealVectorStateSpace>()->getBounds().high;
 	for (size_t i = 0; i < dim_; i++) {
-		if (s1[i] < lower_bounds[i]) {
-			return false;
-			cout << "not valid " << s1[i] << endl;
+		if (s1[i] < lower_bounds[i]) {			
+			return false;			
 		}
-		else if (s1[i] > upper_bounds[i]) {
-			return false;
-			cout << "not valid " << s1[i] << endl;
+		else if (s1[i] > upper_bounds[i]) {			
+			return false;			
 		}
+	}
+	
+	return true;
+}
+
+bool MotionValidator::isValid(const ompl::base::State *state) const{
+	std::vector<double> angles;	    
+	for (unsigned int i = 0; i < dim_; i++) {
+	    angles.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);
+	}
+    
+	return isValid(angles);
+}
+
+bool MotionValidator::isValid(const std::vector<double> &s1) const {	
+	std::vector<double> joint_angles;
+	for (size_t i = 0; i < dim_; i++) {
+		joint_angles.push_back(s1[i]);
+	}
+	
+	if (!satisfiesConstraints(joint_angles)) {		
+		return false;
 	}
 	
 	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects;

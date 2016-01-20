@@ -2,6 +2,7 @@
 #define M_SI_HPP_
 #include <iostream>
 #include <ompl/control/SpaceInformation.h>
+#include <ompl/control/Control.h>
 #include <ompl/control/ControlSpace.h>
 #include <ompl/control/DirectedControlSampler.h>
 #include <ompl/control/SimpleDirectedControlSampler.h>
@@ -20,6 +21,12 @@ namespace shared {
             double getPropagationStepSize() const;
             
             void setNumControlSamples(unsigned int &num_control_samples);
+            
+            unsigned int propagateWhileValid(const ompl::base::State *state, 
+            		                         const ompl::control::Control *control, 
+											 int steps, 
+											 std::vector<ompl::base::State*> &result, 
+											 bool alloc) const;
             
             //unsigned int getMinControlDuration();
             

@@ -38,6 +38,10 @@ namespace shared {
             bool checkMotion(const ompl::base::State *s1, 
                              const ompl::base::State *s2, 
                              std::pair< ompl::base::State *, double > &/*lastValid*/) const;
+            
+            bool satisfiesConstraints(const std::vector<double> &s1) const;
+            
+            bool isValid(const ompl::base::State *state) const;
                              
             bool isValid(const std::vector<double> &s1) const;
                                          

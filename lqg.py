@@ -31,14 +31,14 @@ class LQG:
         np.set_printoptions(precision=16)
         dir = "stats/lqg"        
         self.utils = Utils()        
-        urdf_model_file = "model/test.urdf"
-        self.init_robot(urdf_model_file)
-        environment_file = os.path.join("environment", "env.xml")        
-        if not self.setup_scene("environment", "env.xml", self.robot):
+        #urdf_model_file = "model/test.urdf"
+        self.init_robot(self.robot_file)
+        #environment_file = os.path.join("environment", "env.xml")        
+        if not self.setup_scene(self.environment_file, self.robot):
             return
         #self.show_state_distribution(urdf_model_file, environment_file)
         if show_scene:            
-            self.run_viewer(urdf_model_file, environment_file)
+            self.run_viewer(self.robot_file, self.environment_file)
         self.clear_stats(dir)
         logging.info("Start up simulator")
         sim = Simulator()
@@ -73,8 +73,8 @@ class LQG:
                            self.path_timeout)
         
         if self.dynamic_problem:
-            path_planner.setup_dynamic_problem(urdf_model_file,
-                                               environment_file,
+            path_planner.setup_dynamic_problem(self.robot_file,
+                                               self.environment_file,
                                                self.simulation_step_size,                                               
                                                self.continuous_collision,
                                                self.num_control_samples,
@@ -147,8 +147,8 @@ class LQG:
                                      self.goal_position,
                                      self.goal_radius,
                                      self.show_viewer,
-                                     urdf_model_file,
-                                     environment_file)
+                                     self.robot_file,
+                                     self.environment_file)
                 if self.dynamic_problem:
                     path_evaluator.setup_dynamic_problem()
                 path_evaluator.setup_reward_function(self.step_penalty, self.illegal_move_penalty, self.exit_reward, self.discount_factor)
@@ -183,8 +183,8 @@ class LQG:
                                   self.goal_radius,
                                   self.max_velocity,                                  
                                   self.show_viewer,
-                                  urdf_model_file,
-                                  environment_file)                              
+                                  self.robot_file,
+                                  self.environment_file)                              
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
                 if self.dynamic_problem:
                     sim.setup_dynamic_problem(self.simulation_step_size)                
@@ -299,14 +299,15 @@ class LQG:
             
             if not os.path.exists(dir + "/environment"):
                 os.makedirs(dir + "/environment") 
-                       
-            cmd = "cp environment/env.xml " + dir + "/environment"
+            
+            cmd = "cp " + str(self.environment_file) + " " + str(dir) + "/environment"         
+            #cmd = "cp environment/env.xml " + dir + "/environment"
             os.system(cmd) 
             
             if not os.path.exists(dir + "/model"):
                 os.makedirs(dir + "/model")
                 
-            cmd = "cp " + urdf_model_file + " " + dir + "/model"
+            cmd = "cp " + self.robot_file + " " + dir + "/model"
             os.system(cmd)                   
         print "Done"
         
@@ -443,7 +444,7 @@ class LQG:
                                  result)
             t = time.time() - t0
             integration_times.append(t)
-            if y == 100:
+            if y == 1000000:
                 t_sum = sum(integration_times)
                 t_mean = t_sum / len(integration_times)
                 print "mean integration times: " + str(t_mean)
@@ -505,16 +506,15 @@ class LQG:
     """
         
         
-    def setup_scene(self, 
-                    environment_path, 
+    def setup_scene(self,                    
                     environment_file,
                     robot):
         """ Load the obstacles """         
-        self.obstacles = self.utils.loadObstaclesXML("environment/env.xml")      
+        self.obstacles = self.utils.loadObstaclesXML(environment_file)      
         
         """ Load the goal area """
         goal_area = v_double()
-        self.utils.loadGoalArea("environment/env.xml", goal_area)
+        self.utils.loadGoalArea(environment_file, goal_area)
         if len(goal_area) == 0:
             print "ERROR: Your environment file doesn't define a goal area"
             return False
@@ -615,6 +615,8 @@ class LQG:
         self.add_intermediate_states = config['add_intermediate_states']
         self.gravity_constant = config['gravity']
         self.num_generated_goal_states = config['num_generated_goal_states']
+        self.robot_file = config['robot_file']
+        self.environment_file = config['environment_file']
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='LQG-MP.')
