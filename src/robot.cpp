@@ -416,8 +416,8 @@ void Robot::test() {
 }
 
 std::vector<std::shared_ptr<fcl::CollisionObject const>> Robot::createRobotCollisionObjectsPy(const std::vector<double> &joint_angles) {
-	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects;
-	createRobotCollisionObjects(joint_angles, collision_objects);
+	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects;	
+	createRobotCollisionObjects(joint_angles, collision_objects);	
 	return collision_objects;
 }
 

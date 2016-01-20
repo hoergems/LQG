@@ -1,0 +1,107 @@
+<Environment>  
+  <KinBody name="Floor">
+    <Body type="static" name="FloorBody" enable="true">
+     <Geom type="box">
+       <Translation>0.0 0.0 3.6</Translation>
+       <extents>10 10 0.005</extents>
+       <diffuseColor>.1 .1 .9</diffuseColor>
+     	<ambientColor>0.6 0.6 0.6</ambientColor>
+     </Geom>
+   </Body>
+  </KinBody>
+
+  <KinBody name="GoalArea">
+    <Body type="static" name="GoalAreaBody" enable="false">
+      <Geom type="sphere">
+        <Translation>0.0 4.0 5.0</Translation>
+        <Radius>0.3</Radius>
+        <diffuseColor>.1 .9 .1</diffuseColor>
+     	<ambientColor>0.1 0.9 0.1</ambientColor>
+      </Geom>
+    </Body>
+  </KinBody>
+
+  <!--KinBody name="obst2">
+    <Body type="static" name="obst2_link" enable="true">
+      <Geom type="box">
+        <Translation>0.0 4.49 5.0</Translation>
+        <extents>0.5 0.5 0.5</extents>
+      </Geom> 
+      <Terrain name="grass">
+          <Damping>1.0</Damping>
+          <Cost>0.0</Cost>
+          <Traversable>false</Traversable>
+      </Terrain>     
+    </Body>
+  </KinBody-->   
+  
+  <KinBody name="obst2">
+    <Body type="static" name="obst2_link" enable="true">
+      <Geom type="box">
+        <Translation>-1.2 3.4 4.0</Translation>
+        <extents>0.2 1.5 3.0</extents>
+      </Geom> 
+      <Terrain name="grass">
+          <Damping>1.0</Damping>
+          <Cost>0.0</Cost>
+          <Traversable>false</Traversable>
+      </Terrain>     
+    </Body>
+  </KinBody> 
+
+  <KinBody name="obst3">
+    <Body type="static" name="obst2_link" enable="true">
+      <Geom type="box">
+        <Translation>1.2 5.0 4.5</Translation>
+        <extents>0.2 1.5 3.0</extents>
+      </Geom> 
+      <Terrain name="grass">
+          <Damping>1.0</Damping>
+          <Cost>0.0</Cost>
+          <Traversable>false</Traversable>
+      </Terrain>     
+    </Body>
+  </KinBody>
+
+  <KinBody name="obst4">
+    <Body type="static" name="obst2_link" enable="true">
+      <Geom type="box">
+        <Translation>1.0 2.0 4.5</Translation>
+        <extents>0.5 0.5 0.8</extents>
+      </Geom> 
+      <Terrain name="grass">
+          <Damping>1.0</Damping>
+          <Cost>0.0</Cost>
+          <Traversable>false</Traversable>
+      </Terrain>     
+    </Body>
+  </KinBody>
+
+  <KinBody name="obst5">
+    <Body type="static" name="obst2_link" enable="true">
+      <Geom type="box">
+        <Translation>1.0 2.0 6.5</Translation>
+        <extents>2.0 0.2 0.3</extents>
+      </Geom> 
+      <Terrain name="grass">
+          <Damping>1.0</Damping>
+          <Cost>0.0</Cost>
+          <Traversable>false</Traversable>
+      </Terrain>     
+    </Body>
+  </KinBody>
+
+  <KinBody name="obst6">
+    <Body type="static" name="obst2_link" enable="true">
+      <Geom type="box">
+        <Translation>2.0 -1.5 5.0</Translation>
+        <extents>0.8 0.8 0.8</extents>
+      </Geom> 
+      <Terrain name="grass">
+          <Damping>1.0</Damping>
+          <Cost>0.0</Cost>
+          <Traversable>false</Traversable>
+      </Terrain>     
+    </Body>
+  </KinBody> 
+</Environment>

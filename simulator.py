@@ -393,30 +393,27 @@ class Simulator:
         """
         Is the given end effector position in collision with an obstacle?
         """
-        #previous_state = []
         collidable_obstacles = [o for o in self.obstacles if not o.isTraversable()]
         joint_angles_goal = v_double()
         joint_angles_goal[:] = [state[i] for i in xrange(self.robot_dof)]
-        collision_objects = self.robot.createRobotCollisionObjects(joint_angles_goal)
-        for obstacle in collidable_obstacles:
-            if obstacle.inCollisionDiscrete(collision_objects):                               
-                return True
-        return False  
-        
+        collision_objects_goal = self.robot.createRobotCollisionObjects(joint_angles_goal)        
         if len(previous_state) > 0:
             """
             Perform continuous collision checking if previous state is provided
-            """
+            """            
             joint_angles_start = v_double()        
-            joint_angles_start[:] = previous_state        
-            
+            joint_angles_start[:] = [previous_state[i] for i in xrange(self.robot_dof)]
             collision_objects_start = self.robot.createRobotCollisionObjects(joint_angles_start)
-            collision_objects_goal = self.robot.createRobotCollisionObjects(joint_angles_goal)
             for obstacle in collidable_obstacles:
-                for i in xrange(len(collision_objects_start)):
+                for i in xrange(len(collision_objects_start)):                    
                     if obstacle.inCollisionContinuous([collision_objects_start[i], collision_objects_goal[i]]):
                         return True
             return False
+        else:            
+            for obstacle in collidable_obstacles:
+                if obstacle.inCollisionDiscrete(collision_objects_goal):                               
+                    return True
+            return False 
     
     def is_terminal(self, ee_position):
         """ Determines if the end-effector position is terminal """
