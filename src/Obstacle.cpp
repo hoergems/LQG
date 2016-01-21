@@ -53,7 +53,7 @@ bool Obstacle::in_collision_point(std::vector<double> &point) {
     return collision_object_ptr_->getAABB().contain(p_vec);    
 }
 
-bool Obstacle::in_collision(std::vector<std::shared_ptr<fcl::CollisionObject const>> &other_collision_objects) const {	
+bool Obstacle::in_collision(std::vector<std::shared_ptr<fcl::CollisionObject>> &other_collision_objects) const {	
 	for (size_t i = 0; i < other_collision_objects.size(); i++) {
 		fcl::CollisionRequest request;		
 		fcl::CollisionResult result;
@@ -87,8 +87,8 @@ bool Obstacle::in_collision(const std::vector<std::shared_ptr<Obstacle> > &other
     return false;
 }
 
-bool Obstacle::in_collision(std::shared_ptr<fcl::CollisionObject const> &collision_object_start, 
-		std::shared_ptr<fcl::CollisionObject const> &collision_object_goal) const { 	
+bool Obstacle::in_collision(std::shared_ptr<fcl::CollisionObject> &collision_object_start, 
+		std::shared_ptr<fcl::CollisionObject> &collision_object_goal) const { 	
     fcl::ContinuousCollisionRequest request;
     fcl::ContinuousCollisionResult result;    
     fcl::continuousCollide(collision_object_start.get(), 
@@ -101,10 +101,10 @@ bool Obstacle::in_collision(std::shared_ptr<fcl::CollisionObject const> &collisi
 }
 
 bool Obstacle::in_collision_discrete(boost::python::list &ns) {
-    std::vector<std::shared_ptr<fcl::CollisionObject const>> other_collision_objects;
+    std::vector<std::shared_ptr<fcl::CollisionObject>> other_collision_objects;
     for (int i = 0; i < len(ns); ++i)
     {
-        other_collision_objects.push_back(boost::python::extract<std::shared_ptr<fcl::CollisionObject const>>(ns[i]));
+        other_collision_objects.push_back(boost::python::extract<std::shared_ptr<fcl::CollisionObject>>(ns[i]));
     }
     
     return in_collision(other_collision_objects);
@@ -112,14 +112,14 @@ bool Obstacle::in_collision_discrete(boost::python::list &ns) {
 
 bool Obstacle::in_collision_continuous(boost::python::list &ns) {
 
-    std::shared_ptr<fcl::CollisionObject const> collision_object_start = 
-    		boost::python::extract<std::shared_ptr<fcl::CollisionObject const>>(ns[0]);
-    std::shared_ptr<fcl::CollisionObject const> collision_object_goal = 
-    		boost::python::extract<std::shared_ptr<fcl::CollisionObject const>>(ns[1]);
+    std::shared_ptr<fcl::CollisionObject> collision_object_start = 
+    		boost::python::extract<std::shared_ptr<fcl::CollisionObject>>(ns[0]);
+    std::shared_ptr<fcl::CollisionObject> collision_object_goal = 
+    		boost::python::extract<std::shared_ptr<fcl::CollisionObject>>(ns[1]);
     return in_collision(collision_object_start, collision_object_goal);
 }
 
-std::shared_ptr<fcl::CollisionObject const> Obstacle::getCollisionObject() const {
+std::shared_ptr<fcl::CollisionObject> Obstacle::getCollisionObject() const {
 	return collision_object_ptr_;
 }
 

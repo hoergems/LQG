@@ -27,10 +27,10 @@ MotionValidator::MotionValidator(const ompl::base::SpaceInformationPtr &si,
 bool MotionValidator::checkMotion(const std::vector<double> &s1, 
                                   const std::vector<double> &s2, 
                                   const bool &continuous_collision) const {		
-	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects_goal;
+	std::vector<std::shared_ptr<fcl::CollisionObject>> collision_objects_goal;
 	robot_->createRobotCollisionObjects(s2, collision_objects_goal);
     if (continuous_collision) {    	
-    	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects_start;    	
+    	std::vector<std::shared_ptr<fcl::CollisionObject>> collision_objects_start;    	
     	robot_->createRobotCollisionObjects(s1, collision_objects_start);
         for (size_t i = 0; i < obstacles_.size(); i++) {
             if (!obstacles_[i]->isTraversable()) {
@@ -116,7 +116,7 @@ bool MotionValidator::isValid(const std::vector<double> &s1) const {
 		return false;
 	}
 	
-	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects;
+	std::vector<std::shared_ptr<fcl::CollisionObject>> collision_objects;
 	robot_->createRobotCollisionObjects(joint_angles, collision_objects);    
     for (size_t i = 0; i < obstacles_.size(); i++) {
         if (!obstacles_[i]->getTerrain()->isTraversable()) {        	

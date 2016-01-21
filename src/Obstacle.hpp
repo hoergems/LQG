@@ -45,15 +45,15 @@ class Obstacle {
         /**
          * Checks if this obstacle collides with a CollisionObject 
          */
-        bool in_collision(std::vector<std::shared_ptr<fcl::CollisionObject const>> &other_collision_objects) const; 
+        bool in_collision(std::vector<std::shared_ptr<fcl::CollisionObject>> &other_collision_objects) const; 
         
         /**
          * Checks if the obstacle collides with another moving collision object.
          * The motion of of the other collision object is determined by a start
          * and goal transformation
          */
-        bool in_collision(std::shared_ptr<fcl::CollisionObject const> &collision_object_start, 
-        		std::shared_ptr<fcl::CollisionObject const>  &collision_object_goal) const;
+        bool in_collision(std::shared_ptr<fcl::CollisionObject> &collision_object_start, 
+        		std::shared_ptr<fcl::CollisionObject>  &collision_object_goal) const;
         
         /**
          * Checks if a point lies withing this obstacle
@@ -86,7 +86,7 @@ class Obstacle {
         /**
          * Get the underlying collision object
          */
-        std::shared_ptr<fcl::CollisionObject const> getCollisionObject() const;
+        std::shared_ptr<fcl::CollisionObject> getCollisionObject() const;
 
         /**
          * Determines if the obstacle is traversable
@@ -99,7 +99,7 @@ class Obstacle {
         virtual void createCollisionObject() = 0;
 
     protected:
-        std::shared_ptr<fcl::CollisionObject const> collision_object_ptr_;
+        std::shared_ptr<fcl::CollisionObject> collision_object_ptr_;
                 
         const shared::Terrain terrain_;
 };

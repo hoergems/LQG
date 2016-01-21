@@ -142,18 +142,18 @@ struct Joint {
     	     * Creates the collision object for the end effector
     	     */
     	    void createEndEffectorCollisionObject(const std::vector<double> &joint_angles,
-    	    		std::vector<std::shared_ptr<fcl::CollisionObject const>> &collision_objects); 
+    	    		std::vector<std::shared_ptr<fcl::CollisionObject>> &collision_objects); 
     	    
-    	    std::vector<std::shared_ptr<fcl::CollisionObject const>> 
+    	    std::vector<std::shared_ptr<fcl::CollisionObject>> 
 			        createEndEffectorCollisionObjectPy(const std::vector<double> &joint_angles);
     	    
     	    /**
     	     * Create the robot collision objects
     	     */
     	    void createRobotCollisionObjects(const std::vector<double> &joint_angles, 
-    	    		std::vector<std::shared_ptr<fcl::CollisionObject const>> &collision_objects);
+    	    		std::vector<std::shared_ptr<fcl::CollisionObject>> &collision_objects);
     	    
-    	    std::vector<std::shared_ptr<fcl::CollisionObject const>> 
+    	    std::vector<std::shared_ptr<fcl::CollisionObject>> 
 			        createRobotCollisionObjectsPy(const std::vector<double> &joint_angles);
     	    
     	    //std::vector<fcl::AABB> createRobotCollisionStructuresPy(const std::vector<double> &joint_angles);

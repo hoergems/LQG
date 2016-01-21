@@ -50,6 +50,11 @@ add_library(robot SHARED
             viewer.cpp
             integrate.cpp
             Kinematics.cpp)
+            
+add_library(collision_checker SHARED
+            collision_checker.cpp
+            Obstacle.cpp
+            robot.cpp)
 
 add_library(obstacle SHARED
             Obstacle.cpp
@@ -116,6 +121,12 @@ target_link_libraries(path_planner
                       fcl
                       tinyxml
                       urdf)
+                      
+target_link_libraries(collision_checker
+                      boost_system
+                      boost_python
+                      python2.7
+                      fcl)
 
 target_link_libraries(obstacle
                       openrave0.9 

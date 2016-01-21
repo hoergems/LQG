@@ -415,15 +415,15 @@ void Robot::test() {
 	cout << "HELLLO IN ROBOT" << endl;
 }
 
-std::vector<std::shared_ptr<fcl::CollisionObject const>> Robot::createRobotCollisionObjectsPy(const std::vector<double> &joint_angles) {
-	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects;	
+std::vector<std::shared_ptr<fcl::CollisionObject>> Robot::createRobotCollisionObjectsPy(const std::vector<double> &joint_angles) {
+	std::vector<std::shared_ptr<fcl::CollisionObject>> collision_objects;	
 	createRobotCollisionObjects(joint_angles, collision_objects);	
 	return collision_objects;
 }
 
-std::vector<std::shared_ptr<fcl::CollisionObject const>> 
+std::vector<std::shared_ptr<fcl::CollisionObject>> 
 Robot::createEndEffectorCollisionObjectPy(const std::vector<double> &joint_angles) {
-	std::vector<std::shared_ptr<fcl::CollisionObject const>> collision_objects;
+	std::vector<std::shared_ptr<fcl::CollisionObject>> collision_objects;
 	createEndEffectorCollisionObject(joint_angles, collision_objects);
 	return collision_objects;
 }
@@ -468,7 +468,7 @@ void Robot::initCollisionObjects() {
 }
 
 void Robot::createRobotCollisionObjects(const std::vector<double> &joint_angles, 
-		                                std::vector<std::shared_ptr<fcl::CollisionObject const>> &collision_objects) {	
+		                                std::vector<std::shared_ptr<fcl::CollisionObject>> &collision_objects) {	
 	for (size_t i = 0; i < joint_angles.size(); i++) {
 		const std::pair<fcl::Vec3f, fcl::Matrix3f> pose_link_n = kinematics_->getPoseOfLinkN(joint_angles, i);
 		fcl::Transform3f trans(pose_link_n.second, pose_link_n.first); 
@@ -484,7 +484,7 @@ void Robot::createRobotCollisionObjects(const std::vector<double> &joint_angles,
 		fcl::Box* box = new fcl::Box();  
 		fcl::Transform3f box_tf;		
 		fcl::constructBox(link_aabb, trans, *box, box_tf);		
-		std::shared_ptr<fcl::CollisionObject const> coll_obj = 
+		std::shared_ptr<fcl::CollisionObject> coll_obj = 
 				std::make_shared<fcl::CollisionObject>(boost::shared_ptr<fcl::CollisionGeometry>(box), box_tf);
 		//fcl::CollisionObject coll_obj(geom, box_tf);
 		
@@ -511,7 +511,7 @@ void Robot::createRobotCollisionObjects(const std::vector<double> &joint_angles,
 }
 
 void Robot::createEndEffectorCollisionObject(const std::vector<double> &joint_angles,
-    	    		std::vector<std::shared_ptr<fcl::CollisionObject const>> &collision_objects) {
+    	    		std::vector<std::shared_ptr<fcl::CollisionObject>> &collision_objects) {
 	const std::pair<fcl::Vec3f, fcl::Matrix3f> pose_ee = kinematics_->getPoseOfLinkN(joint_angles, active_link_dimensions_.size());
 	fcl::Transform3f trans(pose_ee.second, pose_ee.first);
 	fcl::Transform3f trans_res = trans * fcl::Transform3f(collision_objects_[collision_objects_.size() - 1]->getAABB().center());
