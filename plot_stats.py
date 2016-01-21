@@ -82,8 +82,9 @@ class PlotStats:
         
     def show_distr_at_time_t(self, t, dir="stats"):        
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
-        dim = (0, 6)        
+        dim = (3, 6)        
         for file in files:
+            print file
             num_steps = 0
             with open(file, 'r') as f:
                 for line in f:
