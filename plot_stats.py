@@ -12,13 +12,14 @@ from libutil import *
 from EMD import *
 import sets
 import random
+import argparse
 
 class PlotStats:
-    def __init__(self, save, algorithm):
+    def __init__(self, algorithm, save_plots, show_particles):
         dir = "stats/" + str(algorithm)
         if not os.path.isdir(dir):
             os.makedirs(dir)       
-        self.save = save        
+        self.save = save_plots        
         serializer = Serializer()
         config = serializer.read_config(path=dir)
         self.inc_covariance = config['inc_covariance']        
@@ -38,7 +39,8 @@ class PlotStats:
         #self.plot_paths(serializer, dir=dir)
         #self.plot_paths(serializer, best_paths=True, dir=dir)
         
-        self.show_distr_at_time_t(5, dir=dir)
+        if show_particles:
+            self.show_distr_at_time_t(5, dir=dir)
         
         logging.info("PlotStats: plotting average distance to goal")
         self.plot_stat("Average distance to goal area", "avg_distance", dir=dir)
@@ -76,7 +78,7 @@ class PlotStats:
        
         self.plot_emd_graph(serializer, cart_coords, dir=dir)
         logging.info("PlotStats: plotting histograms...")        
-        self.save_histogram_plots(serializer, cart_coords, dir=dir)'''
+        self.save_histogram_plots(serializer, cart_coords, dir=dir)'''    
         
     def show_distr_at_time_t(self, t, dir="stats"):        
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
@@ -120,7 +122,7 @@ class PlotStats:
                 #mult_normal = multivariate_normal.pdf(particles, state_nominal, covariance)
                 """ Calculate 2D histogram
                 """
-                if n != 0:
+                '''if n != 0:
                     particles_data= [[particles[i][j] for j in xrange(len(particles[i]))] for i in xrange(len(particles))]                                      
                     H, edges = np.histogramdd(np.array(particles_data), bins=20)
                     print edges[0]
@@ -153,7 +155,7 @@ class PlotStats:
                     
                     sleep
                     #print H[0]
-                    #print edges
+                    #print edges'''
                 samples = multivariate_normal.rvs(state_nominal, covariance, 1000)
                 samples = [sample[dim[0]:dim[1]] for sample in samples]
                 min_x = particles[0][0]
@@ -182,7 +184,47 @@ class PlotStats:
                                   z_scale=[min_z, max_z], 
                                   colormap=['r', 'g'])
             
+    '''def plot_average_distance_to_goal(self, dir="stats"):
+        files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
+        config_files = glob.glob(os.path.join(os.path.join(dir, "config*.yaml")))
         
+        d = dict()
+        m_covs = []
+        
+        cov_str = "Process covariance:"
+        if "observation" in self.inc_covariance:
+            cov_str = "Observation covariance:"
+        for file in sorted(files):
+            file_str = file.split("/")[2].split("_")[1]
+            print file_str
+            if not file_str in d:
+                d[file_str] = []
+            with open(file, "r") as f:                
+                state_arr = None
+                final_states = []
+                for line in f:                                       
+                    if cov_str in line:                        
+                        m_cov = float(line.split(" ")[2])
+                    elif "S: " in line:
+                        state_arr = line.split(" ")
+                        
+                        state_arr = [float(state_arr[i]) for i in xrange(1, len(state_arr) - 2)]
+                    elif ("RUN #" in line or "inc_covariance: " in line) and state_arr != None:
+                        final_states.append(state_arr)
+                for state in final_states:
+                    joint_angles = v_double()
+                    ee_position = v_double()
+                    joint_angles[:] = [state[i] for i in xrange(len(state)/ 2)]
+                    self.robot.getEndEffectorPosition(joint_angles, ee_position)
+                    ee_position = np.array([ee_position[i] for i in xrange(len(ee_position))])
+                    #print ee_position
+                
+            sleep       
+            if m_cov != -1:                        
+                m_covs.append(m_cov)
+        print m_covs
+            
+        sleep'''   
         
     def plot_stat(self, stat_str, output_file_str, dir="stats", y_label=""):
         if y_label == "":
@@ -720,6 +762,17 @@ class PlotStats:
 if __name__ == "__main__":
     logging_level = logging.DEBUG
     logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)
+    parser = argparse.ArgumentParser(description='LQG-MP plotting')
+    parser.add_argument("-a", "--algorithm", help="Path to the robot model file")
+    parser.add_argument("-s", "--save", 
+                        help="Save the plots", 
+                        action="store_true")
+    parser.add_argument("-p", "--particles", 
+                        help="Show particles", 
+                        action="store_true")
+    args = parser.parse_args() 
+    PlotStats(args.algorithm, args.save, args.particles)
+    '''return
     if len(sys.argv) > 2:
         algorithm = sys.argv[1]
         if "save" in sys.argv[2]:
@@ -730,4 +783,4 @@ if __name__ == "__main__":
     else:
         logging.error("Wrong number of arguments. Should be 'python plot_stats.py ALGORITHM SAVE'")
         sys.exit()   
-    PlotStats(False)
+    PlotStats(False)'''

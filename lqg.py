@@ -104,6 +104,7 @@ class LQG:
                 paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)
                 #paths = [paths[3], paths[14]]
                 #paths=[paths[861]]
+                #paths=[paths[0]]
                 
             if len(paths) == 0:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
@@ -193,6 +194,7 @@ class LQG:
                 successes = 0
                 num_collisions = 0 
                 rewards_cov = []
+                final_states= []
                 num_steps = 0
                 collided_num = 0
                 print "LQG: Running " + str(self.num_simulation_runs) + " simulations..."              
@@ -225,7 +227,7 @@ class LQG:
                     if success:
                         successes += 1
                     rewards_cov.append(total_reward)
-                    n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))                    
+                    #n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))                    
                     collided = False
                     for l in xrange(len(history_entries)):
                         history_entries[l].set_estimated_covariance(state_covariances[l])                        
@@ -235,11 +237,25 @@ class LQG:
                             collided = True                        
                     if collided:
                         collided_num += 1
-                    num_steps += history_entries[-1].t                                         
+                    num_steps += history_entries[-1].t
+                    final_states.append(history_entries[-1].x_true)                                         
                     self.serializer.write_line("log.log", "tmp/lqg", "Reward: " + str(total_reward) + " \n") 
                     self.serializer.write_line("log.log", "tmp/lqg", "\n")
                     
-                    
+                """ Calculate the distance to goal area
+                """  
+                ee_position_distances = [] 
+                for state in final_states:
+                    joint_angles = v_double()
+                    joint_angles[:] = [state[y] for y in xrange(len(state) / 2)]
+                    ee_position = v_double()
+                    self.robot.getEndEffectorPosition(joint_angles, ee_position)
+                    ee_position = np.array([ee_position[y] for y in xrange(len(ee_position))])
+                    dist = np.linalg.norm(np.array(self.goal_position - ee_position))
+                    if dist < self.goal_radius:
+                        dist = 0.0
+                    ee_position_distances.append(dist)
+                n, min_max, mean_distance_to_goal, var, skew, kurt = scipy.stats.describe(np.array(ee_position_distances))                         
                 
                 self.serializer.write_line("log.log", "tmp/lqg", "################################# \n")
                 self.serializer.write_line("log.log",
@@ -273,7 +289,7 @@ class LQG:
                 self.serializer.write_line("log.log", "tmp/lqg", "Index of best path: " + str(path_index) + " \n")
                 self.serializer.write_line("log.log", 
                                       "tmp/lqg", 
-                                      "Average distance to goal area: 0 \n")
+                                      "Average distance to goal area: " + str(mean_distance_to_goal) + " \n")
                 self.serializer.write_line("log.log", "tmp/lqg", "Num successes: " + str(successes) + " \n")
                 print "succ " + str((100.0 / self.num_simulation_runs) * successes)
                 self.serializer.write_line("log.log", "tmp/lqg", "Percentage of successful runs: " + str((100.0 / self.num_simulation_runs) * successes) + " \n")
