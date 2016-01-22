@@ -877,10 +877,10 @@ BOOST_PYTHON_MODULE(librobot) {
     class_<fcl::CollisionObject>("CollisionObject", init<const boost::shared_ptr<fcl::CollisionGeometry>, const fcl::Transform3f>());
     to_python_converter<std::vector<fcl::OBB, std::allocator<fcl::OBB> >, VecToList<fcl::OBB> >();
     to_python_converter<std::vector<fcl::CollisionObject, std::allocator<fcl::CollisionObject> >, VecToList<fcl::CollisionObject> >();
-    to_python_converter<std::vector<std::shared_ptr<fcl::CollisionObject const>, std::allocator<std::shared_ptr<fcl::CollisionObject const>> >, 
-	                    VecToList<std::shared_ptr<fcl::CollisionObject const>> >();
+    to_python_converter<std::vector<std::shared_ptr<fcl::CollisionObject>, std::allocator<std::shared_ptr<fcl::CollisionObject>> >, 
+	                    VecToList<std::shared_ptr<fcl::CollisionObject>> >();
     
-    register_ptr_to_python<std::shared_ptr<fcl::CollisionObject const>>();
+    register_ptr_to_python<std::shared_ptr<fcl::CollisionObject>>();
     
     class_<Robot, boost::shared_ptr<Robot>>("Robot", init<std::string>())
                         .def("getLinkNames", &Robot::getLinkNames)

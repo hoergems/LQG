@@ -53,8 +53,8 @@ add_library(robot SHARED
             
 add_library(collision_checker SHARED
             collision_checker.cpp
-            Obstacle.cpp
-            robot.cpp)
+            Obstacle.cpp            
+            Terrain.cpp)
 
 add_library(obstacle SHARED
             Obstacle.cpp
@@ -126,7 +126,8 @@ target_link_libraries(collision_checker
                       boost_system
                       boost_python
                       python2.7
-                      fcl)
+                      fcl
+                      tinyxml)
 
 target_link_libraries(obstacle
                       openrave0.9 

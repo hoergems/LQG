@@ -52,7 +52,7 @@ bool CollisionChecker::inCollisionContinuous(std::shared_ptr<fcl::CollisionObjec
 	return false;
 }
 
-BOOST_PYTHON_MODULE(libobstacle_checker) { 
+BOOST_PYTHON_MODULE(libcollision_checker) { 
 	using namespace boost::python;
 	class_<CollisionChecker>("CollisionChecker", init<>())
 			.def("setObstacles", &CollisionChecker::setObstaclesPy)

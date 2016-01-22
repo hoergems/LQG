@@ -14,6 +14,7 @@ from simulator import Simulator
 from path_evaluator import PathEvaluator
 from path_planning_interface import PathPlanningInterface
 from libobstacle import Obstacle, Terrain
+from libcollision_checker import CollisionChecker
 import plot as plt
 import warnings
 
@@ -335,7 +336,7 @@ class LQG:
         self.robot.enforceConstraints(self.enforce_constraints)
         self.robot.setGravityConstant(self.gravity_constant)
         """ Setup operations """
-        self.robot_dof = self.robot.getDOF()
+        self.robot_dof = self.robot.getDOF()        
         if len(self.start_state) != 2 * self.robot_dof:
             logging.error("LQG: Start state dimension doesn't fit to the robot state space dimension")
             return False
@@ -513,13 +514,11 @@ class LQG:
              0.0,
              0.0,
              0.0]
-        x_true = [0.0 for i in xrange(2 * self.robot_dof)]
-        #x[0] = 0.0
-        #x[1] = -np.pi / 2       
-        #x = self.start_state 
+        x_true = [0.0 for i in xrange(2 * self.robot_dof)]        
         integration_times = [] 
-        collision_check_times = []     
-        #x = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        collision_check_times1 = []
+        collision_check_times2 = []     
+        
         y = 0
         while True:            
             #u_in = [3.0, 1.5, 0.0, 0.0, 0.0, 0.0]
@@ -549,12 +548,13 @@ class LQG:
                 t_sum = sum(integration_times)
                 t_mean = t_sum / len(integration_times)
                 print "mean integration times: " + str(t_mean)
-                t_sum = sum(collision_check_times)
-                t_mean = t_sum / len(collision_check_times)
-                print "mean collision check times " + str(t_mean)
-                sleep
+                t_sum = sum(collision_check_times1)
+                t_mean = t_sum / len(collision_check_times1)
+                print "mean collision check times old " + str(t_mean)
+                t_mean = sum(collision_check_times2) / len(collision_check_times2)
+                print "mean collision check times new " + str(t_mean)
+                sleep            
             
-            t_c = time.time()
             ja_start = v_double()            
             ja_start[:] = [current_state[i] for i in xrange(len(current_state) / 2)]                     
             collision_objects_start = self.robot.createRobotCollisionObjects(ja_start)
@@ -562,6 +562,10 @@ class LQG:
             joint_angles[:] = [result[i] for i in xrange(len(result) / 2)]
             collision_objects_goal = self.robot.createRobotCollisionObjects(joint_angles)
             #print "ee_velocity " + str([ee_velocity[i] for i in xrange(len(ee_velocity))])
+            t_coll_check1 = time.time()
+            ic = self.collision_checker.inCollisionDiscrete(collision_objects_goal)
+            t2 = time.time() - t_coll_check1
+            collision_check_times2.append(t2)            
             
             '''
             Get the end effector position
@@ -569,19 +573,21 @@ class LQG:
             #ee_position = v_double()            
             #self.robot.getEndEffectorPosition(joint_angles, ee_position)                      
             #ee_collision_objects = self.robot.createEndEffectorCollisionObject(joint_angles)
-            in_collision = False            
-            for o in self.obstacles:
-                '''if o.inCollisionDiscrete(ee_collision_objects):                                        
-                    in_collision = True'''                              
-                for i in xrange(len(collision_objects_start)):                        
+            in_collision = False
+            t_c = time.time()            
+            for o in self.obstacles:                
+                if o.inCollisionDiscrete(collision_objects_goal):                                        
+                    in_collision = True
+                    break                              
+                '''for i in xrange(len(collision_objects_start)):                        
                     if o.inCollisionContinuous([collision_objects_start[i], collision_objects_goal[i]]):
                         in_collision = True
-                        break
+                        break'''               
                 if in_collision:
                     break
                     
-            t = time.time() - t_c
-            collision_check_times.append(t)          
+            t = time.time() - t_c            
+            collision_check_times1.append(t)          
                                 
                                                                           
             x = np.array([result[i] for i in xrange(len(result))])
@@ -598,7 +604,7 @@ class LQG:
                                               particle_joint_values,
                                               particle_joint_values)
             time.sleep(0.03) 
-            #time.sleep(0.5)
+            
             y += 1
             print y
             
@@ -620,7 +626,9 @@ class LQG:
             print "ERROR: Your environment file doesn't define a goal area"
             return False
         self.goal_position = [goal_area[i] for i in xrange(0, 3)]
-        self.goal_radius = goal_area[3]        
+        self.goal_radius = goal_area[3]   
+        self.collision_checker = CollisionChecker() 
+        self.collision_checker.setObstacles(self.obstacles)    
         return True
             
     def init_serializer(self):
