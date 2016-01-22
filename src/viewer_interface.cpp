@@ -12,7 +12,8 @@ ViewerInterface::ViewerInterface ():
 	env_(),
 	robot_(nullptr),
 	urdf_loader_(),
-	viewer_(new shared::RaveViewer()){
+	viewer_(new shared::RaveViewer()),
+	particle_plot_limit_(50){
 }
 
 bool ViewerInterface::setupViewer(std::string model_file,
@@ -122,6 +123,10 @@ void ViewerInterface::addPermanentParticles(const std::vector<std::vector<double
 	
 }
 
+void ViewerInterface::setParticlePlotLimit(unsigned int particle_plot_limit) {
+	particle_plot_limit_ = particle_plot_limit;
+}
+
 void ViewerInterface::updateRobotValues(const std::vector<double> &current_joint_values,
 		                                const std::vector<double> &current_joint_velocities,
 										const std::vector<std::vector<double>> &particle_joint_values,
@@ -178,7 +183,7 @@ void ViewerInterface::updateRobotValues(const std::vector<double> &current_joint
 		
 	newJointValues.push_back(0);	
 	robot_to_use->SetDOFValues(newJointValues);
-	size_t num_plot = 50;
+	size_t num_plot = particle_plot_limit_;	
 	if (particle_joint_values.size() < num_plot) {
 		num_plot = particle_joint_values.size();
 	}

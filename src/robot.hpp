@@ -205,6 +205,11 @@ struct Joint {
     	     * Set the viewer camera transformation
     	     */
     	    void setViewerCameraTransform(std::vector<double> &rot, std::vector<double> &trans);
+    	    
+    	    /**
+    	     * Set the maximum number of particles to plot
+    	     */
+    	    void setParticlePlotLimit(unsigned int particle_plot_limit);
     
         private:
     	    std::vector<shared::Link> links_;

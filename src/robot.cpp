@@ -468,8 +468,8 @@ void Robot::initCollisionObjects() {
 }
 
 void Robot::createRobotCollisionObjects(const std::vector<double> &joint_angles, 
-		                                std::vector<std::shared_ptr<fcl::CollisionObject>> &collision_objects) {	
-	for (size_t i = 0; i < joint_angles.size(); i++) {
+		                                std::vector<std::shared_ptr<fcl::CollisionObject>> &collision_objects) {		                                	
+	for (size_t i = 0; i < joint_angles.size(); i++) {		
 		const std::pair<fcl::Vec3f, fcl::Matrix3f> pose_link_n = kinematics_->getPoseOfLinkN(joint_angles, i);
 		fcl::Transform3f trans(pose_link_n.second, pose_link_n.first); 
 		
@@ -511,7 +511,7 @@ void Robot::createRobotCollisionObjects(const std::vector<double> &joint_angles,
 }
 
 void Robot::createEndEffectorCollisionObject(const std::vector<double> &joint_angles,
-    	    		std::vector<std::shared_ptr<fcl::CollisionObject>> &collision_objects) {
+    	    		std::vector<std::shared_ptr<fcl::CollisionObject>> &collision_objects) {	
 	const std::pair<fcl::Vec3f, fcl::Matrix3f> pose_ee = kinematics_->getPoseOfLinkN(joint_angles, active_link_dimensions_.size());
 	fcl::Transform3f trans(pose_ee.second, pose_ee.first);
 	fcl::Transform3f trans_res = trans * fcl::Transform3f(collision_objects_[collision_objects_.size() - 1]->getAABB().center());
@@ -553,6 +553,10 @@ void Robot::addPermanentViewerParticles(const std::vector<std::vector<double>> &
 
 void Robot::removePermanentViewerParticles() {
 	viewer_->removePermanentParticles();
+}
+
+void Robot::setParticlePlotLimit(unsigned int particle_plot_limit) {
+	viewer_->setParticlePlotLimit(particle_plot_limit);
 }
 
 void Robot::updateViewerValues(const std::vector<double> &current_joint_values,

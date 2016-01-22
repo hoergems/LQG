@@ -51,6 +51,11 @@ public:
      * Set the camera transform
      */
     void setCameraTransform(std::vector<double> &rot, std::vector<double> &trans);
+    
+    /**
+     * Maximum number of particles to plot
+     */
+    void setParticlePlotLimit(unsigned int particle_plot_limit);
 
 private:
     bool viewer_setup_;
@@ -65,6 +70,8 @@ private:
     std::shared_ptr<shared::URDFLoader> urdf_loader_;
     
     std::shared_ptr<shared::RaveViewer> viewer_;
+    
+    unsigned int particle_plot_limit_;
     
 };
 
