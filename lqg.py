@@ -38,7 +38,7 @@ class LQG:
         if not self.setup_scene(self.environment_file, self.robot):
             return
         #self.show_state_distribution(urdf_model_file, environment_file)
-        #self.check_continuous_collide(self.robot_file, self.environment_file)
+        self.check_continuous_collide(self.robot_file, self.environment_file)
         if show_scene:            
             self.run_viewer(self.robot_file, self.environment_file)
         self.clear_stats(dir)
@@ -136,6 +136,7 @@ class LQG:
                 N = None
                 if self.inc_covariance == "process":
                     """ The process noise covariance matrix """
+                    M = self.calc_covariance_value(self.robot, m_covs[j], M_base)
                     M = m_covs[j] * M_base
                     
                     """ The observation error covariance matrix """
@@ -331,6 +332,26 @@ class LQG:
         print "LQG: Time to generate paths: " + str(time_to_generate_paths) + " seconds"                   
         print "Done"
         
+    def calc_covariance_value(self, robot, error, covariance_matrix):
+        active_joints = v_string()
+        robot.getActiveJoints(active_joints)
+        lower_position_limits = v_double()
+        upper_position_limits = v_double()
+        robot.getJointLowerPositionLimits(active_joints, lower_position_limits)
+        robot.getJointUpperPositionLimits(active_joints, upper_position_limits)
+        lpl = [lower_position_limits[i] for i in xrange(len(lower_position_limits))]
+        upl = [upper_position_limits[i] for i in xrange(len(upper_position_limits))]
+        print covariance_matrix
+        for i in xrange(len(lpl)):
+            print "upl[i] " + str(upl[i])
+            print "lpl[i] " + str(lpl[i])
+            pos_range = upl[i] - lpl[i]
+            print pos_range
+            covariance_matrix[i, i] = (pos_range / 100.0) * error
+        print covariance_matrix
+        sleep
+        
+        
     def init_robot(self, urdf_model_file):
         self.robot = Robot(urdf_model_file)
         self.robot.enforceConstraints(self.enforce_constraints)
@@ -420,37 +441,31 @@ class LQG:
     def check_continuous_collide(self, model_file, env_file):
         self.robot.setViewerBackgroundColor(0.6, 0.8, 0.6)
         self.robot.setViewerSize(1280, 768)
-        self.robot.setupViewer(model_file, env_file)
-        x1 = [2.2400013118235629,
-             0.2621598024448645,
-             -1.0982654508690488,
-             -0.5631577761974319,
-             -9.7390468635597838,
-             10.0,
-             1.1112004027925497,
-             1.1317584820346522]
-        x1 = [2.2400013118235629,
-             0.2621598024448645,
-             -1.0982654508690488,
-             -0.5631577761974319,
-             -9.7390468635597838,
-             10.0,
-             1.1112004027925497,
-             1.1317584820346522]
-        x2 = [1.8611065087843459, 
-              0.6726534222796512, 
-              -0.9864293631758916,
-              -0.6308273460200361,
-              -10.0,
-              10.0,
-              6.0644666961615297,
-              -3.1460624087499878]
+        self.robot.setupViewer(model_file, env_file)        
+        x1 = [0.358607,
+              -0.678972,
+              0.477903,
+              0.120447,
+              7.08257,
+              -9.81079,
+              3.77867,
+              7.78464]
+        x2 = [0.466241,
+              -0.751277,
+              0.511077,
+              0.329098,
+              0.258967,
+              3.35522,
+              -0.765123,
+              5.79488]
         #x1 = [np.pi - np.pi / 4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         #x1 = [np.pi / 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        x2 = [np.pi / 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        #x2 = [np.pi / 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         
-        
-        while True:            
+        coll_t = 0.0
+        k = 0
+        while True:
+            k += 1            
             cjvals = v_double()
             cjvels = v_double()
             cjvals_arr = [x1[i] for i in xrange(len(x1) / 2)]
@@ -466,29 +481,41 @@ class LQG:
             collision_objects_start = self.robot.createRobotCollisionObjects(ja_start)
             collision_objects_goal = self.robot.createRobotCollisionObjects(ja_goal)
             in_collision_discrete = False
-            in_collision_continuous = False 
-            print len(collision_objects_start)           
-            for o in self.obstacles:
-                in_collision_discrete = o.inCollisionDiscrete(collision_objects_start)
+            in_collision_continuous = False             
+            t0 = time.time()
+            breaking = False      
+            for o in self.obstacles:                
+                #in_collision_discrete_start = o.inCollisionDiscrete(collision_objects_start)
+                #in_collision_discrete_goal = o.inCollisionDiscrete(collision_objects_goal)
                 for i in xrange(len(collision_objects_start)):
                     in_collision_continuous = o.inCollisionContinuous([collision_objects_start[i], collision_objects_goal[i]])
-                    if in_collision_continuous:
-                        break               
-                if in_collision_discrete:                    
-                    print "collides discrete"
+                    if in_collision_continuous:                        
+                        break
+                if in_collision_continuous:
+                    break                              
+                '''if in_collision_discrete_start:                    
+                    print "start collides discrete"
+                    in_collision_discrete = True
+                    break
+                if in_collision_discrete_goal:
+                    print "goal collides discrete"
+                    in_collision_discrete = True
                     break
                 if in_collision_continuous:
                     print "collides continuous"
                     break                     
             print "in collision discrete " + str(in_collision_discrete)
+            print "in collision continuous " + str(in_collision_continuous)'''
             print "in collision continuous " + str(in_collision_continuous)
-            
-            
+            coll_t += time.time() - t0
+            if k == 100:
+                print coll_t / k
+                sleep
             self.robot.updateViewerValues(cjvals, 
                                           cjvels,
                                           particle_joint_values,
                                           particle_joint_values)
-            time.sleep(10)
+            #time.sleep(10)
             time.sleep(0.03) 
             
         
