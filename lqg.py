@@ -38,7 +38,7 @@ class LQG:
         if not self.setup_scene(self.environment_file, self.robot):
             return
         #self.show_state_distribution(urdf_model_file, environment_file)
-        self.check_continuous_collide(self.robot_file, self.environment_file)
+        #self.check_continuous_collide(self.robot_file, self.environment_file)
         if show_scene:            
             self.run_viewer(self.robot_file, self.environment_file)
         self.clear_stats(dir)
@@ -137,13 +137,21 @@ class LQG:
                 if self.inc_covariance == "process":
                     """ The process noise covariance matrix """
                     M = self.calc_covariance_value(self.robot, m_covs[j], M_base)
-                    M = m_covs[j] * M_base
+                    #M = m_covs[j] * M_base
                     
                     """ The observation error covariance matrix """
-                    N = self.min_observation_covariance * N_base
+                    N = self.calc_covariance_value(self.robot, 
+                                                   self.min_observation_covariance, 
+                                                   N_base, 
+                                                   covariance_type='observation')                    
                 elif self.inc_covariance == "observation":
-                    M = self.min_process_covariance * M_base
-                    N = m_covs[j] * N_base
+                    M = self.calc_covariance_value(self.robot, 
+                                                   self.min_process_covariance,
+                                                   M_base)
+                    N = self.calc_covariance_value(self.robot, 
+                                                   m_covs[j],
+                                                   N_base, 
+                                                   covariance_type='observation')
                 P_t = np.array([[0.0 for k in xrange(2 * self.robot_dof)] for l in xrange(2 * self.robot_dof)]) 
                 path_evaluator.setup(A, B, C, D, H, M, N, V, W,                                     
                                      self.robot, 
@@ -332,24 +340,33 @@ class LQG:
         print "LQG: Time to generate paths: " + str(time_to_generate_paths) + " seconds"                   
         print "Done"
         
-    def calc_covariance_value(self, robot, error, covariance_matrix):
+    def calc_covariance_value(self, robot, error, covariance_matrix, covariance_type='process'):
         active_joints = v_string()
-        robot.getActiveJoints(active_joints)
-        lower_position_limits = v_double()
-        upper_position_limits = v_double()
-        robot.getJointLowerPositionLimits(active_joints, lower_position_limits)
-        robot.getJointUpperPositionLimits(active_joints, upper_position_limits)
-        lpl = [lower_position_limits[i] for i in xrange(len(lower_position_limits))]
-        upl = [upper_position_limits[i] for i in xrange(len(upper_position_limits))]
-        print covariance_matrix
-        for i in xrange(len(lpl)):
-            print "upl[i] " + str(upl[i])
-            print "lpl[i] " + str(lpl[i])
-            pos_range = upl[i] - lpl[i]
-            print pos_range
-            covariance_matrix[i, i] = (pos_range / 100.0) * error
-        print covariance_matrix
-        sleep
+        robot.getActiveJoints(active_joints)        
+        if covariance_type == 'process':
+            if self.dynamic_problem:            
+                torque_limits = v_double()
+                robot.getJointTorqueLimits(active_joints, torque_limits)
+                torque_limits = [torque_limits[i] for i in xrange(len(torque_limits))]
+                for i in xrange(len(torque_limits)):
+                    torque_range = 2.0 * torque_limits[i]
+                    covariance_matrix[i, i] = np.square((torque_range / 100.0) * error)
+            else:
+                for i in xrange(self.robot_dof):
+                    covariance_matrix[i, i] = np.square((self.max_velocity / 100.0) * error)
+        else:
+            lower_position_limits = v_double()
+            upper_position_limits = v_double()
+            velocity_limits = v_double()            
+            robot.getJointLowerPositionLimits(active_joints, lower_position_limits)
+            robot.getJointUpperPositionLimits(active_joints, upper_position_limits)
+            robot.getJointVelocityLimits(active_joints, velocity_limits)            
+            for i in xrange(self.robot_dof):
+                position_range = upper_position_limits[i] - lower_position_limits[i]
+                covariance_matrix[i, i] = np.square((position_range / 100.0) * error)            
+                velocity_range = 2.0 * velocity_limits[i]
+                covariance_matrix[i + self.robot_dof, i + self.robot_dof] = np.square((velocity_range / 100.0) * error)          
+        return covariance_matrix
         
         
     def init_robot(self, urdf_model_file):

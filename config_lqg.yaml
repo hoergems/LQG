@@ -39,17 +39,18 @@ num_bins: 201
 #################################################
 ## Uncertainty parameters
 #################################################
+# The error variables are defined as the standard deviation in percentage of the value range
 # The minimum joint state covariance
-min_process_covariance: 20.0
+min_process_covariance: 10.0
 
 # The maximum joint state covariance
 max_process_covariance: 60.0
 
 # The minimum observation covariance
-min_observation_covariance: 0.0001
+min_observation_covariance: 10.0
 
 # The maximum observation covariance
-max_observation_covariance: 0.0001
+max_observation_covariance: 10.0
 
 #Determines which parameter (process covariance or observation
 #covariance should be increased during simulation)
