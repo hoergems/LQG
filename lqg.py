@@ -48,7 +48,7 @@ class LQG:
         path_planner = PathPlanningInterface()
         
                 
-        logging.info("LQG: Generating goal states...")
+        logging.info("LQG: Generating goal states...")        
         goal_states = get_goal_states("lqg",
                                       self.serializer, 
                                       self.obstacles,                                                                           
@@ -61,7 +61,8 @@ class LQG:
                                       self.planning_algortihm,
                                       self.path_timeout,
                                       self.num_generated_goal_states,
-                                      self.continuous_collision)  
+                                      self.continuous_collision,
+                                      self.environment_file)  
         if len(goal_states) == 0:
             logging.error("LQG: Couldn't generate any goal states. Problem seems to be infeasible")
             return
@@ -83,7 +84,9 @@ class LQG:
                                                self.num_control_samples,
                                                self.min_control_duration,
                                                self.max_control_duration,
-                                               self.add_intermediate_states)       
+                                               self.add_intermediate_states,
+                                               self.rrt_goal_bias,
+                                               self.control_sampler)       
         path_planner.set_start_and_goal(self.start_state, goal_states, self.goal_position, self.goal_radius)         
         A, H, B, V, W, C, D, M_base, N_base = self.problem_setup(self.delta_t, self.robot_dof)
         time_to_generate_paths = 0.0
@@ -270,7 +273,7 @@ class LQG:
                 self.serializer.write_line("log.log", "tmp/lqg", "################################# \n")
                 self.serializer.write_line("log.log",
                                            "tmp/lqg",
-                                           "inc_covariance: " + str(self.inc_covariance) + " \n")
+                                           "inc_covariance: " + str(self.inc_covariance) + "\n")
                 if self.inc_covariance == "process":                  
                     self.serializer.write_line("log.log",
                                                "tmp/lqg",
@@ -767,6 +770,8 @@ class LQG:
         self.num_generated_goal_states = config['num_generated_goal_states']
         self.robot_file = config['robot_file']
         self.environment_file = config['environment_file']
+        self.rrt_goal_bias = config['rrt_goal_bias']
+        self.control_sampler = config['control_sampler']
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='LQG-MP.')

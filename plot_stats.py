@@ -34,18 +34,34 @@ class PlotStats:
             else:
                 logging.error("Robot couldn't be initialized")
         
-        logging.info("PlotStats: plotting average distance to goal")        
-        self.plot_stat("Average distance to goal area", "avg_distance", dir=dir)        
-        logging.info("PlotStats: plotting mean rewards")
-        self.plot_stat("Mean rewards", "mean_rewards", dir=dir)
-        logging.info("PlotStats: plotting % successful runs")
+        logging.info("Plotting average distance to goal")        
+        self.plot_stat("Average distance to goal area", "avg_distance", dir=dir)
+        
+        logging.info("Plotting mean number of histories per step")
+        self.plot_stat("Mean number of histories per step", "mean_num_histories", dir=dir)
+                 
+        logging.info("Plotting mean rewards")
+        self.plot_stat("Mean rewards", "mean_rewards", dir=dir)        
+        
+        logging.info("Plotting number of succesful runs")
         self.plot_stat("Num success", "succesful_runs", dir=dir)
+        
+        logging.info("Plotting % successful runs")
         self.plot_stat("Percentage of successful runs", "percentage_succesful_runs", dir=dir, y_label="Succesful runs in %")
+        
+        logging.info("Plotting reward variance")
         self.plot_stat("Reward variance", "sample_variances", dir=dir)
+        
+        logging.info("Plotting reward standard deviation")
         self.plot_stat("Reward standard deviation", "reward_standand_deviation", dir=dir)
-        self.plot_stat("Mean number of steps", "mean_num_steps", dir=dir)        
-        logging.info("PlotStats: plotting mean planning times")
-        self.plot_stat("Mean planning time", "mean_planning_time", dir=dir) 
+        
+        logging.info("Plotting mean number of steps")
+        self.plot_stat("Mean number of steps", "mean_num_steps", dir=dir)
+              
+        logging.info("Plotting mean planning times")
+        self.plot_stat("Mean planning time", "mean_planning_time", dir=dir)
+        
+        logging.info("Plotting mean number of collisions per run") 
         self.plot_stat("Mean num collisions per run", "mean_num_collision_per_run", dir=dir)
         logging.info("PlotStats: plotting mean number of generated paths")
         '''self.plot_mean_num_generated_paths(serializer,
@@ -237,10 +253,11 @@ class PlotStats:
             m_cov = -1
             succ = -1
             cov_str = ""
+            
             with open(file, "r") as f:
                 logging.info("Processing " + str(file))
                 for line in f:
-                    if "inc_covariance: " in line:
+                    if "inc_covariance: " in line:                        
                         inc_covariance = line.rstrip("\n").split(": ")[1]
                         if inc_covariance == 'process':
                             cov_str = "Process covariance:"
@@ -248,7 +265,7 @@ class PlotStats:
                             cov_str = "Observation covariance:"
             with open(file, "r") as f:                                         
                 for line in f:                                                                        
-                    if cov_str in line:                        
+                    if cov_str in line:                                             
                         m_cov = float(line.split(" ")[2])                        
                     elif stat_str in line:                                               
                         float_found = False                        

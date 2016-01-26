@@ -80,6 +80,7 @@ add_library(path_planner SHARED
 add_library(dynamic_path_planner SHARED 
             dynamic_path_planner.cpp
             ManipulatorSpaceInformation.cpp
+            DirectedControlSampler.cpp
             rrt_control.cpp 
             MotionValidator.cpp
             state_propagator.cpp

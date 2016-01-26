@@ -24,7 +24,7 @@ DynamicPathPlanner::DynamicPathPlanner(boost::shared_ptr<shared::Robot> &robot,
     motionValidator_(nullptr),
     verbose_(verbose),
     robot_(robot),
-	all_states_()
+	all_states_()	
 {
     
 }
@@ -34,6 +34,10 @@ void DynamicPathPlanner::setupMotionValidator(bool continuous_collision) {
 			                                               robot_,
 														   continuous_collision,
 														   true);	
+}
+
+void DynamicPathPlanner::setRRTGoalBias(double goal_bias) {
+	boost::static_pointer_cast<RRTControl>(planner_)->setGoalBias(goal_bias);
 }
 
 void DynamicPathPlanner::log_(std::string msg, bool warn=false) {
@@ -65,6 +69,11 @@ ompl::control::ControlSamplerPtr DynamicPathPlanner::allocUniformControlSampler_
 void DynamicPathPlanner::setNumControlSamples(std::vector<int> &num_control_samples) {
 	unsigned int ncs = (unsigned int)num_control_samples[0];
 	boost::static_pointer_cast<ManipulatorSpaceInformation>(space_information_)->setNumControlSamples(ncs);	
+}
+
+void DynamicPathPlanner::setControlSampler(std::string control_sampler) {
+	boost::static_pointer_cast<shared::ControlSpace>(control_space_)->setControlSampler(control_sampler);
+	//control_space_->setControlSampler(control_sampler);
 }
 
 void DynamicPathPlanner::setMinMaxControlDuration(std::vector<int> &min_max_control_duration) {
@@ -137,8 +146,7 @@ bool DynamicPathPlanner::isValid(const ompl::base::State *state) {
 	    state_vec.push_back(state->as<ompl::base::RealVectorStateSpace::StateType>()->values[i]);        
 	} 
 	all_states_.push_back(state_vec);
-    if (state_space_->as<ompl::base::RealVectorStateSpace>()->satisfiesBounds(state) && 
-    	static_cast<MotionValidator &>(*motionValidator_).isValid(state_vec)) {
+    if (static_cast<MotionValidator &>(*motionValidator_).isValid(state_vec)) {
     	accepted_ = accepted_ + 1.0;
     	return true;
     }
@@ -339,6 +347,8 @@ BOOST_PYTHON_MODULE(libdynamic_path_planner) {
 							   .def("setNumControlSamples", &DynamicPathPlanner::setNumControlSamples)
 							   .def("setMinMaxControlDuration", &DynamicPathPlanner::setMinMaxControlDuration)
 							   .def("addIntermediateStates", &DynamicPathPlanner::addIntermediateStates)
+							   .def("setRRTGoalBias", &DynamicPathPlanner::setRRTGoalBias)
+							   .def("setControlSampler", &DynamicPathPlanner::setControlSampler)
 										            		 
                         //.def("doIntegration", &Integrate::do_integration)                        
                         //.def("getResult", &Integrate::getResult)

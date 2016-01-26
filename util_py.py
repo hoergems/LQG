@@ -25,16 +25,16 @@ def check_positive_definite(matrices):
             return False
     return True
 
-def compareEnvironmentToTmpFiles(problem):
+def compareEnvironmentToTmpFiles(problem, environment_file):
     if not os.path.exists("tmp/" + problem):
         os.makedirs("tmp/" + problem)                   
         return False
         
-    if not (os.path.exists('tmp/' + problem + '/env.xml') and
+    if not (os.path.exists('tmp/' + problem + '/' + environment_file) and
             os.path.exists('tmp/' + problem + '/config_' + str(problem) + '.yaml')):                
         return False
         
-    with open("environment/env.xml", 'r') as f1, open('tmp/' + problem + '/env.xml', 'r') as f2:
+    with open(environment_file, 'r') as f1, open('tmp/' + problem + '/' + environment_file, 'r') as f2:
         missing_from_b = [
             diff[2:] for diff in Differ().compare(f1.readlines(), f2.readlines())
             if diff.startswith('-')
@@ -73,8 +73,9 @@ def get_goal_states(problem,
                     planning_algorithm,
                     path_timeout,
                     num_generated_goal_states,
-                    continuous_collision):     
-    if not compareEnvironmentToTmpFiles(problem):        
+                    continuous_collision,                    
+                    environment_file):     
+    if not compareEnvironmentToTmpFiles(problem, environment_file):        
         ik_solution_generator = IKSolutionGenerator()          
         ik_solution_generator.setup(robot,
                                     obstacles,
@@ -90,11 +91,13 @@ def get_goal_states(problem,
         if len(ik_solutions) == 0:
             return []
         serializer.serialize_ik_solutions([ik_solutions[i] for i in xrange(len(ik_solutions))], path='tmp/' + problem, file='goalstates.txt')
-        copyToTmp(problem)    
+        copyToTmp(problem, environment_file)    
     else:
         ik_solutions = serializer.deserialize_joint_angles(path="tmp/" + problem, file="goalstates.txt")          
     return ik_solutions
 
-def copyToTmp(problem):
-    shutil.copy2("environment/env.xml", 'tmp/' + problem + '/env.xml')        
+def copyToTmp(problem, environment_file):
+    if not os.path.exists("tmp/ " + problem + "/environment"):
+        os.makedirs("tmp/" + problem + "/environment")
+    shutil.copy2(environment_file, 'tmp/' + problem + '/' + environment_file)        
     shutil.copy2('config_' + str(problem) + '.yaml', 'tmp/' + problem + '/config_' + str(problem) + '.yaml')

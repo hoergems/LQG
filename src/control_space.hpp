@@ -16,10 +16,14 @@ namespace shared {
             
             ompl::control::ControlSamplerPtr allocDefaultControlSampler() const;
             
+            void setControlSampler(std::string control_sampler);
+            
         private:
             unsigned int dim_;
             
             ompl::RNG rng_;
+            
+            std::string control_sampler_;
     };
 
 }

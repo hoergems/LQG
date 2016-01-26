@@ -163,7 +163,7 @@ class PathEvaluator:
                     num_collisions += 1
                     break
             if not collides:
-                if self.is_terminal(joint_angles):
+                if self.is_terminal(joint_angles):                    
                     expected_reward += self.exit_reward
                     #expected_reward2 += pdf[i] * self.exit_reward
                     terminal = True

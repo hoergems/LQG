@@ -100,17 +100,6 @@ bool MotionValidator::isValid(const std::vector<double> &s1) const {
 	
 	
 	return true;
-	/**std::vector<std::shared_ptr<fcl::CollisionObject>> collision_objects;
-	robot_->createRobotCollisionObjects(joint_angles, collision_objects);    
-    for (size_t i = 0; i < obstacles_.size(); i++) {
-        if (!obstacles_[i]->getTerrain()->isTraversable()) {        	
-        	if (obstacles_[i]->in_collision(collision_objects)) {        		
-        		return false;
-        	}
-        }
-    }    
-    return true;*/
-	
 }
 
 bool MotionValidator::collidesDiscrete(const std::vector<double> &state) const{

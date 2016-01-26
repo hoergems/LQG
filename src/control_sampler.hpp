@@ -25,6 +25,22 @@ namespace shared {
             const ompl::control::ControlSpace *space_;
     
     };
+    
+    class DiscreteControlSampler: public ompl::control::ControlSampler 
+    {
+    	public:
+    	    DiscreteControlSampler(const ompl::control::ControlSpace *space);
+    	    
+    	    void sample(ompl::control::Control *control) override;
+    	                
+    	    void sample(ompl::control::Control *control, const ompl::base::State *state) override;
+    	                
+    	    void sampleNext(ompl::control::Control *control, const ompl::control::Control *previous, const ompl::base::State *state);
+    	    
+    	private:
+    	    const ompl::control::ControlSpace *space_;
+    	
+    };
 }
 
 #endif

@@ -6,6 +6,7 @@
 #include <ompl/control/ControlSpace.h>
 #include <ompl/control/DirectedControlSampler.h>
 #include <ompl/control/SimpleDirectedControlSampler.h>
+#include "DirectedControlSampler.hpp"
 
 
 namespace shared {

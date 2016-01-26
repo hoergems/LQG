@@ -102,7 +102,9 @@ class PathPlanningInterface:
                               num_control_samples,
                               min_control_duration,
                               max_control_duration,
-                              add_intermediate_states):
+                              add_intermediate_states,
+                              rrt_goal_bias,
+                              control_sampler):
         self.dynamic_problem = True
         self.model_file = urdf_model
         self.environment_file = environment_model
@@ -111,6 +113,8 @@ class PathPlanningInterface:
         self.min_control_duration = min_control_duration
         self.max_control_duration = max_control_duration
         self.add_intermediate_states = add_intermediate_states
+        self.rrt_goal_bias = rrt_goal_bias
+        self.control_sampler = control_sampler
         
     def set_start_and_goal(self, start_state, goal_states, ee_goal_position, ee_goal_threshold):                
         self.start_state = start_state
@@ -278,12 +282,14 @@ class PathPlanningInterface:
             logging.info("PathPlanningInterface: Set up motion validator. Setting kinematics...")            
             
             
-            logging.info("PathPlanningInterface: Kinematics set. Running setup...")
+            logging.info("PathPlanningInterface: Kinematics set. Running setup...")            
             path_planner2.setup(self.simulation_step_size,                                
                                 self.delta_t)
+            path_planner2.setControlSampler(self.control_sampler)            
             num_control_samples = libdynamic_path_planner.v_int()
             num_control_samples[:] = [self.num_control_samples]
             path_planner2.setNumControlSamples(num_control_samples)
+            path_planner2.setRRTGoalBias(self.rrt_goal_bias)            
             
             min_max_control_duration = libdynamic_path_planner.v_int()
             min_max_control_duration[:] = [self.min_control_duration,

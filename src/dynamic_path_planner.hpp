@@ -70,6 +70,10 @@ namespace shared {
                 void setMinMaxControlDuration(std::vector<int> &min_max_control_duration);
                 
                 void addIntermediateStates(bool add_intermediate_states);
+                
+                void setRRTGoalBias(double goal_bias);
+                
+                void setControlSampler(std::string control_sampler);
 
         private:
                 std::shared_ptr<Kinematics> kinematics_;
