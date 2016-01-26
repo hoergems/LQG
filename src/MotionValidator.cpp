@@ -30,29 +30,11 @@ bool MotionValidator::checkMotion(const std::vector<double> &s1,
 	std::vector<std::shared_ptr<fcl::CollisionObject>> collision_objects_goal;
 	robot_->createRobotCollisionObjects(s2, collision_objects_goal);
     if (continuous_collision) {    	
-    	std::vector<std::shared_ptr<fcl::CollisionObject>> collision_objects_start;    	
-    	robot_->createRobotCollisionObjects(s1, collision_objects_start);
-        for (size_t i = 0; i < obstacles_.size(); i++) {
-            if (!obstacles_[i]->isTraversable()) {
-                for (size_t j = 0; j < collision_objects_start.size(); j++) {                	
-                	if (obstacles_[i]->in_collision(collision_objects_start[j], collision_objects_goal[j])) {                		
-                		return false;
-                	}
-                }
-            }
-        } 
+    	return !collidesContinuous(s1, s2); 
     } 
     else {    	
-        for (size_t i = 0; i < obstacles_.size(); i++) {        
-    	    if (!obstacles_[i]->isTraversable()) {
-    	        if (obstacles_[i]->in_collision(collision_objects_goal)) {        		
-    	            return false;
-    	        }
-    	    }        
-    	}
+        return !collidesDiscrete(s2);
     }
-    
-    return true;
 }
 
 /** Check if a motion between two states is valid. This assumes that state s1 is valid */
@@ -112,11 +94,13 @@ bool MotionValidator::isValid(const std::vector<double> &s1) const {
 		joint_angles.push_back(s1[i]);
 	}
 	
-	if (!satisfiesConstraints(joint_angles)) {		
+	if (!satisfiesConstraints(joint_angles) || collidesDiscrete(joint_angles)) {		
 		return false;
 	}
 	
-	std::vector<std::shared_ptr<fcl::CollisionObject>> collision_objects;
+	
+	return true;
+	/**std::vector<std::shared_ptr<fcl::CollisionObject>> collision_objects;
 	robot_->createRobotCollisionObjects(joint_angles, collision_objects);    
     for (size_t i = 0; i < obstacles_.size(); i++) {
         if (!obstacles_[i]->getTerrain()->isTraversable()) {        	
@@ -125,7 +109,46 @@ bool MotionValidator::isValid(const std::vector<double> &s1) const {
         	}
         }
     }    
-    return true;    
+    return true;*/
+	
+}
+
+bool MotionValidator::collidesDiscrete(const std::vector<double> &state) const{
+	std::vector<double> joint_angles;
+	for (size_t i = 0; i < dim_; i++) {
+		joint_angles.push_back(state[i]);
+	}
+	
+	std::vector<std::shared_ptr<fcl::CollisionObject>> collision_objects;
+	robot_->createRobotCollisionObjects(joint_angles, collision_objects);    
+	for (size_t i = 0; i < obstacles_.size(); i++) {
+	    if (!obstacles_[i]->getTerrain()->isTraversable()) {        	
+	        if (obstacles_[i]->in_collision(collision_objects)) {        		
+	        	return true;
+	        }
+	    }
+	}    
+	return false; 
+	
+}
+
+bool MotionValidator::collidesContinuous(const std::vector<double> &state1,
+            		                     const std::vector<double> &state2) const {
+	std::vector<std::shared_ptr<fcl::CollisionObject>> collision_objects_start;    	
+	robot_->createRobotCollisionObjects(state1, collision_objects_start);
+	std::vector<std::shared_ptr<fcl::CollisionObject>> collision_objects_goal;
+    robot_->createRobotCollisionObjects(state2, collision_objects_goal);
+	for (size_t i = 0; i < obstacles_.size(); i++) {
+	    if (!obstacles_[i]->isTraversable()) {
+	        for (size_t j = 0; j < collision_objects_start.size(); j++) {                	
+	            if (obstacles_[i]->in_collision(collision_objects_start[j], collision_objects_goal[j])) {                		
+	                return true;
+	            }
+	        }
+	    }
+	}
+	
+	return false;
 }
 
 void MotionValidator::setObstacles(std::vector<std::shared_ptr<Obstacle> > &obstacles) {

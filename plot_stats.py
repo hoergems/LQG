@@ -21,29 +21,21 @@ class PlotStats:
             os.makedirs(dir)       
         self.save = save_plots        
         serializer = Serializer()
-        config = serializer.read_config(path=dir)
-        self.inc_covariance = config['inc_covariance']        
-        self.covariances = []
-        for logfile in glob.glob(dir + "/*.log"):
-            if "process" in self.inc_covariance:
-                self.covariances.append(serializer.read_process_covariance(logfile))
-            elif "observation" in self.inc_covariance:
-                self.covariances.append(serializer.read_observation_covariance(logfile))       
-             
-        #self.create_video(serializer, dir)
-        print "Setting up robot"
-        self.setup_robot(dir)
-        
-        print "Kinematics setup"
-        logging.info("PlotStats: plotting paths")    
+        #config = serializer.read_config(path=dir)
+        #self.inc_covariance = config['inc_covariance']
+        #print "Kinematics setup"
+        #logging.info("PlotStats: plotting paths")    
         #self.plot_paths(serializer, dir=dir)
         #self.plot_paths(serializer, best_paths=True, dir=dir)
         
-        if show_particles:
-            self.show_distr_at_time_t(5, dir=dir)
+        if show_particles:            
+            if self.setup_robot(dir):
+                self.show_distr_at_time_t(5, dir=dir)
+            else:
+                logging.error("Robot couldn't be initialized")
         
-        logging.info("PlotStats: plotting average distance to goal")
-        self.plot_stat("Average distance to goal area", "avg_distance", dir=dir)
+        logging.info("PlotStats: plotting average distance to goal")        
+        self.plot_stat("Average distance to goal area", "avg_distance", dir=dir)        
         logging.info("PlotStats: plotting mean rewards")
         self.plot_stat("Mean rewards", "mean_rewards", dir=dir)
         logging.info("PlotStats: plotting % successful runs")
@@ -237,22 +229,28 @@ class PlotStats:
         m_covs = []
         data = []
         color_map = []
-        d = dict()
-        cov_str = "Process covariance:"
-        if "observation" in self.inc_covariance:
-            cov_str = "Observation covariance:"
+        d = dict()               
         for file in sorted(files):
             file_str = file.split("/")[2].split("_")[1]
             if not file_str in d:
                 d[file_str] = []                 
             m_cov = -1
             succ = -1
+            cov_str = ""
             with open(file, "r") as f:
-                print file                   
-                for line in f:                                       
+                logging.info("Processing " + str(file))
+                for line in f:
+                    if "inc_covariance: " in line:
+                        inc_covariance = line.rstrip("\n").split(": ")[1]
+                        if inc_covariance == 'process':
+                            cov_str = "Process covariance:"
+                        elif inc_covariance == 'observation':
+                            cov_str = "Observation covariance:"
+            with open(file, "r") as f:                                         
+                for line in f:                                                                        
                     if cov_str in line:                        
                         m_cov = float(line.split(" ")[2])                        
-                    elif stat_str in line:                        
+                    elif stat_str in line:                                               
                         float_found = False                        
                         succ_l = line.split(" ")
                         for s in succ_l:
@@ -272,7 +270,7 @@ class PlotStats:
             d[k] = sorted(d[k], key=itemgetter(0))
             d[k] = [np.array(d[k][i]) for i in xrange(len(d[k]))]
             num_succ_runs_sets.append(np.array(d[k]))
-            labels.append(k) 
+            labels.append(k)               
         min_m = min(num_succ_runs)
         if min_m > 0:
             min_m = 0.0
@@ -280,8 +278,7 @@ class PlotStats:
             min_m -= -0.1 * min_m 
         max_m = max(num_succ_runs) 
         min_cov = min(m_covs)
-        max_cov = max(m_covs)
-        print num_succ_runs_sets
+        max_cov = max(m_covs)        
         Plot.plot_2d_n_sets(num_succ_runs_sets,
                             labels=labels,
                             xlabel="joint covariance",
@@ -296,7 +293,11 @@ class PlotStats:
         
     def setup_robot(self, dir='stats'):
         model_file = os.getcwd() + "/" + dir + "/model/test.urdf"
-        self.robot = Robot(model_file)       
+        if os.path.isfile(model_file):
+            self.robot = Robot(model_file) 
+            return True
+        else:
+            return False        
         
     def clear_stats(self):
         for file in glob.glob("stats/*"):

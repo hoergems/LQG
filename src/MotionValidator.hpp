@@ -49,6 +49,11 @@ namespace shared {
             
             void setContinuousCollisionCheck(bool continuous_collision_check);
             
+            bool collidesDiscrete(const std::vector<double> &state) const;
+            
+            bool collidesContinuous(const std::vector<double> &state1,
+            		                const std::vector<double> &state2) const;
+            
         private:
             const ompl::base::SpaceInformationPtr si_;
             
