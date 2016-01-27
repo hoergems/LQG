@@ -133,23 +133,27 @@ class PlotStats:
                 """
                 Calculate 2 * N - dimensional histogram
                 """
-                r = np.random.randn(10,3)
-                num_bins = 10
+                r = np.random.randn(100,3)
+                num_bins = 5
                 print r
-                h_x = np.histogramdd(r, bins=num_bins)
+                h_x = np.histogramdd(r, bins=num_bins, normed=True)
                 coords = []
                 weights = []
                 num_dimensions = len(h_x[1])
                 hist_coord_arr = [0 for i in xrange(num_dimensions)]                
                 m = 0
-                print h_x[1]
+                
+                print h_x[0]
                 for i in xrange(0, (num_bins**num_dimensions)):
                     """
                     Get the histogram coordinates (in state space coordinates)
-                    """                    
+                    """           
                     sample_arr = []                    
-                    for k in xrange(num_dimensions):                        
-                        sample_arr.append(h_x[1][k][hist_coord_arr[k]])
+                    for k in xrange(num_dimensions):
+                        lower_edge = h_x[1][k][hist_coord_arr[k]]
+                        upper_edge = h_x[1][k][hist_coord_arr[k] + 1]
+                        c = lower_edge + (upper_edge - lower_edge) / 2.0                                              
+                        sample_arr.append(c)
                     coords.append(sample_arr)
                     
                     """
@@ -160,15 +164,18 @@ class PlotStats:
                         histogram_elem = histogram_elem[k]
                     weights.append(histogram_elem)
                     
-                              
-                    hist_coord_arr[m] += 1                    
-                    if hist_coord_arr[m] >= num_bins:
-                        while hist_coord_arr[m] >= num_bins - 1:
-                            m += 1
-                        hist_coord_arr[m] += 1
-                        for k in xrange(0, m):
-                            hist_coord_arr[k] = 0
-                        m = 0
+                    if i < (num_bins**num_dimensions) - 1:          
+                        hist_coord_arr[m] += 1                    
+                        if hist_coord_arr[m] >= num_bins:
+                            while hist_coord_arr[m] >= num_bins - 1:
+                                m += 1
+                            hist_coord_arr[m] += 1
+                            for k in xrange(0, m):
+                                hist_coord_arr[k] = 0
+                            m = 0
+                print coords
+                print " "
+                print weights
                 sleep
                 X = np.array([[particles[i][j] for j in xrange(len(particles[i]))] for i in xrange(len(particles))])
                 hist_X = np.histogramdd(X, bins=10)
