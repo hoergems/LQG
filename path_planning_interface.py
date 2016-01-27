@@ -80,7 +80,8 @@ class PathPlanningInterface:
               continuous_collision):
         self.robot = robot
         self.robot_dof = self.robot.getDOF()
-        self.num_cores = cpu_count() 
+        #self.num_cores = cpu_count() 
+        self.num_cores = cpu_count() - 1
         #self.num_cores = 2       
         self.obstacles = obstacles        
         self.max_velocity = max_velocity

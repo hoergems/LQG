@@ -13,6 +13,7 @@ from EMD import *
 import sets
 import random
 import argparse
+from emd import emd
 
 class PlotStats:
     def __init__(self, algorithm, save_plots, show_particles):
@@ -90,7 +91,7 @@ class PlotStats:
         
     def show_distr_at_time_t(self, t, dir="stats"):        
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
-        dim = (3, 6)        
+        dim = (0, 4)        
         for file in files:
             print file
             num_steps = 0
@@ -116,12 +117,12 @@ class PlotStats:
                             elif "S_NOMINAL: " in line:                            
                                 line_str = line.split(" ")
                                 line_arr = line_str[1:len(line_str) - 2]
-                                state_nominal = np.array([float(l) for l in line_arr][0:6]) 
+                                state_nominal = np.array([float(l) for l in line_arr][0:2 * self.robot.getDOF()]) 
                             elif "ESTIMATED_COVARIANCE: " in line:
                                 line_str = line.split(" ")
                                 line_arr = line_str[1:len(line_str) - 2]                             
                                 line_arr = np.array([float(el) for el in line_arr])
-                                covariance = line_arr.reshape((6, 6))
+                                covariance = line_arr.reshape((2 * self.robot.getDOF(), 2 * self.robot.getDOF()))
                                                     
                         if "t = " in line:
                             if "t = " + str(n) + " " in line:                            
@@ -129,44 +130,56 @@ class PlotStats:
                             else:
                                 t_found = False
                 #mult_normal = multivariate_normal.pdf(particles, state_nominal, covariance)
-                """ Calculate 2D histogram
                 """
-                '''if n != 0:
-                    particles_data= [[particles[i][j] for j in xrange(len(particles[i]))] for i in xrange(len(particles))]                                      
-                    H, edges = np.histogramdd(np.array(particles_data), bins=20)
-                    print edges[0]
-                    print edges[1]
-                    print edges[2] 
-                    coords = []
-                    values = []
-                    print "len " + str(len(edges[0]))                  
-                    for x1 in xrange(len(H)):
-                        for x2 in xrange(len(H[x1])):
-                            for x3 in xrange(len(H[x1, x2])):
-                                for x4 in xrange(len(H[x1, x2, x3])):
-                                    for x5 in xrange(len(H[x1, x2, x3, x4])):
-                                        for x6 in xrange(len(H[x1, x2, x3, x4, x5])):
-                                            if H[x1, x2, x3, x4, x5, x6] != 0.0:
-                                                coords.append([edges[0][x1] + (edges[0][x1 + 1] - edges[0][x1]) / 2.0,
-                                                               edges[1][x2] + (edges[1][x2 + 1] - edges[1][x2]) / 2.0,
-                                                               edges[2][x3] + (edges[2][x3 + 1] - edges[2][x3]) / 2.0,
-                                                               edges[3][x4] + (edges[3][x4 + 1] - edges[3][x4]) / 2.0,
-                                                               edges[4][x5] + (edges[4][x5 + 1] - edges[4][x5]) / 2.0,
-                                                               edges[5][x6] + (edges[5][x6 + 1] - edges[5][x6]) / 2.0]) 
-                                                values.append(H[x1, x2, x3, x4, x5, x6])                              
-                                
-                    values /= sum(values)
-                    values_gauss = []
-                    p = multivariate_normal(state_nominal, covariance, allow_singular=True)                    
-                    for i in xrange(len(values)):                        
-                        values_gauss.append(p.pdf(coords[i]))                        
-                    values_gauss /= sum(values_gauss)
+                Calculate 2 * N - dimensional histogram
+                """
+                r = np.random.randn(10,3)
+                num_bins = 10
+                print r
+                h_x = np.histogramdd(r, bins=num_bins)
+                coords = []
+                weights = []
+                num_dimensions = len(h_x[1])
+                hist_coord_arr = [0 for i in xrange(num_dimensions)]                
+                m = 0
+                print h_x[1]
+                for i in xrange(0, (num_bins**num_dimensions)):
+                    """
+                    Get the histogram coordinates (in state space coordinates)
+                    """                    
+                    sample_arr = []                    
+                    for k in xrange(num_dimensions):                        
+                        sample_arr.append(h_x[1][k][hist_coord_arr[k]])
+                    coords.append(sample_arr)
                     
-                    sleep
-                    #print H[0]
-                    #print edges'''
+                    """
+                    Get the histogram weights for the histogram coordinates
+                    """
+                    histogram_elem = h_x[0]
+                    for k in hist_coord_arr:
+                        histogram_elem = histogram_elem[k]
+                    weights.append(histogram_elem)
+                    
+                              
+                    hist_coord_arr[m] += 1                    
+                    if hist_coord_arr[m] >= num_bins:
+                        while hist_coord_arr[m] >= num_bins - 1:
+                            m += 1
+                        hist_coord_arr[m] += 1
+                        for k in xrange(0, m):
+                            hist_coord_arr[k] = 0
+                        m = 0
+                sleep
+                X = np.array([[particles[i][j] for j in xrange(len(particles[i]))] for i in xrange(len(particles))])
+                hist_X = np.histogramdd(X, bins=10)
+                    
+                
                 samples = multivariate_normal.rvs(state_nominal, covariance, 1000)
                 samples = [sample[dim[0]:dim[1]] for sample in samples]
+                Y = np.array([[samples[i][j] for j in xrange(len(samples[i]))] for i in xrange(len(samples))])
+                print emd(X, Y)                 
+                    
+                
                 min_x = particles[0][0]
                 min_y = particles[0][1]
                 min_z = particles[0][2]
@@ -309,7 +322,7 @@ class PlotStats:
                             filename=dir + "/" + output_file_str + ".png")
         
     def setup_robot(self, dir='stats'):
-        model_file = os.getcwd() + "/" + dir + "/model/test.urdf"
+        model_file = os.getcwd() + "/" + dir + "/model/test_4dof.urdf"
         if os.path.isfile(model_file):
             self.robot = Robot(model_file) 
             return True
