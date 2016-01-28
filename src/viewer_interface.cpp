@@ -127,6 +127,34 @@ void ViewerInterface::setParticlePlotLimit(unsigned int particle_plot_limit) {
 	particle_plot_limit_ = particle_plot_limit;
 }
 
+void ViewerInterface::setObstacleColor(std::string &obstacle_name, 
+		                               std::vector<double> &diffuse_color,
+		                               std::vector<double> &ambient_color) {
+	std::vector<OpenRAVE::KinBodyPtr> bodies;
+    env_->GetBodies(bodies);
+    for (auto &body: bodies) {    	
+    	const std::vector<OpenRAVE::KinBody::LinkPtr> links(body->GetLinks());
+    	for (auto &link: links) {
+    		const std::vector<OpenRAVE::KinBody::Link::GeometryPtr> geometries(link->GetGeometries());
+    		for (auto &geom: geometries) {
+    			if (body->GetName().find(obstacle_name) != std::string::npos) {
+    				const OpenRAVE::RaveVector<float> d_color(diffuse_color[0],
+    						                                  diffuse_color[1],
+    						                                  diffuse_color[2],
+    						                                  diffuse_color[3]);
+    				const OpenRAVE::RaveVector<float> a_color(ambient_color[0],
+    				    						              ambient_color[1],
+    				    						              ambient_color[2],
+    				    						              ambient_color[3]);
+    				geom->SetDiffuseColor(d_color);
+    				geom->SetAmbientColor(a_color);
+    						                                        		
+    			}
+    		}		
+    	}
+    }
+}
+
 void ViewerInterface::updateRobotValues(const std::vector<double> &current_joint_values,
 		                                const std::vector<double> &current_joint_velocities,
 										const std::vector<std::vector<double>> &particle_joint_values,

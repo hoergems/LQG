@@ -17,11 +17,18 @@ struct TerrainStruct {
 };
 
 struct ObstacleStruct {
+	std::string name;
 	std::string type;
     double x;
     double y;
     double z;
     std::vector<double> extends;
+    
+    // Diffuse color
+    std::vector<double> d_color;
+    
+    // Ambient color
+    std::vector<double> a_color;
     TerrainStruct terrain;     
 };
 
@@ -111,7 +118,7 @@ void Utils::loadObstaclesXML(std::string &obstacles_file,
 				TiXmlElement *terrain_xml = body_xml->FirstChildElement("Terrain");
 				//Can play with different shapes here in the future
 				if (geom_xml) {
-					std::string type(geom_xml->Attribute("type"));
+					std::string type(geom_xml->Attribute("type"));					
 					TiXmlElement *trans_xml = geom_xml->FirstChildElement("Translation");
 					if (trans_xml) {
 						obstacles.push_back(ObstacleStruct());
@@ -125,6 +132,38 @@ void Utils::loadObstaclesXML(std::string &obstacles_file,
 		                   }
 			            }
 				        
+				        TiXmlElement *dcolor_xml = geom_xml->FirstChildElement("diffuseColor");
+				        if (dcolor_xml) {
+				        	const char* color_string = dcolor_xml->GetText();				        	
+				        	std::vector<std::string> pieces;
+				        	std::vector<double> color_vec;
+				        	boost::split(pieces, color_string, boost::is_any_of(" "));
+				            for (unsigned i = 0; i < pieces.size(); i++) {				            	
+				        		color_vec.push_back(boost::lexical_cast<double>(pieces[i].c_str()));
+				        	}
+				            
+				            obstacles[obstacles.size() - 1].d_color.push_back(color_vec[0]);
+				            obstacles[obstacles.size() - 1].d_color.push_back(color_vec[1]);
+				            obstacles[obstacles.size() - 1].d_color.push_back(color_vec[2]);
+				            
+				        }
+				        
+				        TiXmlElement *acolor_xml = geom_xml->FirstChildElement("ambientColor");
+				        if (acolor_xml) {
+				            const char* color_string = acolor_xml->GetText();
+				        	std::vector<std::string> pieces;
+				            std::vector<double> color_vec;
+				            boost::split(pieces, color_string, boost::is_any_of(" "));
+				        	for (unsigned i = 0; i < pieces.size(); i++) {
+				        		color_vec.push_back(boost::lexical_cast<double>(pieces[i].c_str()));
+				        	}
+				        				            
+				        	obstacles[obstacles.size() - 1].a_color.push_back(color_vec[0]);
+				            obstacles[obstacles.size() - 1].a_color.push_back(color_vec[1]);
+				        	obstacles[obstacles.size() - 1].a_color.push_back(color_vec[2]);				        				            
+				        }
+				        
+				        obstacles[obstacles.size() - 1].name = name;
 				        obstacles[obstacles.size() - 1].type = type;
 				        obstacles[obstacles.size() - 1].x = xyz_vec[0];
 				        obstacles[obstacles.size() - 1].y = xyz_vec[1];
@@ -154,6 +193,7 @@ void Utils::loadObstaclesXML(std::string &obstacles_file,
 					    	}
 					    }
 					}
+					
 				}
 				
 				if (terrain_xml) {					
@@ -184,7 +224,8 @@ void Utils::loadObstaclesXML(std::string &obstacles_file,
 	                            obstacles[i].terrain.velocityDamping,
 	                            obstacles[i].terrain.traversable);
 	    if (obstacles[i].type == "box") {
-	    	obst.push_back(std::make_shared<shared::BoxObstacle>(obstacles[i].x,
+	    	obst.push_back(std::make_shared<shared::BoxObstacle>(obstacles[i].name,
+	    			                                             obstacles[i].x,
                                                                  obstacles[i].y,
                                                                  obstacles[i].z,
 														         obstacles[i].extends[0],
@@ -194,16 +235,18 @@ void Utils::loadObstaclesXML(std::string &obstacles_file,
 	    }
 	    
 	    else if (obstacles[i].type == "sphere") {
-	    	obst.push_back(std::make_shared<shared::SphereObstacle>(obstacles[i].x,
+	    	obst.push_back(std::make_shared<shared::SphereObstacle>(obstacles[i].name,
+	    			                                                obstacles[i].x,
                                                                     obstacles[i].y,
                                                                     obstacles[i].z,
                                                                     obstacles[i].extends[0],
 					                                                terrain));
 	    }
-	    
 	    else {
 	    	assert(false && "Obstacle has an unknown type!");
 	    }
+	    
+	    obst[obst.size() - 1]->setStandardColor(obstacles[i].d_color, obstacles[i].a_color);
 	}	
 }
 

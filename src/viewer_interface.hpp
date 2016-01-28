@@ -56,6 +56,13 @@ public:
      * Maximum number of particles to plot
      */
     void setParticlePlotLimit(unsigned int particle_plot_limit);
+    
+    /**
+     * Set the color of the obstacle 'obstacle_name'
+     */
+    void setObstacleColor(std::string &obstacle_name, 
+    		              std::vector<double> &diffuse_color,
+    		              std::vector<double> &ambient_color);
 
 private:
     bool viewer_setup_;

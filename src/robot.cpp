@@ -585,6 +585,12 @@ void Robot::setViewerCameraTransform(std::vector<double> &rot, std::vector<doubl
 	viewer_->setCameraTransform(rot, trans);
 }
 
+void Robot::setObstacleColor(std::string obstacle_name, 
+		                     std::vector<double> &diffuse_color, 
+                             std::vector<double> &ambient_color) {
+	viewer_->setObstacleColor(obstacle_name, diffuse_color, ambient_color);
+}
+
 bool Robot::propagate_linear(std::vector<double> &current_state,
     	    		         std::vector<double> &control_input,
     	    		         std::vector<double> &control_error,
@@ -925,6 +931,7 @@ BOOST_PYTHON_MODULE(librobot) {
 						.def("setViewerBackgroundColor", &Robot::setViewerBackgroundColor)
 						.def("setViewerCameraTransform", &Robot::setViewerCameraTransform)
 						.def("getEndEffectorJacobian", &Robot::getEndEffectorJacobian)
+						.def("setObstacleColor", &Robot::setObstacleColor)
                         //.def("setup", &Integrate::setup)                        
     ;
 }

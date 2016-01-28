@@ -9,7 +9,7 @@ from serializer import Serializer
 from scipy.stats import multivariate_normal
 from librobot import *
 from libutil import *
-from EMD import *
+from EMD import EMD
 import sets
 import random
 import argparse
@@ -22,18 +22,11 @@ class PlotStats:
             os.makedirs(dir)       
         self.save = save_plots        
         serializer = Serializer()
-        #config = serializer.read_config(path=dir)
-        #self.inc_covariance = config['inc_covariance']
-        #print "Kinematics setup"
-        #logging.info("PlotStats: plotting paths")    
-        #self.plot_paths(serializer, dir=dir)
-        #self.plot_paths(serializer, best_paths=True, dir=dir)
         
-        if show_particles:            
-            if self.setup_robot(dir):
-                self.show_distr_at_time_t(5, dir=dir)
-            else:
-                logging.error("Robot couldn't be initialized")
+        if self.setup_robot(dir):            
+            self.plot_emds(show_particles, dir=dir)
+        else:
+            logging.error("Robot couldn't be initialized")
         
         logging.info("Plotting average distance to goal")        
         self.plot_stat("Average distance to goal area", "avg_distance", dir=dir)
@@ -89,19 +82,43 @@ class PlotStats:
         logging.info("PlotStats: plotting histograms...")        
         self.save_histogram_plots(serializer, cart_coords, dir=dir)'''    
         
-    def show_distr_at_time_t(self, t, dir="stats"):        
+    def plot_emds(self, show_particles, dir="stats"):        
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
-        dim = (0, 4)        
+        
+        d = dict()
+        d["lqg"] = [] 
+        cov_string = "" 
+        cov_value = 0.0
+        stats_sets = []
+        color_map = []
+        labels = []
+        m_covs = [] 
+        emd_vals = []             
         for file in files:
             print file
             num_steps = 0
             with open(file, 'r') as f:
                 for line in f:
+                    if "inc_covariance" in line:
+                        inc_cov = line.rstrip("\n").split(": ")[1]
+                        if inc_cov == "process":
+                            cov_string = "Process covariance"
+                        elif inc_cov == "observation":
+                            cov_string = "Observation covariance"            
+            with open(file, 'r') as f:
+                for line in f:
+                    if cov_string in line:
+                        cov_value = float(line.rstrip("\n ").split(": ")[1])
+                        m_covs.append(cov_value)                                                                 
+            with open(file, 'r') as f:
+                for line in f:
                     if "Length best path: " in line:
-                        num_steps = int(line.split(" ")[3])            
+                        num_steps = int(line.split(" ")[3]) 
+                               
             file_str = file.split("/")[2].split("_")[1]
-            for n in xrange(num_steps):
-                print n
+            emds = []
+            for n in xrange(num_steps):                
+                print "step " + str(n)                
                 particles = []
                 state_nominal = None
                 covariance = None
@@ -113,7 +130,7 @@ class PlotStats:
                                 line_str = line.split(" ")
                                 #line_arr = line_str[1:len(line_str) - 2]
                                 line_arr = line_str[1:len(line_str) - 2]
-                                particles.append(np.array([float(l) for l in line_arr][dim[0]:dim[1]])) 
+                                particles.append(np.array([float(l) for l in line_arr][0:2 * self.robot.getDOF()])) 
                             elif "S_NOMINAL: " in line:                            
                                 line_str = line.split(" ")
                                 line_arr = line_str[1:len(line_str) - 2]
@@ -129,21 +146,20 @@ class PlotStats:
                                 t_found = True
                             else:
                                 t_found = False
-                #mult_normal = multivariate_normal.pdf(particles, state_nominal, covariance)
+                #mult_normal = multivariate_normal.pdf(particles, state_nominal, covariance)                
                 """
                 Calculate 2 * N - dimensional histogram
                 """
-                r = np.random.randn(100,3)
+                
                 num_bins = 5
-                print r
-                h_x = np.histogramdd(r, bins=num_bins, normed=True)
+                X = np.array([[particles[i][j] for j in xrange(len(particles[i]))] for i in xrange(len(particles))])
+                                
+                h_x = np.histogramdd(X, bins=num_bins, normed=False)
                 coords = []
                 weights = []
                 num_dimensions = len(h_x[1])
                 hist_coord_arr = [0 for i in xrange(num_dimensions)]                
                 m = 0
-                
-                print h_x[0]
                 for i in xrange(0, (num_bins**num_dimensions)):
                     """
                     Get the histogram coordinates (in state space coordinates)
@@ -173,45 +189,69 @@ class PlotStats:
                             for k in xrange(0, m):
                                 hist_coord_arr[k] = 0
                             m = 0
-                print coords
-                print " "
-                print weights
-                sleep
-                X = np.array([[particles[i][j] for j in xrange(len(particles[i]))] for i in xrange(len(particles))])
-                hist_X = np.histogramdd(X, bins=10)
-                    
-                
+                sum_weights = sum(weights)
+                weights /= sum(weights)
                 samples = multivariate_normal.rvs(state_nominal, covariance, 1000)
-                samples = [sample[dim[0]:dim[1]] for sample in samples]
-                Y = np.array([[samples[i][j] for j in xrange(len(samples[i]))] for i in xrange(len(samples))])
-                print emd(X, Y)                 
-                    
+                #samples = [sample[dim[0]:dim[1]] for sample in samples]
                 
-                min_x = particles[0][0]
-                min_y = particles[0][1]
-                min_z = particles[0][2]
-                max_x = particles[0][0]
-                max_y = particles[0][1]
-                max_z = particles[0][2]
-                for p in particles:
-                    if p[0] < min_x:
-                        min_x = p[0]
-                    if p[0] > max_x:
-                        max_x = p[0]
-                    if p[1] < min_y:
-                        min_y = p[1]
-                    if p[1] > max_y:
-                        max_y = p[1]
-                    if p[2] < min_z:
-                        min_z = p[2]
-                    if p[2] > max_z:
-                        max_z = p[2]            
-                sets = [np.array(particles), np.array(samples)]                
-                Plot.plot_3d_sets(sets,
-                                  x_scale=[min_x, max_x],
-                                  y_scale=[min_y, max_y],
-                                  z_scale=[min_z, max_z], 
-                                  colormap=['r', 'g'])
+                sample_weights = [multivariate_normal.pdf(samples[i], state_nominal, covariance, allow_singular=True) for i in xrange(len(samples))]
+                sample_weights /= sum(sample_weights)                
+                
+                sample_coords = np.array([[samples[i][j] for j in xrange(len(samples[i]))] for i in xrange(len(samples))])
+                particle_weights = []
+                particle_coords = []
+                for i in xrange(len(coords)):
+                    if weights[i] != 0:
+                        particle_coords.append([coords[i][j] for j in xrange(len(coords[i]))])
+                        particle_weights.append(weights[i])
+                particle_coords = np.array([[particle_coords[i][j] for j in xrange(len(particle_coords[i]))] for i in xrange(len(particle_coords))])
+                particle_weights = np.array(particle_weights)                
+                emd_v = emd(particle_coords, sample_coords, X_weights=particle_weights, Y_weights=sample_weights)
+                print emd_v
+                emds.append(emd_v)
+                if show_particles:
+                    min_x = -np.pi
+                    min_y = np.pi
+                    min_z = -np.pi
+                    max_x = np.pi
+                    max_y = -np.pi
+                    max_z = np.pi                            
+                    sets = [np.array(particles), np.array(samples)]                
+                    Plot.plot_3d_sets(sets,
+                                      x_scale=[min_x, max_x],
+                                      y_scale=[min_y, max_y],
+                                      z_scale=[min_z, max_z], 
+                                      colormap=['r', 'g'])
+            emd_mean = sum(emds) / len(emds)            
+            print "emd_mean " + str(emd_mean)
+            emd_vals.append(float(emd_mean))
+            d["lqg"].append(np.array([float(cov_value), float(emd_mean)]))
+        print d
+                   
+        for k in d:
+            color_map.append(self.gen_random_color())           
+            from operator import itemgetter            
+            d[k] = sorted(d[k], key=itemgetter(0))
+            d[k] = [np.array(d[k][i]) for i in xrange(len(d[k]))]
+            stats_sets.append(np.array(d[k]))
+            labels.append(k)
+        min_m = min(emd_vals)
+        if min_m > 0:
+            min_m = 0.0
+        else:
+            min_m -= -0.1 * min_m 
+        max_m = max(emd_vals)
+        Plot.plot_2d_n_sets(stats_sets,
+                            labels=labels,
+                            xlabel="joint covariance",
+                            ylabel="EMD",
+                            x_range=[min(m_covs), max(m_covs)],
+                            y_range=[min_m, max_m * 1.05],
+                            show_legend=True,
+                            lw=3,
+                            color_map=color_map,
+                            save=self.save,
+                            filename=dir + "/EMD.png")     
             
     '''def plot_average_distance_to_goal(self, dir="stats"):
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
@@ -260,7 +300,7 @@ class PlotStats:
             y_label = stat_str
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))            
         num_succ_runs = [] 
-        num_succ_runs_sets = [] 
+        stats_sets = [] 
         labels = []
         m_covs = []
         data = []
@@ -306,8 +346,8 @@ class PlotStats:
             from operator import itemgetter            
             d[k] = sorted(d[k], key=itemgetter(0))
             d[k] = [np.array(d[k][i]) for i in xrange(len(d[k]))]
-            num_succ_runs_sets.append(np.array(d[k]))
-            labels.append(k)               
+            stats_sets.append(np.array(d[k]))
+            labels.append(k)
         min_m = min(num_succ_runs)
         if min_m > 0:
             min_m = 0.0
@@ -316,7 +356,7 @@ class PlotStats:
         max_m = max(num_succ_runs) 
         min_cov = min(m_covs)
         max_cov = max(m_covs)        
-        Plot.plot_2d_n_sets(num_succ_runs_sets,
+        Plot.plot_2d_n_sets(stats_sets,
                             labels=labels,
                             xlabel="joint covariance",
                             ylabel=y_label,

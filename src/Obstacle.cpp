@@ -25,14 +25,43 @@ struct VecToList
     }
 };
 
-Obstacle::Obstacle(const Terrain &terrain):
+Obstacle::Obstacle(std::string name, const Terrain &terrain):
 		collision_object_ptr_(nullptr),
-		terrain_(terrain){
+		terrain_(terrain),
+		name_(name),
+		diffuse_color_(),
+		ambient_color_(){
 	
 }
 
 std::shared_ptr<Terrain> Obstacle::getTerrain() const {
     return std::make_shared<Terrain>(terrain_);
+}
+
+void Obstacle::setStandardColor(std::vector<double> &diffuseColor,
+        		                std::vector<double> &ambientColor) {
+	diffuse_color_.clear();
+	ambient_color_.clear();
+	
+	if (diffuseColor.size() == 0) {
+		diffuse_color_.push_back(0.0);
+		diffuse_color_.push_back(0.0);
+		diffuse_color_.push_back(0.0);
+	}
+	
+	if (ambientColor.size() == 0) {
+		ambient_color_.push_back(0.0);
+		ambient_color_.push_back(0.0);
+		ambient_color_.push_back(0.0);
+	}
+	
+	for (size_t i = 0; i < diffuseColor.size(); i++) {
+		diffuse_color_.push_back(diffuseColor[i]);
+	}
+	
+	for (size_t i = 0; i < ambientColor.size(); i++) {
+		ambient_color_.push_back(ambientColor[i]);
+	}
 }
 
 bool Obstacle::isTraversable() const{
@@ -127,6 +156,18 @@ std::shared_ptr<fcl::CollisionObject> Obstacle::getCollisionObject() const {
 	return collision_object_ptr_;
 }
 
+std::string Obstacle::getName() {	
+	return name_;
+}
+
+std::vector<double> Obstacle::getStandardDiffuseColor() {	
+	return diffuse_color_;
+}
+
+std::vector<double> Obstacle::getStandardAmbientColor() {
+	return ambient_color_;
+}
+
 BOOST_PYTHON_MODULE(libobstacle)
 {   
     #include "Terrain.hpp"
@@ -146,13 +187,16 @@ BOOST_PYTHON_MODULE(libobstacle)
          .def("isTraversable", &Terrain::isTraversable)    
     ;
     
-    class_<ObstacleWrapper, boost::noncopyable>("Obstacle", init<Terrain>())         
+    class_<ObstacleWrapper, boost::noncopyable>("Obstacle", init<std::string, Terrain>())         
          .def("inCollisionDiscrete", in_collision_d)
          .def("inCollisionContinuous", in_collision_c)
 		 .def("inCollisionPoint", in_collision_p)
          .def("isTraversable", &ObstacleWrapper::isTraversable)
 		 .def("getExternalForce", &ObstacleWrapper::getExternalForce)
 		 .def("createCollisionObject", boost::python::pure_virtual(&ObstacleWrapper::createCollisionObject))
+		 .def("getName", &ObstacleWrapper::getName)
+		 .def("getStandardDiffuseColor", &ObstacleWrapper::getStandardDiffuseColor)
+		 .def("getStandardAmbientColor", &ObstacleWrapper::getStandardAmbientColor)
     ;
 }
 

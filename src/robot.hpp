@@ -120,6 +120,13 @@ struct Joint {
     	    
     	    void setupViewer(std::string model_file, std::string environment_file);
     	    
+    	    /**
+    	     * Set the color of an obstacle with name 'obstacle_name'
+    	     */
+    	    void setObstacleColor(std::string obstacle_name, 
+    	    		              std::vector<double> &diffuse_color, 
+    	    		              std::vector<double> &ambient_color);
+    	    
     	    int getDOF();
     	    
     	    void test();

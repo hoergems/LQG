@@ -96,8 +96,8 @@ def get_goal_states(problem,
         ik_solutions = serializer.deserialize_joint_angles(path="tmp/" + problem, file="goalstates.txt")          
     return ik_solutions
 
-def copyToTmp(problem, environment_file):
-    if not os.path.exists("tmp/ " + problem + "/environment"):
+def copyToTmp(problem, environment_file):    
+    if not os.path.exists("tmp/" + problem + "/environment"):
         os.makedirs("tmp/" + problem + "/environment")
     shutil.copy2(environment_file, 'tmp/' + problem + '/' + environment_file)        
     shutil.copy2('config_' + str(problem) + '.yaml', 'tmp/' + problem + '/config_' + str(problem) + '.yaml')

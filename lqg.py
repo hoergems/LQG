@@ -106,10 +106,7 @@ class LQG:
             paths = []
             if ((not append_paths) and deserialize):
                 paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)
-                #paths = [paths[3], paths[14]]
-                #paths=[paths[861]]
-                #paths=[paths[0]]
-                
+                paths = [paths[0]]
             if len(paths) == 0:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
                 t0 = time.time()
@@ -162,7 +159,7 @@ class LQG:
                                      self.obstacles,
                                      self.goal_position,
                                      self.goal_radius,
-                                     self.show_viewer,
+                                     self.show_viewer_evaluation,
                                      self.robot_file,
                                      self.environment_file)
                 if self.dynamic_problem:
@@ -198,7 +195,7 @@ class LQG:
                                   self.goal_position, 
                                   self.goal_radius,
                                   self.max_velocity,                                  
-                                  self.show_viewer,
+                                  self.show_viewer_simulation,
                                   self.robot_file,
                                   self.environment_file)                              
                 sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
@@ -567,7 +564,10 @@ class LQG:
         collision_check_times2 = []     
         
         y = 0
-        while True:            
+        while True:
+            obstacle_color = v_double()
+            obstacle_color[:] = [0.8, 0.0, 0.0, 0.0]
+            self.robot.setObstacleColor("obst2", obstacle_color)            
             #u_in = [3.0, 1.5, 0.0, 0.0, 0.0, 0.0]
             u_in = [0.0 for i in xrange(self.robot_dof)]
             #u_in[0] = 150.0
@@ -758,7 +758,8 @@ class LQG:
         self.simulation_step_size = config['simulation_step_size']        
         self.path_timeout = config['path_timeout'] 
         self.continuous_collision = config['continuous_collision_check']
-        self.show_viewer = config['show_viewer']   
+        self.show_viewer_evaluation = config['show_viewer_evaluation']
+        self.show_viewer_simulation = config['show_viewer_simulation']   
         self.path_deviation_cost = config['path_deviation_cost'] 
         self.control_deviation_cost = config['control_deviation_cost']
         self.num_control_samples = config['num_control_samples'] 

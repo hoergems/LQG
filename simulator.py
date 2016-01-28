@@ -251,8 +251,9 @@ class Simulator:
                 If yes, the true state is set to the previous state with 0 velocity.
                 If not, set the true state to the propagated state
                 """
-                collided = False                                                    
-                if self.is_in_collision(x_true, x_true_temp):                    
+                collided = False
+                in_collision_true_state, colliding_obstacle = self.is_in_collision(x_true, x_true_temp)                                                    
+                if in_collision_true_state:                    
                     for j in xrange(len(x_true) / 2, len(x_true)):
                         x_true[j] = 0.0                  
                     logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
@@ -289,7 +290,7 @@ class Simulator:
                 history_entries[-1].set_observation(z)
                 
                 """ Update the viewer to display the true state """                       
-                self.update_viewer(x_true, z, control_durations[i])
+                self.update_viewer(x_true, z, control_durations[i], colliding_obstacle)
                 
                 """ Kalman prediction and update """                   
                 x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u_dash, As[i], Bs[i], P_t, Vs[i], Ms[i])
@@ -391,7 +392,7 @@ class Simulator:
         return state
     
     
-    def is_in_collision(self, previous_state, state, p=False):
+    def is_in_collision(self, previous_state, state):
         """
         Is the given end effector position in collision with an obstacle?
         """
@@ -409,13 +410,13 @@ class Simulator:
             for obstacle in collidable_obstacles:
                 for i in xrange(len(collision_objects_start)):                    
                     if obstacle.inCollisionContinuous([collision_objects_start[i], collision_objects_goal[i]]):
-                        return True
-            return False
+                        return True, obstacle
+            return False, None
         else:            
             for obstacle in collidable_obstacles:
                 if obstacle.inCollisionDiscrete(collision_objects_goal):                               
-                    return True
-            return False 
+                    return True, None
+            return False, None 
     
     def is_terminal(self, ee_position):
         """ Determines if the end-effector position is terminal """
@@ -503,7 +504,7 @@ class Simulator:
             self.robot.addPermanentViewerParticles(particle_joint_values,
                                                    particle_joint_colors)            
     
-    def update_viewer(self, x, z, control_duration=None):
+    def update_viewer(self, x, z, control_duration=None, colliding_obstacle=None):
         """ Update the viewer to display the state 'x' of the robot 
         Optionally sleep for 'control_duration'
         """
@@ -526,6 +527,19 @@ class Simulator:
                                           cjvels, 
                                           particle_joint_values,
                                           particle_joint_colors)
+            for o in self.obstacles:
+                self.robot.setObstacleColor(o.getName(), 
+                                            o.getStandardDiffuseColor(),
+                                            o.getStandardAmbientColor())
+            if colliding_obstacle != None:                
+                diffuse_col = v_double()
+                ambient_col = v_double()
+                diffuse_col[:] = [0.5, 0.0, 0.0, 0.0]
+                ambient_col[:] = [0.8, 0.0, 0.0, 0.0]
+                self.robot.setObstacleColor(colliding_obstacle.getName(), 
+                                            diffuse_col, 
+                                            ambient_col)
+            time.sleep(control_duration)
             time.sleep(control_duration)
     
     def sample_control_error(self, M):

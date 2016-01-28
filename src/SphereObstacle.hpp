@@ -20,7 +20,12 @@ namespace shared {
 
 class SphereObstacle: public Obstacle  {
     public:    
-        SphereObstacle(double pos_x, double pos_y, double pos_z, double radius, const Terrain &terrain);
+        SphereObstacle(std::string name, 
+        		       double pos_x, 
+        		       double pos_y, 
+        		       double pos_z, 
+        		       double radius, 
+        		       const Terrain &terrain);
                 
         virtual void createCollisionObject() override;
 

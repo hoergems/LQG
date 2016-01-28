@@ -30,7 +30,7 @@ namespace shared {
 class Obstacle {
     public:
     
-        Obstacle(const Terrain &terrain);
+        Obstacle(std::string name, const Terrain &terrain);
         ~Obstacle() = default;
         
         //void set_dimensions(std::vector<double> &position, std::vector<double>)
@@ -97,8 +97,35 @@ class Obstacle {
          * Create the underlying collision object
          */
         virtual void createCollisionObject() = 0;
+        
+        /**
+         * Get the obstacle name
+         */
+        virtual std::string getName();
+        
+        /**
+         * Set the obstacle's standard color
+         */
+        virtual void setStandardColor(std::vector<double> &diffuseColor,
+        		                      std::vector<double> &ambientColor);
+        
+        /**
+         * Get the standard diffuse color
+         */
+        virtual std::vector<double> getStandardDiffuseColor();
+        
+        /**
+         * Get the standard ambient color
+         */
+        virtual std::vector<double> getStandardAmbientColor();
 
     protected:
+        std::string name_;
+        
+        std::vector<double> diffuse_color_;
+        
+        std::vector<double> ambient_color_;
+        
         std::shared_ptr<fcl::CollisionObject> collision_object_ptr_;
                 
         const shared::Terrain terrain_;
@@ -109,8 +136,8 @@ class Obstacle {
  */
 struct ObstacleWrapper: Obstacle, boost::python::wrapper<Obstacle> {
 public:
-	ObstacleWrapper(const Terrain &terrain):
-		Obstacle(terrain) {		
+	ObstacleWrapper(std::string name, const Terrain &terrain):
+		Obstacle(name, terrain) {		
 	}
 	
 	void createCollisionObject() {
@@ -132,6 +159,19 @@ public:
 	double getExternalForce() {
 		this->get_override("getExternalForce")();
 	}
+	
+	std::string getName() {
+		this->get_override("getName")();
+	}
+	
+	std::vector<double> getStandardDiffuseColor() {
+		this->get_override("getStandardDiffuseColor")();
+	}
+	
+	std::vector<double> getStandardAmbientColor() {
+		this->get_override("getStandardAmbientColor")();
+	}
+	
 };
 
 }

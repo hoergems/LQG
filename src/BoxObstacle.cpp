@@ -12,8 +12,15 @@ using namespace boost::python;
 
 namespace shared {
 
-BoxObstacle::BoxObstacle(double pos_x, double pos_y, double pos_z, double size_x, double size_y, double size_z, const Terrain &terrain):
-	Obstacle(terrain),
+BoxObstacle::BoxObstacle(std::string name,
+		                 double pos_x, 
+		                 double pos_y, 
+		                 double pos_z, 
+		                 double size_x, 
+		                 double size_y, 
+		                 double size_z, 
+		                 const Terrain &terrain):
+	Obstacle(name, terrain),	
     pos_x_(pos_x),
     pos_y_(pos_y),
     pos_z_(pos_z),

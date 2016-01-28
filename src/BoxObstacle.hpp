@@ -20,11 +20,18 @@ namespace shared {
 
 class BoxObstacle: public Obstacle  {
     public:    
-        BoxObstacle(double pos_x, double pos_y, double pos_z, double size_x, double size_y, double size_z, const Terrain &terrain);
+        BoxObstacle(std::string name, 
+        		    double pos_x, 
+        		    double pos_y, 
+        		    double pos_z, 
+        		    double size_x, 
+        		    double size_y, 
+        		    double size_z, 
+        		    const Terrain &terrain);
                 
         virtual void createCollisionObject() override;
 
-    private:
+    private:        
         double pos_x_;
         double pos_y_;
         double pos_z_;

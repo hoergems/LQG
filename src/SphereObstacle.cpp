@@ -8,8 +8,13 @@ using namespace fcl;
 
 namespace shared {
 
-SphereObstacle::SphereObstacle(double pos_x, double pos_y, double pos_z, double radius, const Terrain &terrain):
-	Obstacle(terrain),
+SphereObstacle::SphereObstacle(std::string name, 
+		                       double pos_x, 
+		                       double pos_y, 
+		                       double pos_z, 
+		                       double radius, 
+		                       const Terrain &terrain):
+	Obstacle(name, terrain),
 	pos_x_(pos_x),
 	pos_y_(pos_y),
 	pos_z_(pos_z),

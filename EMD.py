@@ -1,9 +1,10 @@
 __author__ = 'GongLi'
  
-#from pulp import *
+from pulp import *
 import numpy as np
 import cv
 import logging
+import os
 
 def compute_earth_mover(H1, H2):
     """
