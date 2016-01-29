@@ -97,6 +97,7 @@ bool DynamicPathPlanner::setup_ompl_(double &simulation_step_size,
     problem_definition_ = boost::make_shared<ompl::base::ProblemDefinition>(space_information_);
     //planner_ = boost::make_shared<ompl::control::RRT>(space_information_);
     planner_ = boost::make_shared<RRTControl>(space_information_);
+    //planner_ = boost::make_shared<ESTControl>(space_information_);
     planner_->setProblemDefinition(problem_definition_);
     boost::static_pointer_cast<RRTControl>(planner_)->setIntermediateStates(true);
     state_propagator_ = boost::make_shared<StatePropagator>(space_information_,

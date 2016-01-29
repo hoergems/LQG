@@ -16,14 +16,14 @@ import argparse
 from emd import emd
 
 class PlotStats:
-    def __init__(self, algorithm, save_plots, show_particles):
+    def __init__(self, algorithm, save_plots, show_particles, plot_emds):
         dir = "stats/" + str(algorithm)
         if not os.path.isdir(dir):
             os.makedirs(dir)       
         self.save = save_plots        
         serializer = Serializer()
         
-        if self.setup_robot(dir):            
+        if self.setup_robot(dir) and plot_emds:            
             self.plot_emds(show_particles, dir=dir)
         else:
             logging.error("Robot couldn't be initialized")
@@ -849,8 +849,11 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--particles", 
                         help="Show particles", 
                         action="store_true")
+    parser.add_argument("-e", "--emd", 
+                        help="Plot emds", 
+                        action="store_true")
     args = parser.parse_args() 
-    PlotStats(args.algorithm, args.save, args.particles)
+    PlotStats(args.algorithm, args.save, args.particles, args.emd)
     '''return
     if len(sys.argv) > 2:
         algorithm = sys.argv[1]

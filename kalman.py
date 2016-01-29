@@ -15,7 +15,7 @@ def kalman_update(x_tilde_dash_t, z_dash_t, H, P_dash_t, W, N):
     P_t = compute_P_t(K_t, H, P_dash_t)    
     return x_tilde_t, P_t
     
-def compute_kalman_gain(H, P_dash_t, W, N):   
+def compute_kalman_gain(H, P_dash_t, W, N):    
     return np.dot(P_dash_t, np.dot(H.T, linalg.inv(np.dot(H, np.dot(P_dash_t, H.T)) + np.dot(W, np.dot(N, W.T)))))
     
 def compute_state_estimate(x_tilde_dash_t, z_dash_t, H, K_t):

@@ -342,8 +342,7 @@ class PathPlanningInterface:
             us.append([xs_temp[i][j] for j in xrange(2 * self.robot_dof, 3 * self.robot_dof)])
             zs.append([xs_temp[i][j] for j in xrange(3 * self.robot_dof, 5 * self.robot_dof)])
             
-            control_durations.append(xs_temp[i][5 * self.robot_dof])
-        
+            control_durations.append(xs_temp[i][5 * self.robot_dof])        
         '''if self.dynamic_problem:
             all_states = v2_double()
             print "getting all states"

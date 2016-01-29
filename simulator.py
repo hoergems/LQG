@@ -184,8 +184,7 @@ class Simulator:
         collided = False
         x_dash = np.copy(x_tilde)
         x_dash_linear = np.copy(x_tilde_linear)
-        x_true_linear = x_true
-        
+        x_true_linear = x_true        
         As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, us, control_durations)
         Ls = kalman.compute_gain(As, Bs, self.C, self.D, len(xs) - 1)
         logging.info("Simulator: Executing for " + str(n_steps) + " steps") 

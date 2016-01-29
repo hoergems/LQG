@@ -18,6 +18,7 @@
 #include <ompl/control/SpaceInformation.h>
 //#include <ompl/control/planners/rrt/RRT.h>
 #include "rrt_control.hpp"
+#include "EST_control.hpp"
 #include <ompl/control/planners/est/EST.h>
 
 #include <ompl/base/State.h>
