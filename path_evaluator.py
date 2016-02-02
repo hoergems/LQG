@@ -217,14 +217,17 @@ class PathEvaluator:
     def evaluate_paths(self, paths, P_t, current_step, horizon=-1):
         jobs = collections.deque() 
         eval_queue = Queue()
-        evaluated_paths = []
-        paths_tmp = []        
-        for i in xrange(len(paths)):
-            if len(paths[i][0]) != 0:
-                paths_tmp.append(paths[i])
+        evaluated_paths = []        
+        paths_tmp = [(i, paths[i]) for i in xrange(len(paths)) if len(paths[i][0]) != 0]
         for i in xrange(len(paths_tmp)):            
             logging.info("PathEvaluator: Evaluate path " + str(i))            
-            p = Process(target=self.evaluate, args=(i, paths_tmp[i], P_t, current_step, horizon, self.robot, eval_queue,))
+            p = Process(target=self.evaluate, args=(paths_tmp[i][0], 
+                                                    paths_tmp[i][1], 
+                                                    P_t, 
+                                                    current_step, 
+                                                    horizon, 
+                                                    self.robot, 
+                                                    eval_queue,))
             p.start()
             jobs.append(p)           
                 
@@ -249,7 +252,7 @@ class PathEvaluator:
         estimated_deviation_covariances = evaluated_paths[0][6]
         for i in xrange(1, len(path_rewards)):                        
             if path_rewards[i] > best_objective:
-                best_index = [i][0]                
+                best_index = evaluated_paths[i][0]                
                 best_objective = path_rewards[i]                
                 best_path = evaluated_paths[i][2]
                 s_covariances = evaluated_paths[i][4]

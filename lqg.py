@@ -525,7 +525,7 @@ class LQG:
             print "in collision continuous " + str(in_collision_continuous)'''
             print "in collision continuous " + str(in_collision_continuous)
             coll_t += time.time() - t0
-            if k == 100:
+            if k == 10000:
                 print coll_t / k
                 sleep
             self.robot.updateViewerValues(cjvals, 
@@ -553,7 +553,7 @@ class LQG:
         f_pitch = 0.0
         f_yaw = 0.0         
         x = [0.0 for i in xrange(2 * self.robot_dof)]
-        x = [np.pi / 2.0, 0.0, 0.0, 0.0,
+        x = [0.0, 0.0, 0.0, 0.0,
              0.0,
              0.0,
              0.0,
@@ -588,7 +588,7 @@ class LQG:
                                  result)
             t = time.time() - t0
             integration_times.append(t)
-            if y == 100:
+            if y == 10000:
                 t_sum = sum(integration_times)
                 t_mean = t_sum / len(integration_times)
                 print "mean integration times: " + str(t_mean)
