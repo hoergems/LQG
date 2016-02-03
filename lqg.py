@@ -106,7 +106,7 @@ class LQG:
             paths = []
             if ((not append_paths) and deserialize):
                 paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)
-                #paths = [paths[0]]
+                #paths = [paths[26]]
             if len(paths) == 0:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
                 t0 = time.time()
@@ -151,7 +151,7 @@ class LQG:
                     N = self.calc_covariance_value(self.robot, 
                                                    m_covs[j],
                                                    N_base, 
-                                                   covariance_type='observation')
+                                                   covariance_type='observation')                    
                 P_t = np.array([[0.0 for k in xrange(2 * self.robot_dof)] for l in xrange(2 * self.robot_dof)]) 
                 path_evaluator.setup(A, B, C, D, H, M, N, V, W,                                     
                                      self.robot, 

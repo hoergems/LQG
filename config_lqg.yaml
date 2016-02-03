@@ -47,7 +47,7 @@ min_process_covariance: 5.0
 max_process_covariance: 5.0
 
 # The minimum observation covariance
-min_observation_covariance: 0.00
+min_observation_covariance: 2.3
 
 # The maximum observation covariance
 max_observation_covariance: 10.0
@@ -57,7 +57,7 @@ max_observation_covariance: 10.0
 inc_covariance: observation
 
 # The number of covariance steps
-covariance_steps: 10
+covariance_steps: 8
 
 path_deviation_cost: 200.0
 
@@ -82,7 +82,7 @@ exit_reward: 1000.0
 ################################################
 
 # The number of samples drawn from the distribution at each state to check a path for collision
-sample_size: 500
+sample_size: 1000
 
 # Enforce the position and velocity constraints
 enforce_constraints: True
@@ -128,5 +128,5 @@ add_intermediate_states: True
 # Visualization
 #########################################
 show_viewer_evaluation: False
-show_viewer_simulation: True
+show_viewer_simulation: False
 
