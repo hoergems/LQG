@@ -24,9 +24,7 @@ class PlotStats:
         serializer = Serializer()
         
         if self.setup_robot(dir) and plot_emds:            
-            self.plot_emds(show_particles, dir=dir)
-        else:
-            logging.error("Robot couldn't be initialized")
+            self.plot_emds(show_particles, dir=dir)    
         
         logging.info("Plotting average distance to goal")
         try:        
@@ -87,6 +85,7 @@ class PlotStats:
         
     def plot_emds(self, show_particles, dir="stats"):        
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
+        files = [files[i] for i in xrange(len(files)) if not "abt" in files[i]]
         
         d = dict()
         d["lqg"] = [] 
@@ -377,12 +376,12 @@ class PlotStats:
                             filename=dir + "/" + output_file_str + ".png")
         
     def setup_robot(self, dir='stats'):
-        model_file = os.getcwd() + "/" + dir + "/model/test_4dof.urdf"
-        if os.path.isfile(model_file):
-            self.robot = Robot(model_file) 
-            return True
-        else:
-            return False        
+        robot_files = glob.glob(os.path.join(os.path.join(dir + "/model/", "*.urdf")))
+        if len(robot_files) == 0:
+            logging.error("Robot couldn't be initialized")
+            return False
+        self.robot = Robot(robot_files[0]) 
+        return True
         
     def clear_stats(self):
         for file in glob.glob("stats/*"):
