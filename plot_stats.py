@@ -16,10 +16,10 @@ import argparse
 from emd import emd
 
 class PlotStats:
-    def __init__(self, algorithm, save_plots, show_particles, plot_emds):
-        dir = "stats/" + str(algorithm)
+    def __init__(self, dir, save_plots, show_particles, plot_emds):        
         if not os.path.isdir(dir):
-            os.makedirs(dir)       
+            print "Error: Directory doesn't exist"
+            return       
         self.save = save_plots        
         serializer = Serializer()
         
@@ -28,8 +28,11 @@ class PlotStats:
         else:
             logging.error("Robot couldn't be initialized")
         
-        logging.info("Plotting average distance to goal")        
-        self.plot_stat("Average distance to goal area", "avg_distance", dir=dir)
+        logging.info("Plotting average distance to goal")
+        try:        
+            self.plot_stat("Average distance to goal area", "avg_distance", dir=dir)
+        except:
+            pass
         
         logging.info("Plotting mean number of histories per step")
         self.plot_stat("Mean number of histories per step", "mean_num_histories", dir=dir)
@@ -297,8 +300,8 @@ class PlotStats:
         
     def plot_stat(self, stat_str, output_file_str, dir="stats", y_label=""):
         if y_label == "":
-            y_label = stat_str
-        files = glob.glob(os.path.join(os.path.join(dir, "*.log")))            
+            y_label = stat_str        
+        files = glob.glob(os.path.join(os.path.join(dir, "*.log")))                 
         num_succ_runs = [] 
         stats_sets = [] 
         labels = []
@@ -307,7 +310,12 @@ class PlotStats:
         color_map = []
         d = dict()               
         for file in sorted(files):
-            file_str = file.split("/")[2].split("_")[1]
+            file_str = file.split("/")[-1].split("_")[1]
+            #print file_str; sleep
+            #file_str = file.split("/")[2].split("_")[1]
+            
+            #print file_str
+            #sleep
             if not file_str in d:
                 d[file_str] = []                 
             m_cov = -1
@@ -841,8 +849,8 @@ class PlotStats:
 if __name__ == "__main__":
     logging_level = logging.DEBUG
     logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)
-    parser = argparse.ArgumentParser(description='LQG-MP plotting')
-    parser.add_argument("-a", "--algorithm", help="Path to the robot model file")
+    parser = argparse.ArgumentParser(description='LQG-MP plotting')    
+    parser.add_argument("-d", "--directory", help="Path to the robot model file")
     parser.add_argument("-s", "--save", 
                         help="Save the plots", 
                         action="store_true")
@@ -853,7 +861,7 @@ if __name__ == "__main__":
                         help="Plot emds", 
                         action="store_true")
     args = parser.parse_args() 
-    PlotStats(args.algorithm, args.save, args.particles, args.emd)
+    PlotStats(args.directory, args.save, args.particles, args.emd)
     '''return
     if len(sys.argv) > 2:
         algorithm = sys.argv[1]

@@ -41,13 +41,13 @@ num_bins: 201
 #################################################
 # The error variables are defined as the standard deviation in percentage of the value range
 # The minimum joint state covariance
-min_process_covariance: 5.0
+min_process_covariance: 0.01
 
 # The maximum joint state covariance
-max_process_covariance: 5.0
+max_process_covariance: 10.0
 
 # The minimum observation covariance
-min_observation_covariance: 2.3
+min_observation_covariance: 0.01
 
 # The maximum observation covariance
 max_observation_covariance: 10.0
@@ -57,7 +57,7 @@ max_observation_covariance: 10.0
 inc_covariance: observation
 
 # The number of covariance steps
-covariance_steps: 8
+covariance_steps: 10
 
 path_deviation_cost: 200.0
 
