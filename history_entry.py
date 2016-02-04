@@ -39,6 +39,8 @@ class HistoryEntry:
         self.estimated_covariance = estimated_covariance
         self.s_tilde = None
         self.u_dash = None
+        self.colliding_obstacle = None
+        self.colliding_state = None
         
     def set_action(self, action):
         self.action = action
@@ -72,6 +74,12 @@ class HistoryEntry:
         
     def set_u_dash(self, u_dash):
         self.u_dash = u_dash
+        
+    def set_colliding_obstacle(self, obstacle_name):
+        self.colliding_obstacle = obstacle_name
+        
+    def set_colliding_state(self, colliding_state):
+        self.colliding_state = colliding_state
         
     def serialize(self, path, file):        
         with open(os.path.join(path, file), 'a') as f:                    
@@ -163,6 +171,17 @@ class HistoryEntry:
             else:
                 coll_string += "false"
             f.write(coll_string + " \n") 
+            
+            coll_string = "colliding obstacle: " + str(self.colliding_obstacle)
+            f.write(coll_string + " \n")
+            
+            coll_string = "colliding state: "
+            if self.colliding_state == None:
+                coll_string += "None"
+            else:             
+                for i in xrange(len(self.colliding_state)):
+                    coll_string += str(self.colliding_state[i]) + " "
+            f.write(coll_string + " \n")           
             
             term_string = "Terminal: true"
             if not self.terminal:

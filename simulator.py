@@ -74,7 +74,7 @@ class Simulator:
         self.robot.getActiveJoints(active_joints)
         self.robot_dof = self.robot.getDOF()      
         if show_viewer:
-            self.robot.setupViewer(model_file, env_file)        
+            self.robot.setupViewer(model_file, env_file)               
         
     def setup_dynamic_problem(self,                           
                               simulation_step_size):
@@ -258,6 +258,8 @@ class Simulator:
                     logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
                     total_reward += discount * (-1.0 * self.illegal_move_penalty)
                     history_entries[-1].set_reward(-1.0 * self.illegal_move_penalty)
+                    history_entries[-1].set_colliding_obstacle(colliding_obstacle.getName())
+                    history_entries[-1].set_colliding_state(x_true_temp)
                     collided = True
                 else:
                     total_reward += discount * (-1.0 * self.step_penalty)
@@ -316,8 +318,7 @@ class Simulator:
                 if not self.is_in_collision([], x_estimate_new)[0]:                                                                                                    
                     x_estimate = x_estimate_new
                     estimate_collided = False
-                else:
-                    print "estimate collides"
+                else:                    
                     for i in xrange(len(x_estimate) / 2, len(x_estimate)):
                         x_estimate[i] = 0                                          
                 estimated_states.append(x_estimate)
@@ -413,9 +414,7 @@ class Simulator:
             return False, None
         else:            
             for obstacle in collidable_obstacles:
-                if obstacle.inCollisionDiscrete(collision_objects_goal):
-                    print "collides"
-                    time.sleep(10)                               
+                if obstacle.inCollisionDiscrete(collision_objects_goal):                                                   
                     return True, obstacle
             return False, None 
     
@@ -547,8 +546,9 @@ class Simulator:
         """ Samples a zero mean control error from a multivariate Gaussian
         distirbution with covariance matrix 'M'
         """
-        mu = np.array([0.0 for i in xrange(M.shape[0])])
-        return np.random.multivariate_normal(mu, M)
+        mu = np.array([0.0 for i in xrange(M.shape[0])])        
+        r = np.random.multivariate_normal(mu, M)        
+        return r
     
     def get_random_joint_angles(self, mu, cov):        
         #with self.lock:

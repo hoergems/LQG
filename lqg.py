@@ -25,6 +25,13 @@ class LQG:
         self.init_serializer()
         config = self.serializer.read_config("config_lqg.yaml")
         self.set_params(config)
+        if self.seed < 0:
+            """
+            Generate a random seed that will be stored
+            """
+            self.seed = np.random.randint(0, sys.maxint)
+        np.random.seed(self.seed)  
+        
         logging_level = logging.WARN
         if config['verbose']:
             logging_level = logging.DEBUG
@@ -314,6 +321,7 @@ class LQG:
                 self.serializer.write_line("log.log", 
                                       "tmp/lqg", 
                                       "Reward standard deviation: " + str(np.sqrt(var)) + " \n")
+                self.serializer.write_line("log.log", "tmp/lqg", "Seed: " + str(self.seed) + " \n")
                 cmd = "mv tmp/lqg/log.log " + dir + "/log_lqg_" + str(m_covs[j]) + ".log"
                 os.system(cmd)
                 
@@ -770,6 +778,7 @@ class LQG:
         self.environment_file = config['environment_file']
         self.rrt_goal_bias = config['rrt_goal_bias']
         self.control_sampler = config['control_sampler']
+        self.seed = config['seed']
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='LQG-MP.')

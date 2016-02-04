@@ -25,6 +25,13 @@ class MPC:
         self.init_serializer()
         config = self.serializer.read_config("config_mpc.yaml")
         self.set_params(config)
+        if self.seed < 0:
+            """
+            Generate a random seed that will be stored
+            """
+            self.seed = np.random.randint(0, sys.maxint)
+        np.random.seed(self.seed)
+        
         logging_level = logging.WARN
         if config['verbose']:
             logging_level = logging.DEBUG
@@ -300,6 +307,7 @@ class MPC:
             self.serializer.write_line("log.log", 
                                        "tmp/mpc", 
                                        "Reward standard deviation: " + str(np.sqrt(var)) + " \n")
+            self.serializer.write_line("log.log", "tmp/lqg", "Seed: " + str(self.seed) + " \n")
             cmd = "mv tmp/mpc/log.log " + dir + "/log_mpc_" + str(m_covs[j]) + ".log"
             os.system(cmd)
         
@@ -592,7 +600,7 @@ class MPC:
         self.max_num_steps = config['max_num_steps']
         self.evaluation_horizon = config['horizon']
         self.timeout = config['timeout']
-        
+        self.seed = config['seed']
         
         
         """
