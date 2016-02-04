@@ -362,7 +362,17 @@ class PlotStats:
             min_m -= -0.1 * min_m 
         max_m = max(num_succ_runs) 
         min_cov = min(m_covs)
-        max_cov = max(m_covs)        
+        max_cov = max(m_covs)
+        with open(dir + "/" + output_file_str + ".txt", 'a+') as f:            
+            for i in xrange(len(stats_sets)):
+                string = labels[i]
+                f.write(string + " \n") 
+                string = ""
+                for j in xrange(len(stats_sets[i])):
+                    string = str(stats_sets[i][j][0]) + ", "  + str(stats_sets[i][j][1])
+                    f.write(string + " \n")
+                f.write("\n")
+                 
         Plot.plot_2d_n_sets(stats_sets,
                             labels=labels,
                             xlabel="joint covariance",

@@ -211,7 +211,7 @@ class PathEvaluator:
             print "Permanent particles added"           
         
     def evaluate_path(self, path, P_t, current_step, horizon=-1):       
-        objective_p = self.evaluate(0, path, P_t, current_step, horizon)
+        objective_p = self.evaluate(0, path, P_t, current_step, horizon, self.robot)
         return (path, objective_p)
     
     def evaluate_paths(self, paths, P_t, current_step, horizon=-1):

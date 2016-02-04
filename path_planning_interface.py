@@ -39,28 +39,23 @@ class PathPlanningInterface:
     def __init__(self):
         self.path_evaluator = PathEvaluator()
     
-    def setup_path_evaluator(self, A, B, C, D, H, M, N, V, W, 
-                             link_dimensions, 
+    def setup_path_evaluator(self, A, B, C, D, H, M, N, V, W,
                              robot, 
                              sample_size, 
-                             obstacles,
-                             joint_constraints,
-                             enforce_constraints,
+                             obstacles,                             
                              goal_position,
                              goal_radius,
-                             w1, 
-                             w2):
+                             model_file,
+                             env_file):
         self.path_evaluator.setup(A, B, C, D, H, M, N, V, W, 
-                                  link_dimensions, 
-                                  robot, 
+                                  robot,
                                   sample_size, 
-                                  obstacles,
-                                  joint_constraints,
-                                  enforce_constraints,
+                                  obstacles,                                  
                                   goal_position,
                                   goal_radius,
-                                  w1, 
-                                  w2)
+                                  False,
+                                  model_file,
+                                  env_file)
         
     def setup_reward_function(self, 
                               step_penalty, 
@@ -133,8 +128,7 @@ class PathPlanningInterface:
         processes = [Process(target=self.construct_and_evaluate_path, 
                              args=(self.robot,
                                    self.obstacles, 
-                                   path_queue, 
-                                   self.joint_constraints,
+                                   path_queue,                                   
                                    current_step,
                                    horizon, 
                                    P_t,)) for i in xrange(self.num_cores - 1)]
@@ -240,15 +234,14 @@ class PathPlanningInterface:
                                     queue,                                    
                                     current_step, 
                                     horizon, 
-                                    P_t):
-        sleep
+                                    P_t):        
         while True:
             t0 = time.time()               
-            xs, us, zs = self._construct(robot, obstacles)
+            xs, us, zs, control_durations, success = self._construct(robot, obstacles)
             gen_time = time.time() - t0
             if len(xs) > 1:  
                 t0 = time.time()                      
-                eval_result = self.path_evaluator.evaluate_path([xs, us, zs], P_t, current_step, horizon)
+                eval_result = self.path_evaluator.evaluate_path([xs, us, zs, control_durations], P_t, current_step, horizon)
                 eval_time = time.time() - t0        
                 queue.put((xs, us, zs, eval_result[1], gen_time, eval_time))        
     
