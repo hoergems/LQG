@@ -298,8 +298,8 @@ class LQG:
                 self.serializer.write_line("log.log", "tmp/lqg", "Length best path: " + str(len(xs)) + " \n")
                 self.serializer.write_line("log.log", "tmp/lqg", "Index of best path: " + str(path_index) + " \n")
                 self.serializer.write_line("log.log", 
-                                      "tmp/lqg", 
-                                      "Average distance to goal area: " + str(mean_distance_to_goal) + " \n")
+                                           "tmp/lqg", 
+                                           "Average distance to goal area: " + str(mean_distance_to_goal) + " \n")
                 self.serializer.write_line("log.log", "tmp/lqg", "Num successes: " + str(successes) + " \n")
                 print "succ " + str((100.0 / self.num_simulation_runs) * successes)
                 self.serializer.write_line("log.log", "tmp/lqg", "Percentage of successful runs: " + str((100.0 / self.num_simulation_runs) * successes) + " \n")

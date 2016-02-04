@@ -39,6 +39,7 @@ class Play:
             return
         if not self.init_environment():
             return
+        print "PLAY"
         self.play_runs(dir, algorithm, numb, play_failed)
         
     def is_terminal(self, state):
@@ -58,7 +59,7 @@ class Play:
         for file in files:
             file_str = file.split("/")[-1]
             if algorithm in file_str:
-                log_files.append(file)
+                log_files.append(file)        
         with open(sorted(log_files)[numb]) as f:
             states = []
             all_particles = []
@@ -104,7 +105,10 @@ class Play:
                     state = np.array([float(line_arr[i]) for i in xrange(len(line_arr))])
                     states.append(state)
                     terminal = self.is_terminal(state)
-                elif ("RUN #" in line or "Run #" in line) and len(states) != 0:
+                elif ("RUN #" in line or 
+                      "Run #" in line or
+                      "#####" in line) and len(states) != 0:
+                    
                     if play_failed:
                         if terminal == False:
                             self.show_nominal_path(nominal_states)                            

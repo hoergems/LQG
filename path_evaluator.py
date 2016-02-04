@@ -211,8 +211,15 @@ class PathEvaluator:
             print "Permanent particles added"           
         
     def evaluate_path(self, path, P_t, current_step, horizon=-1):       
-        objective_p = self.evaluate(0, path, P_t, current_step, horizon, self.robot)
-        return (path, objective_p)
+        (objective_p, 
+         state_covariances, 
+         deviation_covariances, 
+         estimated_deviation_covariances) = self.evaluate(0, path, P_t, current_step, horizon, self.robot)
+        return (path, 
+                objective_p, 
+                state_covariances, 
+                deviation_covariances, 
+                estimated_deviation_covariances)
     
     def evaluate_paths(self, paths, P_t, current_step, horizon=-1):
         jobs = collections.deque() 
@@ -414,7 +421,7 @@ class PathEvaluator:
         if not eval_queue==None:            
             eval_queue.put((index, path_reward, path, Cov, state_covariances, deviation_covariances, estimated_deviation_covariances))
         else:
-            return path_reward
+            return path_reward, state_covariances, deviation_covariances, estimated_deviation_covariances
     
     def show_state_and_cov(self, state, cov, samples):        
         joint_values = v_double()

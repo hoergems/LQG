@@ -30,13 +30,14 @@ class MPC:
             logging_level = logging.DEBUG
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)        
         np.set_printoptions(precision=16)
-        dir = "stats/lqg"        
+        dir = "stats/mpc"        
         self.utils = Utils()
         if not self.init_robot(self.robot_file):
-            logging.error("LQG: Couldn't initialize robot")
+            logging.error("MPC: Couldn't initialize robot")
             return               
         if not self.setup_scene(self.environment_file, self.robot):
-            return        
+            return   
+        #self.run_viewer(self.robot_file, self.environment_file)     
         self.clear_stats(dir)
         logging.info("Start up simulator")
         sim = Simulator()
@@ -59,9 +60,9 @@ class MPC:
                                       self.environment_file)
         
         if len(goal_states) == 0:
-            logging.error("LQG: Couldn't generate any goal states. Problem seems to be infeasible")
+            logging.error("MPC: Couldn't generate any goal states. Problem seems to be infeasible")
             return
-        logging.info("LQG: Generated " + str(len(goal_states)) + " goal states")
+        logging.info("MPC: Generated " + str(len(goal_states)) + " goal states")
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
         path_planner.setup(self.robot,                         
                            self.obstacles,  
@@ -125,24 +126,50 @@ class MPC:
                                               self.goal_radius,                                              
                                               self.robot_file,
                                               self.environment_file)
+            sim.setup_problem(A, B, C, D, H, V, W, M, N,
+                              self.robot, 
+                              self.enforce_control_constraints,
+                              self.obstacles, 
+                              self.goal_position, 
+                              self.goal_radius,
+                              self.max_velocity,                                  
+                              self.show_viewer_simulation,
+                              self.robot_file,
+                              self.environment_file)
             if self.dynamic_problem:
                 path_evaluator.setup_dynamic_problem()
+                sim.setup_dynamic_problem(self.simulation_step_size)
             path_planner.setup_reward_function(self.step_penalty, self.exit_reward, self.illegal_move_penalty, self.discount_factor)
+            mean_number_planning_steps = 0.0
+            number_of_steps = 0.0
+            mean_planning_time = 0.0
+            num_generated_paths_run = 0.0
+            successful_runs = 0
+            num_collisions = 0.0
+            final_states= []
+            rewards_cov = []
             for k in xrange(self.num_simulation_runs):
+                mean_number_planning_steps += 1.0                
                 self.serializer.write_line("log.log", "tmp/mpc", "RUN #" + str(k + 1) + " \n")
                 current_step = 0
                 x_true = self.start_state
                 x_estimate = self.start_state
+                x_tilde_linear = np.array([0.0 for i in xrange(2 * self.robot_dof)])
                 P_t = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])                
                 total_reward = 0.0
                 terminal = False
                 while current_step < self.max_num_steps and not terminal:
-                    path_planner.set_start_and_goal(self.start_state, goal_states, self.goal_position, self.goal_radius)
+                    path_planner.set_start_and_goal(x_estimate, goal_states, self.goal_position, self.goal_radius)
+                    t0 = time.time()
                     (xs, 
                      us, 
-                     zs, 
+                     zs,
+                     control_durations, 
                      num_generated_paths, 
-                     best_val, 
+                     best_val,
+                     state_covariances,
+                     deviation_covariances,
+                     estimated_deviation_covariances, 
                      mean_gen_times, 
                      mean_eval_times,
                      total_gen_times,
@@ -151,7 +178,146 @@ class MPC:
                                                                               current_step, 
                                                                               self.evaluation_horizon, 
                                                                               P_t, 
-                                                                              self.timeout)
+                                                                              self.timeout)                    
+                    
+                    mean_planning_time += time.time() - t0  
+                    num_generated_paths_run += num_generated_paths
+                    if len(xs) == 0:
+                        logging.error("MPC: Couldn't find any paths from start state" + 
+                                      str(x_estimate) + 
+                                      " to goal states") 
+                                      
+                        total_reward = np.array([-self.illegal_move_penalty])[0]
+                        current_step += 1                                             
+                        break
+                    x_tilde = np.array([0.0 for i in xrange(2 * self.robot_dof)])
+                    n_steps = self.num_execution_steps
+                    
+                    if n_steps > len(xs) - 1:
+                       n_steps = len(xs) - 1
+                    if current_step + n_steps > self.max_num_steps:
+                        n_steps = self.max_num_steps - current_step
+                    (x_true, 
+                     x_tilde,
+                     x_tilde_linear, 
+                     x_estimate, 
+                     P_t, 
+                     current_step, 
+                     total_reward, 
+                     success, 
+                     terminal,
+                     estimated_s,
+                     estimated_c,
+                     history_entries) = sim.simulate_n_steps(xs, us, zs,
+                                                             control_durations,
+                                                             x_true,                                                              
+                                                             x_tilde,
+                                                             x_tilde_linear,
+                                                             x_estimate,
+                                                             P_t,
+                                                             total_reward,                                                                 
+                                                             current_step,
+                                                             n_steps,
+                                                             0.0,
+                                                             0.0)
+                    
+                    if (success):
+                        successful_runs += 1
+                        final_states.append(history_entries[-1].x_true)                        
+                    for l in xrange(len(history_entries)):
+                        history_entries[l].set_estimated_covariance(state_covariances[l])                        
+                        history_entries[l].serialize("tmp/mpc", "log.log")
+                        if history_entries[l].collided:                            
+                            num_collisions += 1
+                            collided = True
+                    logging.warn("MPC: Execution finished. True state is " + str(x_true))
+                    logging.warn("MPC: Estimated state is " + str(x_estimate))
+                    logging.warn("MPC: Executed " + str(current_step) + " steps") 
+                    logging.warn("MPC: terminal " + str(terminal))
+                    if terminal:
+                        print "MPC: Final state: " + str(x_true)
+                rewards_cov.append(total_reward)
+                self.serializer.write_line("log.log", 
+                                           "tmp/mpc", 
+                                           "Reward: " + str(total_reward) + " \n") 
+                self.serializer.write_line("log.log", 
+                                           "tmp/mpc", 
+                                           "\n")
+                number_of_steps += current_step
+            mean_planning_time /= self.num_simulation_runs
+                                
+            """ Calculate the distance to goal area
+            """  
+            ee_position_distances = [] 
+            for state in final_states:
+                joint_angles = v_double()
+                joint_angles[:] = [state[y] for y in xrange(len(state) / 2)]
+                ee_position = v_double()
+                self.robot.getEndEffectorPosition(joint_angles, ee_position)
+                ee_position = np.array([ee_position[y] for y in xrange(len(ee_position))])
+                dist = np.linalg.norm(np.array(self.goal_position - ee_position))
+                if dist < self.goal_radius:
+                    dist = 0.0
+                ee_position_distances.append(dist)
+            logging.info("MPC: Done. total_reward is " + str(total_reward))
+            n, min_max, mean_distance_to_goal, var, skew, kurt = scipy.stats.describe(np.array(ee_position_distances))                         
+                
+            self.serializer.write_line("log.log", "tmp/mpc", "################################# \n")
+            self.serializer.write_line("log.log",
+                                       "tmp/mpc",
+                                       "inc_covariance: " + str(self.inc_covariance) + "\n")
+            if self.inc_covariance == "process":                  
+                self.serializer.write_line("log.log",
+                                           "tmp/mpc",
+                                           "Process covariance: " + str(m_covs[j]) + " \n")
+                self.serializer.write_line("log.log",
+                                           "tmp/mpc",
+                                           "Observation covariance: " + str(self.min_observation_covariance) + " \n")
+            elif self.inc_covariance == "observation":                    
+                self.serializer.write_line("log.log",
+                                           "tmp/mpc",
+                                           "Process covariance: " + str(self.min_process_covariance) + " \n")
+                self.serializer.write_line("log.log",
+                                           "tmp/mpc",
+                                           "Observation covariance: " + str(m_covs[j]) + " \n")
+            number_of_steps /= self.num_simulation_runs
+            self.serializer.write_line("log.log", "tmp/mpc", "Mean number of steps: " + str(number_of_steps) + " \n")                            
+            self.serializer.write_line("log.log", "tmp/mpc", "Mean num collisions per run: " + str(float(num_collisions) / float(self.num_simulation_runs)) + " \n")
+            self.serializer.write_line("log.log", 
+                                       "tmp/mpc", 
+                                       "Average distance to goal area: " + str(mean_distance_to_goal) + " \n")
+            self.serializer.write_line("log.log", "tmp/mpc", "Num successes: " + str(successful_runs) + " \n")
+            print "succ " + str((100.0 / self.num_simulation_runs) * successful_runs)
+            self.serializer.write_line("log.log", "tmp/mpc", "Percentage of successful runs: " + str((100.0 / self.num_simulation_runs) * successful_runs) + " \n")
+            self.serializer.write_line("log.log", "tmp/mpc", "Mean planning time: " + str(mean_planning_time) + " \n")
+            
+            n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))
+            print "mean_rewards " + str(mean)
+            #plt.plot_histogram_from_data(rewards_cov)
+            #sleep
+            self.serializer.write_line("log.log", "tmp/mpc", "Mean rewards: " + str(mean) + " \n")
+            self.serializer.write_line("log.log", "tmp/mpc", "Reward variance: " + str(var) + " \n")
+            self.serializer.write_line("log.log", 
+                                       "tmp/mpc", 
+                                       "Reward standard deviation: " + str(np.sqrt(var)) + " \n")
+            cmd = "mv tmp/mpc/log.log " + dir + "/log_mpc_" + str(m_covs[j]) + ".log"
+            os.system(cmd)
+        
+        cmd = "cp config_mpc.yaml " + dir           
+        os.system(cmd)
+        
+        if not os.path.exists(dir + "/environment"):
+            os.makedirs(dir + "/environment") 
+            
+        cmd = "cp " + str(self.environment_file) + " " + str(dir) + "/environment"
+        os.system(cmd) 
+            
+        if not os.path.exists(dir + "/model"):
+            os.makedirs(dir + "/model")
+                
+        cmd = "cp " + self.robot_file + " " + dir + "/model"
+        os.system(cmd)         
+                    
                      
                 
         
@@ -163,9 +329,128 @@ class MPC:
         """ Setup operations """
         self.robot_dof = self.robot.getDOF()        
         if len(self.start_state) != 2 * self.robot_dof:
-            logging.error("LQG: Start state dimension doesn't fit to the robot state space dimension")
+            logging.error("MPC: Start state dimension doesn't fit to the robot state space dimension")
             return False
         return True
+    
+    def run_viewer(self, model_file, env_file):
+        show_viewer = True
+        rot = v_double()
+        trans = v_double()
+        rot[:] = [-1.0, 0.0, 0.0, 0.0]
+        trans[:] = [0.0, 0.0, 3.0]
+        if show_viewer:
+            self.robot.setViewerBackgroundColor(0.6, 0.8, 0.6)
+            self.robot.setViewerSize(1280, 768)
+            self.robot.setupViewer(model_file, env_file)
+        fx = 0.0
+        fy = 0.0
+        fz = 0.0
+        f_roll = 0.0
+        f_pitch = 0.0
+        f_yaw = 0.0         
+        x = [0.0 for i in xrange(2 * self.robot_dof)]
+        x = [0.8110760662014179,
+             -0.2416850600576381,
+             1.5922944779127346,
+             5.1412306972285471,
+             -10.0,
+             2.5101115097604483]
+                
+        integration_times = [] 
+        collision_check_times1 = []
+        collision_check_times2 = []     
+        
+        y = 0
+        while True:                    
+            #u_in = [3.0, 1.5, 0.0, 0.0, 0.0, 0.0]
+            u_in = [0.0 for i in xrange(self.robot_dof)]
+            #u_in[0] = 150.0
+            #u_in[1] = 70.0
+            current_state = v_double()            
+            current_state[:] = x            
+            control = v_double()            
+            control[:] = u_in
+                       
+            control_error = v_double()
+            ce = [0.0 for i in xrange(self.robot_dof)]
+            control_error[:] = ce
+            result = v_double()            
+            
+            t0 = time.time()                    
+            self.robot.propagate(current_state,
+                                 control,
+                                 control_error,
+                                 self.simulation_step_size,
+                                 0.03,
+                                 result)
+            t = time.time() - t0
+            integration_times.append(t)
+            if y == 10000:
+                t_sum = sum(integration_times)
+                t_mean = t_sum / len(integration_times)
+                print "mean integration times: " + str(t_mean)
+                t_sum = sum(collision_check_times1)
+                t_mean = t_sum / len(collision_check_times1)
+                print "mean collision check times old " + str(t_mean)
+                t_mean = sum(collision_check_times2) / len(collision_check_times2)
+                print "mean collision check times new " + str(t_mean)
+                sleep            
+            
+            ja_start = v_double()            
+            ja_start[:] = [current_state[i] for i in xrange(len(current_state) / 2)]                     
+            collision_objects_start = self.robot.createRobotCollisionObjects(ja_start)
+            joint_angles = v_double()
+            joint_angles[:] = [result[i] for i in xrange(len(result) / 2)]
+            collision_objects_goal = self.robot.createRobotCollisionObjects(joint_angles)
+            #print "ee_velocity " + str([ee_velocity[i] for i in xrange(len(ee_velocity))])
+            t_coll_check1 = time.time()
+            ic = self.collision_checker.inCollisionDiscrete(collision_objects_goal)
+            t2 = time.time() - t_coll_check1
+            collision_check_times2.append(t2)            
+            
+            '''
+            Get the end effector position
+            '''
+            #ee_position = v_double()            
+            #self.robot.getEndEffectorPosition(joint_angles, ee_position)                      
+            #ee_collision_objects = self.robot.createEndEffectorCollisionObject(joint_angles)
+            in_collision = False
+            t_c = time.time()                      
+            for o in self.obstacles:                
+                if o.inCollisionDiscrete(collision_objects_goal):                                                            
+                    in_collision = True
+                    break                              
+                '''for i in xrange(len(collision_objects_start)):                        
+                    if o.inCollisionContinuous([collision_objects_start[i], collision_objects_goal[i]]):
+                        in_collision = True
+                        break'''               
+            if in_collision:
+                print "COLLISION"
+                
+                
+                    
+            t = time.time() - t_c            
+            collision_check_times1.append(t)          
+                                
+                                                                          
+            x = np.array([result[i] for i in xrange(len(result))])
+            cjvals = v_double()
+            cjvels = v_double()
+            cjvals_arr = [x[i] for i in xrange(len(x) / 2)]
+            cjvels_arr = [x[i] for i in xrange(len(x) / 2, len(x))]
+            cjvals[:] = cjvals_arr
+            cjvels[:] = cjvels_arr
+            particle_joint_values = v2_double()
+            if show_viewer:
+                self.robot.updateViewerValues(cjvals, 
+                                              cjvels,
+                                              particle_joint_values,
+                                              particle_joint_values)
+            time.sleep(0.03) 
+            
+            y += 1
+            print y
     
     def setup_scene(self,                    
                     environment_file,
@@ -208,245 +493,7 @@ class MPC:
             avg_dist += dist
         if avg_dist == 0.0:
             return avg_dist        
-        return np.asscalar(avg_dist) / len(cartesian_coords) 
-            
-    def mpc(self, initial_belief, m_covs, horizon, obstacles, serializer):
-        A, H, B, V, W, C, D = self.problem_setup(self.delta_t, self.link_dimensions)
-        cart_coords = []
-        emds = []
-        for j in xrange(len(m_covs)):                       
-            
-            logging.info("MPC: Evaluating covariance " + str(m_covs[j]))
-            
-            """
-            The process noise covariance matrix
-            """
-            M = m_covs[j] * np.identity(len(self.link_dimensions))
-                
-            """
-            The observation noise covariance matrix
-            """
-            N = self.observation_covariance * np.identity(len(self.link_dimensions))
-            P_t = np.array([[0.0 for k in xrange(len(self.link_dimensions))] for l in xrange(len(self.link_dimensions))])
-                
-            self.path_planning_interface.setup_path_evaluator(A, B, C, D, H, M, N, V, W, 
-                                                              self.link_dimensions,
-                                                              self.workspace_dimension, 
-                                                              self.sample_size, 
-                                                              obstacles,
-                                                              self.joint_constraints,
-                                                              self.enforce_constraints, 
-                                                              self.goal_position,
-                                                              self.goal_radius,                                                             
-                                                              self.w1,
-                                                              self.w2)
-            self.path_planning_interface.setup_reward_function(self.step_penalty, 
-                                                               self.exit_reward, 
-                                                               self.illegal_move_penalty, 
-                                                               self.discount_factor)
-            self.sim.setup_problem(A, B, C, D, H, V, W, M, N, 
-                                   obstacles, 
-                                   self.goal_position, 
-                                   self.goal_radius, 
-                                   self.link_dimensions,
-                                   self.workspace_dimension, 
-                                   self.joint_constraints,
-                                   self.enforce_constraints,
-                                   self.max_velocity)            
-            self.sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)            
-            
-            cartesian_coords = []            
-            all_estimated_states = []
-            all_estimated_covariances = []           
-            
-            mean_planning_time_per_run = 0.0
-            
-            successful_runs = 0
-            num_generated_paths_run = 0.0
-            mean_number_planning_steps = 0.0 
-            mean_number_of_steps = 0.0 
-            num_collisions = 0.0
-            rewards_cov = []          
-            for k in xrange(self.num_simulation_runs):                  
-                serializer.write_line("log.log", 
-                                      "tmp/mpc" + str(self.num_execution_steps), 
-                                      "RUN #" + str(k + 1) + " \n")           
-                print "MPC: Joint covariance: " + str(m_covs[j])
-                print "MPC: simulation run " + str(k + 1)
-                x_true = initial_belief
-                x_estimate = initial_belief
-                P_t = np.array([[0.0 for i in xrange(len(self.link_dimensions))] for i in xrange(len(self.link_dimensions))])                
-                total_reward = 0.0
-                
-                current_step = 0                
-                terminal = False                         
-                while current_step < self.max_num_steps and not terminal:                    
-                    mean_number_planning_steps += 1.0
-                    t0 = time.time()                    
-                    self.path_planning_interface.set_start_and_goal(x_estimate, self.goal_states)
-                    
-                    logging.info("MPC: Constructing paths")
-                    (xs, 
-                     us, 
-                     zs, 
-                     num_generated_paths, 
-                     best_val, 
-                     mean_gen_times, 
-                     mean_eval_times,
-                     total_gen_times,
-                     total_eval_times) = self.path_planning_interface.plan_and_evaluate_paths(self.num_paths, 
-                                                                                              0, 
-                                                                                              current_step, 
-                                                                                              horizon, 
-                                                                                              P_t, 
-                                                                                              self.timeout)
-                    
-                    t_e = time.time() - t0
-                    mean_planning_time_per_run += t_e  
-                    num_generated_paths_run += num_generated_paths                   
-                    if len(xs) == 0:
-                        logging.error("MPC: Couldn't find any paths from start state" + 
-                                      str(x_estimate) + 
-                                      " to goal states") 
-                                      
-                        total_reward = np.array([-self.illegal_move_penalty])[0]
-                        current_step += 1                                             
-                        break                         
-                    logging.warn("MPC: Generated " + str(num_generated_paths) + " paths in " + str(t_e) + " seconds")
-                    logging.warn("MPC: Mean time to generate paths: " + str(mean_gen_times) + " seconds")
-                    logging.warn("MPC: Mean time to evaluate_paths: " + str(mean_eval_times) + " seconds")
-                    logging.warn("MPC: Total time to generate paths: " + str(total_gen_times) + " seconds")
-                    logging.warn("MPC: Total time to evaluate_paths: " + str(total_eval_times) + " seconds")
-                    logging.warn("MPC: Length of best path is " + str(len(xs)))
-                    logging.warn("MPC: Expected reward of best path: " + str(best_val))
-                    x_tilde = np.array([0.0 for i in xrange(len(self.link_dimensions))])
-                    n_steps = self.num_execution_steps
-                    if n_steps > len(xs) - 1:
-                       n_steps = len(xs) - 1
-                    if current_step + n_steps > self.max_num_steps:
-                        n_steps = self.max_num_steps - current_step
-                                          
-                    logging.info("MPC: Execute best path for " + str(n_steps) + " steps")
-                    (x_true, 
-                     x_tilde, 
-                     x_estimate, 
-                     P_t, 
-                     current_step, 
-                     total_reward, 
-                     success, 
-                     terminal,
-                     estimated_s,
-                     estimated_c,
-                     history_entries) = self.sim.simulate_n_steps(xs, us, zs,
-                                                                  x_true,                                                              
-                                                                  x_tilde,
-                                                                  x_estimate,
-                                                                  P_t,
-                                                                  total_reward,                                                                 
-                                                                  current_step,
-                                                                  n_steps)
-                    if (success):
-                        successful_runs += 1
-                        
-                    for history_entry in history_entries:                        
-                        history_entry.serialize("tmp/mpc" + str(self.num_execution_steps), "log.log")
-                        if history_entry.collided:
-                            num_collisions += 1         
-                    logging.warn("MPC: Execution finished. True state is " + str(x_true))
-                    logging.warn("MPC: Estimated state is " + str(x_estimate))
-                    logging.warn("MPC: Executed " + str(current_step) + " steps") 
-                    logging.warn("MPC: terminal " + str(terminal))
-                    if terminal:
-                        print "MPC: Final state: " + str(x_true)
-                rewards_cov.append(total_reward)
-                serializer.write_line("log.log", 
-                                      "tmp/mpc" + str(self.num_execution_steps), 
-                                      "Reward: " + str(total_reward) + " \n") 
-                serializer.write_line("log.log", 
-                                      "tmp/mpc"  + str(self.num_execution_steps), 
-                                      "\n")
-                               
-                mean_number_of_steps += current_step                
-                x_true_vec = v_double()
-                x_true_vec[:] = x_true
-                ee_position_vec = self.kinematics.getEndEffectorPosition(x_true_vec)
-                ee_position = np.array([ee_position_vec[i] for i in xrange(len(ee_position_vec))])
-                cartesian_coords.append(ee_position.tolist())
-                logging.info("MPC: Done. total_reward is " + str(total_reward))
-            logging.info("MPC: Finished simulations for covariance value  " + 
-                         str(m_covs[j]))
-            
-            #serializer.save_stats([np.asscalar(m_covs[i]) for i in xrange(len(m_covs))], "stats/mpc" + str(self.num_execution_steps))
-            
-            n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))
-            
-            serializer.write_line("log.log",
-                                  "tmp/mpc" + str(self.num_execution_steps),
-                                  "################################ \n")            
-            
-            serializer.write_line("log.log",
-                                  "tmp/mpc" + str(self.num_execution_steps),
-                                  "Process covariance: " + str(m_covs[j]) + " \n")
-            
-            serializer.write_line("log.log", 
-                                  "tmp/mpc" + str(self.num_execution_steps), 
-                                  "Mean rewards: " + str(mean) + " \n")
-            serializer.write_line("log.log",
-                                  "tmp/mpc" + str(self.num_execution_steps), 
-                                  "Reward variance: " + str(var) + " \n")
-            serializer.write_line("log.log", 
-                                  "tmp/mpc" + str(self.num_execution_steps), 
-                                  "Reward standard deviation: " + str(np.sqrt(var)) + " \n")
-            
-            serializer.write_line("log.log", 
-                                  "tmp/mpc"  + str(self.num_execution_steps), 
-                                  "Num successes: " + str(successful_runs) + " \n")
-            
-            serializer.write_line("log.log", 
-                                  "tmp/mpc"  + str(self.num_execution_steps), 
-                                  "Mean num collisions per run: " + str(float(num_collisions) / float(self.num_simulation_runs)) + " \n")
-            
-            mean_number_planning_steps /= self.num_simulation_runs            
-            serializer.write_line("log.log", 
-                                  "tmp/mpc"  + str(self.num_execution_steps), 
-                                  "Mean number of planning steps: " + str(mean_number_planning_steps) + " \n")
-            mean_number_of_steps /= self.num_simulation_runs
-            serializer.write_line("log.log", 
-                                  "tmp/mpc"  + str(self.num_execution_steps), 
-                                  "Mean number of steps per run: " + str(mean_number_of_steps) + " \n")
-            
-            mean_planning_time_per_run /= self.num_simulation_runs
-            serializer.write_line("log.log", 
-                                  "tmp/mpc"  + str(self.num_execution_steps), 
-                                  "Mean planning time per run: " + str(mean_planning_time_per_run) + " \n")
-            
-            mean_planning_time_per_step = mean_planning_time_per_run / mean_number_planning_steps
-            serializer.write_line("log.log", 
-                                  "tmp/mpc"  + str(self.num_execution_steps), 
-                                  "Mean planning time per step: " + str(mean_planning_time_per_step) + " \n")            
-            
-            num_generated_paths_run /= self.num_simulation_runs
-            serializer.write_line("log.log", 
-                                  "tmp/mpc"  + str(self.num_execution_steps), 
-                                  "Mean number of generated paths per run: " + str(num_generated_paths_run) + " \n")  
-            
-            num_generated_paths_step = num_generated_paths_run / mean_number_planning_steps
-            serializer.write_line("log.log", 
-                                  "tmp/mpc"  + str(self.num_execution_steps), 
-                                  "Mean number of generated paths per step: " + str(num_generated_paths_step) + " \n")
-            prob = "mpc" + str(self.num_execution_steps)
-            d = "stats/mpc" + str(self.num_execution_steps)
-            cmd = "mv tmp/" + prob + "/log.log " + d + "/log_" + prob + "_" + str(m_covs[j]) + ".log"
-            os.system(cmd)           
-            
-            
-            emds.append(calc_EMD(cartesian_coords, 
-                                 self.num_bins, 
-                                 self.goal_position, 
-                                 self.link_dimensions))
-            cart_coords.append([cartesian_coords[i] for i in xrange(len(cartesian_coords))])
-            #estimated_states_cov.append(all_estimated_states)
-            #estimated_covariances_cov.append(all_estimated_covariances)
+        return np.asscalar(avg_dist) / len(cartesian_coords)
             
     def calc_covariance_value(self, robot, error, covariance_matrix, covariance_type='process'):
         active_joints = v_string()

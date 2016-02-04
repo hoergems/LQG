@@ -265,7 +265,7 @@ class Simulator:
                     x_true = x_true_temp 
                 
                 """ Do the same for the linearized true state """ 
-                if self.is_in_collision(x_true_linear, x_true_linear_temp):
+                if self.is_in_collision(x_true_linear, x_true_linear_temp)[0]:
                     for j in xrange(len(x_true_linear) / 2, len(x_true_linear)):
                         x_true_linear[j] = 0.0                  
                 else:
@@ -313,12 +313,13 @@ class Simulator:
                 If no, set the true estimate to this estimate 
                 """
                 estimate_collided = True                                       
-                if not self.is_in_collision([], x_estimate_new):                                                                                
+                if not self.is_in_collision([], x_estimate_new)[0]:                                                                                                    
                     x_estimate = x_estimate_new
                     estimate_collided = False
                 else:
+                    print "estimate collides"
                     for i in xrange(len(x_estimate) / 2, len(x_estimate)):
-                        x_estimate[i] = 0                            
+                        x_estimate[i] = 0                                          
                 estimated_states.append(x_estimate)
                 estimated_covariances.append(P_t)                
                 
@@ -351,8 +352,7 @@ class Simulator:
                 history_entries[-1].set_terminal(terminal_state_reached)                
         #print "========================================"
         #print "======= Simulation done"
-        #print "========================================"
-        
+        #print "========================================"        
         return (x_true, 
                 x_tilde,
                 x_dash_linear, 
@@ -413,8 +413,10 @@ class Simulator:
             return False, None
         else:            
             for obstacle in collidable_obstacles:
-                if obstacle.inCollisionDiscrete(collision_objects_goal):                               
-                    return True, None
+                if obstacle.inCollisionDiscrete(collision_objects_goal):
+                    print "collides"
+                    time.sleep(10)                               
+                    return True, obstacle
             return False, None 
     
     def is_terminal(self, ee_position):
