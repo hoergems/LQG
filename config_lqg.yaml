@@ -44,23 +44,23 @@ num_bins: 201
 #################################################
 # The error variables are defined as the standard deviation in percentage of the value range
 # The minimum joint state covariance
-min_process_covariance: 0.01
+min_process_covariance: 10.0
 
 # The maximum joint state covariance
 max_process_covariance: 10.0
 
 # The minimum observation covariance
-min_observation_covariance: 0.1
+min_observation_covariance: 10.0
 
 # The maximum observation covariance
 max_observation_covariance: 10.0
 
 #Determines which parameter (process covariance or observation
 #covariance should be increased during simulation)
-inc_covariance: observation
+inc_covariance: process
 
 # The number of covariance steps
-covariance_steps: 10
+covariance_steps: 1
 
 path_deviation_cost: 200.0
 

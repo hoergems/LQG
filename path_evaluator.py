@@ -51,7 +51,7 @@ class PathEvaluator:
         
         self.constraints_enforced = robot.constraintsEnforced()
         self.sample_size = sample_size
-        self.num_cores = cpu_count() - 1
+        self.num_cores = cpu_count() + 1
         #self.num_cores = cpu_count() - 1
         #self.num_cores = 2 
         self.goal_position = goal_position 
@@ -210,14 +210,27 @@ class PathEvaluator:
                                               particle_joint_colors) 
             print "Permanent particles added"           
         
-    def evaluate_path(self, path, P_t, current_step, horizon=-1):       
+    def evaluate_path(self, 
+                      path, 
+                      P_t,
+                      deviation_covariance,
+                      estimated_deviation_covariance, 
+                      current_step, 
+                      horizon=-1):       
         (objective_p, 
-         state_covariances, 
+         estimated_state_covariances, 
          deviation_covariances, 
-         estimated_deviation_covariances) = self.evaluate(0, path, P_t, current_step, horizon, self.robot)
+         estimated_deviation_covariances) = self.evaluate(0, 
+                                                          path, 
+                                                          P_t, 
+                                                          current_step, 
+                                                          horizon, 
+                                                          self.robot,
+                                                          deviation_covariance=deviation_covariance,
+                                                          estimated_deviation_covariance=estimated_deviation_covariance)        
         return (path, 
                 objective_p, 
-                state_covariances, 
+                estimated_state_covariances, 
                 deviation_covariances, 
                 estimated_deviation_covariances)
     
@@ -330,7 +343,16 @@ class PathEvaluator:
                 Ns.append(self.N)        
         return As, Bs, Vs, Ms, Hs, Ws, Ns    
     
-    def evaluate(self, index, path, P_t, current_step, horizon, robot, eval_queue=None):
+    def evaluate(self, 
+                 index, 
+                 path, 
+                 P_t, 
+                 current_step, 
+                 horizon, 
+                 robot, 
+                 eval_queue=None,
+                 deviation_covariance=None,
+                 estimated_deviation_covariance=None):
         if self.show_viewer:
             robot.setupViewer(self.model_file, self.env_file)
         xs = path[0]
@@ -358,12 +380,20 @@ class PathEvaluator:
         path_rewards.append(np.power(self.discount, current_step) * state_reward)
         Cov = 0 
         CPi = []
-        state_covariances = []
+        estimated_state_covariances = [P_t]
         deviation_covariances = []
         estimated_deviation_covariances = []
-        state_covariances.append(np.array([[0.0 for i in xrange(2 * self.robot_dof)] for j in xrange(2 * self.robot_dof)]))
-        deviation_covariances.append(np.zeros((2 * self.robot_dof, 2 * self.robot_dof)))
-        estimated_deviation_covariances.append(np.zeros((2 * self.robot_dof, 2 * self.robot_dof)))
+        
+        if deviation_covariance == None:
+            deviation_covariances.append(np.zeros((2 * self.robot_dof, 2 * self.robot_dof)))
+        else:
+            deviation_covariances.append(deviation_covariance)
+            
+        if estimated_deviation_covariance == None:            
+            estimated_deviation_covariances.append(np.zeros((2 * self.robot_dof, 2 * self.robot_dof)))
+        else:
+            estimated_deviation_covariances.append(estimated_deviation_covariance)       
+        
         for i in xrange(1, horizon_L):                              
             P_hat_t = kalman.compute_p_hat_t(As[i], P_t, Vs[i], Ms[i])            
             K_t = kalman.compute_kalman_gain(Hs[i], P_hat_t, Ws[i], Ns[i])
@@ -391,7 +421,7 @@ class PathEvaluator:
                                  np.hstack((np.zeros((L.shape[0], L.shape[1])), L))))                 
             Cov = np.dot(Gamma_t, np.dot(R_t, Gamma_t.T))                       
             cov_state = np.array([[Cov[j, k] for k in xrange(2 * self.robot_dof)] for j in xrange(2 * self.robot_dof)])
-            state_covariances.append(cov_state)            
+            estimated_state_covariances.append(cov_state)            
             (state_reward, terminal, expected_num_collisions_step, samples) = self.get_expected_state_reward(xs[i], cov_state) 
             CPi.append(expected_num_collisions_step)
             expected_num_collisions_path += expected_num_collisions_step           
@@ -409,8 +439,8 @@ class PathEvaluator:
         '''    
         CP = 1 - product 
         #CP = sum(CPi) 
-        logging.info("PathEvaluator: Path " + str(index) + " evaluated. Reward: " + str(path_reward) + ", mean num collisions: " + str(expected_num_collisions_path) + " " \
-              "CP " + str(CP))
+        print "PathEvaluator: Path " + str(index) + " evaluated. Reward: " + str(path_reward) + ", mean num collisions: " + str(expected_num_collisions_path) + " " \
+              "CP " + str(CP)
         
         logging.info("========================================")
         logging.info("PathEvaluator: reward for path " + 
@@ -418,10 +448,19 @@ class PathEvaluator:
                      " is " + 
                      str(path_reward))
         logging.info("========================================")        
-        if not eval_queue==None:            
-            eval_queue.put((index, path_reward, path, Cov, state_covariances, deviation_covariances, estimated_deviation_covariances))
-        else:
-            return path_reward, state_covariances, deviation_covariances, estimated_deviation_covariances
+        if not eval_queue==None:                         
+            eval_queue.put((index, 
+                            path_reward, 
+                            path, 
+                            Cov, 
+                            estimated_state_covariances, 
+                            deviation_covariances, 
+                            estimated_deviation_covariances))
+        else:                     
+            return (path_reward, 
+                    estimated_state_covariances, 
+                    deviation_covariances, 
+                    estimated_deviation_covariances)
     
     def show_state_and_cov(self, state, cov, samples):        
         joint_values = v_double()
