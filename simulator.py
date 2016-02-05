@@ -194,7 +194,7 @@ class Simulator:
         
         """ Execute the nominal path for n_steps """        
         for i in xrange(n_steps):                        
-            if not (terminal_state_reached and self.stop_when_terminal):
+            if not terminal_state_reached:
                 linearization_error = utils.dist(x_dash, x_dash_linear)                
                 history_entries.append(HistoryEntry(current_step + i,
                                                     x_true, 

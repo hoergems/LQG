@@ -156,7 +156,7 @@ class MPC:
             final_states= []
             rewards_cov = []
             for k in xrange(self.num_simulation_runs):
-                mean_number_planning_steps += 1.0                
+                print "MPC: Run " + str(k + 1)                                
                 self.serializer.write_line("log.log", "tmp/mpc", "RUN #" + str(k + 1) + " \n")
                 current_step = 0
                 x_true = self.start_state
@@ -185,9 +185,9 @@ class MPC:
                                                                               current_step, 
                                                                               self.evaluation_horizon, 
                                                                               P_t, 
-                                                                              self.timeout)                    
-                    
-                    mean_planning_time += time.time() - t0  
+                                                                              self.timeout)
+                    mean_planning_time += time.time() - t0
+                    mean_number_planning_steps += 1.0  
                     num_generated_paths_run += num_generated_paths
                     if len(xs) == 0:
                         logging.error("MPC: Couldn't find any paths from start state" + 
@@ -230,15 +230,16 @@ class MPC:
                     
                     if (success):
                         successful_runs += 1
-                        final_states.append(history_entries[-1].x_true)                        
+                        final_states.append(history_entries[-1].x_true)
+                    history_entries[0].set_replanning(True)                        
                     for l in xrange(len(history_entries)):
                         history_entries[l].set_estimated_covariance(state_covariances[l])                        
                         history_entries[l].serialize("tmp/mpc", "log.log")
                         if history_entries[l].collided:                            
                             num_collisions += 1
                             collided = True
-                    logging.warn("MPC: Execution finished. True state is " + str(x_true))
-                    logging.warn("MPC: Estimated state is " + str(x_estimate))
+                    #logging.warn("MPC: Execution finished. True state is " + str(x_true))
+                    #logging.warn("MPC: Estimated state is " + str(x_estimate))
                     logging.warn("MPC: Executed " + str(current_step) + " steps") 
                     logging.warn("MPC: terminal " + str(terminal))
                     if terminal:
@@ -251,6 +252,7 @@ class MPC:
                                            "tmp/mpc", 
                                            "\n")
                 number_of_steps += current_step
+            mean_planning_time_per_step = mean_planning_time / mean_number_planning_steps 
             mean_planning_time /= self.num_simulation_runs
                                 
             """ Calculate the distance to goal area
@@ -296,7 +298,8 @@ class MPC:
             self.serializer.write_line("log.log", "tmp/mpc", "Num successes: " + str(successful_runs) + " \n")
             print "succ " + str((100.0 / self.num_simulation_runs) * successful_runs)
             self.serializer.write_line("log.log", "tmp/mpc", "Percentage of successful runs: " + str((100.0 / self.num_simulation_runs) * successful_runs) + " \n")
-            self.serializer.write_line("log.log", "tmp/mpc", "Mean planning time: " + str(mean_planning_time) + " \n")
+            self.serializer.write_line("log.log", "tmp/mpc", "Mean planning time per run: " + str(mean_planning_time) + " \n")
+            self.serializer.write_line("log.log", "tmp/mpc", "Mean planning time per planning step: " + str(mean_planning_time_per_step) + " \n")
             
             n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))
             print "mean_rewards " + str(mean)
@@ -307,7 +310,7 @@ class MPC:
             self.serializer.write_line("log.log", 
                                        "tmp/mpc", 
                                        "Reward standard deviation: " + str(np.sqrt(var)) + " \n")
-            self.serializer.write_line("log.log", "tmp/lqg", "Seed: " + str(self.seed) + " \n")
+            self.serializer.write_line("log.log", "tmp/mpc", "Seed: " + str(self.seed) + " \n")
             cmd = "mv tmp/mpc/log.log " + dir + "/log_mpc_" + str(m_covs[j]) + ".log"
             os.system(cmd)
         

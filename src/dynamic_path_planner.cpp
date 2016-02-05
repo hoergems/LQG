@@ -88,6 +88,9 @@ void DynamicPathPlanner::addIntermediateStates(bool add_intermediate_states) {
 
 bool DynamicPathPlanner::setup_ompl_(double &simulation_step_size,
 		                             bool &verbose) {
+	if (!verbose_) {        
+	    ompl::msg::noOutputHandler();
+	}
     state_space_bounds_ = ompl::base::RealVectorBounds(state_space_dimension_);    
     //space_information_->setStateValidityChecker(boost::bind(&DynamicPathPlanner::isValid, this, _1));
     space_information_->setMotionValidator(motionValidator_);
@@ -261,53 +264,45 @@ std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<dou
     solved = solve_(timeout);    
     
     if (solved) {
-        ompl::base::PlannerSolution planner_solution(problem_definition_->getSolutionPath());
-        cout << "Solution is approximate: ";
-        if (planner_solution.approximate_) {
-            cout << " True";
-        }
-        else {
-            cout << " False";
-        }
-        cout << endl;        
+        ompl::base::PlannerSolution planner_solution(problem_definition_->getSolutionPath());                
         PathControlPtr solution_path_ = 
             boost::static_pointer_cast<ompl::control::PathControl>(planner_solution.path_);               
-        cout << "Length of solution path " << solution_path_->length() << endl << endl;
+        //cout << "Length of solution path " << solution_path_->length() << endl << endl;
         std::vector<ompl::base::State*> solution_states_(solution_path_->getStates());
         std::vector<ompl::control::Control*> solution_controls_(solution_path_->getControls());
         std::vector<double> control_durations(solution_path_->getControlDurations());
-        cout << "durations: ";
+        /**cout << "durations: ";
         for (auto &k: control_durations) {
         	cout << k << ", ";
         }
-        cout << endl;
+        cout << endl;*/
         for (size_t i = 0; i < solution_states_.size(); i++) {
-            cout << "State: ";
+            //cout << "State: ";
             std::vector<double> solution_state;
             for (size_t j = 0; j < state_space_dimension_; j++) {
             	solution_state.push_back(solution_states_[i]->as<ompl::base::RealVectorStateSpace::StateType>()->values[j]);
-                cout << solution_states_[i]->as<ompl::base::RealVectorStateSpace::StateType>()->values[j] << ", ";
+                //cout << solution_states_[i]->as<ompl::base::RealVectorStateSpace::StateType>()->values[j] << ", ";
             }
-            cout << endl;
+            //cout << endl;
             
             
-            cout << "Control: ";
+            //cout << "Control: ";
             for (size_t j = 0; j < state_space_dimension_ / 2; j++) {
             	if (i < solution_states_.size() - 1) {
                     solution_state.push_back(solution_controls_[i]->as<ompl::control::RealVectorControlSpace::ControlType>()->values[j]);
-                    cout << solution_controls_[i]->as<ompl::control::RealVectorControlSpace::ControlType>()->values[j] << ", ";
+                    //cout << solution_controls_[i]->as<ompl::control::RealVectorControlSpace::ControlType>()->values[j] << ", ";
             	}
             	else {            		
             		solution_state.push_back(0.0);            		
             	}
             }
             
-            cout << "Duration: " << control_durations[i] << endl;
+            //cout << "Duration: " << control_durations[i] << endl;
             /**for (size_t j = 0; j < state_space_dimension_ / 2; j++) { 
             	solution_state.push_back(0.0);
             }*/
             
-            cout << endl;
+            //cout << endl;
             
             for (size_t j = 0; j < state_space_dimension_; j++) {
                 solution_state.push_back(solution_states_[i]->as<ompl::base::RealVectorStateSpace::StateType>()->values[j]);                
@@ -322,9 +317,9 @@ std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<dou
             
             solution_vector.push_back(solution_state);          
         }
-        cout << "Solution found in " << t.elapsed() << "seconds" << endl;
-        cout << "accepted " << accepted_ << endl;
-        cout << "rejected " << rejected_ << endl;        
+        //cout << "Solution found in " << t.elapsed() << "seconds" << endl;
+        //cout << "accepted " << accepted_ << endl;
+        //cout << "rejected " << rejected_ << endl;        
         //return solution_path_; 
     }
     

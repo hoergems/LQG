@@ -41,6 +41,7 @@ class HistoryEntry:
         self.u_dash = None
         self.colliding_obstacle = None
         self.colliding_state = None
+        self.replanning = False
         
     def set_action(self, action):
         self.action = action
@@ -80,6 +81,9 @@ class HistoryEntry:
         
     def set_colliding_state(self, colliding_state):
         self.colliding_state = colliding_state
+        
+    def set_replanning(self, replanning):
+        self.replanning = replanning
         
     def serialize(self, path, file):        
         with open(os.path.join(path, file), 'a') as f:                    
@@ -181,7 +185,14 @@ class HistoryEntry:
             else:             
                 for i in xrange(len(self.colliding_state)):
                     coll_string += str(self.colliding_state[i]) + " "
-            f.write(coll_string + " \n")           
+            f.write(coll_string + " \n")
+            
+            coll_str = "Replanning: "
+            if self.replanning:
+                coll_str += "true \n" 
+            else:
+                coll_str += "false \n"
+            f.write(coll_str)          
             
             term_string = "Terminal: true"
             if not self.terminal:

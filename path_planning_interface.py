@@ -75,7 +75,7 @@ class PathPlanningInterface:
               continuous_collision):
         self.robot = robot
         self.robot_dof = self.robot.getDOF()
-        self.num_cores = cpu_count() - 1
+        self.num_cores = cpu_count() + 1
         #self.num_cores = cpu_count() - 1
         #self.num_cores = 2       
         self.obstacles = obstacles        
@@ -351,7 +351,7 @@ class PathPlanningInterface:
         start_state = v_double()
         v = [self.start_state[i] for i in xrange(len(self.start_state))]
         start_state[:] = v 
-        logging.warn("PathPlanningInterface: Solve...") 
+        logging.info("PathPlanningInterface: Solve...") 
         xs_temp = path_planner2.solve(start_state, self.path_timeout)        
         xs = []
         us = []
