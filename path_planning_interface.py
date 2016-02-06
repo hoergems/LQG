@@ -159,6 +159,7 @@ class PathPlanningInterface:
             if num != 0 and len(res_paths) == num:
                 break
             if timeout > 0.0 and elapsed > timeout:
+                print "TIMEOUT"
                 break
             time.sleep(0.001)
         for i in xrange(len(processes)):

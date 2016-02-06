@@ -314,7 +314,13 @@ class Simulator:
                 If yes, set it to the previous estimate (with velicity 0).
                 If no, set the true estimate to this estimate 
                 """
-                estimate_collided = True                                       
+                estimate_collided = True
+                
+                """"""""""""""""""""""""""
+                if self.is_in_collision([], x_estimate)[0]:
+                    print "ESTIMATE COLLIDES!!! DAMN!!!!!!!"
+                """""""""""""""""""""""""" 
+                                                      
                 if not self.is_in_collision([], x_estimate_new)[0]:                                                                                                    
                     x_estimate = x_estimate_new
                     estimate_collided = False

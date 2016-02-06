@@ -245,6 +245,11 @@ std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<dou
     for (unsigned int i = 0; i < state_space_dimension_; i++) {
         start_state[i] = start_state_vec[i];        
     }
+    
+    if (!static_cast<MotionValidator &>(*motionValidator_).isValid(start_state_vec)) {
+    	cout << "DynamicPathPlanner: ERROR: Start state is not valid!" << endl;
+    	return solution_vector;
+    }
 
     ompl::base::GoalPtr gp(new ManipulatorGoalRegion(space_information_,
     		                                         robot_,
@@ -253,6 +258,7 @@ std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<dou
     		                                         ee_goal_threshold_,
     		                                         true));
     boost::static_pointer_cast<ManipulatorGoalRegion>(gp)->setThreshold(ee_goal_threshold_);
+    
     problem_definition_->addStartState(start_state);    
     problem_definition_->setGoal(gp);
     
