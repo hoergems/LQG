@@ -14,7 +14,6 @@ from simulator import Simulator
 from path_evaluator import PathEvaluator
 from path_planning_interface import PathPlanningInterface
 from libobstacle import Obstacle, Terrain
-from libcollision_checker import CollisionChecker
 import plot as plt
 import warnings
 
@@ -426,8 +425,7 @@ class MPC:
             joint_angles[:] = [result[i] for i in xrange(len(result) / 2)]
             collision_objects_goal = self.robot.createRobotCollisionObjects(joint_angles)
             #print "ee_velocity " + str([ee_velocity[i] for i in xrange(len(ee_velocity))])
-            t_coll_check1 = time.time()
-            ic = self.collision_checker.inCollisionDiscrete(collision_objects_goal)
+            t_coll_check1 = time.time()            
             t2 = time.time() - t_coll_check1
             collision_check_times2.append(t2)            
             
@@ -487,9 +485,7 @@ class MPC:
             print "ERROR: Your environment file doesn't define a goal area"
             return False
         self.goal_position = [goal_area[i] for i in xrange(0, 3)]
-        self.goal_radius = goal_area[3]   
-        self.collision_checker = CollisionChecker() 
-        self.collision_checker.setObstacles(self.obstacles)    
+        self.goal_radius = goal_area[3]
         return True
                 
     def init_serializer(self):
