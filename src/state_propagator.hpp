@@ -2,8 +2,6 @@
 #define STATE_PROPAGATOR_TEST_HPP_
 #include <iostream>
 #include <boost/timer.hpp>
-#include <rbdl/rbdl.h>
-#include <rbdl/addons/urdfreader/urdfreader.h>
 #include <ompl/control/ControlSpace.h>
 #include <ompl/control/Control.h>
 #include <ompl/control/spaces/RealVectorControlSpace.h>
