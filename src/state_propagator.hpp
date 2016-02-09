@@ -12,8 +12,6 @@
 #include "propagator.hpp"
 #include "robot.hpp"
 
-namespace RBD = RigidBodyDynamics;
-
 namespace shared {
     class StatePropagator: public ompl::control::StatePropagator {
         public:
