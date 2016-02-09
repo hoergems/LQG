@@ -141,7 +141,7 @@ horizon: -1
 max_num_steps: 100
 
 # The maximum number of steps a path gets executed before replanning
-num_execution_steps: 8
+num_execution_steps: 10
 
 # Maximum allowed planning time per step
 timeout: 400.0

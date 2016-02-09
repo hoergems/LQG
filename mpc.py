@@ -162,7 +162,9 @@ class MPC:
                 x_true = self.start_state
                 x_estimate = self.start_state
                 x_tilde_linear = np.array([0.0 for i in xrange(2 * self.robot_dof)])
-                P_t = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])                
+                P_t = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)]) 
+                deviation_covariance = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])
+                estimated_deviation_covariance = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])              
                 total_reward = 0.0
                 terminal = False
                 while current_step < self.max_num_steps and not terminal:
@@ -184,7 +186,9 @@ class MPC:
                                                                               0, 
                                                                               current_step, 
                                                                               self.evaluation_horizon, 
-                                                                              P_t, 
+                                                                              P_t,
+                                                                              deviation_covariance,
+                                                                              estimated_deviation_covariance, 
                                                                               self.timeout)
                     mean_planning_time += time.time() - t0
                     mean_number_planning_steps += 1.0  
@@ -227,6 +231,11 @@ class MPC:
                                                              n_steps,
                                                              0.0,
                                                              0.0)
+                    #print "len(hist) " + str(len(history_entries))
+                    #print "len(deviation_covariances) " + str(len(deviation_covariances))
+                    #print "len(estimated_deviation_covariances) " + str(len(estimated_deviation_covariances))
+                    deviation_covariance = deviation_covariances[len(history_entries) - 1]
+                    estimated_deviation_covariance = estimated_deviation_covariances[len(history_entries) - 1]
                     
                     if (success):
                         successful_runs += 1

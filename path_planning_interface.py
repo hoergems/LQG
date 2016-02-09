@@ -119,15 +119,22 @@ class PathPlanningInterface:
         self.ee_goal_threshold = ee_goal_threshold        
         return True
         
-    def plan_and_evaluate_paths(self, num, sim_run, current_step, horizon, P_t, timeout):        
+    def plan_and_evaluate_paths(self, 
+                                num, 
+                                sim_run, 
+                                current_step, 
+                                horizon, 
+                                P_t,
+                                deviation_covariance,
+                                estimated_deviation_covariance,
+                                timeout):        
         path_queue = Queue()
         evaluated_paths = []
         state_covariances = []
         deviation_covariances = []
         estimated_deviation_covariances = []
         gen_times = []
-        eval_times = []
-        
+        eval_times = []        
         res_paths = collections.deque()
         processes = [Process(target=self.construct_and_evaluate_path, 
                              args=(self.robot,
@@ -135,7 +142,9 @@ class PathPlanningInterface:
                                    path_queue,                                   
                                    current_step,
                                    horizon, 
-                                   P_t,)) for i in xrange(self.num_cores - 1)]
+                                   P_t,
+                                   deviation_covariance,
+                                   estimated_deviation_covariance)) for i in xrange(self.num_cores - 1)]
         t0 = time.time()
         print "Path planning interface: " + str(len(processes)) + " processes started"
         for i in xrange(len(processes)):
@@ -150,6 +159,7 @@ class PathPlanningInterface:
             if num != 0 and len(res_paths) == num:
                 break
             if timeout > 0.0 and elapsed > timeout:
+                print "TIMEOUT"
                 break
             time.sleep(0.001)
         for i in xrange(len(processes)):
@@ -161,7 +171,7 @@ class PathPlanningInterface:
                 deviation_covariances.append(p_e[6])
                 estimated_deviation_covariances.append(p_e[7])
                 gen_times.append(p_e[8])
-                eval_times.append(p_e[9])                
+                eval_times.append(p_e[9])                               
                 evaluated_paths.append(([[p_e[0][k] for k in xrange(len(p_e[0]))], 
                                          [p_e[1][k] for k in xrange(len(p_e[0]))], 
                                          [p_e[2][k] for k in xrange(len(p_e[0]))],
@@ -170,17 +180,18 @@ class PathPlanningInterface:
             logging.error("PathPlanningInterface: Couldn't generate and evaluate any paths within the given planning time")
             return [], [], [], 0.0, 0.0, 0.0, 0.0, 0.0, 0.0    
         best_val = evaluated_paths[0][1]
-        best_path = evaluated_paths[0][0]
-        best_state_covariances = state_covariances[0]
+        best_path = evaluated_paths[0][0]        
+        best_estimated_state_covariances = state_covariances[0]
         best_deviation_covariances = deviation_covariances[0]
-        best_estimated_deviation_covariances = estimated_deviation_covariances[i]        
+        best_estimated_deviation_covariances = estimated_deviation_covariances[0]        
         for i in xrange(1, len(evaluated_paths)):
             if evaluated_paths[i][1] < best_val:                
                 best_val = evaluated_paths[i][1]
                 best_path = evaluated_paths[i][0]
-                best_state_covariances = state_covariances[i]                
+                best_estimated_state_covariances = state_covariances[i]                
                 best_deviation_covariances = deviation_covariances[i]
                 best_estimated_deviation_covariances = estimated_deviation_covariances[i]
+                
         n, min_max, mean_gen_times, var, skew, kurt = scipy.stats.describe(np.array(gen_times))
         n, min_max, mean_eval_times, var, skew, kurt = scipy.stats.describe(np.array(eval_times))
         total_gen_times = sum(gen_times)
@@ -191,7 +202,7 @@ class PathPlanningInterface:
                 best_path[3], 
                 len(evaluated_paths), 
                 best_val,
-                best_state_covariances,
+                best_estimated_state_covariances,
                 best_deviation_covariances,
                 best_estimated_deviation_covariances, 
                 mean_gen_times, 
@@ -252,14 +263,21 @@ class PathPlanningInterface:
                                     queue,                                    
                                     current_step, 
                                     horizon, 
-                                    P_t):        
+                                    P_t,
+                                    deviation_covariance,
+                                    estimated_deviation_covariance):        
         while True:
             t0 = time.time()               
             xs, us, zs, control_durations, success = self._construct(robot, obstacles)
             gen_time = time.time() - t0
             if len(xs) > 1:  
                 t0 = time.time()                      
-                eval_result = self.path_evaluator.evaluate_path([xs, us, zs, control_durations], P_t, current_step, horizon)
+                eval_result = self.path_evaluator.evaluate_path([xs, us, zs, control_durations], 
+                                                                P_t,
+                                                                deviation_covariance,
+                                                                estimated_deviation_covariance, 
+                                                                current_step, 
+                                                                horizon)
                 eval_time = time.time() - t0        
                 queue.put((xs, 
                            us, 
