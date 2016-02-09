@@ -2,7 +2,7 @@
 seed: -1
 
 # Number of cores used for parallel path construction and evaluation
-num_cores: 4
+num_cores: 7
 
 # Verbose output
 verbose: False
