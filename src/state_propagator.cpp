@@ -3,9 +3,6 @@
 using std::cout;
 using std::endl;
 
-using namespace RigidBodyDynamics;
-using namespace RigidBodyDynamics::Math;
-
 namespace shared {
 
 StatePropagator::StatePropagator(const ompl::control::SpaceInformationPtr &si,
