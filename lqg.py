@@ -18,10 +18,11 @@ import warnings
 
 class LQG:
     def __init__(self, show_scene, deserialize, append_paths):
+        self.abs_path = os.path.dirname(os.path.abspath(__file__))
         """ Reading the config """
         warnings.filterwarnings("ignore")
         self.init_serializer()
-        config = self.serializer.read_config("config_lqg.yaml")
+        config = self.serializer.read_config("config_lqg.yaml", path=self.abs_path)
         self.set_params(config)
         if self.seed < 0:
             """
@@ -35,7 +36,8 @@ class LQG:
             logging_level = logging.DEBUG
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)        
         np.set_printoptions(precision=16)
-        dir = "stats/lqg"        
+        dir = self.abs_path + "/stats/lqg"
+        tmp_dir = self.abs_path + "/tmp/lqg"        
         self.utils = Utils()
         if not self.init_robot(self.robot_file):
             logging.error("LQG: Couldn't initialize robot")
@@ -55,6 +57,7 @@ class LQG:
                 
         logging.info("LQG: Generating goal states...")        
         goal_states = get_goal_states("lqg",
+                                      self.abs_path,
                                       self.serializer, 
                                       self.obstacles,                                                                           
                                       self.robot,                                    
@@ -112,7 +115,7 @@ class LQG:
             time_to_generate_paths = 0.0            
             paths = []
             if ((not append_paths) and deserialize):
-                paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)
+                paths = self.serializer.deserialize_paths(self.abs_path + "/paths.txt", self.robot_dof)
                 #paths = [paths[26]]
             if len(paths) == 0:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
@@ -126,8 +129,8 @@ class LQG:
                 if self.plot_paths:                
                     self.serializer.save_paths(paths, "paths.yaml", self.overwrite_paths_file, path=dir)                
                 if deserialize or append_paths:                    
-                    self.serializer.serialize_paths("paths.txt", paths, append_paths, self.robot_dof)                    
-                    paths = self.serializer.deserialize_paths("paths.txt", self.robot_dof)
+                    self.serializer.serialize_paths(self.abs_path + "/paths.txt", paths, append_paths, self.robot_dof)                    
+                    paths = self.serializer.deserialize_paths(self.abs_path + "/paths.txt", self.robot_dof)
             
             """ Determine average path length """
             avg_path_length = self.get_avg_path_length(paths)            
@@ -217,7 +220,7 @@ class LQG:
                 collided_num = 0
                 print "LQG: Running " + str(self.num_simulation_runs) + " simulations..."              
                 for k in xrange(self.num_simulation_runs):
-                    self.serializer.write_line("log.log", "tmp/lqg", "RUN #" + str(k + 1) + " \n")
+                    self.serializer.write_line("log.log", tmp_dir, "RUN #" + str(k + 1) + " \n")
                     print "simulation run: " + str(k)
                     (x_true, 
                      x_tilde,
@@ -249,7 +252,7 @@ class LQG:
                     collided = False
                     for l in xrange(len(history_entries)):
                         history_entries[l].set_estimated_covariance(state_covariances[l])                        
-                        history_entries[l].serialize("tmp/lqg", "log.log")
+                        history_entries[l].serialize(tmp_dir, "log.log")
                         if history_entries[l].collided:                            
                             num_collisions += 1
                             collided = True                        
@@ -257,8 +260,8 @@ class LQG:
                         collided_num += 1
                     num_steps += history_entries[-1].t
                     final_states.append(history_entries[-1].x_true)                                         
-                    self.serializer.write_line("log.log", "tmp/lqg", "Reward: " + str(total_reward) + " \n") 
-                    self.serializer.write_line("log.log", "tmp/lqg", "\n")
+                    self.serializer.write_line("log.log", tmp_dir, "Reward: " + str(total_reward) + " \n") 
+                    self.serializer.write_line("log.log", tmp_dir, "\n")
                     
                 """ Calculate the distance to goal area
                 """  
@@ -275,55 +278,55 @@ class LQG:
                     ee_position_distances.append(dist)
                 n, min_max, mean_distance_to_goal, var, skew, kurt = scipy.stats.describe(np.array(ee_position_distances))                         
                 
-                self.serializer.write_line("log.log", "tmp/lqg", "################################# \n")
+                self.serializer.write_line("log.log", tmp_dir, "################################# \n")
                 self.serializer.write_line("log.log",
-                                           "tmp/lqg",
+                                           tmp_dir,
                                            "inc_covariance: " + str(self.inc_covariance) + "\n")
                 if self.inc_covariance == "process":                  
                     self.serializer.write_line("log.log",
-                                               "tmp/lqg",
+                                               tmp_dir,
                                                "Process covariance: " + str(m_covs[j]) + " \n")
                     self.serializer.write_line("log.log",
-                                               "tmp/lqg",
+                                               tmp_dir,
                                                "Observation covariance: " + str(self.min_observation_covariance) + " \n")
                     
                 elif self.inc_covariance == "observation":                    
                     self.serializer.write_line("log.log",
-                                               "tmp/lqg",
+                                               tmp_dir,
                                                "Process covariance: " + str(self.min_process_covariance) + " \n")
                     self.serializer.write_line("log.log",
-                                               "tmp/lqg",
+                                               tmp_dir,
                                                "Observation covariance: " + str(m_covs[j]) + " \n")
                     
                 num_steps /= self.num_simulation_runs
-                self.serializer.write_line("log.log", "tmp/lqg", "Mean number of steps: " + str(num_steps) + " \n")
-                self.serializer.write_line("log.log", "tmp/lqg", "Objective value of best path: " + str(objective) + " \n")                
-                self.serializer.write_line("log.log", "tmp/lqg", "Mean num collisions per run: " + str(float(num_collisions) / float(self.num_simulation_runs)) + " \n")
+                self.serializer.write_line("log.log", tmp_dir, "Mean number of steps: " + str(num_steps) + " \n")
+                self.serializer.write_line("log.log", tmp_dir, "Objective value of best path: " + str(objective) + " \n")                
+                self.serializer.write_line("log.log", tmp_dir, "Mean num collisions per run: " + str(float(num_collisions) / float(self.num_simulation_runs)) + " \n")
                 print "collision_prob " + str(collided_num / float(self.num_simulation_runs))
                 print "total num collisions " + str(num_collisions)    
                 print "mean num collisions " + str(float(num_collisions) / float(self.num_simulation_runs))
                 
-                self.serializer.write_line("log.log", "tmp/lqg", "Length best path: " + str(len(xs)) + " \n")
-                self.serializer.write_line("log.log", "tmp/lqg", "Index of best path: " + str(path_index) + " \n")
+                self.serializer.write_line("log.log", tmp_dir, "Length best path: " + str(len(xs)) + " \n")
+                self.serializer.write_line("log.log", tmp_dir, "Index of best path: " + str(path_index) + " \n")
                 self.serializer.write_line("log.log", 
-                                           "tmp/lqg", 
+                                           tmp_dir, 
                                            "Average distance to goal area: " + str(mean_distance_to_goal) + " \n")
-                self.serializer.write_line("log.log", "tmp/lqg", "Num successes: " + str(successes) + " \n")
+                self.serializer.write_line("log.log", tmp_dir, "Num successes: " + str(successes) + " \n")
                 print "succ " + str((100.0 / self.num_simulation_runs) * successes)
-                self.serializer.write_line("log.log", "tmp/lqg", "Percentage of successful runs: " + str((100.0 / self.num_simulation_runs) * successes) + " \n")
-                self.serializer.write_line("log.log", "tmp/lqg", "Mean planning time: " + str(mean_planning_time) + " \n")
+                self.serializer.write_line("log.log", tmp_dir, "Percentage of successful runs: " + str((100.0 / self.num_simulation_runs) * successes) + " \n")
+                self.serializer.write_line("log.log", tmp_dir, "Mean planning time: " + str(mean_planning_time) + " \n")
                 
                 n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))
                 print "mean_rewards " + str(mean)
                 #plt.plot_histogram_from_data(rewards_cov)
                 #sleep
-                self.serializer.write_line("log.log", "tmp/lqg", "Mean rewards: " + str(mean) + " \n")
-                self.serializer.write_line("log.log", "tmp/lqg", "Reward variance: " + str(var) + " \n")
+                self.serializer.write_line("log.log", tmp_dir, "Mean rewards: " + str(mean) + " \n")
+                self.serializer.write_line("log.log", tmp_dir, "Reward variance: " + str(var) + " \n")
                 self.serializer.write_line("log.log", 
-                                      "tmp/lqg", 
+                                      tmp_dir, 
                                       "Reward standard deviation: " + str(np.sqrt(var)) + " \n")
-                self.serializer.write_line("log.log", "tmp/lqg", "Seed: " + str(self.seed) + " \n")
-                cmd = "mv tmp/lqg/log.log " + dir + "/log_lqg_" + str(m_covs[j]) + ".log"
+                self.serializer.write_line("log.log", tmp_dir, "Seed: " + str(self.seed) + " \n")
+                cmd = "mv " + tmp_dir + "/log.log " + dir + "/log_lqg_" + str(m_covs[j]) + ".log"
                 os.system(cmd)
                 
             
@@ -331,20 +334,19 @@ class LQG:
                 self.serializer.save_paths(best_paths, 'best_paths.yaml', True, path=dir)                      
             #self.serializer.save_stats(stats, path=dir)
             
-            cmd = "cp config_lqg.yaml " + dir           
+            cmd = "cp " + self.abs_path + "/config_lqg.yaml " + dir           
             os.system(cmd)
             
             if not os.path.exists(dir + "/environment"):
                 os.makedirs(dir + "/environment") 
             
-            cmd = "cp " + str(self.environment_file) + " " + str(dir) + "/environment"         
-            #cmd = "cp environment/env.xml " + dir + "/environment"
+            cmd = "cp " + self.abs_path + "/" + str(self.environment_file) + " " + str(dir) + "/environment"
             os.system(cmd) 
             
             if not os.path.exists(dir + "/model"):
                 os.makedirs(dir + "/model")
                 
-            cmd = "cp " + self.robot_file + " " + dir + "/model"
+            cmd = "cp " + self.abs_path + "/" + self.robot_file + " " + dir + "/model"
             os.system(cmd)
         print "LQG: Time to generate paths: " + str(time_to_generate_paths) + " seconds"                   
         print "Done"
@@ -379,7 +381,7 @@ class LQG:
         
         
     def init_robot(self, urdf_model_file):
-        self.robot = Robot(urdf_model_file)
+        self.robot = Robot(self.abs_path + "/" + urdf_model_file)
         self.robot.enforceConstraints(self.enforce_constraints)
         self.robot.setGravityConstant(self.gravity_constant)
         """ Setup operations """
@@ -669,11 +671,11 @@ class LQG:
                     environment_file,
                     robot):
         """ Load the obstacles """         
-        self.obstacles = self.utils.loadObstaclesXML(environment_file)      
+        self.obstacles = self.utils.loadObstaclesXML(self.abs_path + "/" + environment_file)      
         
         """ Load the goal area """
         goal_area = v_double()
-        self.utils.loadGoalArea(environment_file, goal_area)
+        self.utils.loadGoalArea(self.abs_path + "/" + environment_file, goal_area)
         if len(goal_area) == 0:
             print "ERROR: Your environment file doesn't define a goal area"
             return False
@@ -683,7 +685,7 @@ class LQG:
             
     def init_serializer(self):
         self.serializer = Serializer()
-        self.serializer.create_temp_dir("lqg")        
+        self.serializer.create_temp_dir(self.abs_path, "lqg")        
             
     def clear_stats(self, dir):        
         if os.path.isdir(dir):
@@ -772,7 +774,7 @@ class LQG:
         self.add_intermediate_states = config['add_intermediate_states']
         self.gravity_constant = config['gravity']
         self.num_generated_goal_states = config['num_generated_goal_states']
-        self.robot_file = config['robot_file']
+        self.robot_file = config['robot_file']        
         self.environment_file = config['environment_file']
         self.rrt_goal_bias = config['rrt_goal_bias']
         self.control_sampler = config['control_sampler']

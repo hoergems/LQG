@@ -18,10 +18,11 @@ import warnings
 
 class MPC:
     def __init__(self, plot):
+        self.abs_path = os.path.dirname(os.path.abspath(__file__))
         """ Reading the config """
         warnings.filterwarnings("ignore")
         self.init_serializer()
-        config = self.serializer.read_config("config_mpc.yaml")
+        config = self.serializer.read_config("config_mpc.yaml", path=self.abs_path)
         self.set_params(config)
         if self.seed < 0:
             """
@@ -35,7 +36,8 @@ class MPC:
             logging_level = logging.DEBUG
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)        
         np.set_printoptions(precision=16)
-        dir = "stats/mpc"        
+        dir = self.abs_path + "/stats/mpc"
+        tmp_dir = self.abs_path + "/tmp/mpc"       
         self.utils = Utils()
         if not self.init_robot(self.robot_file):
             logging.error("MPC: Couldn't initialize robot")
@@ -50,6 +52,7 @@ class MPC:
         path_planner = PathPlanningInterface()
         logging.info("MPC: Generating goal states...")        
         goal_states = get_goal_states("mpc",
+                                      self.abs_path,
                                       self.serializer, 
                                       self.obstacles,                                                                           
                                       self.robot,                                    
@@ -157,7 +160,7 @@ class MPC:
             rewards_cov = []
             for k in xrange(self.num_simulation_runs):
                 print "MPC: Run " + str(k + 1)                                
-                self.serializer.write_line("log.log", "tmp/mpc", "RUN #" + str(k + 1) + " \n")
+                self.serializer.write_line("log.log", tmp_dir, "RUN #" + str(k + 1) + " \n")
                 current_step = 0
                 x_true = self.start_state
                 x_estimate = self.start_state
@@ -243,7 +246,7 @@ class MPC:
                     history_entries[0].set_replanning(True)                        
                     for l in xrange(len(history_entries)):
                         history_entries[l].set_estimated_covariance(state_covariances[l])                        
-                        history_entries[l].serialize("tmp/mpc", "log.log")
+                        history_entries[l].serialize(tmp_dir, "log.log")
                         if history_entries[l].collided:                            
                             num_collisions += 1
                             collided = True
@@ -255,10 +258,10 @@ class MPC:
                         print "MPC: Final state: " + str(x_true)
                 rewards_cov.append(total_reward)
                 self.serializer.write_line("log.log", 
-                                           "tmp/mpc", 
+                                           tmp_dir,
                                            "Reward: " + str(total_reward) + " \n") 
                 self.serializer.write_line("log.log", 
-                                           "tmp/mpc", 
+                                           tmp_dir,
                                            "\n")
                 number_of_steps += current_step
             mean_planning_time_per_step = mean_planning_time / mean_number_planning_steps 
@@ -280,70 +283,68 @@ class MPC:
             logging.info("MPC: Done. total_reward is " + str(total_reward))
             n, min_max, mean_distance_to_goal, var, skew, kurt = scipy.stats.describe(np.array(ee_position_distances))                         
                 
-            self.serializer.write_line("log.log", "tmp/mpc", "################################# \n")
+            self.serializer.write_line("log.log", tmp_dir, "################################# \n")
             self.serializer.write_line("log.log",
-                                       "tmp/mpc",
+                                       tmp_dir,
                                        "inc_covariance: " + str(self.inc_covariance) + "\n")
             if self.inc_covariance == "process":                  
                 self.serializer.write_line("log.log",
-                                           "tmp/mpc",
+                                           tmp_dir,
                                            "Process covariance: " + str(m_covs[j]) + " \n")
                 self.serializer.write_line("log.log",
-                                           "tmp/mpc",
+                                           tmp_dir,
                                            "Observation covariance: " + str(self.min_observation_covariance) + " \n")
             elif self.inc_covariance == "observation":                    
                 self.serializer.write_line("log.log",
-                                           "tmp/mpc",
+                                           tmp_dir,
                                            "Process covariance: " + str(self.min_process_covariance) + " \n")
                 self.serializer.write_line("log.log",
-                                           "tmp/mpc",
+                                           tmp_dir,
                                            "Observation covariance: " + str(m_covs[j]) + " \n")
             number_of_steps /= self.num_simulation_runs
-            self.serializer.write_line("log.log", "tmp/mpc", "Mean number of steps: " + str(number_of_steps) + " \n")                            
-            self.serializer.write_line("log.log", "tmp/mpc", "Mean num collisions per run: " + str(float(num_collisions) / float(self.num_simulation_runs)) + " \n")
+            self.serializer.write_line("log.log", tmp_dir, "Mean number of steps: " + str(number_of_steps) + " \n")                            
+            self.serializer.write_line("log.log", tmp_dir, "Mean num collisions per run: " + str(float(num_collisions) / float(self.num_simulation_runs)) + " \n")
             self.serializer.write_line("log.log", 
-                                       "tmp/mpc", 
+                                       tmp_dir, 
                                        "Average distance to goal area: " + str(mean_distance_to_goal) + " \n")
-            self.serializer.write_line("log.log", "tmp/mpc", "Num successes: " + str(successful_runs) + " \n")
+            self.serializer.write_line("log.log", tmp_dir, "Num successes: " + str(successful_runs) + " \n")
             print "succ " + str((100.0 / self.num_simulation_runs) * successful_runs)
-            self.serializer.write_line("log.log", "tmp/mpc", "Percentage of successful runs: " + str((100.0 / self.num_simulation_runs) * successful_runs) + " \n")
-            self.serializer.write_line("log.log", "tmp/mpc", "Mean planning time per run: " + str(mean_planning_time) + " \n")
-            self.serializer.write_line("log.log", "tmp/mpc", "Mean planning time per planning step: " + str(mean_planning_time_per_step) + " \n")
+            self.serializer.write_line("log.log", tmp_dir, "Percentage of successful runs: " + str((100.0 / self.num_simulation_runs) * successful_runs) + " \n")
+            self.serializer.write_line("log.log", tmp_dir, "Mean planning time per run: " + str(mean_planning_time) + " \n")
+            self.serializer.write_line("log.log", tmp_dir, "Mean planning time per planning step: " + str(mean_planning_time_per_step) + " \n")
             
             n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))
             print "mean_rewards " + str(mean)
             #plt.plot_histogram_from_data(rewards_cov)
             #sleep
-            self.serializer.write_line("log.log", "tmp/mpc", "Mean rewards: " + str(mean) + " \n")
-            self.serializer.write_line("log.log", "tmp/mpc", "Reward variance: " + str(var) + " \n")
+            self.serializer.write_line("log.log", tmp_dir, "Mean rewards: " + str(mean) + " \n")
+            self.serializer.write_line("log.log", tmp_dir, "Reward variance: " + str(var) + " \n")
             self.serializer.write_line("log.log", 
-                                       "tmp/mpc", 
+                                       tmp_dir, 
                                        "Reward standard deviation: " + str(np.sqrt(var)) + " \n")
-            self.serializer.write_line("log.log", "tmp/mpc", "Seed: " + str(self.seed) + " \n")
-            cmd = "mv tmp/mpc/log.log " + dir + "/log_mpc_" + str(m_covs[j]) + ".log"
+            self.serializer.write_line("log.log", tmp_dir, "Seed: " + str(self.seed) + " \n")
+            cmd = "mv " + tmp_dir + "log.log " + dir + "/log_mpc_" + str(m_covs[j]) + ".log"
             os.system(cmd)
         
-        cmd = "cp config_mpc.yaml " + dir           
+        cmd = "cp " + self.abs_path + "/config_mpc.yaml " + dir           
         os.system(cmd)
         
         if not os.path.exists(dir + "/environment"):
             os.makedirs(dir + "/environment") 
             
-        cmd = "cp " + str(self.environment_file) + " " + str(dir) + "/environment"
+        cmd = "cp " + self.abs_path + "/" + str(self.environment_file) + " " + str(dir) + "/environment"
         os.system(cmd) 
             
         if not os.path.exists(dir + "/model"):
             os.makedirs(dir + "/model")
                 
-        cmd = "cp " + self.robot_file + " " + dir + "/model"
-        os.system(cmd)         
-                    
-                     
-                
+        cmd = "cp " + self.abs_path + "/" + self.robot_file + " " + dir + "/model"
+        os.system(cmd)
+        print "Done."
         
                 
     def init_robot(self, urdf_model_file):
-        self.robot = Robot(urdf_model_file)
+        self.robot = Robot(self.abs_path + "/" + urdf_model_file)
         self.robot.enforceConstraints(self.enforce_constraints)
         self.robot.setGravityConstant(self.gravity_constant)
         """ Setup operations """
@@ -475,11 +476,11 @@ class MPC:
                     environment_file,
                     robot):
         """ Load the obstacles """         
-        self.obstacles = self.utils.loadObstaclesXML(environment_file)      
+        self.obstacles = self.utils.loadObstaclesXML(self.abs_path + "/" + environment_file)      
         
         """ Load the goal area """
         goal_area = v_double()
-        self.utils.loadGoalArea(environment_file, goal_area)
+        self.utils.loadGoalArea(self.abs_path + "/" + environment_file, goal_area)
         if len(goal_area) == 0:
             print "ERROR: Your environment file doesn't define a goal area"
             return False
@@ -487,10 +488,9 @@ class MPC:
         self.goal_radius = goal_area[3]
         return True
                 
-    def init_serializer(self):
-        print "INIT S"
+    def init_serializer(self):        
         self.serializer = Serializer()
-        self.serializer.create_temp_dir("mpc") 
+        self.serializer.create_temp_dir(self.abs_path, "mpc") 
                 
     def clear_stats(self, dir):
         if os.path.isdir(dir):

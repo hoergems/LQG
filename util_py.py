@@ -25,16 +25,16 @@ def check_positive_definite(matrices):
             return False
     return True
 
-def compareEnvironmentToTmpFiles(problem, environment_file):
-    if not os.path.exists("tmp/" + problem):
-        os.makedirs("tmp/" + problem)                   
+def compareEnvironmentToTmpFiles(problem, environment_file, abs_path):
+    if not os.path.exists(abs_path + "/tmp/" + problem):
+        os.makedirs(abs_path + "/tmp/" + problem)                   
         return False
         
-    if not (os.path.exists('tmp/' + problem + '/' + environment_file) and
-            os.path.exists('tmp/' + problem + '/config_' + str(problem) + '.yaml')):                
+    if not (os.path.exists(abs_path + '/tmp/' + problem + '/' + environment_file) and
+            os.path.exists(abs_path + '/tmp/' + problem + '/config_' + str(problem) + '.yaml')):                
         return False
         
-    with open(environment_file, 'r') as f1, open('tmp/' + problem + '/' + environment_file, 'r') as f2:
+    with open(abs_path + "/" + environment_file, 'r') as f1, open(abs_path + '/tmp/' + problem + '/' + environment_file, 'r') as f2:
         missing_from_b = [
             diff[2:] for diff in Differ().compare(f1.readlines(), f2.readlines())
             if diff.startswith('-')
@@ -42,7 +42,7 @@ def compareEnvironmentToTmpFiles(problem, environment_file):
         if len(missing_from_b) != 0:                
             return False    
         
-    with open('config_' + str(problem) + '.yaml', 'r') as f1, open('tmp/' + problem + '/config_' + str(problem) + '.yaml', 'r') as f2:
+    with open(abs_path + '/config_' + str(problem) + '.yaml', 'r') as f1, open(abs_path + '/tmp/' + problem + '/config_' + str(problem) + '.yaml', 'r') as f2:
         missing_from_b = [
             diff[2:] for diff in Differ().compare(f1.readlines(), f2.readlines())
             if diff.startswith('-')
@@ -57,11 +57,12 @@ def compareEnvironmentToTmpFiles(problem, environment_file):
                 return False
         
     """ If same, use existing goalstates """
-    if os.path.exists("tmp/" + problem + "/goalstates.txt"):
+    if os.path.exists(abs_path + "/tmp/" + problem + "/goalstates.txt"):
         return True
     return False
 
-def get_goal_states(problem, 
+def get_goal_states(problem,
+                    abs_path, 
                     serializer, 
                     obstacles,                                         
                     robot,
@@ -75,8 +76,9 @@ def get_goal_states(problem,
                     num_generated_goal_states,
                     continuous_collision,                    
                     environment_file,
-                    num_cores):     
-    if not compareEnvironmentToTmpFiles(problem, environment_file):        
+                    num_cores):    
+    if not compareEnvironmentToTmpFiles(problem, environment_file, abs_path): 
+             
         ik_solution_generator = IKSolutionGenerator()          
         ik_solution_generator.setup(robot,
                                     obstacles,
@@ -91,15 +93,18 @@ def get_goal_states(problem,
                                                       goal_threshold,
                                                       num_generated_goal_states)        
         if len(ik_solutions) == 0:
-            return []
-        serializer.serialize_ik_solutions([ik_solutions[i] for i in xrange(len(ik_solutions))], path='tmp/' + problem, file='goalstates.txt')
-        copyToTmp(problem, environment_file)    
+            return []        
+        serializer.serialize_ik_solutions([ik_solutions[i] for i in xrange(len(ik_solutions))], path=abs_path + '/tmp/' + problem, file='goalstates.txt')
+        
+        copyToTmp(problem, environment_file, abs_path)
+        
     else:
-        ik_solutions = serializer.deserialize_joint_angles(path="tmp/" + problem, file="goalstates.txt")          
+        ik_solutions = serializer.deserialize_joint_angles(path=abs_path + "/tmp/" + problem, file="goalstates.txt")            
     return ik_solutions
 
-def copyToTmp(problem, environment_file):    
-    if not os.path.exists("tmp/" + problem + "/environment"):
-        os.makedirs("tmp/" + problem + "/environment")
-    shutil.copy2(environment_file, 'tmp/' + problem + '/' + environment_file)        
-    shutil.copy2('config_' + str(problem) + '.yaml', 'tmp/' + problem + '/config_' + str(problem) + '.yaml')
+def copyToTmp(problem, environment_file, abs_path):    
+    if not os.path.exists(abs_path + "/tmp/" + problem + "/environment"):
+        os.makedirs(abs_path + "/tmp/" + problem + "/environment")
+    print environment_file
+    shutil.copy2(abs_path + "/" + environment_file, abs_path + '/tmp/' + problem + '/' + environment_file)        
+    shutil.copy2(abs_path + '/config_' + str(problem) + '.yaml', abs_path + '/tmp/' + problem + '/config_' + str(problem) + '.yaml')

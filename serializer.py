@@ -123,10 +123,10 @@ class Serializer:
         with open(os.path.join(path, filename), 'a+') as f:
             f.write(line)
             
-    def create_temp_dir(self, alg):
-        if not os.path.exists("tmp/" + str(alg)):            
-            os.makedirs("tmp/" + str(alg))
-        for file in glob.glob(os.path.join("tmp/" + alg, "log.log")):
+    def create_temp_dir(self, path, alg):
+        if not os.path.exists(path + "/tmp/" + str(alg)):            
+            os.makedirs(path + "/tmp/" + str(alg))
+        for file in glob.glob(os.path.join(path + "/tmp/" + alg, "log.log")):
             os.remove(file)
             
     def read_observation_covariance(self, path, filename=None):
@@ -143,7 +143,7 @@ class Serializer:
                     if "Process covariance:" in line:
                         return float(line.strip().split(": ")[1])
         
-    def read_config(self, filename=None, path=""):        
+    def read_config(self, filename=None, path=""):                
         if filename == None:
             filename = glob.glob(os.path.join(path, "config*"))[0]
             if "mpc" in filename:
