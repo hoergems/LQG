@@ -26,11 +26,16 @@ class PlotStats:
         if self.setup_robot(dir) and plot_emds:            
             self.plot_emds(show_particles, dir=dir)    
         
+        self.plot_bla(["collided", "Trans: Collision detected"], "collision_stats", dir=dir)
+        self.plot_bla(["R:"], "reward_stats", dir=dir)
+        
         logging.info("Plotting average distance to goal")
         try:        
             self.plot_stat("Average distance to goal area", "avg_distance", dir=dir)
         except:
             pass
+        
+        
         
         logging.info("Plotting mean number of histories per step")
         self.plot_stat("Mean number of histories per step", "mean_num_histories", dir=dir)
@@ -295,7 +300,87 @@ class PlotStats:
                 m_covs.append(m_cov)
         print m_covs
             
-        sleep'''   
+        sleep'''
+        
+    def plot_bla(self, stat_strings, output_file_str, dir="stats", y_label=""):        
+        files = glob.glob(os.path.join(os.path.join(dir, "*.log")))        
+        d = dict()
+        m_covs = []
+        for file in sorted(files):
+            m_cov = float(str(file.split("/")[-1].split("_")[-1].split(".")[0] + "." + str(file.split("/")[-1].split("_")[-1].split(".")[1])))
+            m_covs.append(m_cov)
+        for i in xrange(len(m_covs)):
+            out_files = glob.glob(os.path.join(os.path.join(dir, "out_" + str(output_file_str) + "*")))
+            for out_file in out_files:
+                os.remove(out_file)               
+        for file in sorted(files):
+            num_runs = 0.0
+            all_vals = []
+            vals = []
+            vals_per_run = []
+            file_str = file.split("/")[-1].split("_")[1]
+            if not file_str in d:
+                d[file_str] = []           
+            with open(file, "r") as f:
+                for line in f:
+                    if "inc_covariance: " in line:                        
+                        inc_covariance = line.rstrip("\n").split(": ")[1]
+                        if inc_covariance == 'process':
+                            cov_str = "Process covariance:"
+                        elif inc_covariance == 'observation':
+                            cov_str = "Observation covariance:"            
+            with open(file, "r") as f:
+                for line in f:                    
+                    if cov_str in line:                                             
+                        m_cov = float(line.split(" ")[2])
+                    elif ("RUN #" in line or 
+                          "Run #" in line):
+                        num_runs += 1
+                        if len(vals) != 0:
+                            vals_per_run.append(vals)
+                            all_vals.extend(vals)
+                            vals = []                            
+                    elif "############" in line:
+                        vals_per_run.append(vals)
+                        all_vals.extend(vals)
+                        vals = []
+                    else:
+                        for i in xrange(len(stat_strings)):                            
+                            if stat_strings[i] in line and stat_strings[i][0] == line[0]:
+                                if not "estimate" in line:                                             
+                                    if ("true" in line or 
+                                        "false" in line or
+                                        "True" in line or
+                                        "False" in line):
+                                        if "true" in line or "True" in line:
+                                            vals.append(1)
+                                        else:
+                                            vals.append(0)
+                                    else: 
+                                        try:                                       
+                                            vals.append(float(line.rstrip("\n").split(":")[-1].rstrip(" ")))
+                                        except:
+                                            print line.rstrip("\n")
+                                                                
+            
+            n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(all_vals))
+            arr = []            
+            for i in xrange(int(num_runs)):                            
+                arr.append(sum(vals_per_run[i]))            
+            n, min_max, mean2, var2, skew, kurt = scipy.stats.describe(np.array(arr))
+            
+            
+            with open(os.path.join(dir, "out_" + str(output_file_str) + "_" + str(m_cov) + ".txt"), "a+") as f:
+                f.write(file_str + " " + str(m_cov) + ": \n")
+                f.write("mean per run: " + str(mean2) + " \n")
+                f.write("variance: " + str(var2) + " \n")
+                f.write("min: " + str(min_max[0]) + " \n")
+                f.write("max: " + str(min_max[1]) + " \n")
+                f.write("skewness: " + str(skew) + " \n")
+                f.write("kurtosis: " + str(kurt) + " \n \n")
+                #f.write(file_str + " " + str(m_cov) + " " + str(mean) + ", " + str(var) + " \n")
+             
+        
         
     def plot_stat(self, stat_str, output_file_str, dir="stats", y_label=""):
         if y_label == "":
