@@ -14,7 +14,6 @@ from simulator import Simulator
 from path_evaluator import PathEvaluator
 from path_planning_interface import PathPlanningInterface
 from libobstacle import Obstacle, Terrain
-import plot as plt
 import warnings
 
 class LQG:
