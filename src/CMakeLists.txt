@@ -1,73 +1,149 @@
 cmake_minimum_required (VERSION 2.6)
 
 project (lqg)
-#set(CMAKE_BUILD_TYPE RELASE)
-#set(CMAKE_CXX_FLAGS "-g -std=c++11 -pg")
-#set(CMAKE_CXX_FLAGS "-g -std=c++11")
-#SET(CMAKE_EXE_LINKER_FLAGS "-pg")
-#SET(CMAKE_SHARED_LINKER_FLAGS "-pg")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -std=c++11")
-#set(CMAKE_CXX_FLAGS_RELEASE "-g -std=c++11 -O3 -DEIGEN_NO_DEBUG -mavx -mfma -fopenmp")
-#set(CMAKE_CXX_FLAGS_RELEASE "-g -std=c++11")
-set(CMAKE_CXX_FLAGS_RELEASE "-g -std=c++11 -O3 -DEIGEN_NO_DEBUG -w")
+set(CMAKE_BUILD_TYPE DEBUG)
+set(CMAKE_CXX_FLAGS_DEBUG "-g -std=c++11 -w")
+set(CMAKE_CXX_FLAGS_RELEASE "-g -std=c++11 -O3 -w")
 
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${lqg_SOURCE_DIR})
-SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${lqg_SOURCE_DIR}/..)
+SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${lqg_SOURCE_DIR}/../../../python/)
+SET(BOOST_MIN_VERSION "1.54.0")
+SET(PYTHON_MIN_VERSION "2.7.0")
+include(FindPkgConfig)
 
-#message(${CMAKE_CXX_FLAGS})
+####### USER SPECIFIED VARIABLES #########
+set(USE_URDF True)
 
-include_directories(/usr/include/eigen3 
-                    /usr/inclue/boost 
-                    /usr/include/python2.7
-                    /usr/include/jsoncpp
-                    /usr/local/include/openrave-0.9
-                    /usr/local/include/ompl
-                    /usr/local/include/fcl/)
 
-# set the path to the library folder
-link_directories(/usr/lib /usr/local/lib /opt/ros/indigo/lib)
+set(CMAKE_PREFIX_PATH "/home/uqmhoerg/home/opt/include")
+message ("CMAKE PREFIXPATH ${CMAKE_PREFIX_PATH}" )
 
-# link the libraries to the executable
-add_library(util SHARED 
-            utils.cpp
-            Terrain.cpp
-            Obstacle.cpp
-            BoxObstacle.cpp
-            SphereObstacle.cpp)
+##############################
+#Try to load URDF
+##############################
+if (USE_URDF)       
+    if(PKG_CONFIG_FOUND)
+        pkg_check_modules(URDF urdf)
+        if(NOT URDF_FOUND)
+           message(FATAL_ERROR "URDF package could not be found")
+        endif()
+        include_directories(${URDF_INCLUDE_DIRS})
+        link_directories(${URDF_LIBRARY_DIRS})    
+    endif()
+        
+############################# LOAD OPENRAVE #############################
+    if(PKG_CONFIG_FOUND)
+        pkg_check_modules(OPENRAVE openrave0.9-core)
+        if(NOT OPENRAVE_FOUND)
+           message(FATAL_ERROR "OpenRAVE 0.9 could not be found")           
+        endif()
+        include_directories(${OPENRAVE_INCLUDE_DIRS})
+        link_directories(${OPENRAVE_LIBRARY_DIRS})           
+    endif() 
+    
+    if(PKG_CONFIG_FOUND)    
+	    pkg_check_modules(VIEWER viewer_interface)
+	    if(NOT VIEWER_FOUND)
+	       message(FATAL_ERROR "VIEWER could not be found")	       
+	    endif()	
+	    include_directories(${VIEWER_INCLUDE_DIRS})
+	    link_directories(${VIEWER_LIBRARY_DIRS})    
+        add_definitions(-DUSE_URDF)    
+	endif()      
+endif()
 
-add_library(area SHARED
-            Area.cpp)
+############################# LOAD PYTHON #############################
+if(PKG_CONFIG_FOUND)    
+    pkg_check_modules(PYTHON python-2.7)
+    if(NOT PYTHON_FOUND)
+       message(FATAL_ERROR "Python could not be found")
+    endif()
+    include_directories(${PYTHON_INCLUDE_DIRS})    
+endif()
 
-#add_library(kinematics SHARED
-#            Kinematics.cpp
-#            robot.cpp)
+
+
+############################# LOAD EIGEN #############################
+if(PKG_CONFIG_FOUND)
+    pkg_check_modules(EIGEN eigen3)
+    if(NOT EIGEN_FOUND)
+       message(FATAL_ERROR "EIGEN could not be found")
+    endif()
+    include_directories(${EIGEN_INCLUDE_DIRS})    
+endif()
+
+
+############################# LOAD BOOST #############################
+find_package(Boost ${BOOST_MIN_VERSION} REQUIRED COMPONENTS python system thread random timer)
+if (NOT Boost_FOUND)
+    set(Boost_INCLUDE_DIRS "${BOOST_INCLUDE_DIRS}")
+    IF ( NOT Boost_INCLUDE_DIRS )
+        message(FATAL_ERROR "Please point the environment variable BOOST_INCLUDE_DIRS to the include directory of Boost")
+    ENDIF()
+endif (NOT Boost_FOUND)
+include_directories(${Boost_INCLUDE_DIRS})
+
+############################# LOAD FCL #############################
+if(PKG_CONFIG_FOUND)
+    pkg_check_modules(FCL fcl)
+    if(NOT FCL_FOUND)
+       message(FATAL_ERROR "FCL could not be found")
+    endif()
+    include_directories(${FCL_INCLUDE_DIRS})    
+endif()
+
+############################# LOAD OMPL #############################
+if(PKG_CONFIG_FOUND)    
+    pkg_check_modules(OMPL ompl)
+    if(NOT OMPL_FOUND)
+       message(FATAL_ERROR "OMPL could not be found")
+    endif()
+    include_directories(${OMPL_INCLUDE_DIRS})    
+endif()
+
+############################# LOAD TINYXML #############################
+if(PKG_CONFIG_FOUND)    
+    pkg_check_modules(TINYXML tinyxml)
+    if(NOT TINYXML_FOUND)
+       message(FATAL_ERROR "TINYXML could not be found")
+    endif()
+    include_directories(${TINYXML_INCLUDE_DIRS})    
+endif()
+
+############################# LOAD VIEWER_INTERFACE #############################
+if (USE_URDF)
+	if(PKG_CONFIG_FOUND)    
+	    pkg_check_modules(VIEWER viewer_interface)
+	    if(NOT VIEWER_FOUND)
+	       message(FATAL_ERROR "VIEWER could not be found")
+	    endif()
+	    include_directories(${VIEWER_INCLUDE_DIRS})
+            add_definitions(-DUSE_URDF)    
+	endif()
+endif()
+
+#get_cmake_property(_variableNames VARIABLES)
+#foreach (_variableName ${_variableNames})
+#    message(STATUS "${_variableName}=${${_variableName}}")
+#endforeach()
+link_directories(${TINYXML_LIBRARY_DIRS}
+                 ${OMPL_LIBRARY_DIRS}                 
+                 ${PYTHON_LIBRARY_DIRS}
+                 ${FCL_LIBRARY_DIRS}
+                 ${Boost_LIBRARY_DIRS}
+                 ${EIGEN_LIBRARY_DIRS})
 
 add_library(robot SHARED 
             robot.cpp
-            propagator.cpp
-            viewer_interface.cpp
-            urdf_loader.cpp
-            viewer.cpp
+            propagator.cpp                      
             integrate.cpp
             Kinematics.cpp)
             
-add_library(collision_checker SHARED
-            collision_checker.cpp
-            Obstacle.cpp            
-            Terrain.cpp)
-
-add_library(obstacle SHARED
-            Obstacle.cpp
-            Terrain.cpp)
-
 add_library(path_planner SHARED
             path_planner.cpp
             MotionValidator.cpp
             ManipulatorGoalRegion.cpp
             robot.cpp
-            viewer_interface.cpp
-            urdf_loader.cpp
-            viewer.cpp
             Kinematics.cpp
             propagator.cpp
             integrate.cpp
@@ -76,7 +152,7 @@ add_library(path_planner SHARED
             Obstacle.cpp
             BoxObstacle.cpp
             SphereObstacle.cpp)
-
+            
 add_library(dynamic_path_planner SHARED 
             dynamic_path_planner.cpp
             ManipulatorSpaceInformation.cpp
@@ -90,79 +166,67 @@ add_library(dynamic_path_planner SHARED
             ManipulatorGoalRegion.cpp            
             Kinematics.cpp
             utils.cpp
-            robot.cpp
-            viewer_interface.cpp
-            urdf_loader.cpp
-            viewer.cpp
+            robot.cpp            
             Obstacle.cpp
             BoxObstacle.cpp
             SphereObstacle.cpp
             Terrain.cpp            
             control_space.cpp
             control_sampler.cpp)
-
-target_link_libraries (util
-                       boost_system
-                       boost_python
-                       python2.7
-                       tinyxml
-                       fcl)
-
-target_link_libraries(area
-                      boost_system
-                      boost_python
-                      python2.7)
-
-target_link_libraries(path_planner
-                      boost_system
-                      boost_python
-                      python2.7 
-                      openrave0.9 
-                      openrave0.9-core                     
-                      ompl
-                      fcl
-                      tinyxml
-                      urdf)
-                      
-target_link_libraries(collision_checker
-                      boost_system
-                      boost_python
-                      python2.7
-                      fcl
-                      tinyxml)
-
-target_link_libraries(obstacle
-                      openrave0.9 
-                      openrave0.9-core
-                      boost_system
-                      boost_python
-                      python2.7
-                      fcl
-                      tinyxml)
+            
+add_library(obstacle SHARED
+            Obstacle.cpp
+            Terrain.cpp)
+            
+add_library(util SHARED 
+            utils.cpp
+            Terrain.cpp
+            Obstacle.cpp
+            BoxObstacle.cpp
+            SphereObstacle.cpp)
+            
+add_library(area SHARED
+            Area.cpp)
 
 target_link_libraries (robot
-                       urdf
-                       boost_system
-                       boost_python
-                       python2.7
-                       openrave0.9 
-                       openrave0.9-core
-                       fcl
-                       tinyxml
-                       urdf)
+                       ${URDF_LIBRARIES}
+                       ${Boost_LIBRARIES}
+                       ${PYTHON_LIBRARIES}
+                       ${OPENRAVE_LIBRARIES}
+                       ${FCL_LIBRARIES}
+                       ${VIEWER_LIBRARIES}
+                       ${TINYXML_LIBRARIES})
 
+target_link_libraries(path_planner
+                      ${Boost_LIBRARIES}
+                      ${PYTHON_LIBRARIES}
+                      ${OPENRAVE_LIBRARIES}                   
+                      ${OMPL_LIBRARIES}
+                      ${FCL_LIBRARIES}                      
+                      ${URDF_LIBRARIES}
+                      ${VIEWER_LIBRARIES}
+                      ${TINYXML_LIBRARIES})
+                      
 target_link_libraries (dynamic_path_planner                        
-                       openrave0.9 
-                       openrave0.9-core 
-                       ompl
-                       boost_system
-                       boost_python
-                       python2.7 
-                       boost_thread
-                       fcl
-                       tinyxml
-                       urdf)
-
-#set_property(TARGET robot PROPERTY CXX_STANDARD 11)
+                       ${OPENRAVE_LIBRARIES}
+                       ${OMPL_LIBRARIES}
+                       ${Boost_LIBRARIES}
+                       ${PYTHON_LIBRARIES}                   
+                       ${FCL_LIBRARIES}
+                       ${TINYXML_LIBRARIES}
+                       ${URDF_LIBRARIES})
+                      
+target_link_libraries(obstacle                      
+                      ${Boost_LIBRARIES}
+                      ${PYTHON_LIBRARIES}
+                      ${FCL_LIBRARIES})
+                      
+target_link_libraries (util
+                       ${Boost_LIBRARIES}
+                       ${PYTHON_LIBRARIES}                       
+                       ${FCL_LIBRARIES}
+                       ${TINYXML_LIBRARIES})
                        
-#file(COPY "libintegrate.so" DESTINATION "..")
+target_link_libraries(area
+                      ${Boost_LIBRARIES}
+                      ${PYTHON_LIBRARIES})

@@ -74,7 +74,8 @@ def get_goal_states(problem,
                     path_timeout,
                     num_generated_goal_states,
                     continuous_collision,                    
-                    environment_file):     
+                    environment_file,
+                    num_cores):     
     if not compareEnvironmentToTmpFiles(problem, environment_file):        
         ik_solution_generator = IKSolutionGenerator()          
         ik_solution_generator.setup(robot,
@@ -83,7 +84,8 @@ def get_goal_states(problem,
                                     delta_t,
                                     planning_algorithm,
                                     path_timeout,
-                                    continuous_collision)
+                                    continuous_collision,
+                                    num_cores)
         ik_solutions = ik_solution_generator.generate(start_state, 
                                                       goal_position, 
                                                       goal_threshold,

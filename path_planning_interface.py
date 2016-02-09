@@ -55,7 +55,8 @@ class PathPlanningInterface:
                                   goal_radius,
                                   False,
                                   model_file,
-                                  env_file)
+                                  env_file,
+                                  self.num_cores)
         
     def setup_reward_function(self, 
                               step_penalty, 
@@ -72,10 +73,11 @@ class PathPlanningInterface:
               use_linear_path,
               planning_algorithm,
               path_timeout,
-              continuous_collision):
+              continuous_collision,
+              num_cores):
         self.robot = robot
         self.robot_dof = self.robot.getDOF()
-        self.num_cores = cpu_count() + 1
+        self.num_cores = num_cores + 1
         #self.num_cores = cpu_count() - 1
         #self.num_cores = 2       
         self.obstacles = obstacles        

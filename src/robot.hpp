@@ -14,7 +14,10 @@
 #include <tinyxml.h>
 #include "propagator.hpp"
 #include "Kinematics.hpp"
-#include "viewer_interface.hpp"
+
+#ifdef USE_URDF
+   #include <viewer_interface/viewer_interface.hpp>
+#endif
 
 using std::cout;
 using std::endl;
@@ -101,31 +104,8 @@ struct Joint {
     	    void getEndEffectorJacobian(const std::vector<double> &joint_angles, 
     	    		                    std::vector<std::vector<double>> &ee_jacobian);
     	    
-    	    void updateViewerValues(const std::vector<double> &current_joint_values,
-                                    const std::vector<double> &current_joint_velocities,
-									const std::vector<std::vector<double>> &particle_joint_values,
-									const std::vector<std::vector<double>> &particle_colors);
     	    
     	    
-    	    /**
-    	     * Add particles to the viewer which remain when the viewer is updated
-    	     */
-    	    void addPermanentViewerParticles(const std::vector<std::vector<double>> &particle_joint_values,
-									         const std::vector<std::vector<double>> &particle_colors);
-    	    
-    	    /**
-    	     * Removes any permanent particles
-    	     */
-    	    void removePermanentViewerParticles();
-    	    
-    	    void setupViewer(std::string model_file, std::string environment_file);
-    	    
-    	    /**
-    	     * Set the color of an obstacle with name 'obstacle_name'
-    	     */
-    	    void setObstacleColor(std::string obstacle_name, 
-    	    		              std::vector<double> &diffuse_color, 
-    	    		              std::vector<double> &ambient_color);
     	    
     	    int getDOF();
     	    
@@ -197,7 +177,7 @@ struct Joint {
     	    std::vector<double> getProcessMatrices(std::vector<double> &x, 
                                                    std::vector<double> &rho, 
 				                                   double t_e);
-    	    
+#ifdef USE_URDF	    
     	    /**
     	     * Set the size of the attached viewer
     	     */
@@ -217,7 +197,26 @@ struct Joint {
     	     * Set the maximum number of particles to plot
     	     */
     	    void setParticlePlotLimit(unsigned int particle_plot_limit);
-    
+    	    
+    	    void updateViewerValues(const std::vector<double> &current_joint_values,
+    	                            const std::vector<double> &current_joint_velocities,
+    	    					    const std::vector<std::vector<double>> &particle_joint_values,
+    	    					    const std::vector<std::vector<double>> &particle_colors);
+    	        	    
+    	        	    
+    	    /**
+    	      * Add particles to the viewer which remain when the viewer is updated
+    	    */
+    	    void addPermanentViewerParticles(const std::vector<std::vector<double>> &particle_joint_values,
+    	    							     const std::vector<std::vector<double>> &particle_colors);
+    	        	    
+    	    /**
+    	      * Removes any permanent particles
+    	      */
+    	    void removePermanentViewerParticles();
+    	        	    
+    	    void setupViewer(std::string model_file, std::string environment_file);
+#endif
         private:
     	    std::vector<shared::Link> links_;
     	    
@@ -291,7 +290,11 @@ struct Joint {
             
             std::shared_ptr<shared::Kinematics> kinematics_;
             
+#ifdef USE_URDF
             std::shared_ptr<shared::ViewerInterface> viewer_;
+#else
+            std::shared_ptr<double> viewer_;
+#endif
             
             void quatFromRPY(double &roll, double &pitch, double &y, std::vector<double> &quat);
     

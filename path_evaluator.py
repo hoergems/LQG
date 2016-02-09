@@ -22,7 +22,8 @@ class PathEvaluator:
               goal_radius,              
               show_viewer,
               model_file,
-              env_file):
+              env_file,
+              num_cores):
         self.robot = robot       
         self.A = A
         self.B = B
@@ -51,7 +52,7 @@ class PathEvaluator:
         
         self.constraints_enforced = robot.constraintsEnforced()
         self.sample_size = sample_size
-        self.num_cores = cpu_count() + 1
+        self.num_cores = num_cores
         #self.num_cores = cpu_count() - 1
         #self.num_cores = 2 
         self.goal_position = goal_position 
@@ -304,16 +305,8 @@ class PathEvaluator:
                 state[:] = state_path[i]
                 control[:] = control_path[i]
                 A = self.robot.getProcessMatrices(state, control, control_durations[i])       
-                Matr_list = [A[j] for j in xrange(len(A))]
-                
-                '''A_list = np.array([Matr_list[j] for j in xrange(len(state)**2)])
-                B_list = np.array([Matr_list[j] for j in xrange(len(state)**2, 2 * len(state)**2)])
-                V_list = np.array([Matr_list[j] for j in xrange(2 * len(state)**2, 
-                                                                3 * len(state)**2)])
-                A_Matr = A_list.reshape(len(state), len(state)).T
-                V_Matr = V_list.reshape(len(state), len(state)).T
-                B_Matr = B_list.reshape(len(state), len(state)).T'''
-                
+                Matr_list = [A[j] for j in xrange(len(A))]                
+               
                 A_list = np.array([Matr_list[j] for j in xrange(len(state)**2)])
                 start_index = len(state)**2
                 B_list = np.array([Matr_list[j] for j in xrange(start_index, 

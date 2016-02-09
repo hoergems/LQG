@@ -348,8 +348,11 @@ Robot::Robot(std::string robot_file):
 	enforce_constraints_(false),
 	propagator_(new Propagator()),
 	kinematics_(new Kinematics()),
-	viewer_(new ViewerInterface()){
+	viewer_(nullptr){
 	
+#ifdef USE_URDF
+	viewer_ = std::make_shared<shared::ViewerInterface>();
+#endif
 	TiXmlDocument xml_doc;
 	xml_doc.LoadFile(robot_file);	
 	TiXmlElement *robot_xml = xml_doc.FirstChildElement("robot");
@@ -539,6 +542,11 @@ void Robot::getEndEffectorPosition(const std::vector<double> &joint_angles, std:
 	kinematics_->getEndEffectorPosition(joint_angles, end_effector_position);
 }
 
+
+/****************************************
+ * Viewer functions
+ */
+#ifdef USE_URDF
 void Robot::setupViewer(std::string model_file, std::string environment_file) {	
 	viewer_->setupViewer(model_file, environment_file);	
 }
@@ -584,12 +592,7 @@ void Robot::setViewerBackgroundColor(double r, double g, double b) {
 void Robot::setViewerCameraTransform(std::vector<double> &rot, std::vector<double> &trans) {
 	viewer_->setCameraTransform(rot, trans);
 }
-
-void Robot::setObstacleColor(std::string obstacle_name, 
-		                     std::vector<double> &diffuse_color, 
-                             std::vector<double> &ambient_color) {
-	viewer_->setObstacleColor(obstacle_name, diffuse_color, ambient_color);
-}
+#endif
 
 bool Robot::propagate_linear(std::vector<double> &current_state,
     	    		         std::vector<double> &control_input,
@@ -910,11 +913,7 @@ BOOST_PYTHON_MODULE(librobot) {
                         //.def("createRobotCollisionStructures", &Robot::createRobotCollisionStructuresPy)
                         .def("createRobotCollisionObjects", &Robot::createRobotCollisionObjectsPy)
 						.def("createEndEffectorCollisionObject", &Robot::createEndEffectorCollisionObjectPy)
-                        .def("getEndEffectorPosition", &Robot::getEndEffectorPosition)
-                        .def("setupViewer", &Robot::setupViewer)
-                        .def("updateViewerValues", &Robot::updateViewerValues)
-						.def("addPermanentViewerParticles", &Robot::addPermanentViewerParticles)
-						.def("removePermanentViewerParticles", &Robot::removePermanentViewerParticles)
+                        .def("getEndEffectorPosition", &Robot::getEndEffectorPosition)						
                         .def("test", &Robot::test)
                         .def("getDOF", &Robot::getDOF)
 						.def("getJointLowerPositionLimits", &Robot::getJointLowerPositionLimits)
@@ -926,12 +925,17 @@ BOOST_PYTHON_MODULE(librobot) {
 						.def("setGravityConstant", &Robot::setGravityConstant)
 						.def("setExternalForce", &Robot::setExternalForce)
 						.def("getEndEffectorVelocity", &Robot::getEndEffectorVelocity)
-						.def("getProcessMatrices", &Robot::getProcessMatrices)
+						.def("getProcessMatrices", &Robot::getProcessMatrices)						
+						.def("getEndEffectorJacobian", &Robot::getEndEffectorJacobian)
+#ifdef USE_URDF
+						.def("setupViewer", &Robot::setupViewer)
+						.def("updateViewerValues", &Robot::updateViewerValues)
 						.def("setViewerSize", &Robot::setViewerSize)
 						.def("setViewerBackgroundColor", &Robot::setViewerBackgroundColor)
-						.def("setViewerCameraTransform", &Robot::setViewerCameraTransform)
-						.def("getEndEffectorJacobian", &Robot::getEndEffectorJacobian)
-						.def("setObstacleColor", &Robot::setObstacleColor)
+					    .def("setViewerCameraTransform", &Robot::setViewerCameraTransform)
+					    .def("addPermanentViewerParticles", &Robot::addPermanentViewerParticles)
+					    .def("removePermanentViewerParticles", &Robot::removePermanentViewerParticles)
+#endif
                         //.def("setup", &Integrate::setup)                        
     ;
 }

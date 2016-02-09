@@ -29,7 +29,7 @@ class LQG:
             """
             Generate a random seed that will be stored
             """
-            self.seed = np.random.randint(0, sys.maxint)
+            self.seed = np.random.randint(0, 4294967295)
         np.random.seed(self.seed)  
         
         logging_level = logging.WARN
@@ -69,7 +69,8 @@ class LQG:
                                       self.path_timeout,
                                       self.num_generated_goal_states,
                                       self.continuous_collision,
-                                      self.environment_file)  
+                                      self.environment_file,
+                                      self.num_cores)  
         if len(goal_states) == 0:
             logging.error("LQG: Couldn't generate any goal states. Problem seems to be infeasible")
             return
@@ -82,7 +83,8 @@ class LQG:
                            self.use_linear_path,
                            self.planning_algortihm,
                            self.path_timeout,
-                           self.continuous_collision)
+                           self.continuous_collision,
+                           self.num_cores)
         
         if self.dynamic_problem:
             path_planner.setup_dynamic_problem(self.robot_file,
@@ -168,7 +170,8 @@ class LQG:
                                      self.goal_radius,
                                      self.show_viewer_evaluation,
                                      self.robot_file,
-                                     self.environment_file)
+                                     self.environment_file,
+                                     self.num_cores)
                 if self.dynamic_problem:
                     path_evaluator.setup_dynamic_problem()
                 path_evaluator.setup_reward_function(self.step_penalty, self.illegal_move_penalty, self.exit_reward, self.discount_factor)
@@ -779,6 +782,7 @@ class LQG:
         self.rrt_goal_bias = config['rrt_goal_bias']
         self.control_sampler = config['control_sampler']
         self.seed = config['seed']
+        self.num_cores = config['num_cores']
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='LQG-MP.')
