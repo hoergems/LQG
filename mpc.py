@@ -47,7 +47,7 @@ class MPC:
         #self.run_viewer(self.robot_file, self.environment_file)     
         self.clear_stats(dir)
         logging.info("Start up simulator")
-        sim = Simulator()
+        sim = Simulator()        
         path_evaluator = PathEvaluator()
         path_planner = PathPlanningInterface()
         logging.info("MPC: Generating goal states...")        
@@ -72,7 +72,7 @@ class MPC:
             logging.error("MPC: Couldn't generate any goal states. Problem seems to be infeasible")
             return
         logging.info("MPC: Generated " + str(len(goal_states)) + " goal states")
-        sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)  
+        sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)
         path_planner.setup(self.robot,                         
                            self.obstacles,  
                            self.max_velocity, 
@@ -146,6 +146,7 @@ class MPC:
                               self.show_viewer_simulation,
                               self.robot_file,
                               self.environment_file)
+            sim.set_stop_when_colliding(self.replan_when_colliding)
             if self.dynamic_problem:
                 path_evaluator.setup_dynamic_problem()
                 sim.setup_dynamic_problem(self.simulation_step_size)
@@ -217,8 +218,7 @@ class MPC:
                      x_estimate, 
                      P_t, 
                      current_step, 
-                     total_reward, 
-                     success, 
+                     total_reward,
                      terminal,
                      estimated_s,
                      estimated_c,
@@ -233,16 +233,21 @@ class MPC:
                                                              current_step,
                                                              n_steps,
                                                              0.0,
-                                                             0.0)
+                                                             0.0,
+                                                             max_num_steps=self.max_num_steps)
                     #print "len(hist) " + str(len(history_entries))
                     #print "len(deviation_covariances) " + str(len(deviation_covariances))
                     #print "len(estimated_deviation_covariances) " + str(len(estimated_deviation_covariances))
                     deviation_covariance = deviation_covariances[len(history_entries) - 1]
                     estimated_deviation_covariance = estimated_deviation_covariances[len(history_entries) - 1]
                     
-                    if (success):
-                        successful_runs += 1
+                    if (current_step == self.max_num_steps) or terminal:
                         final_states.append(history_entries[-1].x_true)
+                        print "len " + str(len(history_entries))
+                        print "t " + str(history_entries[-1].t)
+                        if terminal:
+                            successful_runs += 1
+                        
                     history_entries[0].set_replanning(True)                        
                     for l in xrange(len(history_entries)):
                         history_entries[l].set_estimated_covariance(state_covariances[l])                        
@@ -281,7 +286,11 @@ class MPC:
                     dist = 0.0
                 ee_position_distances.append(dist)
             logging.info("MPC: Done. total_reward is " + str(total_reward))
-            n, min_max, mean_distance_to_goal, var, skew, kurt = scipy.stats.describe(np.array(ee_position_distances))                         
+            try:
+                n, min_max, mean_distance_to_goal, var, skew, kurt = scipy.stats.describe(np.array(ee_position_distances))
+            except:
+                print ee_position_distances
+                sleep                         
                 
             self.serializer.write_line("log.log", tmp_dir, "################################# \n")
             self.serializer.write_line("log.log",
@@ -323,7 +332,7 @@ class MPC:
                                        tmp_dir, 
                                        "Reward standard deviation: " + str(np.sqrt(var)) + " \n")
             self.serializer.write_line("log.log", tmp_dir, "Seed: " + str(self.seed) + " \n")
-            cmd = "mv " + tmp_dir + "log.log " + dir + "/log_mpc_" + str(m_covs[j]) + ".log"
+            cmd = "mv " + tmp_dir + "/log.log " + dir + "/log_mpc_" + str(m_covs[j]) + ".log"
             os.system(cmd)
         
         cmd = "cp " + self.abs_path + "/config_mpc.yaml " + dir           
@@ -611,6 +620,7 @@ class MPC:
         self.timeout = config['timeout']
         self.seed = config['seed']
         self.num_cores = config['num_cores']
+        self.replan_when_colliding = config['replan_when_colliding']
         
         
         """

@@ -2,7 +2,7 @@
 seed: -1
 
 # Number of cores used for parallel path construction and evaluation
-num_cores: 7
+num_cores: 6
 
 # Verbose output
 verbose: False
@@ -26,7 +26,7 @@ path_timeout: 100.0
 use_linear_path: False
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 30
+num_simulation_runs: 2
 
 # Maximum angular velocity of the joints for the kinematic problem (in rad/sec)
 max_velocity: 4.0
@@ -47,13 +47,13 @@ num_bins: 201
 #################################################
 # The error variables are defined as the standard deviation in percentage of the value range
 # The minimum joint state covariance
-min_process_covariance: 0.01
+min_process_covariance: 3.0
 
 # The maximum joint state covariance
 max_process_covariance: 10.0
 
 # The minimum observation covariance
-min_observation_covariance: 0.1
+min_observation_covariance: 5.0
 
 # The maximum observation covariance
 max_observation_covariance: 10.0
@@ -144,7 +144,10 @@ horizon: -1
 max_num_steps: 100
 
 # The maximum number of steps a path gets executed before replanning
-num_execution_steps: 10
+num_execution_steps: 10000
+
+# Perform replanning when robot collides
+replan_when_colliding: True
 
 # Maximum allowed planning time per step
 timeout: 400.0

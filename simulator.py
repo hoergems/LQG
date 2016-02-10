@@ -69,6 +69,7 @@ class Simulator:
         self.enforce_constraints = robot.constraintsEnforced()
         self.enforce_constrol_constraints = enforce_control_constraints
         self.dynamic_problem = False
+        self.stop_when_colliding = False
         self.show_viewer = show_viewer
         active_joints = v_string()
         self.robot.getActiveJoints(active_joints)
@@ -87,9 +88,8 @@ class Simulator:
         self.illegal_move_penalty = illegal_move_penalty
         self.exit_reward = exit_reward
     
-    def setup_simulator(self, num_simulation_runs, stop_when_terminal):
-        self.num_simulation_runs = num_simulation_runs        
-        self.stop_when_terminal = stop_when_terminal
+    def set_stop_when_colliding(self, stop_when_colliding):
+        self.stop_when_colliding = stop_when_colliding
     
     def get_linear_model_matrices(self, state_path, control_path, control_durations):
         """ Get the linearized model matrices along a given nominal path
@@ -177,7 +177,8 @@ class Simulator:
                          current_step,
                          n_steps,
                          deviation_covariances,
-                         estimated_deviation_covariances):
+                         estimated_deviation_covariances,
+                         max_num_steps=None):
         history_entries = []        
         terminal_state_reached = False
         success = False
@@ -196,7 +197,7 @@ class Simulator:
         for i in xrange(n_steps):                        
             if not terminal_state_reached:
                 linearization_error = utils.dist(x_dash, x_dash_linear)                
-                history_entries.append(HistoryEntry(current_step + i,
+                history_entries.append(HistoryEntry(current_step,
                                                     x_true, 
                                                     xs[i],
                                                     x_true_linear,
@@ -212,6 +213,7 @@ class Simulator:
                                                     False,
                                                     False,
                                                     0.0))
+                current_step += 1
                 history_entries[-1].set_s_dash_estimated(x_tilde)
                 
                 """ Calc u_dash from the estimated deviation of the state from the nominal path 'x_tilde'
@@ -244,7 +246,7 @@ class Simulator:
                 if self.enforce_constraints:
                     x_true_linear_temp = self.check_constraints(x_true_linear_temp)
                 
-                discount = np.power(self.discount_factor, current_step + i)   
+                discount = np.power(self.discount_factor, current_step - 1)
                 
                 """ Check if the propagated state collides with an obstacle
                 If yes, the true state is set to the previous state with 0 velocity.
@@ -252,19 +254,19 @@ class Simulator:
                 """
                 collided = False
                 in_collision_true_state, colliding_obstacle = self.is_in_collision(x_true, x_true_temp)                                                    
-                if in_collision_true_state:                    
+                if in_collision_true_state:
                     for j in xrange(len(x_true) / 2, len(x_true)):
                         x_true[j] = 0.0                  
                     logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
                     total_reward += discount * (-1.0 * self.illegal_move_penalty)
-                    history_entries[-1].set_reward(-1.0 * self.illegal_move_penalty)
+                    history_entries[-1].set_reward(discount * (-1.0 * self.illegal_move_penalty))
                     history_entries[-1].set_colliding_obstacle(colliding_obstacle.getName())
                     history_entries[-1].set_colliding_state(x_true_temp)
                     collided = True
                 else:
                     total_reward += discount * (-1.0 * self.step_penalty)
-                    history_entries[-1].set_reward(-1.0 * self.step_penalty)
-                    x_true = x_true_temp 
+                    history_entries[-1].set_reward(discount * (-1.0 * self.illegal_move_penalty))
+                    x_true = x_true_temp
                 
                 """ Do the same for the linearized true state """ 
                 if self.is_in_collision(x_true_linear, x_true_linear_temp)[0]:
@@ -314,13 +316,7 @@ class Simulator:
                 If yes, set it to the previous estimate (with velicity 0).
                 If no, set the true estimate to this estimate 
                 """
-                estimate_collided = True
-                
-                """"""""""""""""""""""""""
-                if self.is_in_collision([], x_estimate)[0]:
-                    print "ESTIMATE COLLIDES!!! DAMN!!!!!!!"
-                """""""""""""""""""""""""" 
-                                                      
+                estimate_collided = True              
                 if not self.is_in_collision([], x_estimate_new)[0]:                                                                                                    
                     x_estimate = x_estimate_new
                     estimate_collided = False
@@ -331,8 +327,9 @@ class Simulator:
                 estimated_covariances.append(P_t)                
                 
                 """ Check if the end-effector position is terminal. If yes, we're done """
-                if self.is_terminal(ee_position):                    
-                    history_entries.append(HistoryEntry(current_step + i + 1,
+                if self.is_terminal(ee_position):
+                    discount = np.power(self.discount_factor, current_step)
+                    history_entries.append(HistoryEntry(current_step,
                                                         x_true,
                                                         xs[i + 1],
                                                         x_true_linear, 
@@ -347,16 +344,39 @@ class Simulator:
                                                         False,
                                                         False,
                                                         True,
-                                                        0.0))                    
+                                                        discount * self.exit_reward))                                      
                     terminal_state_reached = True                        
-                    total_reward += discount * self.exit_reward
-                    history_entries[-1].set_reward(self.exit_reward)
-                    history_entries[-1].set_linearization_error(utils.dist(x_dash, x_dash_linear))
-                    success = True                      
+                    total_reward += discount * self.exit_reward                    
+                    history_entries[-1].set_linearization_error(utils.dist(x_dash, x_dash_linear))                                         
                     logging.info("Terminal state reached: reward = " + str(total_reward))                    
                 history_entries[-1].set_collided(collided)
                 history_entries[-1].set_estimate_collided(estimate_collided)
-                history_entries[-1].set_terminal(terminal_state_reached)                
+                
+                
+                if current_step == max_num_steps: 
+                    """ This was the last step -> append final history entry"""
+                    history_entries.append(HistoryEntry(current_step,
+                                                        x_true,
+                                                        xs[i + 1],
+                                                        x_true_linear,
+                                                        x_estimate,
+                                                        x_dash,
+                                                        x_dash_linear,
+                                                        0.0,
+                                                        None,
+                                                        None,
+                                                        z,
+                                                        P_t,
+                                                        False,
+                                                        False,
+                                                        False,
+                                                        0.0))
+                    history_entries[-1].set_linearization_error(utils.dist(x_dash, x_dash_linear))                        
+                    total_reward += discount * self.exit_reward
+                if (collided and self.stop_when_colliding):
+                    print "BREAKKK!!!!!"
+                    time.sleep(1)                                                             
+                    break                
         #print "========================================"
         #print "======= Simulation done"
         #print "========================================"        
@@ -365,9 +385,8 @@ class Simulator:
                 x_dash_linear, 
                 x_estimate, 
                 P_t, 
-                current_step + n_steps, 
-                total_reward, 
-                success, 
+                current_step, 
+                total_reward,                
                 terminal_state_reached,
                 estimated_states,
                 estimated_covariances,                

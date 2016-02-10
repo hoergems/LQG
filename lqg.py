@@ -208,8 +208,7 @@ class LQG:
                                   self.max_velocity,                                  
                                   self.show_viewer_simulation,
                                   self.robot_file,
-                                  self.environment_file)                              
-                sim.setup_simulator(self.num_simulation_runs, self.stop_when_terminal)
+                                  self.environment_file)
                 if self.dynamic_problem:
                     sim.setup_dynamic_problem(self.simulation_step_size)                
                 successes = 0
@@ -228,8 +227,7 @@ class LQG:
                      x_estimate, 
                      P_t, 
                      current_step, 
-                     total_reward, 
-                     success, 
+                     total_reward,
                      terminal,
                      estimated_s,
                      estimated_c,                     
@@ -245,7 +243,7 @@ class LQG:
                                                              len(xs) - 1,
                                                              deviation_covariances,
                                                              estimated_deviation_covariances)
-                    if success:
+                    if terminal:
                         successes += 1
                     rewards_cov.append(total_reward)
                     #n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))                    

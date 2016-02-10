@@ -144,20 +144,23 @@ class HistoryEntry:
             f.write(p_str + " \n") 
             
             if not self.terminal:
-                action_str = "A: "            
-                for i in xrange(len(self.action)):
-                    action_str += str(self.action[i]) + " "
-                f.write(action_str + " \n")
-            
-                action_str = "NOMINAL_ACTION: "
-                for i in xrange(len(self.nominal_action)):
-                    action_str += str(self.nominal_action[i]) + " "
-                f.write(action_str + " \n")
-            
-                obs_str = "O: " 
-                for i in xrange(len(self.observation)):
-                    obs_str += str(self.observation[i]) + " "
-                f.write(obs_str + " \n") 
+                try:                
+                    action_str = "A: "            
+                    for i in xrange(len(self.action)):
+                        action_str += str(self.action[i]) + " "
+                    f.write(action_str + " \n")
+                
+                    action_str = "NOMINAL_ACTION: "
+                    for i in xrange(len(self.nominal_action)):
+                        action_str += str(self.nominal_action[i]) + " "
+                    f.write(action_str + " \n")
+                
+                    obs_str = "O: " 
+                    for i in xrange(len(self.observation)):
+                        obs_str += str(self.observation[i]) + " "
+                    f.write(obs_str + " \n")
+                except:
+                    pass 
             
             rew_str = "R: " + str(self.reward)
             f.write(rew_str + " \n")
