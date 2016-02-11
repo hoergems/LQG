@@ -382,7 +382,7 @@ class LQG:
         self.robot = Robot(self.abs_path + "/" + urdf_model_file)
         self.robot.enforceConstraints(self.enforce_constraints)
         self.robot.setGravityConstant(self.gravity_constant)
-        self.robot.setAccelerationLimit(acceleration_limit)
+        self.robot.setAccelerationLimit(self.acceleration_limit)
         """ Setup operations """
         self.robot_dof = self.robot.getDOF()        
         if len(self.start_state) != 2 * self.robot_dof:
