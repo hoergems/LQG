@@ -112,6 +112,7 @@ continuous_collision_check: True
 #########################################
 dynamic_problem: True
 gravity: 9.81
+acceleration_limit: 100.0
 simulation_step_size: 0.001
 
 # Control sampler to use. 'discrete' or 'continuous'

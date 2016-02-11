@@ -382,6 +382,7 @@ class LQG:
         self.robot = Robot(self.abs_path + "/" + urdf_model_file)
         self.robot.enforceConstraints(self.enforce_constraints)
         self.robot.setGravityConstant(self.gravity_constant)
+        self.robot.setAccelerationLimit(acceleration_limit)
         """ Setup operations """
         self.robot_dof = self.robot.getDOF()        
         if len(self.start_state) != 2 * self.robot_dof:
@@ -550,7 +551,7 @@ class LQG:
         rot = v_double()
         trans = v_double()
         rot[:] = [-1.0, 0.0, 0.0, 0.0]
-        trans[:] = [0.0, 0.0, 3.0]
+        trans[:] = [0.0, 0.0, 3.0]        
         if show_viewer:
             self.robot.setViewerBackgroundColor(0.6, 0.8, 0.6)
             self.robot.setViewerSize(1280, 768)
@@ -778,6 +779,7 @@ class LQG:
         self.control_sampler = config['control_sampler']
         self.seed = config['seed']
         self.num_cores = config['num_cores']
+        self.acceleration_limit = config['acceleration_limit']
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='LQG-MP.')

@@ -619,6 +619,10 @@ void Robot::setExternalForce(double f_x,
 	propagator_->getIntegrator()->setExternalForce(f_x, f_y, f_z, f_roll, f_pitch, f_yaw);	
 }
 
+void Robot::setAccelerationLimit(double accelerationLimit) {
+	propagator_->getIntegrator()->setAccelerationLimit(accelerationLimit);
+}
+
 void Robot::getEndEffectorJacobian(const std::vector<double> &joint_angles, 
     	    		               std::vector<std::vector<double>> &ee_jacobian) {
 	std::vector<double> state;
@@ -924,6 +928,7 @@ BOOST_PYTHON_MODULE(librobot) {
 						.def("constraintsEnforced", &Robot::constraintsEnforced)
 						.def("setGravityConstant", &Robot::setGravityConstant)
 						.def("setExternalForce", &Robot::setExternalForce)
+						.def("setAccelerationLimit", &Robot::setAccelerationLimit)
 						.def("getEndEffectorVelocity", &Robot::getEndEffectorVelocity)
 						.def("getProcessMatrices", &Robot::getProcessMatrices)						
 						.def("getEndEffectorJacobian", &Robot::getEndEffectorJacobian)

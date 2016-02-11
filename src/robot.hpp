@@ -165,6 +165,11 @@ struct Joint {
 								  double f_yaw);
     	    
     	    /**
+    	     * Set a joint acceleration limit
+    	     */
+    	    void setAccelerationLimit(double accelerationLimit);
+    	    
+    	    /**
     	     * Gets the end-effector velocity for a given state
     	     */
     	    void getEndEffectorVelocity(std::vector<double> &state,

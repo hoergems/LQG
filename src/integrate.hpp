@@ -49,6 +49,11 @@ namespace shared {
 							  double &f_yaw);
     	
     	/**
+    	 * Set the joint acceleration limit
+    	 */
+    	void setAccelerationLimit(double &accelerationLimit);
+    	
+    	/**
     	 * Sets the viscous joint damping constants
     	 */
     	void setJointDamping(std::vector<double> &viscous);
@@ -116,6 +121,11 @@ MatrixXd getA0(const state_type &x, const state_type &rho, const state_type &zet
     	mutable double f_roll_;
     	mutable double f_pitch_;
     	mutable double f_yaw_;
+    	
+    	/**
+    	 * The joint acceleration limit
+    	 */
+    	mutable double acceleration_limit_;
     	
     	/**
     	 * Viscous joint dampings

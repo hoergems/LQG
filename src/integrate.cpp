@@ -28,10 +28,11 @@ Integrate::Integrate():
 	f_roll_(0.0),
 	f_pitch_(0.0),
 	f_yaw_(0.0),
-	viscous_(){
+	viscous_(),
+	acceleration_limit_(10000.0){
 	setupSteadyStates();
 	rho_vec_ = VectorXd(3);
-	vel_ = VectorXd(3);
+	vel_ = VectorXd(3);	
 }
 
 void Integrate::setGravityConstant(double g) {
@@ -51,6 +52,10 @@ void Integrate::setExternalForce(double &f_x,
 	f_pitch_ = f_pitch;
 	f_yaw_ = f_yaw;
 	
+}
+
+void Integrate::setAccelerationLimit(double &accelerationLimit) {
+	acceleration_limit_ = accelerationLimit;
 }
 
 void Integrate::setJointDamping(std::vector<double> &viscous) {
@@ -248,8 +253,17 @@ void Integrate::ode(const state_type &x , state_type &dxdt , double t) const {
 	}*/
 	
     MatrixXd res = getF0(x, rho_, zeta_);
-	dxdt.clear();	
+	dxdt.clear();
+	cout << "accel limit " << acceleration_limit_ << endl;
 	for (size_t i = 0; i < res.size(); i++) {
+		if (i > res.size() / 2) {
+			if (res(i) > acceleration_limit_) {
+				res(i) = acceleration_limit_;
+			}
+			else if (res(i) < -acceleration_limit_) {
+				res(i) = -acceleration_limit_;
+			}
+		}
 		dxdt.push_back(res(i));
 	}
 }
