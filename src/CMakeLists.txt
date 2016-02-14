@@ -2,8 +2,8 @@ cmake_minimum_required (VERSION 2.6)
 
 project (lqg)
 set(CMAKE_BUILD_TYPE DEBUG)
-set(CMAKE_CXX_FLAGS_DEBUG "-g -std=c++11 -O3 -w")
-set(CMAKE_CXX_FLAGS_RELEASE "-g -std=c++11 -O3 -w")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -std=c++11 -O3 -w -fopenmp -mavx -mfma -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-g -std=c++11 -O3 -w -fopenmp -mavx -mfma -DNDEBUG")
 
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${lqg_SOURCE_DIR})
 SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${lqg_SOURCE_DIR}/../)
@@ -61,6 +61,16 @@ if(PKG_CONFIG_FOUND)
     include_directories(${PYTHON_INCLUDE_DIRS})    
 endif()
 
+############################# LOAD RBDL_INTERFACE #############################
+if(PKG_CONFIG_FOUND)    
+    pkg_check_modules(RBDL rbdl_interface)
+    if(NOT RBDL_FOUND)
+       message(FATAL_ERROR "RBDL could not be found")
+    endif()
+    include_directories(${RBDL_INCLUDE_DIRS}) 
+    message("RBDL include: ${RBDL_INCLUDE_DIRS}")   
+endif()
+
 
 
 ############################# LOAD EIGEN #############################
@@ -69,7 +79,9 @@ if(PKG_CONFIG_FOUND)
     if(NOT EIGEN_FOUND)
        message(FATAL_ERROR "EIGEN could not be found")
     endif()
-    include_directories(${EIGEN_INCLUDE_DIRS})    
+    include_directories(${EIGEN_INCLUDE_DIRS}) 
+    message("Eigen include dirs: ${EIGEN_INCLUDE_DIRS}")
+    message("Eigen library dirs: ${EIGEN_LIBRARY_DIRS}")   
 endif()
 
 
@@ -131,7 +143,8 @@ link_directories(${TINYXML_LIBRARY_DIRS}
                  ${PYTHON_LIBRARY_DIRS}
                  ${FCL_LIBRARY_DIRS}
                  ${Boost_LIBRARY_DIRS}
-                 ${EIGEN_LIBRARY_DIRS})
+                 ${EIGEN_LIBRARY_DIRS}
+                 ${RBDL_LIBRARY_DIRS})
 
 add_library(robot SHARED 
             robot.cpp
@@ -195,7 +208,8 @@ target_link_libraries (robot
                        ${OPENRAVE_LIBRARIES}
                        ${FCL_LIBRARIES}
                        ${VIEWER_LIBRARIES}
-                       ${TINYXML_LIBRARIES})
+                       ${TINYXML_LIBRARIES}
+                       ${RBDL_LIBRARIES})
 
 target_link_libraries(path_planner
                       ${Boost_LIBRARIES}
@@ -205,7 +219,8 @@ target_link_libraries(path_planner
                       ${FCL_LIBRARIES}                      
                       ${URDF_LIBRARIES}
                       ${VIEWER_LIBRARIES}
-                      ${TINYXML_LIBRARIES})
+                      ${TINYXML_LIBRARIES}
+                      ${RBDL_LIBRARIES})
                       
 target_link_libraries (dynamic_path_planner                        
                        ${OPENRAVE_LIBRARIES}
@@ -215,7 +230,8 @@ target_link_libraries (dynamic_path_planner
                        ${FCL_LIBRARIES}
                        ${TINYXML_LIBRARIES}
                        ${URDF_LIBRARIES}
-                       ${VIEWER_LIBRARIES})                       
+                       ${VIEWER_LIBRARIES}
+                       ${RBDL_LIBRARIES})                       
                       
 target_link_libraries(obstacle                      
                       ${Boost_LIBRARIES}

@@ -12,6 +12,7 @@
 #include "fcl/shape/geometric_shapes.h"
 #include "fcl/shape/geometric_shapes_utility.h"
 #include <tinyxml.h>
+#include <rbdl_interface/rbdl_interface.hpp>
 #include "propagator.hpp"
 #include "Kinematics.hpp"
 
@@ -312,6 +313,8 @@ struct Joint {
     	     * A vector holding the collision objects of the active links
     	     */
     	    std::vector<std::shared_ptr<fcl::CollisionObject>> collision_objects_;
+    	    
+    	    std::shared_ptr<shared::RBDLInterface> rbdl_interface_;
     };
     		
 }

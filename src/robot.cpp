@@ -348,7 +348,8 @@ Robot::Robot(std::string robot_file):
 	enforce_constraints_(false),
 	propagator_(new Propagator()),
 	kinematics_(new Kinematics()),
-	viewer_(nullptr){
+	viewer_(nullptr),
+	rbdl_interface_(new RBDLInterface()){
 	
 #ifdef USE_URDF
 	viewer_ = std::make_shared<shared::ViewerInterface>();
@@ -365,6 +366,11 @@ Robot::Robot(std::string robot_file):
 					   enforce_constraints_);
 	kinematics_->setJointOrigins(joint_origins_);
 	kinematics_->setLinkDimensions(active_link_dimensions_);
+	
+	rbdl_interface_->load_model(robot_file);
+	//propagator_->getIntegrator()->setRBDLInterface(rbdl_interface_);
+	rbdl_interface_->setViscous(joint_dampings_);
+    //rbdl_interface_->setPositionConstraints(lower_joint_limits_, upper_joint_limits_);
 	
 	propagator_->getIntegrator()->setJointDamping(joint_dampings_);
 	initCollisionObjects();
@@ -607,7 +613,8 @@ bool Robot::propagate_linear(std::vector<double> &current_state,
 }
 
 void Robot::setGravityConstant(double gravity_constant) {
-	propagator_->getIntegrator()->setGravityConstant(gravity_constant);	
+	propagator_->getIntegrator()->setGravityConstant(gravity_constant);
+	rbdl_interface_->setGravity(gravity_constant);
 }
 
 void Robot::setExternalForce(double f_x, 

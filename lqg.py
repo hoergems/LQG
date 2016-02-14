@@ -28,7 +28,7 @@ class LQG:
             """
             Generate a random seed that will be stored
             """
-            self.seed = np.random.randint(0, 4294967295)
+            self.seed = np.random.randint(0, 4294967)
         np.random.seed(self.seed)  
         
         logging_level = logging.WARN
@@ -563,11 +563,7 @@ class LQG:
         f_pitch = 0.0
         f_yaw = 0.0         
         x = [0.0 for i in xrange(2 * self.robot_dof)]
-        x = [0.0, 0.0, 0.0, 0.0,
-             0.0,
-             0.0,
-             0.0,
-             0.0]
+        
         x_true = [0.0 for i in xrange(2 * self.robot_dof)]        
         integration_times = [] 
         collision_check_times1 = []
