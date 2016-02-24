@@ -151,7 +151,7 @@ class Serializer:
             else:
                 filename = "config_lqg.yaml"
         try:            
-            return yaml.load(open(os.path.join(path, filename), 'r'), yaml.CLoader)
+            return yaml.load(open(os.path.join(path, filename), 'r'))
         except:
             logging.error("Serializer: Can't read " + path + "/" + filename + ". No such file") 
             return None
@@ -244,7 +244,7 @@ class Serializer:
             
     def load_stats(self, filename, path=""):
         with open(os.path.join(path, filename), 'r') as f:
-            return yaml.load(f, yaml.CLoader)
+            return yaml.load(f)
             
     def save_paths(self, paths, filename, overwrite, path=""):
         if not os.path.exists(path):
@@ -288,7 +288,7 @@ class Serializer:
         if file == None:
             file = "cartesian_coords.yaml"       
         with open(os.path.join(path, file), 'r') as f:
-            return yaml.load(f, yaml.CLoader)
+            return yaml.load(f)
         
     def save_total_rewards(self, total_rewards, path="", filename=None):
         if not os.path.exists(path):
@@ -305,13 +305,13 @@ class Serializer:
         if filename == None:
             filename = "num_successes.yaml"       
         with open(os.path.join(path, filename), 'r') as f:
-            return yaml.load(f, yaml.CLoader)
+            return yaml.load(f)
             
     def load_total_rewards(self, path="", file=None): 
         if file == None:
             file = "total_rewards.yaml"       
         with open(os.path.join(path, file), 'r') as f:
-            return yaml.load(f, yaml.CLoader)
+            return yaml.load(f)
         
     def save_sample_variances(self, sample_variances, path="", filename=None):
         if not os.path.exists(path):
@@ -327,11 +327,11 @@ class Serializer:
         if file == None:
             file = "sample_variances.yaml"       
         with open(os.path.join(path, file), 'r') as f:
-            return yaml.load(f, yaml.CLoader)
+            return yaml.load(f)
     
     def load_paths(self, file, path=""):
         try:        
-            paths = yaml.load(open(os.path.join(path, file), 'r'), yaml.CLoader) 
+            paths = yaml.load(open(os.path.join(path, file), 'r')) 
         except IOError:
             logging.error("Serializer: No such file or directory: " + str(os.path.join(path, file)))
             return []       
