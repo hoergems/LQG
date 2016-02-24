@@ -191,8 +191,7 @@ class Simulator:
         logging.info("Simulator: Executing for " + str(n_steps) + " steps") 
         estimated_states = []
         estimated_covariances = []
-        self.show_nominal_path(xs)
-        
+        self.show_nominal_path(xs)        
         """ Execute the nominal path for n_steps """        
         for i in xrange(n_steps):                        
             if not terminal_state_reached:
@@ -266,7 +265,7 @@ class Simulator:
                 else:
                     total_reward += discount * (-1.0 * self.step_penalty)
                     history_entries[-1].set_reward(discount * (-1.0 * self.illegal_move_penalty))
-                    x_true = x_true_temp
+                    x_true = x_true_temp                
                 
                 """ Do the same for the linearized true state """ 
                 if self.is_in_collision(x_true_linear, x_true_linear_temp)[0]:
@@ -345,7 +344,7 @@ class Simulator:
                                                         False,
                                                         True,
                                                         discount * self.exit_reward))                                      
-                    terminal_state_reached = True                        
+                    terminal_state_reached = True                                           
                     total_reward += discount * self.exit_reward                    
                     history_entries[-1].set_linearization_error(utils.dist(x_dash, x_dash_linear))                                         
                     logging.info("Terminal state reached: reward = " + str(total_reward))                    
@@ -372,14 +371,12 @@ class Simulator:
                                                         False,
                                                         0.0))
                     history_entries[-1].set_linearization_error(utils.dist(x_dash, x_dash_linear))                        
-                    total_reward += discount * self.exit_reward
-                if (collided and self.stop_when_colliding):
-                    print "BREAKKK!!!!!"
-                    time.sleep(1)                                                             
+                    #total_reward += discount * self.exit_reward
+                if (collided and self.stop_when_colliding):                                                                               
                     break                
         #print "========================================"
         #print "======= Simulation done"
-        #print "========================================"        
+        #print "========================================"              
         return (x_true, 
                 x_tilde,
                 x_dash_linear, 

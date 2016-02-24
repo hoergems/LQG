@@ -2,7 +2,7 @@
 seed: -1
 
 # Number of cores used for parallel path construction and evaluation
-num_cores: 6
+num_cores: 3
 
 # Verbose output
 verbose: False
@@ -47,25 +47,25 @@ num_bins: 201
 #################################################
 # The error variables are defined as the standard deviation in percentage of the value range
 # The minimum joint state covariance
-min_process_covariance: 3.0
+min_process_covariance: 0.0
 
 # The maximum joint state covariance
 max_process_covariance: 10.0
 
 # The minimum observation covariance
-min_observation_covariance: 5.0
+min_observation_covariance: 0.1
 
 # The maximum observation covariance
 max_observation_covariance: 10.0
 
 #Determines which parameter (process covariance or observation
 #covariance should be increased during simulation)
-inc_covariance: observation
+inc_covariance: process
 
 # The number of covariance steps
 covariance_steps: 2
 
-path_deviation_cost: 200.0
+path_deviation_cost: 500.0
 
 control_deviation_cost: 1.0
 
@@ -77,7 +77,7 @@ control_deviation_cost: 1.0
 discount_factor: 0.999999
 
 # Penalty for crashing into an obstacle
-illegal_move_penalty: 500.0
+illegal_move_penalty: 50.0
 
 # Penalty for taking a step
 step_penalty: 1.0
@@ -88,7 +88,7 @@ exit_reward: 1000.0
 ################################################
 
 # The number of samples drawn from the distribution at each state to check a path for collision
-sample_size: 200
+sample_size: 500
 
 # Enforce the position and velocity constraints
 enforce_constraints: True
@@ -150,6 +150,6 @@ num_execution_steps: 10000
 # Perform replanning when robot collides
 replan_when_colliding: True
 
-# Maximum allowed planning time per step
-timeout: 400.0
+# Maximum allowed planning time per step in seconds
+timeout: 3.0
 

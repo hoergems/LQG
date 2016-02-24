@@ -28,7 +28,7 @@ class MPC:
             """
             Generate a random seed that will be stored
             """
-            self.seed = np.random.randint(0, 4294967295)
+            self.seed = np.random.randint(0, 42949672)
         np.random.seed(self.seed)
         
         logging_level = logging.WARN
@@ -261,7 +261,7 @@ class MPC:
                     logging.warn("MPC: terminal " + str(terminal))
                     if terminal:
                         print "MPC: Final state: " + str(x_true)
-                rewards_cov.append(total_reward)
+                rewards_cov.append(total_reward)                
                 self.serializer.write_line("log.log", 
                                            tmp_dir,
                                            "Reward: " + str(total_reward) + " \n") 
