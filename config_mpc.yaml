@@ -151,5 +151,5 @@ num_execution_steps: 10000
 replan_when_colliding: True
 
 # Maximum allowed planning time per step in seconds
-timeout: 3.0
+timeout: 10.0
 
