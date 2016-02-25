@@ -179,7 +179,7 @@ class PathPlanningInterface:
                                          [p_e[3][k] for k in xrange(len(p_e[0]))]], p_e[4]))
         if len(evaluated_paths) == 0:
             logging.error("PathPlanningInterface: Couldn't generate and evaluate any paths within the given planning time")
-            return [], [], [], 0.0, 0.0, 0.0, 0.0, 0.0, 0.0    
+            return [], [], [], 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0    
         best_val = evaluated_paths[0][1]
         best_path = evaluated_paths[0][0]        
         best_estimated_state_covariances = state_covariances[0]

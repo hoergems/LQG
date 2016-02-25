@@ -201,8 +201,8 @@ class MPC:
                         logging.error("MPC: Couldn't find any paths from start state" + 
                                       str(x_estimate) + 
                                       " to goal states") 
-                                      
-                        total_reward = np.array([-self.illegal_move_penalty])[0]
+                        final_states.append(x_true)              
+                        #total_reward = np.array([-self.illegal_move_penalty])[0]
                         current_step += 1                                             
                         break
                     x_tilde = np.array([0.0 for i in xrange(2 * self.robot_dof)])
@@ -287,8 +287,7 @@ class MPC:
             try:
                 n, min_max, mean_distance_to_goal, var, skew, kurt = scipy.stats.describe(np.array(ee_position_distances))
             except:
-                print ee_position_distances
-                sleep                         
+                print ee_position_distances                                         
                 
             self.serializer.write_line("log.log", tmp_dir, "################################# \n")
             self.serializer.write_line("log.log",
