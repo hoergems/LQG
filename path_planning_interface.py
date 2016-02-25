@@ -148,10 +148,10 @@ class PathPlanningInterface:
                                    deviation_covariance,
                                    estimated_deviation_covariance)) for i in xrange(self.num_cores - 1)]
         t0 = time.time()
-        print "Path planning interface: " + str(len(processes)) + " processes started"
+        logging.info("Path planning interface: " + str(len(processes)) + " processes started")
         for i in xrange(len(processes)):
             processes[i].daemon = True
-            processes[i].start()
+            processes[i].start()            
         while True:
             try:                            
                 res_paths.append(path_queue.get_nowait())
@@ -160,8 +160,7 @@ class PathPlanningInterface:
             elapsed = time.time() - t0
             if num != 0 and len(res_paths) == num:
                 break
-            if timeout > 0.0 and elapsed > timeout:
-                print "TIMEOUT"
+            if timeout > 0.0 and elapsed > timeout:                
                 break
             time.sleep(0.001)
         for i in xrange(len(processes)):
@@ -224,7 +223,7 @@ class PathPlanningInterface:
         t0 = time.time() 
         for i in xrange(len(processes)):
             processes[i].daemon = True
-            processes[i].start()
+            processes[i].start()            
         curr_len = 0
         while True:
             breaking = False            

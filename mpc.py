@@ -242,9 +242,7 @@ class MPC:
                     estimated_deviation_covariance = estimated_deviation_covariances[len(history_entries) - 1]
                     
                     if (current_step == self.max_num_steps) or terminal:
-                        final_states.append(history_entries[-1].x_true)
-                        print "len " + str(len(history_entries))
-                        print "t " + str(history_entries[-1].t)
+                        final_states.append(history_entries[-1].x_true)                        
                         if terminal:
                             successful_runs += 1
                         
@@ -260,7 +258,7 @@ class MPC:
                     logging.warn("MPC: Executed " + str(current_step) + " steps") 
                     logging.warn("MPC: terminal " + str(terminal))
                     if terminal:
-                        print "MPC: Final state: " + str(x_true)
+                        logging.info("MPC: Final state: " + str(x_true))
                 rewards_cov.append(total_reward)                
                 self.serializer.write_line("log.log", 
                                            tmp_dir,
