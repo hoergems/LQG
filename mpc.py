@@ -238,8 +238,13 @@ class MPC:
                     #print "len(hist) " + str(len(history_entries))
                     #print "len(deviation_covariances) " + str(len(deviation_covariances))
                     #print "len(estimated_deviation_covariances) " + str(len(estimated_deviation_covariances))
-                    deviation_covariance = deviation_covariances[len(history_entries) - 1]
-                    estimated_deviation_covariance = estimated_deviation_covariances[len(history_entries) - 1]
+                    try:
+                        deviation_covariance = deviation_covariances[len(history_entries) - 1]
+                        estimated_deviation_covariance = estimated_deviation_covariances[len(history_entries) - 1]
+                    except:
+                        print "what: len(deviation_covariance) " + str(len(deviation_covariance))
+                        print "len(history_entries) " + str(len(history_entries))
+                        print "len(xs) " + str(len(xs))
                     
                     if (current_step == self.max_num_steps) or terminal:
                         final_states.append(history_entries[-1].x_true)                        
