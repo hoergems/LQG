@@ -32,6 +32,14 @@ namespace shared {
 		                        const double duration,
 		                        std::vector<double> &result);
 	   
+	   bool propagate_nonlinear_second_order(const std::vector<double> &current_joint_values,
+	   		                        const std::vector<double> &current_joint_velocities,
+	   		                        std::vector<double> &control,
+	   		                        std::vector<double> &control_error_vec,
+	   		                        const double simulation_step_size,
+	   		                        const double duration,
+	   		                        std::vector<double> &result);
+	   
 	   void enforce_constraints(bool enforce);
 	   
 	   /**

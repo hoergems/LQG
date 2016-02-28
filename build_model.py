@@ -81,13 +81,16 @@ class Test:
             N = trigsimp(N)
         t0 = time.time()
         
-        f = self.get_dynamic_model(M, M_inv, C, N, self.q, self.qdot, self.rho, self.zeta)        
+        f = self.get_dynamic_model(M, M_inv, C, N, self.q, self.qdot, self.rho, self.zeta)       
         
         print "Build taylor approximation" 
         #steady_states = self.get_steady_states()
         print "Calculate partial derivatives"                  
-        A, B, V = self.partial_derivatives(M_inv, C, N)        
-          
+        A, B, V = self.partial_derivatives(M_inv, C, N) 
+        
+        print "Calculate second order Taylor approximation"
+        Sec = self.partial_derivatives_second_order(f)       
+        
         print "Clean cpp code"
         header_src = "src/integrate.hpp"
         imple_src = "src/integrate.cpp"
@@ -110,6 +113,7 @@ class Test:
             self.gen_cpp_code2(V, "V0", header_src, imple_src)
             self.gen_cpp_code2(M, "M0", header_src, imple_src)
             self.gen_cpp_code2(f, "F0", header_src, imple_src)
+            self.gen_cpp_code2(Sec, "Sec0", header_src, imple_src)
             #self.gen_cpp_code2(C, "C0", header_src, imple_src)
             #self.gen_cpp_code2(N, "N0", header_src, imple_src)
             self.gen_cpp_code2(ee_jacobian, "EEJacobian", header_src, imple_src)
@@ -375,6 +379,7 @@ class Test:
                 "MatrixXd Integrate::getM" in lines[i] or
                 "MatrixXd Integrate::getC" in lines[i] or
                 "MatrixXd Integrate::getN" in lines[i] or
+                "MatrixXd Integrate::getSec" in lines[i] or
                 "MatrixXd Integrate::getEEJacobian" in lines[i]):
                 idx1 = i                
                 breaking = True
@@ -405,6 +410,7 @@ class Test:
                 "MatrixXd getM" in lines_header[i] or
                 "MatrixXd getC" in lines_header[i] or
                 "MatrixXd getN" in lines_header[i] or 
+                "MatrixXd getSec" in lines_header[i] or
                 "MatrixXd getEEJacobian" in lines_header[i]):
                 idxs.append(i)
         for i in xrange(len(lines_header)):
@@ -536,7 +542,47 @@ class Test:
         
         B = zeros(len(self.q) - 1)
         B = B.col_join(C1)
-        return f, A, B    
+        return f, A, B  
+    
+    def partial_derivatives_second_order(self, f):
+        vars = [self.q[i] for i in xrange(len(self.q) - 1)]     
+        vars.extend([self.qdot[i] for i in xrange(len(self.qdot) - 1)])
+        vars.extend([self.rho[i] for i in xrange(len(self.rho) - 1)])
+        vars.extend([self.zeta[i] for i in xrange(len(self.zeta) - 1)])
+        stars = [self.qstar[i] for i in xrange(len(self.qstar) - 1)]
+        stars.extend([self.qdotstar[i] for i in xrange(len(self.qdotstar) - 1)])
+        stars.extend([self.rhostar[i] for i in xrange(len(self.rhostar) - 1)])
+        stars.extend([self.zetastar[i] for i in xrange(len(self.zetastar) - 1)])
+        
+        
+        diff_fs = []
+        matr_elems = []
+        for k in xrange(len(f)):
+            sum1 = 0.0
+            sum2 = 0.0
+            diff_f_first = []
+            for i in xrange(len(vars)):
+                diff_f = trigsimp(diff(f[k], vars[i]))
+                for l in xrange(len(vars)):
+                    diff_f = diff_f.subs(vars[l], stars[l])
+                sum1 += diff_f * (vars[i] - stars[i])            
+            
+            for i in xrange(len(vars)):
+                for j in xrange(len(vars)):                   
+                    diff_f = trigsimp(diff(f[k], vars[i], vars[j]))
+                    for l in xrange(len(vars)):
+                        diff_f = diff_f.subs(vars[l], stars[l])
+                    
+                    sum2 += diff_f * (vars[i] - stars[i]) * (vars[j] - stars[j])
+            
+            print "------------------------"
+            matr_elems.append(sum1 + (1.0 / factorial(2)) * sum2)
+        m = Matrix(matr_elems)
+        for i in xrange(len(self.zeta)):
+            m = m.subs(self.zeta[i], 0.0) 
+            m = m.subs(self.zetastar[i], 0.0) 
+        return m         
+        
     
     def partial_derivatives(self, M_inv, C, N):        
         r = Matrix([[self.rho[i]] for i in xrange(len(self.rho) - 1)])

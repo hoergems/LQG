@@ -453,6 +453,9 @@ class Simulator:
         """
         delta_x_new = np.dot(A, x_dash) + np.dot(B, u_dash) + np.dot(V, control_error)        
         return delta_x_new
+    
+    def get_linearized_next_state_second_order(self, x_dash, u_dash, control_error):
+        pass
        
     def apply_control(self, 
                       x, 

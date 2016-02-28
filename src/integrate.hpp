@@ -58,6 +58,12 @@ namespace shared {
     	 */
     	void setJointDamping(std::vector<double> &viscous);
     	
+    	void do_integration_second_order(std::vector<double> &x,
+    			                         std::vector<double> &control,
+    			    			         std::vector<double> &control_error,
+										 std::vector<double> &int_times,
+										 std::vector<double> &result);
+    	
     	void do_integration(std::vector<double> &x,
     			            std::vector<double> &control,
     			            std::vector<double> &control_error,
@@ -77,12 +83,15 @@ namespace shared {
     			                                  std::vector<double> &rho, 
     										      double t_e) const;
     	
+    	void ode_second_order(const state_type &x , state_type &dxdt , double t) const; 
+    	
     	void ode(const state_type &x , state_type &dxdt , double t) const;
     	
     	std::vector<double> getResult();
     	
     private:
 MatrixXd getEEJacobian(const state_type &x, const state_type &rho, const state_type &zeta) const; 
+MatrixXd getSec0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
 MatrixXd getF0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
 MatrixXd getM0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
 MatrixXd getV0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
@@ -160,7 +169,8 @@ MatrixXd getA0(const state_type &x, const state_type &rho, const state_type &zet
     	
     	mutable VectorXd rho_vec_;
     	
-    	mutable VectorXd vel_;
+    	mutable VectorXd vel_;    	
+    	
     };
 
     

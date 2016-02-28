@@ -253,7 +253,12 @@ class MPC:
                         
                     history_entries[0].set_replanning(True)                        
                     for l in xrange(len(history_entries)):
-                        history_entries[l].set_estimated_covariance(state_covariances[l])                        
+                        try:
+                            history_entries[l].set_estimated_covariance(state_covariances[l])
+                        except:
+                            print "l " + str(l)
+                            print "len(state_covariances) " + str(len(state_covariances))
+                                                    
                         history_entries[l].serialize(tmp_dir, "log.log")
                         if history_entries[l].collided:                            
                             num_collisions += 1
