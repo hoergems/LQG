@@ -243,7 +243,7 @@ class MPC:
                         deviation_covariance = deviation_covariances[len(history_entries) - 1]
                         estimated_deviation_covariance = estimated_deviation_covariances[len(history_entries) - 1]
                     except:
-                        print "what: len(deviation_covariance) " + str(len(deviation_covariance))
+                        print "what: len(deviation_covariances) " + str(len(deviation_covariances))
                         print "len(history_entries) " + str(len(history_entries))
                         print "len(xs) " + str(len(xs))
                     
