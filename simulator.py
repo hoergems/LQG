@@ -126,6 +126,7 @@ class Simulator:
                 A_Matr = A_list.reshape(len(state), len(state)).T
                 B_Matr = B_list.reshape(len(state)/ 2, len(state)).T
                 V_Matr = V_list.reshape(len(state) / 2, len(state)).T
+                
                 As.append(A_Matr)
                 Bs.append(B_Matr)
                 Vs.append(V_Matr)                
@@ -168,7 +169,7 @@ class Simulator:
     def simulate_n_steps(self,
                          xs, us, zs,                         
                          control_durations,
-                         x_true,                         
+                         x_true,                                                
                          x_tilde,
                          x_tilde_linear,
                          x_estimate,
@@ -183,8 +184,8 @@ class Simulator:
         terminal_state_reached = False
         success = False
         collided = False
-        x_dash = np.copy(x_tilde)
-        x_dash_linear = np.copy(x_tilde_linear)
+        x_dash = np.subtract(np.array(x_true), np.array(xs[0]))
+        x_dash_linear = np.copy(x_dash)
         x_true_linear = x_true        
         As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, us, control_durations)
         Ls = kalman.compute_gain(As, Bs, self.C, self.D, len(xs) - 1)
@@ -230,6 +231,8 @@ class Simulator:
                 history_entries[-1].set_action(u)
                 history_entries[-1].set_nominal_action(us[i])
                 
+                
+                
                 """ Apply the control 'u' and propagate the state 'x_true' """
                 x_true_temp, ce = self.apply_control(x_true, 
                                                      u,
@@ -237,14 +240,17 @@ class Simulator:
                                                      As[i], 
                                                      Bs[i], 
                                                      Vs[i], 
-                                                     Ms[i])
+                                                     Ms[i],
+                                                     xs[i],
+                                                     us[i])
                 
-                """ Calc the linearized next state (used to compare with x_true) """             
-                x_dash_linear_temp = self.get_linearized_next_state(x_dash_linear, u_dash, ce, As[i], Bs[i], Vs[i])
-                x_true_linear_temp = np.add(x_dash_linear_temp, xs[i+1])
+                x_dash_linear_temp = self.get_linearized_next_state(x_dash, u_dash, ce, As[i], Bs[i], Vs[i])
+                x_true_linear_temp = np.add(x_dash_linear_temp, xs[i+1]) 
                 if self.enforce_constraints:
+                    x_true = self.check_constraints(x_true)
                     x_true_linear_temp = self.check_constraints(x_true_linear_temp)
                 
+                """ Calc the linearized next state (used to compare with x_true) """
                 discount = np.power(self.discount_factor, current_step - 1)
                 
                 """ Check if the propagated state collides with an obstacle
@@ -255,28 +261,34 @@ class Simulator:
                 in_collision_true_state, colliding_obstacle = self.is_in_collision(x_true, x_true_temp)                                                    
                 if in_collision_true_state:
                     for j in xrange(len(x_true) / 2, len(x_true)):
-                        x_true[j] = 0.0                  
+                        x_true[j] = 0.0
+                        x_true_linear[j] = 0.0                   
                     logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
                     total_reward += discount * (-1.0 * self.illegal_move_penalty)
                     history_entries[-1].set_reward(discount * (-1.0 * self.illegal_move_penalty))
                     history_entries[-1].set_colliding_obstacle(colliding_obstacle.getName())
                     history_entries[-1].set_colliding_state(x_true_temp)
                     collided = True
+                    """ Calculate the state deviation from the nominal path """                           
+                    x_dash = np.subtract(x_true, xs[i])
+                    x_dash_linear = np.subtract(x_true_linear , xs[i])
                 else:
                     total_reward += discount * (-1.0 * self.step_penalty)
                     history_entries[-1].set_reward(discount * (-1.0 * self.illegal_move_penalty))
-                    x_true = x_true_temp                
+                    x_true = x_true_temp 
+                    x_true_linear = x_true_linear_temp
+                    x_dash = np.subtract(x_true, xs[i + 1])
+                    x_dash_linear = np.subtract(x_true_linear , xs[i + 1])               
                 
                 """ Do the same for the linearized true state """ 
-                if self.is_in_collision(x_true_linear, x_true_linear_temp)[0]:
+                '''if self.is_in_collision(x_true_linear, x_true_linear_temp)[0]:
                     for j in xrange(len(x_true_linear) / 2, len(x_true_linear)):
                         x_true_linear[j] = 0.0                  
-                else:
-                    x_true_linear = x_true_linear_temp
+                else:'''
+                    
                 
-                """ Calculate the state deviation from the nominal path """                           
-                x_dash = np.subtract(x_true, xs[i + 1])
-                x_dash_linear = np.subtract(x_true_linear , xs[i + 1])
+                
+                
                 
                 """ Get the end effector position for the true state """
                 state = v_double()
@@ -291,9 +303,6 @@ class Simulator:
                 z_dash = np.subtract(z, zs[i+1])
                 history_entries[-1].set_observation(z)
                 
-                """ Update the viewer to display the true state """                       
-                self.update_viewer(x_true, z, control_durations[i], colliding_obstacle)
-                
                 """ Kalman prediction and update """                   
                 x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u_dash, As[i], Bs[i], P_t, Vs[i], Ms[i])
                 x_tilde, P_t = kalman.kalman_update(x_tilde_dash, 
@@ -302,7 +311,6 @@ class Simulator:
                                                     P_dash, 
                                                     Ws[i], 
                                                     Ns[i])
-                
                 
                 """ x_estimate_new is the estimated state """                            
                 x_estimate_new = x_tilde + xs[i + 1]
@@ -320,10 +328,17 @@ class Simulator:
                     x_estimate = x_estimate_new
                     estimate_collided = False
                 else:                    
-                    for i in xrange(len(x_estimate) / 2, len(x_estimate)):
-                        x_estimate[i] = 0                                          
+                    for l in xrange(len(x_estimate) / 2, len(x_estimate)):
+                        x_estimate[l] = 0                                          
                 estimated_states.append(x_estimate)
-                estimated_covariances.append(P_t)                
+                estimated_covariances.append(P_t)
+                
+                """ Update the viewer to display the true state """                       
+                self.update_viewer(x_true,
+                                   x_estimate, 
+                                   z, 
+                                   control_durations[i], 
+                                   colliding_obstacle)                
                 
                 """ Check if the end-effector position is terminal. If yes, we're done """
                 if self.is_terminal(ee_position):
@@ -377,7 +392,7 @@ class Simulator:
         #print "========================================"
         #print "======= Simulation done"
         #print "========================================"              
-        return (x_true, 
+        return (x_true,                 
                 x_tilde,
                 x_dash_linear, 
                 x_estimate, 
@@ -447,6 +462,48 @@ class Simulator:
             return True
         return False
     
+    def get_linearized_next_state_prop(self, 
+                                       x, 
+                                       x_nominal, 
+                                       u, 
+                                       u_nominal, 
+                                       control_error,
+                                       control_duration):
+        current_state = v_double()
+        current_state[:] = x
+        nominal_state = v_double()
+        nominal_state[:] = x_nominal
+        control = v_double()
+        control[:] = u
+        nominal_control = v_double()
+        nominal_control[:] = u_nominal
+        control_e = v_double()
+        control_e[:] = control_error
+        
+        result = v_double()
+        result2 = v_double()
+        self.robot.propagate_first_order(current_state,
+                                         control,
+                                         control_e,
+                                         nominal_state,                                         
+                                         nominal_control,                                         
+                                         0.001,
+                                         control_duration,
+                                         result)
+        self.robot.propagate_second_order(current_state,
+                                          control,
+                                          control_e,
+                                          nominal_state,                                         
+                                          nominal_control,                                         
+                                          0.001,
+                                          control_duration,
+                                          result2)
+        r = np.array([result[i] for i in xrange(len(result))])
+        r2 = np.array([result2[i] for i in xrange(len(result2))])
+        print "dev first order " + str(r)
+        print "dev second order " + str(r2)
+        return (r, r2)
+    
     def get_linearized_next_state(self, x_dash, u_dash, control_error, A, B, V):
         """ Apply the linear(ized) model matrices to calcuate
         delta_x_new (the linearized deviation from the nominal path)
@@ -464,7 +521,9 @@ class Simulator:
                       A, 
                       B, 
                       V, 
-                      M):
+                      M,
+                      x_nominal=None,
+                      u_nominal=None):
         """ Applies a control input 'u' to the system which
         is in state 'x' for the duration of 'control_duration'.
         A, B, and V are used for the linear problem. M is used
@@ -480,14 +539,54 @@ class Simulator:
             control_error = v_double()
             ce = self.sample_control_error(M)
             control_error[:] = ce            
-            result = v_double()            
+            result = v_double()
+            result_first_order = v_double()
+            result_second_order = v_double()            
             self.robot.propagate(current_state,
                                  control,
                                  control_error,
                                  self.simulation_step_size,
                                  control_duration,
-                                 result)                               
+                                 result)
             x_new = np.array([result[i] for i in xrange(len(result))])
+            
+            """
+            Determine the second order terms
+            """
+            '''nominal_state = v_double()
+            nominal_state[:] = x_nominal
+            nominal_control = v_double()
+            nominal_control[:] = u_nominal
+            nominal_error = v_double()
+            
+            self.robot.propagate_first_order(current_state,
+                                             nominal_state,
+                                             nominal_control,                                              
+                                             control,
+                                             control_error,
+                                             0.0001,
+                                             control_duration,
+                                             result_first_order)
+            
+            self.robot.propagate_second_order(current_state,
+                                              nominal_state,
+                                              nominal_control,                                              
+                                              control,
+                                              control_error,
+                                              self.simulation_step_size,
+                                              control_duration,
+                                              result_second_order)
+            second_order_result = np.array([result_second_order[i] for i in xrange(len(result_second_order))])
+            first_order_result = np.array([result_first_order[i] for i in xrange(len(result_first_order))])
+            x_new_first_order = np.dot(A, x) + np.dot(B, u) + np.dot(V, ce)
+            print "current_state " + str(x)
+            #print "result first_order matr: " + str(x_new_first_order)
+            print "result first_order: " + str(first_order_result)
+            #print "result second order: " + str(second_order_result)
+            #print "sum: " + str(x_new_first_order + second_order_result)
+            print "real: " + str(x_new)'''
+                                      
+            
         else:               
             ce = self.get_random_joint_angles([0.0 for i in xrange(M.shape[0])], M)            
             x_new = np.dot(A, x) + np.dot(B, u) + np.dot(V, ce)
@@ -529,7 +628,12 @@ class Simulator:
             self.robot.addPermanentViewerParticles(particle_joint_values,
                                                    particle_joint_colors)            
     
-    def update_viewer(self, x, z, control_duration=None, colliding_obstacle=None):
+    def update_viewer(self, 
+                      x,
+                      x_estimate, 
+                      z, 
+                      control_duration=None, 
+                      colliding_obstacle=None):
         """ Update the viewer to display the state 'x' of the robot 
         Optionally sleep for 'control_duration'
         """
@@ -543,11 +647,17 @@ class Simulator:
             particle_joint_values = v2_double()
             pjv = v_double()
             pjv[:] = [z[i] for i in xrange(len(z))]
+            pjv_estimate = v_double()
+            pjv_estimate[:] = [x_estimate[i] for i in xrange(len(x_estimate))]
             particle_joint_values.append(pjv)
+            particle_joint_values.append(pjv_estimate)
             particle_joint_colors = v2_double()
             pja = v_double()            
             pja[:] = [0.5, 0.5, 0.9, 0.0]
+            pja_estimate = v_double()
+            pja_estimate[:] = [0.2, 0.8, 0.2, 0.0]
             particle_joint_colors.append(pja)
+            particle_joint_colors.append(pja_estimate)
             self.robot.updateViewerValues(cjvals, 
                                           cjvels, 
                                           particle_joint_values,
@@ -565,7 +675,7 @@ class Simulator:
                                             diffuse_col, 
                                             ambient_col)
             time.sleep(control_duration)
-            time.sleep(control_duration)
+            time.sleep(1.0)
     
     def sample_control_error(self, M):
         """ Samples a zero mean control error from a multivariate Gaussian

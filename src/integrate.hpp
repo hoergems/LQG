@@ -58,9 +58,19 @@ namespace shared {
     	 */
     	void setJointDamping(std::vector<double> &viscous);
     	
+    	void do_integration_first_order(std::vector<double> &x,
+    	    			                         std::vector<double> &control,
+    	    			    			         std::vector<double> &control_error,
+												 std::vector<double> &nominal_state,
+												 std::vector<double> &nominal_control,
+    											 std::vector<double> &int_times,
+    											 std::vector<double> &result);
+    	
     	void do_integration_second_order(std::vector<double> &x,
     			                         std::vector<double> &control,
     			    			         std::vector<double> &control_error,
+										 std::vector<double> &nominal_state,
+										 std::vector<double> &nominal_control,
 										 std::vector<double> &int_times,
 										 std::vector<double> &result);
     	
@@ -83,6 +93,8 @@ namespace shared {
     			                                  std::vector<double> &rho, 
     										      double t_e) const;
     	
+    	void ode_first_order(const state_type &x , state_type &dxdt , double t) const;
+    	
     	void ode_second_order(const state_type &x , state_type &dxdt , double t) const; 
     	
     	void ode(const state_type &x , state_type &dxdt , double t) const;
@@ -91,7 +103,6 @@ namespace shared {
     	
     private:
 MatrixXd getEEJacobian(const state_type &x, const state_type &rho, const state_type &zeta) const; 
-MatrixXd getSec0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
 MatrixXd getF0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
 MatrixXd getM0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
 MatrixXd getV0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
@@ -148,6 +159,8 @@ MatrixXd getA0(const state_type &x, const state_type &rho, const state_type &zet
     	mutable std::vector<double> xstar;
     	
     	mutable std::vector<double> rhostar;
+    	
+    	mutable std::vector<double> zetastar;
     	
     	mutable std::vector<double> result_;
     	

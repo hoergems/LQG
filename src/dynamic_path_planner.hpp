@@ -62,7 +62,8 @@ namespace shared {
                 void setObstaclesPy(boost::python::list &ns); 
                 
                 bool setup(double simulation_step_size,
-						   double control_duration);
+						   double control_duration,
+						   std::string planner);
                 
                 void getAllStates(std::vector<std::vector<double>> &all_states);
                 
@@ -110,6 +111,8 @@ namespace shared {
 
                 // The planner
                 ompl::base::PlannerPtr planner_;
+                
+                std::string planner_str_;
                 
                 ompl::control::StatePropagatorPtr state_propagator_;                
                 

@@ -85,11 +85,13 @@ class Test:
         
         print "Build taylor approximation" 
         #steady_states = self.get_steady_states()
-        print "Calculate partial derivatives"                  
-        A, B, V = self.partial_derivatives(M_inv, C, N) 
+        print "Calculate partial derivatives"  
+        A, B, V = self.partial_derivatives2(f)                
+        #A, B, V = self.partial_derivatives(M_inv, C, N) 
         
         print "Calculate second order Taylor approximation"
-        Sec = self.partial_derivatives_second_order(f)       
+        #First = self.partial_derivatives_first_order(f)
+        #Sec = self.partial_derivatives_second_order(f, First)       
         
         print "Clean cpp code"
         header_src = "src/integrate.hpp"
@@ -113,7 +115,8 @@ class Test:
             self.gen_cpp_code2(V, "V0", header_src, imple_src)
             self.gen_cpp_code2(M, "M0", header_src, imple_src)
             self.gen_cpp_code2(f, "F0", header_src, imple_src)
-            self.gen_cpp_code2(Sec, "Sec0", header_src, imple_src)
+            #self.gen_cpp_code2(First, "First0", header_src, imple_src)
+            #self.gen_cpp_code2(Sec, "Sec0", header_src, imple_src)
             #self.gen_cpp_code2(C, "C0", header_src, imple_src)
             #self.gen_cpp_code2(N, "N0", header_src, imple_src)
             self.gen_cpp_code2(ee_jacobian, "EEJacobian", header_src, imple_src)
@@ -380,6 +383,7 @@ class Test:
                 "MatrixXd Integrate::getC" in lines[i] or
                 "MatrixXd Integrate::getN" in lines[i] or
                 "MatrixXd Integrate::getSec" in lines[i] or
+                "MatrixXd Integrate::getFirst" in lines[i] or
                 "MatrixXd Integrate::getEEJacobian" in lines[i]):
                 idx1 = i                
                 breaking = True
@@ -411,6 +415,7 @@ class Test:
                 "MatrixXd getC" in lines_header[i] or
                 "MatrixXd getN" in lines_header[i] or 
                 "MatrixXd getSec" in lines_header[i] or
+                "MatrixXd getFirst" in lines_header[i] or
                 "MatrixXd getEEJacobian" in lines_header[i]):
                 idxs.append(i)
         for i in xrange(len(lines_header)):
@@ -542,9 +547,85 @@ class Test:
         
         B = zeros(len(self.q) - 1)
         B = B.col_join(C1)
-        return f, A, B  
+        return f, A, B 
     
-    def partial_derivatives_second_order(self, f):
+    def partial_derivatives_first_order(self, f):
+        vars = [self.q[i] for i in xrange(len(self.q) - 1)]     
+        vars.extend([self.qdot[i] for i in xrange(len(self.qdot) - 1)])
+        vars.extend([self.rho[i] for i in xrange(len(self.rho) - 1)])
+        vars.extend([self.zeta[i] for i in xrange(len(self.zeta) - 1)])
+        stars = [self.qstar[i] for i in xrange(len(self.qstar) - 1)]
+        stars.extend([self.qdotstar[i] for i in xrange(len(self.qdotstar) - 1)])
+        stars.extend([self.rhostar[i] for i in xrange(len(self.rhostar) - 1)])
+        stars.extend([self.zetastar[i] for i in xrange(len(self.zetastar) - 1)])
+        
+        A1 = f.jacobian([self.q[i] for i in xrange(len(self.q) - 1)])
+        A2 = f.jacobian([self.qdot[i] for i in xrange(len(self.qdot) - 1)])
+        B = f.jacobian([self.rho[i] for i in xrange(len(self.rho) - 1)])
+        V = f.jacobian([self.zeta[i] for i in xrange(len(self.zeta) - 1)])
+        f_temp = f
+        for i in xrange(len(self.qdotstar)):
+            A1 = A1.subs(self.q[i], self.qstar[i])
+            A2 = A2.subs(self.q[i], self.qstar[i])
+            B = B.subs(self.q[i], self.qstar[i])
+            V = V.subs(self.q[i], self.qstar[i])
+            f_temp = f_temp.subs(self.q[i], self.qstar[i])
+            
+            A1 = A1.subs(self.qdot[i], self.qdotstar[i])
+            A2 = A2.subs(self.qdot[i], self.qdotstar[i])
+            B = B.subs(self.qdot[i], self.qdotstar[i])
+            V = V.subs(self.qdot[i], self.qdotstar[i])
+            f_temp = f_temp.subs(self.qdot[i], self.qdotstar[i])
+            
+            A1 = A1.subs(self.rho[i], self.rhostar[i])
+            A2 = A2.subs(self.rho[i], self.rhostar[i])
+            B = B.subs(self.rho[i], self.rhostar[i])
+            V = V.subs(self.rho[i], self.rhostar[i])
+            f_temp = f_temp.subs(self.rho[i], self.rhostar[i])
+            
+            A1 = A1.subs(self.zeta[i], self.zetastar[i])
+            A2 = A2.subs(self.zeta[i], self.zetastar[i])
+            B = B.subs(self.zeta[i], self.zetastar[i])
+            V = V.subs(self.zeta[i], self.zetastar[i])
+            f_temp = f_temp.subs(self.zeta[i], self.zetastar[i])
+            
+        q_matr = Matrix([[self.q[i]] for i in xrange(len(self.q) - 1)])
+        qdot_matr = Matrix([[self.qdot[i]] for i in xrange(len(self.q) - 1)])
+        rho_matr = Matrix([[self.rho[i]] for i in xrange(len(self.q) - 1)])
+        zeta_matr = Matrix([[self.zeta[i]] for i in xrange(len(self.q) - 1)])
+        
+        qstar_matr = Matrix([[self.qstar[i]] for i in xrange(len(self.q) - 1)])
+        qdotstar_matr = Matrix([[self.qdotstar[i]] for i in xrange(len(self.q) - 1)])
+        rhostar_matr = Matrix([[self.rhostar[i]] for i in xrange(len(self.q) - 1)])
+        zetastar_matr = Matrix([[self.zetastar[i]] for i in xrange(len(self.q) - 1)])
+        m = A1 * (q_matr - qstar_matr) + A2 * (qdot_matr - qdotstar_matr) + B * (rho_matr - rhostar_matr) + V * (zeta_matr - zetastar_matr)
+        return m
+            
+        
+            
+        
+        diff_fs = []
+        matr_elems = []
+        for k in xrange(len(f)):
+            sum1 = 0.0            
+            diff_f_first = []            
+            for i in xrange(len(vars)):
+                diff_f = trigsimp(diff(f[k], vars[i]))                
+                for l in xrange(len(vars)):
+                    diff_f = diff_f.subs(vars[l], stars[l])
+                    
+                sum1 += diff_f * (vars[i] - stars[i])         
+            
+            
+            #matr_elems.append(sum1 + (1.0 / factorial(2)) * sum2)
+            matr_elems.append(sum1)
+        m = Matrix(matr_elems)
+        '''for i in xrange(len(self.zeta)):
+            m = m.subs(self.zeta[i], 0.0) 
+            m = m.subs(self.zetastar[i], 0.0) '''
+        return m 
+    
+    def partial_derivatives_second_order(self, f, First):
         vars = [self.q[i] for i in xrange(len(self.q) - 1)]     
         vars.extend([self.qdot[i] for i in xrange(len(self.qdot) - 1)])
         vars.extend([self.rho[i] for i in xrange(len(self.rho) - 1)])
@@ -558,31 +639,36 @@ class Test:
         diff_fs = []
         matr_elems = []
         for k in xrange(len(f)):
-            sum1 = 0.0
+            #sum1 = 0.0
             sum2 = 0.0
-            diff_f_first = []
-            for i in xrange(len(vars)):
-                diff_f = trigsimp(diff(f[k], vars[i]))
-                for l in xrange(len(vars)):
-                    diff_f = diff_f.subs(vars[l], stars[l])
-                sum1 += diff_f * (vars[i] - stars[i])            
-            
+            diff_f_first = []            
             for i in xrange(len(vars)):
                 for j in xrange(len(vars)):                   
                     diff_f = trigsimp(diff(f[k], vars[i], vars[j]))
                     for l in xrange(len(vars)):
-                        diff_f = diff_f.subs(vars[l], stars[l])
+                        diff_f = diff_f.subs(vars[l], stars[l])                        
+                        for n in xrange(len(self.zetastar)):
+                            diff_f = diff_f.subs(self.zetastar[n], 0.0)                                              
                     
                     sum2 += diff_f * (vars[i] - stars[i]) * (vars[j] - stars[j])
             
-            print "------------------------"
-            matr_elems.append(sum1 + (1.0 / factorial(2)) * sum2)
+            
+            #matr_elems.append(sum1 + (1.0 / factorial(2)) * sum2)
+            matr_elems.append(First[k] + (1.0 / factorial(2)) * sum2)
         m = Matrix(matr_elems)
-        for i in xrange(len(self.zeta)):
+        '''for i in xrange(len(self.zeta)):
             m = m.subs(self.zeta[i], 0.0) 
-            m = m.subs(self.zetastar[i], 0.0) 
+            m = m.subs(self.zetastar[i], 0.0) '''
         return m         
         
+    def partial_derivatives2(self, f):
+        A1 = f.jacobian([self.q[i] for i in xrange(len(self.q) - 1)])
+        A2 = f.jacobian([self.qdot[i] for i in xrange(len(self.qdot) - 1)])
+        B =  f.jacobian([self.rho[i] for i in xrange(len(self.rho) - 1)])
+        C =  f.jacobian([self.zeta[i] for i in xrange(len(self.zeta) - 1)])
+        A = A1.row_join(A2)        
+        return A, B, C
+        #sleep
     
     def partial_derivatives(self, M_inv, C, N):        
         r = Matrix([[self.rho[i]] for i in xrange(len(self.rho) - 1)])
@@ -616,7 +702,8 @@ class Test:
             A = A.subs(self.zeta[i], 0.0)
             B = B.subs(self.zeta[i], 0.0)
             C = C.subs(self.zeta[i], 0.0)            
-        
+        print A
+        print B
         return A, B, C
         
     def calc_generalized_forces(self, 

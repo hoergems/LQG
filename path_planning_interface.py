@@ -91,7 +91,7 @@ class PathPlanningInterface:
         self.planning_algorithm = planning_algorithm
         self.dynamic_problem = False
         self.path_timeout = path_timeout 
-        self.continuous_collision = continuous_collision       
+        self.continuous_collision = continuous_collision
         
     def setup_dynamic_problem(self, 
                               urdf_model,
@@ -152,10 +152,14 @@ class PathPlanningInterface:
         for i in xrange(len(processes)):
             processes[i].daemon = True
             processes[i].start()            
+        current_len = 0           
         while True:
-            try:                            
-                res_paths.append(path_queue.get_nowait())
-            except:      
+            try:
+                res_paths.append(path_queue.get(timeout=0.1))
+                if len(res_paths) > current_len:
+                    print "Got " + str(len(res_paths)) + " paths so far"
+                    current_len = len(res_paths)
+            except:                    
                 pass
             elapsed = time.time() - t0
             if num != 0 and len(res_paths) == num:
@@ -258,6 +262,7 @@ class PathPlanningInterface:
                               [p_e[3][i] for i in xrange(len(p_e[0]))]])                  
         return paths
     
+    
     def construct_and_evaluate_path(self,
                                     robot, 
                                     obstacles, 
@@ -269,7 +274,7 @@ class PathPlanningInterface:
                                     estimated_deviation_covariance):        
         while True:
             t0 = time.time()               
-            xs, us, zs, control_durations, success = self._construct(robot, obstacles)
+            xs, us, zs, control_durations, success = self._construct(robot, obstacles)            
             gen_time = time.time() - t0
             if len(xs) > 1:  
                 t0 = time.time()                      
@@ -279,7 +284,7 @@ class PathPlanningInterface:
                                                                 estimated_deviation_covariance, 
                                                                 current_step, 
                                                                 horizon)
-                eval_time = time.time() - t0        
+                eval_time = time.time() - t0                     
                 queue.put((xs, 
                            us, 
                            zs, 
@@ -289,7 +294,8 @@ class PathPlanningInterface:
                            eval_result[3],
                            eval_result[4],
                            gen_time, 
-                           eval_time))        
+                           eval_time))                
+                time.sleep(0.1)       
     
     def construct_path(self, robot, obstacles, queue, process_num):
         while True:
@@ -322,9 +328,11 @@ class PathPlanningInterface:
             logging.info("PathPlanningInterface: Set up motion validator. Setting kinematics...")            
             
             
-            logging.info("PathPlanningInterface: Kinematics set. Running setup...")            
+            logging.info("PathPlanningInterface: Kinematics set. Running setup...") 
+            planner_str = "RRT"           
             path_planner2.setup(self.simulation_step_size,                                
-                                self.delta_t)
+                                self.delta_t,
+                                planner_str)
             path_planner2.setControlSampler(self.control_sampler)            
             num_control_samples = libdynamic_path_planner.v_int()
             num_control_samples[:] = [self.num_control_samples]

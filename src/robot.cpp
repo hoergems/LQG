@@ -364,10 +364,18 @@ Robot::Robot(std::string robot_file):
 			           active_joint_velocity_limits_,
 					   enforce_constraints_);
 	kinematics_->setJointOrigins(joint_origins_);
+	cout << "joint origins size: " << joint_origins_.size() << endl;
+	//kinematics_->setJointAxis(joint_axes_);
 	kinematics_->setLinkDimensions(active_link_dimensions_);
+	cout << "active_link_dimensions_" << active_link_dimensions_.size() << endl;
 	
+	//rbdl_interface_->load_model(robot_file);
+    //propagator_->getIntegrator()->setRBDLInterface(rbdl_interface_);
+	//rbdl_interface_->setViscous(joint_dampings_);
+	//rbdl_interface_->setPositionConstraints(lower_joint_limits_, upper_joint_limits_);
 	propagator_->getIntegrator()->setJointDamping(joint_dampings_);
-	initCollisionObjects();
+	//initCollisionObjects();
+	
 }
 
 void Robot::quatFromRPY(double &roll, double &pitch, double &yaw, std::vector<double> &quat) {
@@ -471,10 +479,22 @@ void Robot::initCollisionObjects() {
 }
 
 void Robot::createRobotCollisionObjects(const std::vector<double> &joint_angles, 
-		                                std::vector<std::shared_ptr<fcl::CollisionObject>> &collision_objects) {		                                	
+		                                std::vector<std::shared_ptr<fcl::CollisionObject>> &collision_objects) {
+	Eigen::MatrixXd res = Eigen::MatrixXd::Identity(4, 4);
+	res(0, 3) = joint_origins_[0][0];
+	res(1, 3) = joint_origins_[0][1];
+	res(2, 3) = joint_origins_[0][2];
+	
 	for (size_t i = 0; i < joint_angles.size(); i++) {		
-		const std::pair<fcl::Vec3f, fcl::Matrix3f> pose_link_n = kinematics_->getPoseOfLinkN(joint_angles, i);
-		fcl::Transform3f trans(pose_link_n.second, pose_link_n.first); 
+		//const std::pair<fcl::Vec3f, fcl::Matrix3f> pose_link_n = kinematics_->getPoseOfLinkN(joint_angles, i);
+		res = kinematics_->getPoseOfLinkN(joint_angles[i], res, i);	
+		
+		fcl::Matrix3f trans_matrix(res(0,0), res(0,1), res(0,2),
+				                   res(1,0), res(1,1), res(1,2),
+								   res(2,0), res(2,1), res(2,2));
+		fcl::Vec3f trans_vec(res(0,3), res(1,3), res(2,3));
+		
+		fcl::Transform3f trans(trans_matrix, trans_vec); 
 		
 		
 		fcl::AABB link_aabb(fcl::Vec3f(0.0, 
@@ -592,6 +612,23 @@ void Robot::setViewerBackgroundColor(double r, double g, double b) {
 void Robot::setViewerCameraTransform(std::vector<double> &rot, std::vector<double> &trans) {
 	viewer_->setCameraTransform(rot, trans);
 }
+
+void Robot::addSensor(std::string sensor_file) {
+	viewer_->addSensor(sensor_file);
+}
+
+void Robot::setSensorTransform(std::vector<double> &joint_angles) {
+	bool b = true;
+	Eigen::MatrixXd end_effector_pose = kinematics_->getEndEffectorPose(joint_angles, b);
+	viewer_->setSensorTransform(end_effector_pose);
+}
+
+void Robot::setObstacleColor(std::string obstacle_name, 
+ 		                     std::vector<double> &diffuse_color, 
+                             std::vector<double> &ambient_color) {
+	viewer_->setObstacleColor(obstacle_name, diffuse_color, ambient_color);
+}
+
 #endif
 
 bool Robot::propagate_linear(std::vector<double> &current_state,
@@ -607,7 +644,8 @@ bool Robot::propagate_linear(std::vector<double> &current_state,
 }
 
 void Robot::setGravityConstant(double gravity_constant) {
-	propagator_->getIntegrator()->setGravityConstant(gravity_constant);	
+	propagator_->getIntegrator()->setGravityConstant(gravity_constant);
+	//rbdl_interface_->setGravity(gravity_constant);
 }
 
 void Robot::setExternalForce(double f_x, 
@@ -625,12 +663,38 @@ void Robot::setAccelerationLimit(double accelerationLimit) {
 
 void Robot::getEndEffectorJacobian(const std::vector<double> &joint_angles, 
     	    		               std::vector<std::vector<double>> &ee_jacobian) {
-	std::vector<double> state;
-	for (auto &k: joint_angles) {
-		state.push_back(k);
-	}
 	
-	MatrixXd jacobian = propagator_->get_ee_jacobian(state);	
+	//std::vector<double> state;
+	std::vector<double> state2;
+	//for (auto &k: joint_angles) {
+	//	state.push_back(k);		
+	//}
+	
+	if (joint_angles.size() > getDOF()) {
+	    for (size_t i = 0; i < joint_angles.size() / 2; i++) {
+		    state2.push_back(joint_angles[i]);
+	    }
+	}
+	else {
+		for (size_t i = 0; i < joint_angles.size(); i++) {
+		    state2.push_back(joint_angles[i]);
+		}
+	} 
+	
+	
+	/**MatrixXd jacobian1(6, getDOF());
+	propagator_->getIntegrator()->getRBDLInterface()->getEEJacobian(state, jacobian1);
+	cout << "rbdl: " << endl;
+	cout << jacobian1 << endl;*/
+	/**MatrixXd jacobian2 = propagator_->get_ee_jacobian(state);
+	cout << "prop: " << endl;
+	cout << jacobian2 << endl;*/
+	MatrixXd jacobian(6, getDOF());	
+	kinematics_->getEEJacobian(state2, jacobian);
+	//cout << "kin: " << endl;
+	//cout << jacobian << endl;
+	
+	//MatrixXd jacobian = propagator_->get_ee_jacobian(state);	
 	for (size_t i = 0; i < jacobian.rows(); i++) {
 		std::vector<double> row;
 		for (size_t j = 0; j < jacobian.cols(); j++) {			
@@ -677,6 +741,60 @@ bool Robot::propagate(std::vector<double> &current_state,
 			                                simulation_step_size,
 			                                duration,
 			                                result);
+}
+
+bool Robot::propagate_first_order(std::vector<double> &current_state,
+                                  std::vector<double> &control_input,
+                                  std::vector<double> &control_error,
+		                          std::vector<double> &nominal_state,
+		                          std::vector<double> &nominal_control,
+                                  double simulation_step_size,
+                                  double duration,
+                                  std::vector<double> &result) {
+	std::vector<double> current_joint_values;
+	std::vector<double> current_joint_velocities;
+		
+	for (size_t i = 0; i < current_state.size() / 2; i++) {
+		current_joint_values.push_back(current_state[i]);
+		current_joint_velocities.push_back(current_state[i + current_state.size() / 2]);
+	}
+	
+	return propagator_->propagate_nonlinear_first_order(current_joint_values,
+				                                         current_joint_velocities,
+				                                         control_input,
+				                                         control_error,
+														 nominal_state,
+														 nominal_control,
+				                                         simulation_step_size,
+				                                         duration,
+				                                         result);
+}
+
+bool Robot::propagate_second_order(std::vector<double> &current_state,
+        std::vector<double> &control_input,
+        std::vector<double> &control_error,
+		std::vector<double> &nominal_state,
+		std::vector<double> &nominal_control,
+        double simulation_step_size,
+        double duration,
+        std::vector<double> &result) {
+	std::vector<double> current_joint_values;
+	std::vector<double> current_joint_velocities;
+		
+	for (size_t i = 0; i < current_state.size() / 2; i++) {
+		current_joint_values.push_back(current_state[i]);
+		current_joint_velocities.push_back(current_state[i + current_state.size() / 2]);
+	}
+	
+	return propagator_->propagate_nonlinear_second_order(current_joint_values,
+				                                         current_joint_velocities,
+				                                         control_input,
+				                                         control_error,
+														 nominal_state,
+														 nominal_control,
+				                                         simulation_step_size,
+				                                         duration,
+				                                         result);
 }
 
 void Robot::setState(std::vector<double> &joint_values, std::vector<double> &joint_velocities) {
@@ -914,6 +1032,8 @@ BOOST_PYTHON_MODULE(librobot) {
                         .def("getJointOrigin", &Robot::getJointOrigin)
                         .def("getJointAxis", &Robot::getJointAxis)
                         .def("propagate", &Robot::propagate)
+						.def("propagate_first_order", &Robot::propagate_first_order)
+						.def("propagate_second_order", &Robot::propagate_second_order)
                         //.def("createRobotCollisionStructures", &Robot::createRobotCollisionStructuresPy)
                         .def("createRobotCollisionObjects", &Robot::createRobotCollisionObjectsPy)
 						.def("createEndEffectorCollisionObject", &Robot::createEndEffectorCollisionObjectPy)
@@ -940,6 +1060,9 @@ BOOST_PYTHON_MODULE(librobot) {
 					    .def("setViewerCameraTransform", &Robot::setViewerCameraTransform)
 					    .def("addPermanentViewerParticles", &Robot::addPermanentViewerParticles)
 					    .def("removePermanentViewerParticles", &Robot::removePermanentViewerParticles)
+					    .def("addSensor", &Robot::addSensor)
+						.def("setSensorTransform", &Robot::setSensorTransform)
+						.def("setObstacleColor", &Robot::setObstacleColor)
 #endif
                         //.def("setup", &Integrate::setup)                        
     ;

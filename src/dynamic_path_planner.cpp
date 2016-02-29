@@ -20,6 +20,7 @@ DynamicPathPlanner::DynamicPathPlanner(boost::shared_ptr<shared::Robot> &robot,
     space_information_(new ManipulatorSpaceInformation(state_space_, control_space_)),
     problem_definition_(nullptr),
     planner_(nullptr),
+	planner_str_(""),
     state_propagator_(nullptr),    
     motionValidator_(nullptr),
     verbose_(verbose),
@@ -37,7 +38,13 @@ void DynamicPathPlanner::setupMotionValidator(bool continuous_collision) {
 }
 
 void DynamicPathPlanner::setRRTGoalBias(double goal_bias) {
-	boost::static_pointer_cast<RRTControl>(planner_)->setGoalBias(goal_bias);
+	if (planner_str_ == "EST") {
+		boost::static_pointer_cast<ESTControl>(planner_)->setGoalBias(goal_bias);
+	}
+	else {
+		boost::static_pointer_cast<RRTControl>(planner_)->setGoalBias(goal_bias);
+	}
+	
 }
 
 void DynamicPathPlanner::log_(std::string msg, bool warn=false) {
@@ -50,9 +57,10 @@ void DynamicPathPlanner::log_(std::string msg, bool warn=false) {
 }
 
 bool DynamicPathPlanner::setup(double simulation_step_size,
-							   double control_duration) {	
+							   double control_duration,
+							   std::string planner) {	
 	control_duration_ = control_duration;
-	    
+	planner_str_ = planner;
 	/***** Setup OMPL *****/
 	log_("Setting up OMPL");
 	setup_ompl_(simulation_step_size, verbose_);
@@ -83,7 +91,9 @@ void DynamicPathPlanner::setMinMaxControlDuration(std::vector<int> &min_max_cont
 }
 
 void DynamicPathPlanner::addIntermediateStates(bool add_intermediate_states) {
-	boost::static_pointer_cast<RRTControl>(planner_)->setIntermediateStates(add_intermediate_states);
+	if (planner_str_ == "RRT") {
+		boost::static_pointer_cast<RRTControl>(planner_)->setIntermediateStates(add_intermediate_states);
+	}	
 }
 
 bool DynamicPathPlanner::setup_ompl_(double &simulation_step_size,
@@ -99,10 +109,19 @@ bool DynamicPathPlanner::setup_ompl_(double &simulation_step_size,
      
     problem_definition_ = boost::make_shared<ompl::base::ProblemDefinition>(space_information_);
     //planner_ = boost::make_shared<ompl::control::RRT>(space_information_);
-    planner_ = boost::make_shared<RRTControl>(space_information_);
-    //planner_ = boost::make_shared<ESTControl>(space_information_);
+    //
+    if (planner_str_ == "EST") {
+    	planner_ = boost::make_shared<ESTControl>(space_information_);
+    }
+    else {
+    	planner_ = boost::make_shared<RRTControl>(space_information_);
+    }
+    
     planner_->setProblemDefinition(problem_definition_);
-    boost::static_pointer_cast<RRTControl>(planner_)->setIntermediateStates(true);
+    if (planner_str_ == "EST") {
+    	boost::static_pointer_cast<RRTControl>(planner_)->setIntermediateStates(true);
+    }
+    
     state_propagator_ = boost::make_shared<StatePropagator>(space_information_,
     		                                                robot_,
                                                             simulation_step_size,

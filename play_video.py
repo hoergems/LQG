@@ -8,7 +8,7 @@ from libutil import *
 from libobstacle import *
 
 class Play:
-    def __init__(self, algorithm, dir, numb, play_failed):
+    def __init__(self, algorithm, dir, numb, play_failed, user_input):
         robot_files = glob.glob(os.path.join(os.path.join(dir + "/model/", "*.urdf")))
         environment_files = glob.glob(os.path.join(os.path.join(dir + "/environment/", "*.xml")))
         
@@ -40,6 +40,7 @@ class Play:
         if not self.init_environment():
             return
         print "PLAY"
+        self.user_input = user_input
         self.play_runs(dir, algorithm, numb, play_failed)
         
     def is_terminal(self, state):
@@ -55,6 +56,7 @@ class Play:
         
     def play_runs(self, dir, algorithm, numb, play_failed):      
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
+        first_particle = 1
         log_files = []
         for file in files:
             file_str = file.split("/")[-1]
@@ -105,6 +107,12 @@ class Play:
                     state = np.array([float(line_arr[i]) for i in xrange(len(line_arr))])
                     states.append(state)
                     terminal = self.is_terminal(state)
+                elif "S_ESTIMATED" in line:
+                    first_particle = 0                                      
+                    particles = []
+                    line_arr = line.rstrip("\n").split(":")[1].strip(" ").split(" ")
+                    particle = [float(line_arr[i]) for i in xrange(len(line_arr))]
+                    all_particles.append([particle])
                 elif ("RUN #" in line or 
                       "Run #" in line or
                       "#####" in line) and len(states) != 0:
@@ -112,11 +120,11 @@ class Play:
                     if play_failed:
                         if terminal == False:
                             self.show_nominal_path(nominal_states)                            
-                            self.play_states(states, col, all_particles)
+                            self.play_states(states, col, all_particles, first_particle)
                     else:
                         
                         self.show_nominal_path(nominal_states)                        
-                        self.play_states(states, col, all_particles)
+                        self.play_states(states, col, all_particles, first_particle)
                     states = []
                     nominal_states = []
                     col = []
@@ -143,7 +151,7 @@ class Play:
         self.robot.addPermanentViewerParticles(particle_joint_values,
                                                particle_joint_colors)
                     
-    def play_states(self, states, col, particles):        
+    def play_states(self, states, col, particles, first_particle):        
         if not self.viewer_initialized:
             self.robot.setupViewer(self.robot_file, self.environment_file)
             self.viewer_initialized = True
@@ -158,11 +166,11 @@ class Play:
             particle_joint_colors = v2_double()
             
             if i > 1 and len(particles) > 0:                
-                for p in particles[i-1]:
+                for p in particles[i - first_particle]:
                     particle = v_double()
                     particle_color = v_double()
                     particle[:] = [p[k] for k in xrange(len(p) / 2)]
-                    particle_color[:] = [0.5, 0.5, 0.5, 0.5]
+                    particle_color[:] = [0.2, 0.8, 0.5, 0.0]
                     particle_joint_values.append(particle)
                     particle_joint_colors.append(particle_color)
             self.robot.updateViewerValues(cjvals, 
@@ -186,6 +194,8 @@ class Play:
             except:
                 pass           
             time.sleep(0.3)
+            if self.user_input:
+                raw_input("Press Enter to continue...")
             
     def is_in_collision(self, previous_state, state):
         """
@@ -242,5 +252,8 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--play_failed", 
                         help="Play only the failed runs", 
                         action="store_true")
+    parser.add_argument("-u", "--user_input",
+                        help="Wait for user input",
+                        action="store_true")
     args = parser.parse_args()
-    Play(args.algorithm, args.directory, args.numb, args.play_failed)
+    Play(args.algorithm, args.directory, args.numb, args.play_failed, args.user_input)

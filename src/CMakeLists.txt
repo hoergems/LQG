@@ -2,8 +2,8 @@ cmake_minimum_required (VERSION 2.6)
 
 project (lqg)
 set(CMAKE_BUILD_TYPE DEBUG)
-set(CMAKE_CXX_FLAGS_DEBUG "-g -std=c++11 -O3 -w")
-set(CMAKE_CXX_FLAGS_RELEASE "-g -std=c++11 -O3 -w")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -std=c++11 -O3 -w -pg")
+set(CMAKE_CXX_FLAGS_RELEASE "-g -std=c++11 -O3 -w -pg")
 
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${lqg_SOURCE_DIR})
 SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${lqg_SOURCE_DIR}/../)
@@ -23,12 +23,20 @@ message ("CMAKE PREFIXPATH ${CMAKE_PREFIX_PATH}" )
 ##############################
 if (USE_URDF)       
     if(PKG_CONFIG_FOUND)
-        pkg_check_modules(URDF urdf)
-        if(NOT URDF_FOUND)
-           message(FATAL_ERROR "URDF package could not be found")
+        pkg_check_modules(URDFDOM urdfdom)
+        if(NOT URDFDOM_FOUND)
+           message(FATAL_ERROR "URDFDOM package could not be found")
         endif()
-        include_directories(${URDF_INCLUDE_DIRS})
-        link_directories(${URDF_LIBRARY_DIRS})    
+        include_directories(${URDFDOM_INCLUDE_DIRS})
+        link_directories(${URDFDOM_LIBRARY_DIRS})    
+    endif()
+
+    if(PKG_CONFIG_FOUND)
+        pkg_check_modules(URDFDOM_HEADERS urdfdom_headers)
+        if(NOT URDFDOM_HEADERS_FOUND)
+           message(FATAL_ERROR "URDFDOM_HEADERS package could not be found")
+        endif()
+        include_directories(${URDFDOM_HEADERS_INCLUDE_DIRS})           
     endif()
         
 ############################# LOAD OPENRAVE #############################
@@ -131,7 +139,8 @@ link_directories(${TINYXML_LIBRARY_DIRS}
                  ${PYTHON_LIBRARY_DIRS}
                  ${FCL_LIBRARY_DIRS}
                  ${Boost_LIBRARY_DIRS}
-                 ${EIGEN_LIBRARY_DIRS})
+                 ${EIGEN_LIBRARY_DIRS}
+                 ${URDFDOM_LIBRARY_DIRS})
 
 add_library(robot SHARED 
             robot.cpp
@@ -189,7 +198,7 @@ add_library(area SHARED
             Area.cpp)
 
 target_link_libraries (robot
-                       ${URDF_LIBRARIES}
+                       ${URDFDOM_LIBRARIES}
                        ${Boost_LIBRARIES}
                        ${PYTHON_LIBRARIES}
                        ${OPENRAVE_LIBRARIES}
@@ -203,7 +212,7 @@ target_link_libraries(path_planner
                       ${OPENRAVE_LIBRARIES}                   
                       ${OMPL_LIBRARIES}
                       ${FCL_LIBRARIES}                      
-                      ${URDF_LIBRARIES}
+                      ${URDFDOM_LIBRARIES}
                       ${VIEWER_LIBRARIES}
                       ${TINYXML_LIBRARIES})
                       
@@ -214,7 +223,7 @@ target_link_libraries (dynamic_path_planner
                        ${PYTHON_LIBRARIES}                   
                        ${FCL_LIBRARIES}
                        ${TINYXML_LIBRARIES}
-                       ${URDF_LIBRARIES}
+                       ${URDFDOM_LIBRARIES}
                        ${VIEWER_LIBRARIES})                       
                       
 target_link_libraries(obstacle                      

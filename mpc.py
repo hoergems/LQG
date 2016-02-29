@@ -157,6 +157,7 @@ class MPC:
             num_generated_paths_run = 0.0
             successful_runs = 0
             num_collisions = 0.0
+            linearization_error = 0.0
             final_states= []
             rewards_cov = []
             for k in xrange(self.num_simulation_runs):
@@ -165,7 +166,7 @@ class MPC:
                 current_step = 0
                 x_true = self.start_state
                 x_estimate = self.start_state
-                x_tilde_linear = np.array([0.0 for i in xrange(2 * self.robot_dof)])
+                x_tilde_linear = np.array([0.0 for i in xrange(2 * self.robot_dof)])                
                 P_t = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)]) 
                 deviation_covariance = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])
                 estimated_deviation_covariance = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])              
@@ -212,7 +213,7 @@ class MPC:
                        n_steps = len(xs) - 1
                     if current_step + n_steps > self.max_num_steps:
                         n_steps = self.max_num_steps - current_step
-                    (x_true, 
+                    (x_true,                     
                      x_tilde,
                      x_tilde_linear, 
                      x_estimate, 
@@ -224,7 +225,7 @@ class MPC:
                      estimated_c,
                      history_entries) = sim.simulate_n_steps(xs, us, zs,
                                                              control_durations,
-                                                             x_true,                                                              
+                                                             x_true,                                                                                                                          
                                                              x_tilde,
                                                              x_tilde_linear,
                                                              x_estimate,
@@ -263,6 +264,7 @@ class MPC:
                         if history_entries[l].collided:                            
                             num_collisions += 1
                             collided = True
+                        linearization_error += history_entries[l].linearization_error
                     #logging.warn("MPC: Execution finished. True state is " + str(x_true))
                     #logging.warn("MPC: Estimated state is " + str(x_estimate))
                     logging.warn("MPC: Executed " + str(current_step) + " steps") 
@@ -317,6 +319,7 @@ class MPC:
                 self.serializer.write_line("log.log",
                                            tmp_dir,
                                            "Observation covariance: " + str(m_covs[j]) + " \n")
+            mean_linearization_error = linearization_error / number_of_steps
             number_of_steps /= self.num_simulation_runs
             self.serializer.write_line("log.log", tmp_dir, "Mean number of steps: " + str(number_of_steps) + " \n")                            
             self.serializer.write_line("log.log", tmp_dir, "Mean num collisions per run: " + str(float(num_collisions) / float(self.num_simulation_runs)) + " \n")
@@ -335,6 +338,7 @@ class MPC:
             #sleep
             self.serializer.write_line("log.log", tmp_dir, "Mean rewards: " + str(mean) + " \n")
             self.serializer.write_line("log.log", tmp_dir, "Reward variance: " + str(var) + " \n")
+            self.serializer.write_line("log.log", tmp_dir, "Mean linearisation error: " + str(mean_linearization_error) + " \n")
             self.serializer.write_line("log.log", 
                                        tmp_dir, 
                                        "Reward standard deviation: " + str(np.sqrt(var)) + " \n")

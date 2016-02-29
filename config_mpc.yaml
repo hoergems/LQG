@@ -2,7 +2,7 @@
 seed: -1
 
 # Number of cores used for parallel path construction and evaluation
-num_cores: 4
+num_cores: 8
 
 # Verbose output
 verbose: False
@@ -26,7 +26,7 @@ path_timeout: 100.0
 use_linear_path: False
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 100
+num_simulation_runs: 50
 
 # Maximum angular velocity of the joints for the kinematic problem (in rad/sec)
 max_velocity: 4.0
@@ -116,13 +116,13 @@ acceleration_limit: 100.0
 simulation_step_size: 0.001
 
 # Control sampler to use. 'discrete' or 'continuous'
-control_sampler: continuous
+control_sampler: discrete
 
 # Number of controls to sample at the nearest node in the RRT tree
 num_control_samples: 1
 
 min_control_duration: 1
-max_control_duration: 4
+max_control_duration: 1
 
 # The RRT goal bias
 rrt_goal_bias: 0.05

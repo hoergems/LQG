@@ -73,10 +73,12 @@ bool Propagator::propagate_linear(const std::vector<double> &current_joint_value
 	
 }
 
-bool Propagator::propagate_nonlinear_second_order(const std::vector<double> &current_joint_values,
+bool Propagator::propagate_nonlinear_first_order(const std::vector<double> &current_joint_values,
                                                   const std::vector<double> &current_joint_velocities,
 												  std::vector<double> &control,
 								                  std::vector<double> &control_error_vec,
+												  std::vector<double> &nominal_state,
+												  std::vector<double> &nominal_control,
 												  const double simulation_step_size,
 									              const double duration,
 												  std::vector<double> &result) {
@@ -91,7 +93,64 @@ bool Propagator::propagate_nonlinear_second_order(const std::vector<double> &cur
 		
 	std::vector<double> integration_result;
 	std::vector<double> inte_times({0.0, duration, simulation_step_size});	
-	integrator_->do_integration_second_order(state, control, control_error_vec, inte_times, integration_result);
+	integrator_->do_integration_first_order(state, 
+			                                control, 
+											control_error_vec,
+											nominal_state,
+											nominal_control,
+											inte_times, 
+											integration_result);
+	
+	std::vector<double> newJointValues;
+    std::vector<double> newJointVelocities;
+		
+	for (size_t i = 0; i < integration_result.size() / 2; i++) {
+		newJointValues.push_back(integration_result[i]);		
+	}
+		
+	for (size_t i = integration_result.size() / 2; i < integration_result.size(); i++) {
+		newJointVelocities.push_back(integration_result[i]);		
+	}
+	
+	for (size_t i = 0; i < newJointValues.size(); i++) {
+		result.push_back(newJointValues[i]);
+	}
+		
+	for (size_t i = 0; i < newJointVelocities.size(); i++) {
+		result.push_back(newJointVelocities[i]);
+	}
+		
+	return true;
+	
+}
+
+bool Propagator::propagate_nonlinear_second_order(const std::vector<double> &current_joint_values,
+                                                  const std::vector<double> &current_joint_velocities,
+												  std::vector<double> &control,
+								                  std::vector<double> &control_error_vec,
+												  std::vector<double> &nominal_state,
+												  std::vector<double> &nominal_control,
+												  const double simulation_step_size,
+									              const double duration,
+												  std::vector<double> &result) {
+	std::vector<double> state;
+		
+	for (size_t i = 0; i < current_joint_values.size(); i++) {
+		state.push_back(current_joint_values[i]);
+	}
+	for (size_t i = 0; i < current_joint_values.size(); i++) {		
+		state.push_back(current_joint_velocities[i]);		
+	}
+		
+	std::vector<double> integration_result;
+	std::vector<double> inte_times({0.0, duration, simulation_step_size});	
+	integrator_->do_integration_second_order(state, 
+			                                 control, 
+			                                 control_error_vec,
+											 nominal_state,
+											 nominal_control,
+											 inte_times, 
+											 integration_result);
 	
 	std::vector<double> newJointValues;
     std::vector<double> newJointVelocities;

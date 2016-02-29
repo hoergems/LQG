@@ -12,6 +12,7 @@
 #include "fcl/shape/geometric_shapes.h"
 #include "fcl/shape/geometric_shapes_utility.h"
 #include <tinyxml.h>
+
 #include "propagator.hpp"
 #include "Kinematics.hpp"
 
@@ -118,6 +119,24 @@ struct Joint {
 		                   double duration,
 		                   std::vector<double> &result);
     	    
+    	    bool propagate_first_order(std::vector<double> &current_state,
+    	    	                   std::vector<double> &control_input,
+    	    	                   std::vector<double> &control_error,
+    	    					   std::vector<double> &nominal_state,
+    	    					   std::vector<double> &nominal_control,
+    	    	                   double simulation_step_size,
+    	    	                   double duration,
+    	    	                   std::vector<double> &result);
+    	    
+    	    bool propagate_second_order(std::vector<double> &current_state,
+	                   std::vector<double> &control_input,
+	                   std::vector<double> &control_error,
+					   std::vector<double> &nominal_state,
+					   std::vector<double> &nominal_control,
+	                   double simulation_step_size,
+	                   double duration,
+	                   std::vector<double> &result);
+    	    
     	    bool propagate_linear(std::vector<double> &current_state,
     	    		              std::vector<double> &control_input,
     	    		              std::vector<double> &control_error,
@@ -221,6 +240,14 @@ struct Joint {
     	    void removePermanentViewerParticles();
     	        	    
     	    void setupViewer(std::string model_file, std::string environment_file);
+    	    
+    	    void addSensor(std::string sensor_file);
+    	    
+    	    void setSensorTransform(std::vector<double> &joint_angles);
+    	    
+    	    void setObstacleColor(std::string obstacle_name, 
+    	     		                     std::vector<double> &diffuse_color, 
+    	                                 std::vector<double> &ambient_color);
 #endif
         private:
     	    std::vector<shared::Link> links_;
@@ -312,6 +339,8 @@ struct Joint {
     	     * A vector holding the collision objects of the active links
     	     */
     	    std::vector<std::shared_ptr<fcl::CollisionObject>> collision_objects_;
+    	    
+    	    
     };
     		
 }
