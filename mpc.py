@@ -262,8 +262,7 @@ class MPC:
                                                     
                         history_entries[l].serialize(tmp_dir, "log.log")
                         if history_entries[l].collided:                            
-                            num_collisions += 1
-                            collided = True
+                            num_collisions += 1                            
                         linearization_error += history_entries[l].linearization_error
                     #logging.warn("MPC: Execution finished. True state is " + str(x_true))
                     #logging.warn("MPC: Estimated state is " + str(x_estimate))

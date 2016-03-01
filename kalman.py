@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import linalg
+from librobot import v_string, v_double, v2_double
 
 def kalman_predict(x_tilde, u, A, B, P_t, V, M):    
     x_tilde_dash_t = np.dot(A, x_tilde) + np.dot(B, u)                 
@@ -43,11 +44,10 @@ def compute_gain(A, B, C, D, l):
 
 def predict_state(robot,
                   x_tilde,
-                  xs0,
-                  xs1, 
-                  u_dash,
+                  xs0,                  
                   us, 
                   control_duration,
+                  simulation_step_size,
                   A,
                   B,
                   V, 
@@ -57,7 +57,8 @@ def predict_state(robot,
     Predidcts the state at the next time step using an extended kalman filter
     """
     x_estimate = x_tilde + xs0
-    u = u_dash + us
+    u = us
+    u_dash = np.array([0.0 for i in xrange(len(u))])
     current_state = v_double()
     current_state[:] = x_estimate
     control = v_double()
@@ -68,10 +69,65 @@ def predict_state(robot,
     robot.propagate(current_state,
                     control,
                     control_error,
-                    self.simulation_step_size,
+                    simulation_step_size,
                     control_duration,
                     result)
     x_predicted = np.array([result[i] for i in xrange(len(result))])
         
-    x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u_dash, A, B, P_t, V, M)
+    x_tilde_dash, P_dash = kalman_predict(x_tilde, u_dash, A, B, P_t, V, M)
     return (x_predicted, P_dash)
+
+def get_linear_model_matrices(robot, 
+                              state_path, 
+                              control_path, 
+                              control_durations, 
+                              dynamic_problem,
+                              M,
+                              H,
+                              W,
+                              N):
+        """ Get the linearized model matrices along a given nominal path
+        """
+        As = []
+        Bs = []
+        Vs = []
+        Ms = []
+        Hs = []
+        Ws = []
+        Ns = []
+        if dynamic_problem:
+            for i in xrange(len(state_path)):
+                state = v_double()
+                control = v_double()
+                state[:] = state_path[i]
+                control[:] = control_path[i]
+                A = robot.getProcessMatrices(state, control, control_durations[i])       
+                Matr_list = [A[j] for j in xrange(len(A))]
+                A_list = np.array([Matr_list[j] for j in xrange(len(state)**2)])
+                start_index = len(state)**2
+                B_list = np.array([Matr_list[j] for j in xrange(start_index, 
+                                                                start_index + (len(state) * (len(state) / 2)))])
+                start_index = start_index + (len(state) * (len(state) / 2))
+                V_list = np.array([Matr_list[j] for j in xrange(start_index, 
+                                                                start_index + (len(state) * (len(state) / 2)))])
+                A_Matr = A_list.reshape(len(state), len(state)).T
+                B_Matr = B_list.reshape(len(state)/ 2, len(state)).T
+                V_Matr = V_list.reshape(len(state) / 2, len(state)).T
+                
+                As.append(A_Matr)
+                Bs.append(B_Matr)
+                Vs.append(V_Matr)                
+                Ms.append(M)
+                Hs.append(H)
+                Ws.append(W)
+                Ns.append(N)
+        else:
+            for i in xrange(len(state_path) + 1):
+                As.append(self.A)
+                Bs.append(self.B)
+                Vs.append(self.V)
+                Ms.append(self.M)
+                Hs.append(self.H)
+                Ws.append(self.W)
+                Ns.append(self.N)
+        return As, Bs, Vs, Ms, Hs, Ws, Ns

@@ -67,7 +67,7 @@ class Simulator:
         self.torque_limits = [torque_limits[i] for i in xrange(len(torque_limits))]
         
         self.enforce_constraints = robot.constraintsEnforced()
-        self.enforce_constrol_constraints = enforce_control_constraints
+        self.control_constraints_enforced = enforce_control_constraints
         self.dynamic_problem = False
         self.stop_when_colliding = False
         self.show_viewer = show_viewer
@@ -101,14 +101,8 @@ class Simulator:
         Hs = []
         Ws = []
         Ns = []
-        if self.dynamic_problem:            
-            '''As.append(np.identity((len(state_path[0]))))
-            Bs.append(np.identity((len(state_path[0]))))
-            Vs.append(np.identity((len(state_path[0]))))
-            Ms.append(np.identity((len(state_path[0]))))
-            Hs.append(np.identity((len(state_path[0]))))
-            Ws.append(np.identity((len(state_path[0]))))
-            Ns.append(np.identity((len(state_path[0]))))'''
+        if self.dynamic_problem:           
+            
             for i in xrange(len(state_path)):
                 state = v_double()
                 control = v_double()
@@ -187,7 +181,15 @@ class Simulator:
         x_dash = np.subtract(np.array(x_true), np.array(xs[0]))
         x_dash_linear = np.copy(x_dash)
         x_true_linear = x_true        
-        As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, us, control_durations)
+        As, Bs, Vs, Ms, Hs, Ws, Ns = kalman.get_linear_model_matrices(self.robot, 
+                                                                      xs, 
+                                                                      us, 
+                                                                      control_durations,
+                                                                      self.dynamic_problem,
+                                                                      self.M,
+                                                                      self.H,
+                                                                      self.W,
+                                                                      self.N)
         Ls = kalman.compute_gain(As, Bs, self.C, self.D, len(xs) - 1)
         logging.info("Simulator: Executing for " + str(n_steps) + " steps") 
         estimated_states = []
@@ -195,8 +197,7 @@ class Simulator:
         self.show_nominal_path(xs)        
         """ Execute the nominal path for n_steps """        
         for i in xrange(n_steps):                        
-            if not terminal_state_reached:
-                linearization_error = utils.dist(x_dash, x_dash_linear)                
+            if not terminal_state_reached:                             
                 history_entries.append(HistoryEntry(current_step,
                                                     x_true, 
                                                     xs[i],
@@ -204,7 +205,7 @@ class Simulator:
                                                     x_estimate,
                                                     x_dash,
                                                     x_dash_linear,
-                                                    linearization_error, 
+                                                    0.0, 
                                                     None,
                                                     None,
                                                     None,
@@ -218,15 +219,19 @@ class Simulator:
                 
                 """ Calc u_dash from the estimated deviation of the state from the nominal path 'x_tilde'
                 using the optimal gain L
-                """                      
-                u_dash = np.dot(Ls[i], x_tilde)                
+                """
+                try:                    
+                    u_dash = np.dot(Ls[i], x_tilde)
+                except:
+                    print "len(LS) " + str(len(Ls))
+                    print "len(xs) " + str(len(xs))                
                 history_entries[-1].set_u_dash(u_dash)
                 
                 """ Calc the actual control input """ 
                 u = u_dash + us[i] 
                 
                 """ Enforce the control constraints on 'u' and 'u_dash' """
-                if self.enforce_constrol_constraints:                    
+                if self.control_constraints_enforced:                    
                     u, u_dash = self.enforce_control_constraints(u, us[i])                          
                 history_entries[-1].set_action(u)
                 history_entries[-1].set_nominal_action(us[i])
@@ -286,7 +291,8 @@ class Simulator:
                         x_true_linear[j] = 0.0                  
                 else:'''
                     
-                
+                linearization_error = utils.dist(x_dash, x_dash_linear)
+                history_entries[-1].set_linearization_error(linearization_error)
                 
                 
                 
@@ -300,8 +306,12 @@ class Simulator:
                 
                 """ Generate an observation for the true state """
                 z = self.get_observation(x_true, Hs[i + 1], Ns[i + 1], Ws[i + 1])
-                z_dash = np.subtract(z, zs[i+1])
-                history_entries[-1].set_observation(z)
+                try:
+                    z_dash = np.subtract(z, zs[i+1])
+                    history_entries[-1].set_observation(z)
+                except:
+                    print "len(xs) " + str(len(xs))
+                    print "len(zs) " + str(len(zs))
                 
                 """ Kalman prediction and update """                   
                 x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u_dash, As[i], Bs[i], P_t, Vs[i], Ms[i])

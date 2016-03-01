@@ -24,7 +24,7 @@ class HRF:
         """ Reading the config """
         warnings.filterwarnings("ignore")
         self.init_serializer()
-        config = self.serializer.read_config("config_mpc.yaml", path=self.abs_path)
+        config = self.serializer.read_config("config_hrf.yaml", path=self.abs_path)
         self.set_params(config)
         if self.seed < 0:
             """
@@ -42,18 +42,20 @@ class HRF:
         tmp_dir = self.abs_path + "/tmp/hrf"
         self.utils = Utils()
         if not self.init_robot(self.robot_file):
-            logging.error("MPC: Couldn't initialize robot")
+            logging.error("HRF: Couldn't initialize robot")
             return               
         if not self.setup_scene(self.environment_file, self.robot):
-            return   
-        #self.run_viewer(self.robot_file, self.environment_file)     
+            return
+            
         self.clear_stats(dir)
         logging.info("Start up simulator")
         sim = Simulator() 
         plan_adjuster = PlanAdjuster()       
         path_evaluator = PathEvaluator()
         path_planner = PathPlanningInterface()
-        logging.info("MPC: Generating goal states...") 
+        if self.show_viewer_simulation:
+            self.robot.setupViewer(self.robot_file, self.environment_file)
+        logging.info("HRF: Generating goal states...") 
         goal_states = get_goal_states("hrf",
                                       self.abs_path,
                                       self.serializer, 
@@ -72,9 +74,9 @@ class HRF:
                                       self.num_cores)
         
         if len(goal_states) == 0:
-            logging.error("MPC: Couldn't generate any goal states. Problem seems to be infeasible")
+            logging.error("HRF: Couldn't generate any goal states. Problem seems to be infeasible")
             return
-        logging.info("MPC: Generated " + str(len(goal_states)) + " goal states")
+        logging.info("HRF: Generated " + str(len(goal_states)) + " goal states")
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)
         path_planner.setup(self.robot,                         
                            self.obstacles,  
@@ -149,6 +151,27 @@ class HRF:
                               self.show_viewer_simulation,
                               self.robot_file,
                               self.environment_file)
+            path_evaluator.setup(A, B, C, D, H, M, N, V, W,                                     
+                                 self.robot, 
+                                 self.sample_size, 
+                                 self.obstacles,
+                                 self.goal_position,
+                                 self.goal_radius,
+                                 self.show_viewer_evaluation,
+                                 self.robot_file,
+                                 self.environment_file,
+                                 self.num_cores)
+            path_evaluator.setup_reward_function(self.step_penalty, self.illegal_move_penalty, self.exit_reward, self.discount_factor)
+            plan_adjuster.setup(self.robot,
+                                M, 
+                                H, 
+                                W, 
+                                N, 
+                                C, 
+                                D,
+                                self.dynamic_problem, 
+                                self.enforce_control_constraints)
+            plan_adjuster.set_simulation_step_size(self.simulation_step_size)
             sim.set_stop_when_colliding(self.replan_when_colliding)
             if self.dynamic_problem:
                 path_evaluator.setup_dynamic_problem()
@@ -164,11 +187,13 @@ class HRF:
             final_states= []
             rewards_cov = []
             for k in xrange(self.num_simulation_runs):
-                print "MPC: Run " + str(k + 1)                                
+                print "HRF: Run " + str(k + 1)                                
                 self.serializer.write_line("log.log", tmp_dir, "RUN #" + str(k + 1) + " \n")
                 current_step = 0
                 x_true = self.start_state
                 x_estimate = self.start_state
+                x_predicted = self.start_state
+                x_tilde = np.array([0.0 for i in xrange(2 * self.robot_dof)])
                 x_tilde_linear = np.array([0.0 for i in xrange(2 * self.robot_dof)])                
                 P_t = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)]) 
                 deviation_covariance = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])
@@ -180,8 +205,7 @@ class HRF:
                 Obtain a nominal path
                 """
                 path_planner.set_start_and_goal(x_estimate, goal_states, self.goal_position, self.goal_radius)
-                t0 = time.time()
-                print "plan"
+                t0 = time.time()                
                 (xs, 
                  us, 
                  zs,
@@ -194,16 +218,14 @@ class HRF:
                  mean_gen_times, 
                  mean_eval_times,
                  total_gen_times,
-                 total_eval_times) = path_planner.plan_and_evaluate_paths(self.num_paths, 
+                 total_eval_times) = path_planner.plan_and_evaluate_paths(1, 
                                                                           0, 
                                                                           current_step, 
                                                                           self.evaluation_horizon, 
                                                                           P_t,
                                                                           deviation_covariance,
                                                                           estimated_deviation_covariance, 
-                                                                          self.timeout)
-                print "planned"
-                
+                                                                          0.0)
                 while True:
                     """
                     Predict system state at t+1 using nominal path
@@ -213,21 +235,32 @@ class HRF:
                     As, Bs, Vs, Ms, Hs, Ws, Ns = sim.get_linear_model_matrices(xs, us, control_durations)
                     
                     """ Predict using EKF """
-                    (x_predicted, P_predicted) = kalman.predict_state(x_tilde, 
-                                                                      xs[0], 
-                                                                      xs[1], 
-                                                                      u_dash, 
-                                                                      u[0], 
-                                                                      control_durations[0], 
+                    (x_predicted_temp, P_predicted) = kalman.predict_state(self.robot,
+                                                                      x_tilde, 
+                                                                      xs[0],                                                                      
+                                                                      us[0], 
+                                                                      control_durations[0],
+                                                                      self.simulation_step_size, 
                                                                       As[0],
                                                                       Bs[0],
                                                                       Vs[0],
                                                                       Ms[0],
-                                                                      P_t)                    
+                                                                      P_t)
+                    
+                    """ Make sure x_predicted fulfills the constraints """                 
+                    if self.enforce_constraints:     
+                        x_predicted_temp = sim.check_constraints(x_predicted_temp)
+                    predicted_collided = True              
+                    if not sim.is_in_collision([], x_predicted_temp)[0]:                                                                                                    
+                        x_predicted = x_predicted_temp
+                        predicted_collided = False
+                    else:          
+                        for l in xrange(len(x_predicted) / 2, len(x_predicted)):
+                            x_predicted[l] = 0   
                     
                     """
                     Execute path for 1 time step
-                    """
+                    """                    
                     (x_true,                     
                      x_tilde,
                      x_tilde_linear, 
@@ -251,65 +284,238 @@ class HRF:
                                                              0.0,
                                                              0.0,
                                                              max_num_steps=self.max_num_steps)
+                    print "current step " + str(current_step)
+                     
+                    """
+                    Process history entries
+                    """
+                    try:
+                        deviation_covariance = deviation_covariances[len(history_entries) - 1]
+                        estimated_deviation_covariance = estimated_deviation_covariances[len(history_entries) - 1]
+                    except:
+                        print "what: len(deviation_covariances) " + str(len(deviation_covariances))
+                        print "len(history_entries) " + str(len(history_entries))
+                        print "len(xs) " + str(len(xs))
+                    
+                    history_entries[0].set_replanning(True)                        
+                    for l in xrange(len(history_entries)):
+                        try:
+                            history_entries[l].set_estimated_covariance(state_covariances[l])
+                        except:
+                            print "l " + str(l)
+                            print "len(state_covariances) " + str(len(state_covariances))
+                                                    
+                        history_entries[l].serialize(tmp_dir, "log.log")
+                        if history_entries[l].collided:                            
+                            num_collisions += 1                            
+                        linearization_error += history_entries[l].linearization_error
+                    if (current_step == self.max_num_steps) or terminal:
+                        final_states.append(history_entries[-1].x_true)                        
+                        if terminal:
+                            successful_runs += 1
+                        break
                     
                     """
                     Plan new trajectories from predicted state
                     """
-                    path_planner.set_start_and_goal(x_predicted, goal_states, self.goal_position, self.goal_radius)
-                    (xs_new, 
-                     us_new, 
-                     zs_new,
-                     control_durations_new, 
-                     num_generated_paths, 
-                     best_val_new,
-                     state_covariances,
-                     deviation_covariances,
-                     estimated_deviation_covariances, 
-                     mean_gen_times, 
-                     mean_eval_times,
-                     total_gen_times,
-                     total_eval_times) = path_planner.plan_and_evaluate_paths(self.num_paths, 
-                                                                              0, 
-                                                                              current_step, 
-                                                                              self.evaluation_horizon, 
-                                                                              P_predicted,
-                                                                              deviation_covariance,
-                                                                              estimated_deviation_covariance, 
-                                                                              self.timeout)
+                    path_planner.set_start_and_goal(x_predicted, goal_states, self.goal_position, self.goal_radius) 
+                    t0 = time.time()                   
+                    paths = path_planner.plan_paths(self.num_paths, 0, timeout=self.timeout)
+                    num_generated_paths_run += len(paths)                   
                     
                     """
                     Filter update
                     """
-                    x_estimate
-                    P_t
+                    #x_estimate
+                    #P_t
                     
                     """
                     Adjust plan
                     """
-                    
+                    t0 = time.time()
+                    (xs_adj, us_adj, zs_adj, control_durations_adj) = plan_adjuster.adjust_plan(self.robot,
+                                                                                                (xs, us, zs, control_durations),                                                                                                
+                                                                                                x_estimate,
+                                                                                                P_t)                    
+                    mean_planning_time += time.time() - t0
+                    mean_number_planning_steps += 1.0
                     """
-                    Evaluate the adjusted plan
+                    Evaluate the adjusted plan and the planned paths
                     """
+                    if self.is_terminal(xs_adj[-1]) and not len(xs_adj)==1:
+                        """
+                        Only evaluate the adjusted path if it's terminal
+                        """
+                        paths.extend([[xs_adj, us_adj, zs_adj, control_durations_adj]])
+                    (path_index,
+                     xs, 
+                     us, 
+                     zs, 
+                     control_durations, 
+                     objective, 
+                     state_covariances,
+                     deviation_covariances,
+                     estimated_deviation_covariances) = path_evaluator.evaluate_paths(paths, 
+                                                                                      P_t, 
+                                                                                      current_step)
+                    if path_index == None:
+                        """
+                        We couldn't evaluate any paths
+                        """
+                        final_states.append(history_entries[-1].x_true)
+                        break
                     
-                    if best_val_new > best_val_adjusted:
-                        """
-                        We found a better trajectory
-                        """
-                        xs = xs_new
-                        us = us_new
-                        zs = zs_new
-                        control_durations = control_durations_new
-                        x_tilde = np.array([0.0 for i in xrange(2 * self.robot_dof)])
-                    else:
-                        """
-                        The adjusted trajectory is the better one
-                        """
+                    if self.show_viewer_simulation:
+                        self.visualize_paths(self.robot, [xs])    
                     
-                 
+                    #x_tilde = np.array([0.0 for i in xrange(2 * self.robot_dof)])
+                    x_tilde = x_estimate - xs[0]                    
+                rewards_cov.append(total_reward)                
+                self.serializer.write_line("log.log", 
+                                           tmp_dir,
+                                           "Reward: " + str(total_reward) + " \n") 
+                self.serializer.write_line("log.log", 
+                                           tmp_dir,
+                                           "\n")
+                number_of_steps += current_step
+            mean_planning_time_per_step = mean_planning_time / mean_number_planning_steps 
+            mean_planning_time /= self.num_simulation_runs
+                                
+            """ Calculate the distance to goal area
+            """  
+            ee_position_distances = [] 
+            for state in final_states:
+                joint_angles = v_double()
+                joint_angles[:] = [state[y] for y in xrange(len(state) / 2)]
+                ee_position = v_double()
+                self.robot.getEndEffectorPosition(joint_angles, ee_position)
+                ee_position = np.array([ee_position[y] for y in xrange(len(ee_position))])
+                dist = np.linalg.norm(np.array(self.goal_position - ee_position))
+                if dist < self.goal_radius:
+                    dist = 0.0
+                ee_position_distances.append(dist)
+            logging.info("HRF: Done. total_reward is " + str(total_reward))
+            try:
+                n, min_max, mean_distance_to_goal, var, skew, kurt = scipy.stats.describe(np.array(ee_position_distances))
+            except:
+                print ee_position_distances                                         
+                
+            self.serializer.write_line("log.log", tmp_dir, "################################# \n")
+            self.serializer.write_line("log.log",
+                                       tmp_dir,
+                                       "inc_covariance: " + str(self.inc_covariance) + "\n")
+            if self.inc_covariance == "process":                  
+                self.serializer.write_line("log.log",
+                                           tmp_dir,
+                                           "Process covariance: " + str(m_covs[j]) + " \n")
+                self.serializer.write_line("log.log",
+                                           tmp_dir,
+                                           "Observation covariance: " + str(self.min_observation_covariance) + " \n")
+            elif self.inc_covariance == "observation":                    
+                self.serializer.write_line("log.log",
+                                           tmp_dir,
+                                           "Process covariance: " + str(self.min_process_covariance) + " \n")
+                self.serializer.write_line("log.log",
+                                           tmp_dir,
+                                           "Observation covariance: " + str(m_covs[j]) + " \n")
+            mean_linearization_error = linearization_error / number_of_steps
+            number_of_steps /= self.num_simulation_runs
+            self.serializer.write_line("log.log", tmp_dir, "Mean number of steps: " + str(number_of_steps) + " \n")                            
+            self.serializer.write_line("log.log", tmp_dir, "Mean num collisions per run: " + str(float(num_collisions) / float(self.num_simulation_runs)) + " \n")
+            self.serializer.write_line("log.log", 
+                                       tmp_dir, 
+                                       "Average distance to goal area: " + str(mean_distance_to_goal) + " \n")
+            self.serializer.write_line("log.log", tmp_dir, "Num successes: " + str(successful_runs) + " \n")
+            print "succ " + str((100.0 / self.num_simulation_runs) * successful_runs)
+            self.serializer.write_line("log.log", tmp_dir, "Percentage of successful runs: " + str((100.0 / self.num_simulation_runs) * successful_runs) + " \n")
+            self.serializer.write_line("log.log", tmp_dir, "Mean planning time per run: " + str(mean_planning_time) + " \n")
+            self.serializer.write_line("log.log", tmp_dir, "Mean planning time per planning step: " + str(mean_planning_time_per_step) + " \n")
+            
+            n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))
+            print "mean_rewards " + str(mean)
+            #plt.plot_histogram_from_data(rewards_cov)
+            #sleep
+            self.serializer.write_line("log.log", tmp_dir, "Mean rewards: " + str(mean) + " \n")
+            self.serializer.write_line("log.log", tmp_dir, "Reward variance: " + str(var) + " \n")
+            self.serializer.write_line("log.log", tmp_dir, "Mean linearisation error: " + str(mean_linearization_error) + " \n")
+            self.serializer.write_line("log.log", 
+                                       tmp_dir, 
+                                       "Reward standard deviation: " + str(np.sqrt(var)) + " \n")
+            self.serializer.write_line("log.log", tmp_dir, "Seed: " + str(self.seed) + " \n")
+            cmd = "mv " + tmp_dir + "/log.log " + dir + "/log_hrf_" + str(m_covs[j]) + ".log"
+            os.system(cmd)
+        cmd = "cp " + self.abs_path + "/config_hrf.yaml " + dir           
+        os.system(cmd)
+        
+        if not os.path.exists(dir + "/environment"):
+            os.makedirs(dir + "/environment") 
+            
+        cmd = "cp " + self.abs_path + "/" + str(self.environment_file) + " " + str(dir) + "/environment"
+        os.system(cmd) 
+            
+        if not os.path.exists(dir + "/model"):
+            os.makedirs(dir + "/model")
+                
+        cmd = "cp " + self.abs_path + "/" + self.robot_file + " " + dir + "/model"
+        os.system(cmd)
+        print "Done."
+                    
+    def is_terminal(self, x):
+        """
+        Check if x is terminal
+        """
+        state = v_double()
+        state[:] = [x[j] for j in xrange(len(x) / 2)]
+        ee_position_arr = v_double()
+        self.robot.getEndEffectorPosition(state, ee_position_arr)
+        ee_position = np.array([ee_position_arr[j] for j in xrange(len(ee_position_arr))])
+        norm = np.linalg.norm(ee_position - self.goal_position)               
+        if norm - 0.01 <= self.goal_radius:                       
+            return True
+        return False
+      
+    def visualize_x(self, robot, x, color=None):
+        cjvals = v_double()
+        cjvels = v_double()
+        cjvals[:] = [x[i] for i in xrange(len(x) / 2)]
+        cjvels[:] = [x[i] for i in xrange(len(x) / 2, len(x))]
+        particle_joint_values = v2_double()
+        robot.updateViewerValues(cjvals, 
+                                 cjvels, 
+                                 particle_joint_values,
+                                 particle_joint_values)              
+                    
+    def visualize_paths(self, robot, paths, colors=None):
+        robot.removePermanentViewerParticles()        
+        particle_joint_values = v2_double()
+        particle_joint_colors = v2_double()
+        pjvs = []
+        for k in xrange(len(paths)):
+            for p in paths[k]:
+                particle = v_double()
+                particle[:] = [p[i] for i in xrange(len(p) / 2)]
+                pjvs.append(particle)
+                if colors == None:
+                    color = v_double()
+                    color[:] = [0.0, 0.0, 0.0, 0.7]
+                    particle_joint_colors.append(color)        
+                else:
+                    c = v_double()
+                    c[:] = color
+                    particle_joint_colors.append(c)
+                
+        particle_joint_values[:] = pjvs
+        self.robot.addPermanentViewerParticles(particle_joint_values,
+                                               particle_joint_colors)        
+        
+                    
         
     def init_serializer(self):        
         self.serializer = Serializer()
         self.serializer.create_temp_dir(self.abs_path, "hrf")
+        
+    def setup_viewer(self, robot):
+        robot.setupViewer(model_file, env_file)
         
     def init_robot(self, urdf_model_file):
         self.robot = Robot(self.abs_path + "/" + urdf_model_file)
@@ -319,7 +525,7 @@ class HRF:
         """ Setup operations """
         self.robot_dof = self.robot.getDOF()        
         if len(self.start_state) != 2 * self.robot_dof:
-            logging.error("MPC: Start state dimension doesn't fit to the robot state space dimension")
+            logging.error("HRF: Start state dimension doesn't fit to the robot state space dimension")
             return False
         return True 
     

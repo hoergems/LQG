@@ -2,7 +2,7 @@
 seed: -1
 
 # Number of cores used for parallel path construction and evaluation
-num_cores: 4
+num_cores: 8
 
 # Verbose output
 verbose: False
@@ -26,7 +26,7 @@ path_timeout: 100.0
 use_linear_path: False
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 50
+num_simulation_runs: 2
 
 # Maximum angular velocity of the joints for the kinematic problem (in rad/sec)
 max_velocity: 4.0
@@ -47,10 +47,10 @@ num_bins: 201
 #################################################
 # The error variables are defined as the standard deviation in percentage of the value range
 # The minimum joint state covariance
-min_process_covariance: 0.0
+min_process_covariance: 1.0
 
 # The maximum joint state covariance
-max_process_covariance: 10.0
+max_process_covariance: 2.0
 
 # The minimum observation covariance
 min_observation_covariance: 0.1
@@ -63,7 +63,7 @@ max_observation_covariance: 10.0
 inc_covariance: process
 
 # The number of covariance steps
-covariance_steps: 10
+covariance_steps: 2
 
 path_deviation_cost: 500.0
 
@@ -122,7 +122,7 @@ control_sampler: discrete
 num_control_samples: 1
 
 min_control_duration: 1
-max_control_duration: 1
+max_control_duration: 4
 
 # The RRT goal bias
 rrt_goal_bias: 0.05
@@ -135,7 +135,7 @@ add_intermediate_states: True
 # Visualization
 #########################################
 show_viewer_evaluation: False
-show_viewer_simulation: False
+show_viewer_simulation: True
 
 ######## MPC parameters ############
 # The number of steps a path gets evaluated for (-1 => Evaluate full path)
@@ -151,5 +151,5 @@ num_execution_steps: 10000
 replan_when_colliding: True
 
 # Maximum allowed planning time per step in seconds
-timeout: 180.0
+timeout: 1.0
 

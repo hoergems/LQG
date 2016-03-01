@@ -140,7 +140,7 @@ class PathEvaluator:
     def get_expected_state_reward(self, mean, cov):
         with self.mutex:
             np.random.seed()
-        samples = self.sample_valid_states(mean, cov, self.sample_size)
+        samples = self.sample_valid_states(mean, cov, self.sample_size)        
         pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True)
         if np.isscalar(pdf):            
             pdf = [pdf]
@@ -261,10 +261,15 @@ class PathEvaluator:
                         time.sleep(0.00001)
                 jobs.clear()
                 q_size = eval_queue.qsize()
-                for j in xrange(q_size):                     
-                    evaluated_paths.append(eval_queue.get())
+                for j in xrange(q_size):
+                    eval_elem = eval_queue.get()
+                    if eval_elem != None:                   
+                        evaluated_paths.append(eval_elem)
+                    else:
+                        print "Path could not be evaluated"                    
         path_rewards = [evaluated_paths[i][1] for i in xrange(len(evaluated_paths))]               
-        
+        if len(path_rewards) == 0:
+            return (None, None, None, None, None, None, None, None, None)
         best_index = evaluated_paths[0][0]
         best_path = evaluated_paths[0][2]        
         best_objective = path_rewards[0] 
@@ -367,8 +372,12 @@ class PathEvaluator:
         ee_approx_distr = []
         collision_probs = []
         path_rewards = []
-        expected_num_collisions_path = 0  
-        (state_reward, terminal, expected_num_collisions_step, samples) = self.get_expected_state_reward(xs[0], P_t)
+        expected_num_collisions_path = 0 
+        try: 
+            (state_reward, terminal, expected_num_collisions_step, samples) = self.get_expected_state_reward(xs[0], P_t)
+        except:
+            eval_queue.put(None)
+            return
         expected_num_collisions_path += expected_num_collisions_step
         path_rewards.append(np.power(self.discount, current_step) * state_reward)
         Cov = 0 
@@ -414,8 +423,12 @@ class PathEvaluator:
                                  np.hstack((np.zeros((L.shape[0], L.shape[1])), L))))                 
             Cov = np.dot(Gamma_t, np.dot(R_t, Gamma_t.T))                       
             cov_state = np.array([[Cov[j, k] for k in xrange(2 * self.robot_dof)] for j in xrange(2 * self.robot_dof)])
-            estimated_state_covariances.append(cov_state)            
-            (state_reward, terminal, expected_num_collisions_step, samples) = self.get_expected_state_reward(xs[i], cov_state) 
+            estimated_state_covariances.append(cov_state)
+            try:            
+                (state_reward, terminal, expected_num_collisions_step, samples) = self.get_expected_state_reward(xs[i], cov_state)
+            except:
+                eval_queue.put(None)
+                return
             CPi.append(expected_num_collisions_step)
             expected_num_collisions_path += expected_num_collisions_step           
             path_rewards.append(np.power(self.discount, current_step + i) * state_reward)            

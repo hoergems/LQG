@@ -15,7 +15,7 @@ from path_evaluator import PathEvaluator
 from path_planning_interface import PathPlanningInterface
 from libobstacle import Obstacle, Terrain
 import warnings
-import yep
+
 
 class LQG:
     def __init__(self, show_scene, deserialize, append_paths):
@@ -120,10 +120,9 @@ class LQG:
                 #paths = [paths[26]]
             if len(paths) == 0:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
-                t0 = time.time()
-                yep.start('file_name.prof')
+                t0 = time.time()                
                 paths = path_planner.plan_paths(self.num_paths, 0)
-                yep.stop()
+                print paths
                 sleep
                 if len(paths) == 0:
                     logging.error("LQG: Couldn't create any paths within the given time.")

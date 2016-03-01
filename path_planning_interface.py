@@ -215,7 +215,7 @@ class PathPlanningInterface:
                 total_gen_times,
                 total_eval_times)
         
-    def plan_paths(self, num, sim_run, timeout=0.0):
+    def plan_paths(self, num, sim_run, timeout=0.0):        
         queue = Queue() 
         paths = []        
         res_paths = collections.deque()
@@ -242,7 +242,7 @@ class PathPlanningInterface:
                     if len(res_paths) == num:                        
                         breaking = True
                         break
-                    if timeout > 0.0:                        
+                    if timeout > 0.0:                                              
                         if elapsed > timeout:
                             breaking = True
                             break 
@@ -250,7 +250,8 @@ class PathPlanningInterface:
                 pass           
             if breaking:
                 break 
-            time.sleep(0.0001)                 
+            time.sleep(0.0001)
+            elapsed = time.time() - t0                 
         for i in xrange(len(processes)):
             processes[i].terminate()              
         for i in xrange(len(res_paths)):
