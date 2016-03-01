@@ -515,41 +515,6 @@ class Simulator:
     
     def get_linearized_next_state_second_order(self, x_dash, u_dash, control_error):
         pass
-    
-    def predict_state(self, 
-                      x_tilde,
-                      xs0,
-                      xs1, 
-                      u_dash,
-                      us, 
-                      control_duration,
-                      A,
-                      B,
-                      V, 
-                      M,
-                      P_t):        
-        """
-        Predidcts the state at the next time step using an extended kalman filter
-        """
-        x_estimate = x_tilde + xs0
-        u = u_dash + us
-        current_state = v_double()
-        current_state[:] = x_estimate
-        control = v_double()
-        control[:] = u
-        control_error = v_double()
-        control_error[:] = [0.0 for i in xrange(len(u))]
-        result = v_double()
-        self.robot.propagate(current_state,
-                             control,
-                             control_error,
-                             self.simulation_step_size,
-                             control_duration,
-                             result)
-        x_predicted = np.array([result[i] for i in xrange(len(result))])
-        
-        x_tilde_dash, P_dash = kalman.kalman_predict(x_tilde, u_dash, A, B, P_t, V, M)
-        return (x_predicted, P_dash)
        
     def apply_control(self, 
                       x, 
