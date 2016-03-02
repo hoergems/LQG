@@ -236,16 +236,16 @@ class HRF:
                     
                     """ Predict using EKF """
                     (x_predicted_temp, P_predicted) = kalman.predict_state(self.robot,
-                                                                      x_tilde, 
-                                                                      xs[0],                                                                      
-                                                                      us[0], 
-                                                                      control_durations[0],
-                                                                      self.simulation_step_size, 
-                                                                      As[0],
-                                                                      Bs[0],
-                                                                      Vs[0],
-                                                                      Ms[0],
-                                                                      P_t)
+                                                                           x_tilde, 
+                                                                           xs[0],                                                                      
+                                                                           us[0], 
+                                                                           control_durations[0],
+                                                                           self.simulation_step_size, 
+                                                                           As[0],
+                                                                           Bs[0],
+                                                                           Vs[0],
+                                                                           Ms[0],
+                                                                           P_t)
                     
                     """ Make sure x_predicted fulfills the constraints """                 
                     if self.enforce_constraints:     
@@ -254,7 +254,9 @@ class HRF:
                     if not sim.is_in_collision([], x_predicted_temp)[0]:                                                                                                    
                         x_predicted = x_predicted_temp
                         predicted_collided = False
-                    else:          
+                    else: 
+                        print "X_PREDICTED COLLIDES!"
+                        x_predicted = x_estimate         
                         for l in xrange(len(x_predicted) / 2, len(x_predicted)):
                             x_predicted[l] = 0   
                     
@@ -320,7 +322,7 @@ class HRF:
                     """
                     path_planner.set_start_and_goal(x_predicted, goal_states, self.goal_position, self.goal_radius) 
                     t0 = time.time()                   
-                    paths = path_planner.plan_paths(self.num_paths, 0, timeout=self.timeout)
+                    paths = path_planner.plan_paths(self.num_paths, 0, planning_timeout=self.timeout)
                     num_generated_paths_run += len(paths)                   
                     
                     """
@@ -347,6 +349,14 @@ class HRF:
                         Only evaluate the adjusted path if it's terminal
                         """
                         paths.extend([[xs_adj, us_adj, zs_adj, control_durations_adj]])
+                    if len(paths) == 0:
+                        """
+                        Running out of paths
+                        """
+                        print "Error: Couldn't generate an evaluate any paths"
+                        final_states.append(history_entries[-1].x_true)
+                        break
+                    
                     (path_index,
                      xs, 
                      us, 

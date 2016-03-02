@@ -215,7 +215,7 @@ class PathPlanningInterface:
                 total_gen_times,
                 total_eval_times)
         
-    def plan_paths(self, num, sim_run, timeout=0.0):        
+    def plan_paths(self, num, sim_run, planning_timeout=0.0):        
         queue = Queue() 
         paths = []        
         res_paths = collections.deque()
@@ -242,16 +242,16 @@ class PathPlanningInterface:
                     if len(res_paths) == num:                        
                         breaking = True
                         break
-                    if timeout > 0.0:                                              
-                        if elapsed > timeout:
-                            breaking = True
-                            break 
             except:
                 pass           
             if breaking:
                 break 
             time.sleep(0.0001)
-            elapsed = time.time() - t0                 
+            elapsed = time.time() - t0
+            if planning_timeout > 0.0:                                              
+                if elapsed > planning_timeout:
+                    breaking = True
+                    break                  
         for i in xrange(len(processes)):
             processes[i].terminate()              
         for i in xrange(len(res_paths)):
@@ -356,7 +356,7 @@ class PathPlanningInterface:
         ss_vec = v_double()
         ss_vec[:] = self.start_state
         if not path_planner2.isValid(ss_vec):
-            logging.warn("Path planning interface: Start state not valid")            
+            print "Path planning interface: Start state not valid!!!"           
             return [], [], [], [], False
               
         '''
