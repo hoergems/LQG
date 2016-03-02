@@ -130,8 +130,7 @@ class HRF:
                 N = self.calc_covariance_value(self.robot, 
                                                m_covs[j],
                                                N_base, 
-                                               covariance_type='observation')                    
-            P_t = np.array([[0.0 for k in xrange(2 * self.robot_dof)] for l in xrange(2 * self.robot_dof)])
+                                               covariance_type='observation')
             
             path_planner.setup_path_evaluator(A, B, C, D, H, M, N, V, W,                                     
                                               self.robot, 
@@ -191,11 +190,12 @@ class HRF:
                 self.serializer.write_line("log.log", tmp_dir, "RUN #" + str(k + 1) + " \n")
                 current_step = 0
                 x_true = self.start_state
-                x_estimate = self.start_state
+                x_estimated = self.start_state                
                 x_predicted = self.start_state
                 x_tilde = np.array([0.0 for i in xrange(2 * self.robot_dof)])
                 x_tilde_linear = np.array([0.0 for i in xrange(2 * self.robot_dof)])                
                 P_t = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)]) 
+                P_ext_t = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)]) 
                 deviation_covariance = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])
                 estimated_deviation_covariance = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])              
                 total_reward = 0.0
@@ -204,7 +204,7 @@ class HRF:
                 """
                 Obtain a nominal path
                 """
-                path_planner.set_start_and_goal(x_estimate, goal_states, self.goal_position, self.goal_radius)
+                path_planner.set_start_and_goal(x_estimated, goal_states, self.goal_position, self.goal_radius)
                 t0 = time.time()                
                 (xs, 
                  us, 
@@ -226,7 +226,7 @@ class HRF:
                                                                           deviation_covariance,
                                                                           estimated_deviation_covariance, 
                                                                           0.0)
-                while True:
+                while True:                    
                     """
                     Predict system state at t+1 using nominal path
                     """
@@ -236,8 +236,7 @@ class HRF:
                     
                     """ Predict using EKF """
                     (x_predicted_temp, P_predicted) = kalman.predict_state(self.robot,
-                                                                           x_tilde, 
-                                                                           xs[0],                                                                      
+                                                                           x_estimated,                                                                     
                                                                            us[0], 
                                                                            control_durations[0],
                                                                            self.simulation_step_size, 
@@ -245,7 +244,7 @@ class HRF:
                                                                            Bs[0],
                                                                            Vs[0],
                                                                            Ms[0],
-                                                                           P_t)
+                                                                           P_ext_t)
                     
                     """ Make sure x_predicted fulfills the constraints """                 
                     if self.enforce_constraints:     
@@ -256,7 +255,7 @@ class HRF:
                         predicted_collided = False
                     else: 
                         print "X_PREDICTED COLLIDES!"
-                        x_predicted = x_estimate         
+                        x_predicted = x_estimated         
                         for l in xrange(len(x_predicted) / 2, len(x_predicted)):
                             x_predicted[l] = 0   
                     
@@ -266,7 +265,8 @@ class HRF:
                     (x_true,                     
                      x_tilde,
                      x_tilde_linear, 
-                     x_estimate, 
+                     x_estimated_dash,
+                     z, 
                      P_t, 
                      current_step, 
                      total_reward,
@@ -278,7 +278,7 @@ class HRF:
                                                              x_true,                                                                                                                          
                                                              x_tilde,
                                                              x_tilde_linear,
-                                                             x_estimate,
+                                                             x_estimated,
                                                              P_t,
                                                              total_reward,                                                                 
                                                              current_step,
@@ -314,6 +314,7 @@ class HRF:
                     if (current_step == self.max_num_steps) or terminal:
                         final_states.append(history_entries[-1].x_true)                        
                         if terminal:
+                            print "Terminal state reached"
                             successful_runs += 1
                         break
                     
@@ -323,24 +324,40 @@ class HRF:
                     path_planner.set_start_and_goal(x_predicted, goal_states, self.goal_position, self.goal_radius) 
                     t0 = time.time()                   
                     paths = path_planner.plan_paths(self.num_paths, 0, planning_timeout=self.timeout)
-                    num_generated_paths_run += len(paths)                   
+                    mean_planning_time += time.time() - t0
+                    mean_number_planning_steps += 1.0
+                    num_generated_paths_run += len(paths)
                     
                     """
                     Filter update
                     """
-                    #x_estimate
-                    #P_t
+                    (x_estimated_temp, P_ext_t) = kalman.filter_update(x_predicted, P_predicted, z, Hs[0], Ws[0], Ns[0])
+                    
+                    """ Make sure x_estimated fulfills the constraints """                 
+                    if self.enforce_constraints:     
+                        x_estimated_temp = sim.check_constraints(x_estimated_temp)                           
+                    if not sim.is_in_collision([], x_estimated_temp)[0]:                                                                                                    
+                        x_estimated = x_estimated_temp 
+                        history_entries[-1].set_estimate_collided(False)
+                        history_entries[-1].set_colliding_obstacle("")    
+                    else:      
+                        history_entries[-1].set_estimate_collided(True)
+                        history_entries[-1].set_colliding_obstacle(sim.colliding_obstacle.getName())
+                        for l in xrange(len(x_estimated) / 2, len(x_estimated)):
+                            x_estimated[l] = 0
+                    history_entries[-1].set_estimated_state(x_estimated)
                     
                     """
                     Adjust plan
-                    """
-                    t0 = time.time()
+                    """ 
+                    t0 = time.time()                   
                     (xs_adj, us_adj, zs_adj, control_durations_adj) = plan_adjuster.adjust_plan(self.robot,
                                                                                                 (xs, us, zs, control_durations),                                                                                                
-                                                                                                x_estimate,
-                                                                                                P_t)                    
-                    mean_planning_time += time.time() - t0
-                    mean_number_planning_steps += 1.0
+                                                                                                x_estimated,
+                                                                                                P_t)
+                    if self.show_viewer_simulation:
+                        sim.update_viewer(x_true, x_estimated, z, control_duration=0.03, colliding_obstacle=sim.colliding_obstacle)                    
+                    
                     """
                     Evaluate the adjusted plan and the planned paths
                     """
@@ -368,6 +385,7 @@ class HRF:
                      estimated_deviation_covariances) = path_evaluator.evaluate_paths(paths, 
                                                                                       P_t, 
                                                                                       current_step)
+                    mean_planning_time += time.time() - t0
                     if path_index == None:
                         """
                         We couldn't evaluate any paths
@@ -379,7 +397,7 @@ class HRF:
                         self.visualize_paths(self.robot, [xs])    
                     
                     #x_tilde = np.array([0.0 for i in xrange(2 * self.robot_dof)])
-                    x_tilde = x_estimate - xs[0]                    
+                    x_tilde = x_estimated - xs[0]                   
                 rewards_cov.append(total_reward)                
                 self.serializer.write_line("log.log", 
                                            tmp_dir,

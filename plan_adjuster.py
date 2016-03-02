@@ -61,7 +61,7 @@ class PlanAdjuster:
         return u
     
     def adjust_plan(self, 
-                    robot,
+                    robot,                    
                     plan,                                      
                     x_estimated,
                     P_t):

@@ -178,6 +178,7 @@ class Simulator:
         terminal_state_reached = False
         success = False
         collided = False
+        z = None
         x_dash = np.subtract(np.array(x_true), np.array(xs[0]))
         x_dash_linear = np.copy(x_dash)
         x_true_linear = x_true        
@@ -263,7 +264,8 @@ class Simulator:
                 If not, set the true state to the propagated state
                 """
                 collided = False
-                in_collision_true_state, colliding_obstacle = self.is_in_collision(x_true, x_true_temp)                                                    
+                in_collision_true_state, colliding_obstacle = self.is_in_collision(x_true, x_true_temp)
+                self.set_colliding_obstacle(colliding_obstacle)                                                    
                 if in_collision_true_state:
                     for j in xrange(len(x_true) / 2, len(x_true)):
                         x_true[j] = 0.0
@@ -344,11 +346,11 @@ class Simulator:
                 estimated_covariances.append(P_t)
                 
                 """ Update the viewer to display the true state """                       
-                self.update_viewer(x_true,
+                '''self.update_viewer(x_true,
                                    x_estimate, 
                                    z, 
                                    control_durations[i], 
-                                   colliding_obstacle)                
+                                   colliding_obstacle)'''                
                 
                 """ Check if the end-effector position is terminal. If yes, we're done """
                 if self.is_terminal(ee_position):
@@ -405,7 +407,8 @@ class Simulator:
         return (x_true,                 
                 x_tilde,
                 x_dash_linear, 
-                x_estimate, 
+                x_estimate,
+                z, 
                 P_t, 
                 current_step, 
                 total_reward,                
@@ -414,7 +417,8 @@ class Simulator:
                 estimated_covariances,                
                 history_entries) 
         
-       
+    def set_colliding_obstacle(self, colliding_obstacle):
+        self.colliding_obstacle = colliding_obstacle
     
     def check_constraints(self, state):
         """ Checks if a state satisfies the system constraints.

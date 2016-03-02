@@ -85,6 +85,9 @@ class HistoryEntry:
     def set_replanning(self, replanning):
         self.replanning = replanning
         
+    def set_estimated_state(self, estimated_state):
+        self.x_estimate = estimated_state
+        
     def serialize(self, path, file):        
         with open(os.path.join(path, file), 'a') as f:                    
             f.write("t = " + str(self.t) + " \n")

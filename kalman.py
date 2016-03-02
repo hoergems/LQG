@@ -43,9 +43,8 @@ def compute_gain(A, B, C, D, l):
     return Ls
 
 def predict_state(robot,
-                  x_tilde,
-                  xs0,                  
-                  us, 
+                  x_estimated,                  
+                  u, 
                   control_duration,
                   simulation_step_size,
                   A,
@@ -56,11 +55,8 @@ def predict_state(robot,
     """
     Predidcts the state at the next time step using an extended kalman filter
     """
-    x_estimate = x_tilde + xs0
-    u = us
-    u_dash = np.array([0.0 for i in xrange(len(u))])
     current_state = v_double()
-    current_state[:] = x_estimate
+    current_state[:] = x_estimated
     control = v_double()
     control[:] = u
     control_error = v_double()
@@ -74,8 +70,11 @@ def predict_state(robot,
                     result)
     x_predicted = np.array([result[i] for i in xrange(len(result))])
         
-    x_tilde_dash, P_dash = kalman_predict(x_tilde, u_dash, A, B, P_t, V, M)
-    return (x_predicted, P_dash)
+    x_tilde_dash, P_predicted = kalman_predict(x_estimated, u, A, B, P_t, V, M)
+    return (x_predicted, P_predicted)
+
+def filter_update(x_predicted, P_dash, observation, H, W, N):
+    return kalman_update(x_predicted, observation, H, P_dash, W, N)    
 
 def get_linear_model_matrices(robot, 
                               state_path, 
