@@ -35,8 +35,8 @@ max_velocity: 4.0
 control_rate: 30.0
 
 # The initial joint angles (has to be consistent with the number of links)
-start_state: [0.7, 0.0, 1.5, 0.0, 0.0, 0.0]
-#start_state: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+#start_state: [0.7, 0.0, 1.5, 0.0, 0.0, 0.0]
+start_state: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 #Number of bins for the histograms
 num_bins: 201
