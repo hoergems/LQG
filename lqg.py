@@ -121,9 +121,7 @@ class LQG:
             if len(paths) == 0:
                 print "LQG: Generating " + str(self.num_paths) + " paths from the inital state to the goal position..."
                 t0 = time.time()                
-                paths = path_planner.plan_paths(self.num_paths, 0)
-                print paths
-                sleep
+                paths = path_planner.plan_paths(self.num_paths, 0)                
                 if len(paths) == 0:
                     logging.error("LQG: Couldn't create any paths within the given time.")
                     return
@@ -134,7 +132,7 @@ class LQG:
                 if deserialize or append_paths:                    
                     self.serializer.serialize_paths(self.abs_path + "/paths.txt", paths, append_paths, self.robot_dof)                    
                     paths = self.serializer.deserialize_paths(self.abs_path + "/paths.txt", self.robot_dof)
-            
+            return
             """ Determine average path length """
             avg_path_length = self.get_avg_path_length(paths)            
             self.serializer.save_avg_path_lengths(avg_path_length, path=dir)                                       
@@ -227,7 +225,8 @@ class LQG:
                     (x_true, 
                      x_tilde,
                      x_tilde_linear, 
-                     x_estimate, 
+                     x_estimate,
+                     z,
                      P_t, 
                      current_step, 
                      total_reward,

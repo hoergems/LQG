@@ -335,14 +335,15 @@ class HRF:
                     
                     """ Make sure x_estimated fulfills the constraints """                 
                     if self.enforce_constraints:     
-                        x_estimated_temp = sim.check_constraints(x_estimated_temp)                           
-                    if not sim.is_in_collision([], x_estimated_temp)[0]:                                                                                                    
+                        x_estimated_temp = sim.check_constraints(x_estimated_temp) 
+                    in_collision, colliding_obstacle = sim.is_in_collision([], x_estimated_temp)                          
+                    if not in_collision:                                                                                                    
                         x_estimated = x_estimated_temp 
                         history_entries[-1].set_estimate_collided(False)
                         history_entries[-1].set_colliding_obstacle("")    
                     else:      
                         history_entries[-1].set_estimate_collided(True)
-                        history_entries[-1].set_colliding_obstacle(sim.colliding_obstacle.getName())
+                        history_entries[-1].set_colliding_obstacle(colliding_obstacle.getName())
                         for l in xrange(len(x_estimated) / 2, len(x_estimated)):
                             x_estimated[l] = 0
                     history_entries[-1].set_estimated_state(x_estimated)

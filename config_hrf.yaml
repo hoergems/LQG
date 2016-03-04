@@ -47,7 +47,7 @@ num_bins: 201
 #################################################
 # The error variables are defined as the standard deviation in percentage of the value range
 # The minimum joint state covariance
-min_process_covariance: 0.0
+min_process_covariance: 5.0
 
 # The maximum joint state covariance
 max_process_covariance: 5.0
