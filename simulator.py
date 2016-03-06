@@ -253,7 +253,7 @@ class Simulator:
                 x_dash_linear_temp = self.get_linearized_next_state(x_dash, u_dash, ce, As[i], Bs[i], Vs[i])
                 x_true_linear_temp = np.add(x_dash_linear_temp, xs[i+1]) 
                 if self.enforce_constraints:
-                    x_true = self.check_constraints(x_true)
+                    x_true_temp = self.check_constraints(x_true_temp)
                     x_true_linear_temp = self.check_constraints(x_true_linear_temp)
                 
                 """ Calc the linearized next state (used to compare with x_true) """
@@ -266,7 +266,7 @@ class Simulator:
                 collided = False
                 in_collision_true_state, colliding_obstacle = self.is_in_collision(x_true, x_true_temp)
                 self.set_colliding_obstacle(colliding_obstacle)                                                    
-                if in_collision_true_state:
+                if in_collision_true_state:                                 
                     for j in xrange(len(x_true) / 2, len(x_true)):
                         x_true[j] = 0.0
                         x_true_linear[j] = 0.0                   

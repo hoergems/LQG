@@ -13,21 +13,31 @@ from EMD import EMD
 import sets
 import random
 import argparse
-from emd import emd
+#from emd import emd
+from tabulate import tabulate
 
 class PlotStats:
     def __init__(self, dir, save_plots, show_particles, plot_emds):        
         if not os.path.isdir(dir):
             print "Error: Directory doesn't exist"
-            return       
+            return
+        self.cleanup(dir=dir) 
+        self.config_file = glob.glob(os.path.join(dir + "/config_*"))[0]
+              
         self.save = save_plots        
         serializer = Serializer()
         
         if self.setup_robot(dir) and plot_emds:            
             self.plot_emds(show_particles, dir=dir)    
         
+        self.save_estimation_error("estimation_error_stats", dir=dir)
+        self.plot_stat_from_txt_file("estimation_error_stats", "mean_estimation_error", dir=dir)
+        
+        print "sving collision information"
         self.plot_bla(["collided", "Trans: Collision detected"], "collision_stats", dir=dir)
+        print "saving reward information"
         self.plot_bla(["R:"], "reward_stats", dir=dir)
+        self.to_latex_table(dir=dir)
         
         logging.info("Plotting average distance to goal")
         try:        
@@ -86,7 +96,54 @@ class PlotStats:
        
         self.plot_emd_graph(serializer, cart_coords, dir=dir)
         logging.info("PlotStats: plotting histograms...")        
-        self.save_histogram_plots(serializer, cart_coords, dir=dir)'''    
+        self.save_histogram_plots(serializer, cart_coords, dir=dir)'''
+        
+    def cleanup(self, dir="stats"):
+        txtfiles = glob.glob(os.path.join(dir, "*.txt"))
+        for file in txtfiles:
+            print "removing " + file
+            try:
+                os.remove(file)
+            except:
+                pass
+        texfiles = glob.glob(os.path.join(dir, "*.tex"))        
+        for file in txtfiles:
+            try:
+                os.remove(file)
+            except Exception as e:
+                print e
+                pass
+        
+    def to_latex_table(self, dir="stats"):
+        files = glob.glob(os.path.join(dir, "out_*.txt"))
+        print files
+        for file in files:            
+            headers = []
+            table_entries = []
+            latex_filename = file.split("/")[-1].split(".txt")[0] + ".tex" 
+            cov = 0.0           
+            with open(file, "r") as f: 
+                lines = f.readlines()               
+                for i in xrange(len(lines)):
+                    if "alg" in lines[i]:
+                        headers.append(lines[i].strip().split(" ")[1])                        
+                        cov = float(lines[i].strip().split(" ")[2].split(":")[0])
+                        print headers
+                    else:
+                        value_found = False
+                        for k in xrange(len(table_entries)):
+                            if table_entries[k][0] == lines[i].strip().split(":")[0]:
+                                value_found = True
+                                table_entries[k].append(float(lines[i].strip().split(":")[1].strip()))
+                                break
+                        if not len(lines[i].split()) == 0:
+                            if not value_found:
+                                print lines[i].split()
+                                table_entries.append([lines[i].strip().split(":")[0], float(lines[i].strip().split(":")[1].strip())])
+                table = tabulate(table_entries, headers=headers, tablefmt="latex")
+                with open(os.path.join(dir, latex_filename), "a+") as f:
+                    f.write(table)    
+          
         
     def plot_emds(self, show_particles, dir="stats"):        
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
@@ -258,49 +315,72 @@ class PlotStats:
                             lw=3,
                             color_map=color_map,
                             save=self.save,
-                            filename=dir + "/EMD.png")     
-            
-    '''def plot_average_distance_to_goal(self, dir="stats"):
-        files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
-        config_files = glob.glob(os.path.join(os.path.join(dir, "config*.yaml")))
+                            filename=dir + "/EMD.png")
         
+    def save_estimation_error(self, output_file_str, dir="stats", y_label=""):
+        all_log_files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
+        log_files = []
         d = dict()
         m_covs = []
-        
-        cov_str = "Process covariance:"
-        if "observation" in self.inc_covariance:
-            cov_str = "Observation covariance:"
-        for file in sorted(files):
-            file_str = file.split("/")[2].split("_")[1]
-            print file_str
-            if not file_str in d:
-                d[file_str] = []
-            with open(file, "r") as f:                
-                state_arr = None
-                final_states = []
-                for line in f:                                       
-                    if cov_str in line:                        
+        for file in all_log_files:
+            if "hrf" in file or "lqg" in file:
+                log_files.append(file)
+        for file in sorted(log_files):
+            m_cov = float(str(file.split("/")[-1].split("_")[-1].split(".")[0] + "." + str(file.split("/")[-1].split("_")[-1].split(".")[1])))
+            m_covs.append(m_cov)
+        for i in xrange(len(m_covs)):
+            out_files = glob.glob(os.path.join(os.path.join(dir, "out_" + str(output_file_str) + "*")))
+            for out_file in out_files:
+                os.remove(out_file)
+        for file in sorted(log_files):
+            num_runs = 0.0
+            all_vals = []
+            vals = []
+            vals_per_run = []
+            file_str = "alg: " + file.split("/")[-1].split("_")[1]
+            with open(file, "r") as f:
+                for line in f:                    
+                    if "inc_covariance: " in line:                        
+                        inc_covariance = line.rstrip("\n").split(": ")[1]
+                        if inc_covariance == 'process':
+                            cov_str = "Process covariance:"
+                        elif inc_covariance == 'observation':
+                            cov_str = "Observation covariance:" 
+            with open(file, "r") as f:
+                for line in f:
+                    if cov_str in line:                                             
                         m_cov = float(line.split(" ")[2])
-                    elif "S: " in line:
-                        state_arr = line.split(" ")
-                        
-                        state_arr = [float(state_arr[i]) for i in xrange(1, len(state_arr) - 2)]
-                    elif ("RUN #" in line or "inc_covariance: " in line) and state_arr != None:
-                        final_states.append(state_arr)
-                for state in final_states:
-                    joint_angles = v_double()
-                    ee_position = v_double()
-                    joint_angles[:] = [state[i] for i in xrange(len(state)/ 2)]
-                    self.robot.getEndEffectorPosition(joint_angles, ee_position)
-                    ee_position = np.array([ee_position[i] for i in xrange(len(ee_position))])
-                    #print ee_position
-                
-            sleep       
-            if m_cov != -1:                        
-                m_covs.append(m_cov)
-        print m_covs
-            
-        sleep'''
+                    elif ("RUN #" in line or 
+                          "Run #" in line):
+                        num_runs += 1
+                        if len(vals) != 0:
+                            vals_per_run.append(vals)
+                            all_vals.extend(vals)
+                            vals = []
+                    elif "############" in line:
+                        vals_per_run.append(vals)
+                        all_vals.extend(vals)
+                        vals = []
+                    else:
+                        if "S:" in line:                            
+                            state = np.array([float(el) for el in line.split("S: ")[1].strip().split(" ")])                            
+                        elif "S_ESTIMATED:" in line:
+                            estimated_state = np.array([float(el) for el in line.split("S_ESTIMATED: ")[1].strip().split(" ")])
+                            vals.append(np.linalg.norm(state - estimated_state))
+            n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(all_vals))
+            arr = []            
+            for i in xrange(int(num_runs)):                            
+                arr.append(sum(vals_per_run[i]))            
+            n, min_max, mean2, var2, skew, kurt = scipy.stats.describe(np.array(arr))
+            with open(os.path.join(dir, "out_" + str(output_file_str) + "_" + str(m_cov) + ".txt"), "a+") as f:
+                f.write(file_str + " " + str(m_cov) + ": \n")
+                f.write("mean per run: " + str(mean2) + " \n")
+                f.write("variance: " + str(var2) + " \n")
+                f.write("min: " + str(min_max[0]) + " \n")
+                f.write("max: " + str(min_max[1]) + " \n")
+                f.write("skewness: " + str(skew) + " \n")
+                f.write("kurtosis: " + str(kurt) + " \n \n")        
+        
         
     def plot_bla(self, stat_strings, output_file_str, dir="stats", y_label=""):        
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))        
@@ -318,7 +398,7 @@ class PlotStats:
             all_vals = []
             vals = []
             vals_per_run = []
-            file_str = file.split("/")[-1].split("_")[1]
+            file_str = "alg: " + file.split("/")[-1].split("_")[1]
             if not file_str in d:
                 d[file_str] = []           
             with open(file, "r") as f:
@@ -380,7 +460,57 @@ class PlotStats:
                 f.write("kurtosis: " + str(kurt) + " \n \n")
                 #f.write(file_str + " " + str(m_cov) + " " + str(mean) + ", " + str(var) + " \n")
              
+    def plot_stat_from_txt_file(self, stat_str, output_file_str, dir="stats", y_label=""):
+        if y_label == "":
+            y_label = stat_str        
+        possible_files = glob.glob(os.path.join(os.path.join(dir, "*.txt")))
+        files = []
+        stats_sets = []
+        labels = []
+        color_map = []
+        d = dict()
+        for file in sorted(possible_files):
+            if stat_str in file:
+                files.append(file)
+        for file in files:
+            with open(file, "r") as f:
+                cov_val = 0.0               
+                for line in f:                    
+                    if "alg" in line:
+                        alg = line.split(": ")[1].split(" ")[0]                        
+                        cov_val = float(line.split(" ")[2].split(":")[0])                        
+                        if not alg in d:
+                            d[alg] = []                        
+                    if "mean per run:" in line:
+                        val = float(line.split(": ")[1].strip())
+                        d[alg].append([cov_val, val])
+                        
+        m_covs = []
+        min_m = 100000.0
+        max_m = -100000.0
+        for key in d.keys():
+            color_map.append(self.gen_random_color())
+            labels.append(key)
+            stats_sets.append(np.array(d[key]))
+            for i in xrange(len(d[key])):
+                m_covs.append(d[key][i][0])
+                if d[key][i][1] > max_m:
+                    max_m = d[key][i][1]
+                elif d[key][i][1] < min_m:
+                    min_m = d[key][i][1]
+                               
         
+        Plot.plot_2d_n_sets(stats_sets,
+                            labels=labels,
+                            xlabel="joint covariance",
+                            ylabel=y_label,
+                            x_range=[min(m_covs), max(m_covs)],
+                            y_range=[min_m, max_m * 1.05],
+                            show_legend=True,
+                            lw=3,
+                            color_map=color_map,
+                            save=self.save,
+                            filename=dir + "/" + output_file_str + ".png")
         
     def plot_stat(self, stat_str, output_file_str, dir="stats", y_label=""):
         if y_label == "":
@@ -458,6 +588,8 @@ class PlotStats:
                     f.write(string + " \n")
                 f.write("\n")
                  
+        print stats_sets
+        sleep
         Plot.plot_2d_n_sets(stats_sets,
                             labels=labels,
                             xlabel="joint covariance",
@@ -471,11 +603,23 @@ class PlotStats:
                             filename=dir + "/" + output_file_str + ".png")
         
     def setup_robot(self, dir='stats'):
-        robot_files = glob.glob(os.path.join(os.path.join(dir + "/model/", "*.urdf")))
+        robot_filename = "" 
+        with open(self.config_file, "r") as f:
+            for line in f.readlines():
+                if "robot_file:" in line:
+                    if "/" in line:
+                        robot_filename = line.split("/")[1].strip()
+                    else:
+                        robot_filename = line.split(":")[1].strip()
+               
+        robot_files = glob.glob(os.path.join(os.path.join(dir + "/model/", robot_filename)))
         if len(robot_files) == 0:
             logging.error("Robot couldn't be initialized")
             return False
-        self.robot = Robot(robot_files[0]) 
+        print "setting up robot"
+        print robot_files[0]
+        self.robot = Robot(robot_files[0])
+        print "set upt robot" 
         return True
         
     def clear_stats(self):

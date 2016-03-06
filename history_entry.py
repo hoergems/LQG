@@ -1,5 +1,6 @@
 import os
 import glob
+import numpy as np
 
 class HistoryEntry:    
     def __init__(self, 
@@ -21,15 +22,18 @@ class HistoryEntry:
                  reward,
                  estimated_covariance=None):
         self.t = t        
-        self.x_true = x_true
-        self.x_nominal = x_nominal
-        self.x_true_linear = x_true_linear
-        self.x_estimate = x_estimate
-        self.x_dash = x_dash
-        self.x_dash_linear = x_dash_linear
-        self.action = action
-        self.nominal_action = nominal_action
-        self.observation = observation
+        self.x_true = np.array([x_true[i] for i in xrange(len(x_true))])
+        self.x_nominal = np.array([x_nominal[i] for i in xrange(len(x_nominal))])
+        self.x_true_linear = np.array([x_true_linear[i] for i in xrange(len(x_true_linear))])
+        self.x_estimate = np.array([x_estimate[i] for i in xrange(len(x_estimate))])
+        self.x_dash = np.array([x_dash[i] for i in xrange(len(x_dash))])
+        self.x_dash_linear = np.array([x_dash_linear[i] for i in xrange(len(x_dash_linear))])
+        if not action == None:
+            self.action = np.array([action[i] for i in xrange(len(action))])
+        if not nominal_action == None:
+            self.nominal_action = np.array([nominal_action[i] for i in xrange(len(nominal_action))])
+        if not observation == None:
+            self.observation = np.array([observation[i] for i in xrange(len(observation))])
         self.covariance = covariance
         self.collided = collided
         self.estimate_collided = estimate_collided
@@ -44,13 +48,13 @@ class HistoryEntry:
         self.replanning = False
         
     def set_action(self, action):
-        self.action = action
+        self.action = np.array([action[i] for i in xrange(len(action))])
         
     def set_nominal_action(self, nominal_action):
-        self.nominal_action = nominal_action
+        self.nominal_action = np.array([nominal_action[i] for i in xrange(len(nominal_action))])
         
     def set_observation(self, observation):
-        self.observation = observation
+        self.observation = np.array([observation[i] for i in xrange(len(observation))])
         
     def set_reward(self, reward):
         self.reward = reward
@@ -71,22 +75,22 @@ class HistoryEntry:
         self.estimated_covariance = estimated_covariance
         
     def set_s_dash_estimated(self, s_tilde):
-        self.s_tilde = s_tilde
+        self.s_tilde = np.array([s_tilde[i] for i in xrange(len(s_tilde))])
         
     def set_u_dash(self, u_dash):
-        self.u_dash = u_dash
+        self.u_dash = np.array([u_dash[i] for i in xrange(len(u_dash))])
         
     def set_colliding_obstacle(self, obstacle_name):
         self.colliding_obstacle = obstacle_name
         
     def set_colliding_state(self, colliding_state):
-        self.colliding_state = colliding_state
+        self.colliding_state = np.array([colliding_state[i] for i in xrange(len(colliding_state))])
         
     def set_replanning(self, replanning):
         self.replanning = replanning
         
     def set_estimated_state(self, estimated_state):
-        self.x_estimate = estimated_state
+        self.x_estimate = np.array([estimated_state[i] for i in xrange(len(estimated_state))])
         
     def serialize(self, path, file):        
         with open(os.path.join(path, file), 'a') as f:                    

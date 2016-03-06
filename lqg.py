@@ -132,7 +132,7 @@ class LQG:
                 if deserialize or append_paths:                    
                     self.serializer.serialize_paths(self.abs_path + "/paths.txt", paths, append_paths, self.robot_dof)                    
                     paths = self.serializer.deserialize_paths(self.abs_path + "/paths.txt", self.robot_dof)
-            return
+            
             """ Determine average path length """
             avg_path_length = self.get_avg_path_length(paths)            
             self.serializer.save_avg_path_lengths(avg_path_length, path=dir)                                       

@@ -445,7 +445,7 @@ class PathEvaluator:
         '''    
         CP = 1 - product 
         #CP = sum(CPi) 
-        #print "PathEvaluator: Path " + str(index) + " evaluated. Reward: " + str(path_reward) + ", mean num collisions: " + str(expected_num_collisions_path) + " " \
+        print "PathEvaluator: Path " + str(index) + " evaluated. Reward: " + str(path_reward) + ", mean num collisions: " + str(expected_num_collisions_path) + " " \
         #      "CP " + str(CP)
         
         logging.info("========================================")

@@ -12,7 +12,7 @@ SET(PYTHON_MIN_VERSION "2.7.0")
 include(FindPkgConfig)
 
 ####### USER SPECIFIED VARIABLES #########
-set(USE_URDF False)
+set(USE_URDF True)
 
 
 set(CMAKE_PREFIX_PATH "/home/uqmhoerg/home/opt/include")

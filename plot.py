@@ -28,16 +28,20 @@ def plot_2d_n_sets(sets,
         labels=['default' for i in xrange(len(sets))]
     if len(color_map) == 0:
         color_map = ['#000000' for i in xrange(len(sets))]
-    fig = plt.figure()   
+    fig = plt.figure()
+    ax = plt.subplot(111)
     if plot_type == 'lines':
         for i in xrange(len(sets)):
-            if i == idx:                
+            '''if i == idx:                
                 p, = plt.plot(sets[i][:,0], sets[i][:,1], color_map[i], label=labels[i], linewidth=lw)
             else:                
-                p, = plt.plot(sets[i][:,0], sets[i][:,1], color_map[i], label=labels[i], linewidth=lw)
-            ps.append(p)
-        if show_legend:
-            plt.legend(ps)
+                p, = plt.plot(sets[i][:,0], sets[i][:,1], color_map[i], label=labels[i], linewidth=lw)'''
+            #p, = plt.plot(sets[i][:,0], sets[i][:,1], color_map[i], label=labels[i], linewidth=lw)
+            ax.plot(sets[i][:,0], sets[i][:,1], color_map[i], label=labels[i], linewidth=lw)
+            
+            #ps.append(p)
+        '''if show_legend:
+            plt.legend(ps)'''
     else:        
         ax = fig.add_subplot(111)
         for i in xrange(len(sets)):
@@ -48,6 +52,10 @@ def plot_2d_n_sets(sets,
         ax = fig.add_subplot(111)
         circ = plt.Circle((circle[0], circle[1]), radius=circle[2], color='g', fill=True)
         ax.add_patch(circ)
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    ax.legend(loc='upper left', bbox_to_anchor=(1, 1))    
+        
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.xlim([x_range[0], x_range[1]])
