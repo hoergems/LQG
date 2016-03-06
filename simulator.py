@@ -163,9 +163,7 @@ class Simulator:
     def simulate_n_steps(self,
                          xs, us, zs,                         
                          control_durations,
-                         x_true,                                                
-                         x_tilde,
-                         x_tilde_linear,
+                         x_true,
                          x_estimate,
                          P_t,
                          total_reward,                         
@@ -182,6 +180,7 @@ class Simulator:
         x_dash = np.subtract(np.array(x_true), np.array(xs[0]))
         x_dash_linear = np.copy(x_dash)
         x_true_linear = x_true        
+        x_tilde = np.array(x_estimate) - np.array(xs[0])
         As, Bs, Vs, Ms, Hs, Ws, Ns = kalman.get_linear_model_matrices(self.robot, 
                                                                       xs, 
                                                                       us, 
@@ -214,7 +213,12 @@ class Simulator:
                                                     False,
                                                     False,
                                                     False,
-                                                    0.0))
+                                                    0.0)) 
+                x_true_norm = np.array(x_true) / np.linalg.norm(np.array(x_true))
+                x_estimate_norm = np.array(x_estimate) / np.linalg.norm(np.array(x_estimate))                               
+                history_entries[-1].set_estimation_error(np.linalg.norm(np.array(x_true) - np.array(x_estimate)))
+                history_entries[-1].set_estimation_error_normalized(np.linalg.norm(np.array(x_true_norm) - np.array(x_estimate_norm)))
+                
                 current_step += 1
                 history_entries[-1].set_s_dash_estimated(x_tilde)
                 
@@ -265,7 +269,8 @@ class Simulator:
                 """
                 collided = False
                 in_collision_true_state, colliding_obstacle = self.is_in_collision(x_true, x_true_temp)
-                self.set_colliding_obstacle(colliding_obstacle)                                                    
+                self.set_colliding_obstacle(colliding_obstacle)    
+                                                                
                 if in_collision_true_state:                                 
                     for j in xrange(len(x_true) / 2, len(x_true)):
                         x_true[j] = 0.0
@@ -337,7 +342,7 @@ class Simulator:
                 """
                 estimate_collided = True              
                 if not self.is_in_collision([], x_estimate_new)[0]:                                                                                                    
-                    x_estimate = x_estimate_new
+                    x_estimate = x_estimate_new                   
                     estimate_collided = False
                 else:                    
                     for l in xrange(len(x_estimate) / 2, len(x_estimate)):

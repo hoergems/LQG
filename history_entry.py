@@ -46,6 +46,14 @@ class HistoryEntry:
         self.colliding_obstacle = None
         self.colliding_state = None
         self.replanning = False
+        self.estimation_error = None
+        self.estimation_error_normalized = None
+        
+    def set_estimation_error(self, estimation_error):
+        self.estimation_error = estimation_error
+        
+    def set_estimation_error_normalized(self, estimation_error):
+        self.estimation_error_normalized = estimation_error
         
     def set_action(self, action):
         self.action = np.array([action[i] for i in xrange(len(action))])
@@ -208,6 +216,20 @@ class HistoryEntry:
             if not self.terminal:
                 term_string = "Terminal: false"
             f.write(term_string + " \n")
+            
+            err_string = "Estimation error: "
+            if not self.estimation_error == None:
+                err_string += str(self.estimation_error)
+            else:
+                err_string += "None"
+            f.write(err_string + " \n")
+            
+            err_string = "Estimation error normalized: "
+            if not self.estimation_error == None:
+                err_string += str(self.estimation_error_normalized)
+            else:
+                err_string += "None"
+            f.write(err_string + " \n")
             
             err_string = "Linearization error: " + str(self.linearization_error)
             f.write(err_string + " \n")

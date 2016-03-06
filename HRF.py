@@ -190,10 +190,9 @@ class HRF:
                 self.serializer.write_line("log.log", tmp_dir, "RUN #" + str(k + 1) + " \n")
                 current_step = 0
                 x_true = self.start_state
-                x_estimated = self.start_state                
-                x_predicted = self.start_state
-                x_tilde = np.array([0.0 for i in xrange(2 * self.robot_dof)])
-                x_tilde_linear = np.array([0.0 for i in xrange(2 * self.robot_dof)])                
+                x_estimated = self.start_state 
+                #x_estimated[0] = 0.4             
+                x_predicted = self.start_state                               
                 P_t = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)]) 
                 P_ext_t = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)]) 
                 deviation_covariance = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])
@@ -226,7 +225,8 @@ class HRF:
                                                                           deviation_covariance,
                                                                           estimated_deviation_covariance, 
                                                                           0.0)
-                while True:                    
+                while True: 
+                    print "current step " + str(current_step)       
                     """
                     Predict system state at t+1 using nominal path
                     """
@@ -275,9 +275,7 @@ class HRF:
                      estimated_c,
                      history_entries) = sim.simulate_n_steps(xs, us, zs,
                                                              control_durations,
-                                                             x_true,                                                                                                                          
-                                                             x_tilde,
-                                                             x_tilde_linear,
+                                                             x_true,
                                                              x_estimated,
                                                              P_t,
                                                              total_reward,                                                                 
@@ -286,11 +284,11 @@ class HRF:
                                                              0.0,
                                                              0.0,
                                                              max_num_steps=self.max_num_steps)
-                    print "current step " + str(current_step)
+                                        
                      
                     """
                     Process history entries
-                    """
+                    """                    
                     try:
                         deviation_covariance = deviation_covariances[len(history_entries) - 1]
                         estimated_deviation_covariance = estimated_deviation_covariances[len(history_entries) - 1]
@@ -299,24 +297,26 @@ class HRF:
                         print "len(history_entries) " + str(len(history_entries))
                         print "len(xs) " + str(len(xs))
                     
-                    history_entries[0].set_replanning(True)                        
+                    history_entries[0].set_replanning(True)                                           
                     for l in xrange(len(history_entries)):
                         try:
                             history_entries[l].set_estimated_covariance(state_covariances[l])
                         except:
                             print "l " + str(l)
-                            print "len(state_covariances) " + str(len(state_covariances))
-                                                    
-                        history_entries[l].serialize(tmp_dir, "log.log")
+                            print "len(state_covariances) " + str(len(state_covariances))                                                   
+                        
                         if history_entries[l].collided:                            
                             num_collisions += 1                            
                         linearization_error += history_entries[l].linearization_error
                     if (current_step == self.max_num_steps) or terminal:
+                        for l in xrange(len(history_entries)):                            
+                            history_entries[l].serialize(tmp_dir, "log.log")
                         final_states.append(history_entries[-1].x_true)                        
                         if terminal:
                             print "Terminal state reached"
                             successful_runs += 1
                         break
+                    
                     
                     """
                     Plan new trajectories from predicted state
@@ -338,7 +338,7 @@ class HRF:
                         x_estimated_temp = sim.check_constraints(x_estimated_temp) 
                     in_collision, colliding_obstacle = sim.is_in_collision([], x_estimated_temp)                          
                     if not in_collision:                                                                                                    
-                        x_estimated = x_estimated_temp 
+                        x_estimated = x_estimated_temp                         
                         history_entries[-1].set_estimate_collided(False)
                         history_entries[-1].set_colliding_obstacle("")    
                     else:      
@@ -346,8 +346,8 @@ class HRF:
                         history_entries[-1].set_colliding_obstacle(colliding_obstacle.getName())
                         for l in xrange(len(x_estimated) / 2, len(x_estimated)):
                             x_estimated[l] = 0
-                    history_entries[-1].set_estimated_state(x_estimated)
                     
+                    history_entries[-1].serialize(tmp_dir, "log.log")
                     """
                     Adjust plan
                     """ 
@@ -357,7 +357,7 @@ class HRF:
                                                                                                 x_estimated,
                                                                                                 P_t)
                     if self.show_viewer_simulation:
-                        sim.update_viewer(x_true, x_estimated, z, control_duration=0.03, colliding_obstacle=sim.colliding_obstacle)                    
+                        sim.update_viewer(x_true, x_estimated, z, control_duration=0.03, colliding_obstacle=sim.colliding_obstacle)
                     
                     """
                     Evaluate the adjusted plan and the planned paths
@@ -396,9 +396,7 @@ class HRF:
                     
                     if self.show_viewer_simulation:
                         self.visualize_paths(self.robot, [xs])    
-                    
-                    #x_tilde = np.array([0.0 for i in xrange(2 * self.robot_dof)])
-                    x_tilde = x_estimated - xs[0]                   
+                                                 
                 rewards_cov.append(total_reward)                
                 self.serializer.write_line("log.log", 
                                            tmp_dir,
