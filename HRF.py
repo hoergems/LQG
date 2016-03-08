@@ -198,7 +198,7 @@ class HRF:
                 deviation_covariance = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])
                 estimated_deviation_covariance = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])              
                 total_reward = 0.0
-                terminal = False
+                terminal = False                
                 
                 """
                 Obtain a nominal path
@@ -326,7 +326,7 @@ class HRF:
                     paths = path_planner.plan_paths(self.num_paths, 0, planning_timeout=self.timeout)
                     mean_planning_time += time.time() - t0
                     mean_number_planning_steps += 1.0
-                    num_generated_paths_run += len(paths)
+                    num_generated_paths_run += len(paths)                    
                     
                     """
                     Filter update
@@ -407,6 +407,7 @@ class HRF:
                 number_of_steps += current_step
             mean_planning_time_per_step = mean_planning_time / mean_number_planning_steps 
             mean_planning_time /= self.num_simulation_runs
+            mean_num_generated_paths_step = num_generated_paths_run / mean_number_planning_steps
                                 
             """ Calculate the distance to goal area
             """  
@@ -447,7 +448,8 @@ class HRF:
                                            "Observation covariance: " + str(m_covs[j]) + " \n")
             mean_linearization_error = linearization_error / number_of_steps
             number_of_steps /= self.num_simulation_runs
-            self.serializer.write_line("log.log", tmp_dir, "Mean number of steps: " + str(number_of_steps) + " \n")                            
+            self.serializer.write_line("log.log", tmp_dir, "Mean number of steps: " + str(number_of_steps) + " \n") 
+            self.serializer.write_line("log.log", tmp_dir, "Mean number of generated paths per step: " + str(mean_num_generated_paths_step) + " \n")                            
             self.serializer.write_line("log.log", tmp_dir, "Mean num collisions per run: " + str(float(num_collisions) / float(self.num_simulation_runs)) + " \n")
             self.serializer.write_line("log.log", 
                                        tmp_dir, 
