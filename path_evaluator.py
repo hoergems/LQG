@@ -141,11 +141,11 @@ class PathEvaluator:
         with self.mutex:
             np.random.seed()
         samples = self.sample_valid_states(mean, cov, self.sample_size)        
-        pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True)
+        '''pdf = multivariate_normal.pdf(samples, mean, cov, allow_singular=True)
         if np.isscalar(pdf):            
             pdf = [pdf]
         else:
-            pdf /= sum(pdf)                
+            pdf /= sum(pdf)'''                
         expected_reward = 0.0
         expected_reward2 = 0.0
         num_collisions = 0
@@ -159,8 +159,7 @@ class PathEvaluator:
             collision_objects = self.robot.createRobotCollisionObjects(joint_angles)
             for obstacle in self.obstacles:
                 if obstacle.inCollisionDiscrete(collision_objects) and not obstacle.isTraversable():
-                    expected_reward -= self.collision_penalty 
-                    #expected_reward2 -= pdf[i] * self.collision_penalty                      
+                    expected_reward -= self.collision_penalty                                         
                     collides = True
                     num_collisions += 1
                     break

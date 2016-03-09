@@ -23,6 +23,11 @@ class PlotStats:
             return
         self.cleanup(dir=dir) 
         self.config_file = glob.glob(os.path.join(dir + "/config_*"))[0]
+        
+        self.color_dict = dict()
+        self.color_dict["abt"] = "#ff0000"
+        self.color_dict["lqg"] = "#00ff00"
+        self.color_dict["hrf"] = "#0000ff"
               
         self.save = save_plots        
         serializer = Serializer()
@@ -489,7 +494,11 @@ class PlotStats:
         min_m = 100000.0
         max_m = -100000.0
         for key in d.keys():
-            color_map.append(self.gen_random_color())
+            if key in self.color_dict:
+                color_map.append(self.color_dict[key])
+            else:
+                color_map.append(self.gen_random_color())
+            
             labels.append(key)
             stats_sets.append(np.array(d[key]))
             for i in xrange(len(d[key])):
@@ -562,9 +571,13 @@ class PlotStats:
             if m_cov != -1:                        
                 m_covs.append(m_cov)
                 num_succ_runs.append(succ)
-                d[file_str].append([m_cov, succ])        
+                d[file_str].append([m_cov, succ])             
         for k in d:
-            color_map.append(self.gen_random_color())
+            if k in self.color_dict:
+                color_map.append(self.color_dict[k])
+            else:
+                color_map.append(self.gen_random_color())
+            
             from operator import itemgetter            
             d[k] = sorted(d[k], key=itemgetter(0))
             d[k] = [np.array(d[k][i]) for i in xrange(len(d[k]))]
@@ -586,10 +599,8 @@ class PlotStats:
                 for j in xrange(len(stats_sets[i])):
                     string = str(stats_sets[i][j][0]) + ", "  + str(stats_sets[i][j][1])
                     f.write(string + " \n")
-                f.write("\n")
-                 
-        print stats_sets
-        sleep
+                f.write("\n")                 
+        
         Plot.plot_2d_n_sets(stats_sets,
                             labels=labels,
                             xlabel="joint covariance",
