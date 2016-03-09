@@ -323,7 +323,7 @@ class HRF:
                     """
                     path_planner.set_start_and_goal(x_predicted, goal_states, self.goal_position, self.goal_radius) 
                     t0 = time.time()                   
-                    paths = path_planner.plan_paths(self.num_paths, 0, planning_timeout=self.timeout)
+                    paths = path_planner.plan_paths(self.num_paths, 0, planning_timeout=self.timeout, min_num_paths=0)
                     mean_planning_time += time.time() - t0
                     mean_number_planning_steps += 1.0
                     num_generated_paths_run += len(paths)                    
@@ -340,10 +340,10 @@ class HRF:
                     if not in_collision:                                                                                                    
                         x_estimated = x_estimated_temp                         
                         history_entries[-1].set_estimate_collided(False)
-                        history_entries[-1].set_colliding_obstacle("")    
+                        #history_entries[-1].set_colliding_obstacle("")    
                     else:      
                         history_entries[-1].set_estimate_collided(True)
-                        history_entries[-1].set_colliding_obstacle(colliding_obstacle.getName())
+                        #history_entries[-1].set_colliding_obstacle(colliding_obstacle.getName())
                         for l in xrange(len(x_estimated) / 2, len(x_estimated)):
                             x_estimated[l] = 0
                     
@@ -362,9 +362,10 @@ class HRF:
                     """
                     Evaluate the adjusted plan and the planned paths
                     """
-                    if self.is_terminal(xs_adj[-1]) and not len(xs_adj)==1:
+                    #if self.is_terminal(xs_adj[-1]) and not len(xs_adj)==1:
+                    if not len(xs_adj)<=1:
                         """
-                        Only evaluate the adjusted path if it's terminal
+                        Only evaluate the adjusted path if it's > 1
                         """
                         paths.extend([[xs_adj, us_adj, zs_adj, control_durations_adj]])
                     if len(paths) == 0:

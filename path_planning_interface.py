@@ -215,7 +215,7 @@ class PathPlanningInterface:
                 total_gen_times,
                 total_eval_times)
         
-    def plan_paths(self, num, sim_run, planning_timeout=0.0):        
+    def plan_paths(self, num, sim_run, planning_timeout=0.0, min_num_paths=0):        
         queue = Queue() 
         paths = []        
         res_paths = collections.deque()
@@ -249,7 +249,8 @@ class PathPlanningInterface:
             time.sleep(0.0001)
             elapsed = time.time() - t0
             if planning_timeout > 0.0:                                              
-                if elapsed > planning_timeout:
+                if elapsed > planning_timeout and len(res_paths) >= min_num_paths:
+                    print "timeout"
                     breaking = True
                     break                  
         for i in xrange(len(processes)):
@@ -299,12 +300,10 @@ class PathPlanningInterface:
                 time.sleep(0.1)       
     
     def construct_path(self, robot, obstacles, queue, process_num):
-        while True:
-            #xs = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0] for i in xrange(10)]
-            #us = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0] for i in xrange(10)]
-            #zs = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0] for i in xrange(10)]                     
+        while True:                              
             xs, us, zs, control_durations, success = self._construct(robot, obstacles)
             if (not success):
+                print "Unsuccessful. breaking"
                 break;
             if not len(xs) == 0:                              
                 queue.put((xs, us, zs, control_durations))
@@ -369,7 +368,7 @@ class PathPlanningInterface:
                 gs.append(goal_state)            
                               
         if len(gs) == 0:
-            logging.warn("PathPlanningInterface: No valid goal states")                        
+            print "PathPlanningInterface: ERROR: No valid goal states"                        
             return [], [], [], [], False               
         goal_states[:] = gs 
         
@@ -389,26 +388,7 @@ class PathPlanningInterface:
             xs.append([xs_temp[i][j] for j in xrange(0, 2 * self.robot_dof)])
             us.append([xs_temp[i][j] for j in xrange(2 * self.robot_dof, 3 * self.robot_dof)])
             zs.append([xs_temp[i][j] for j in xrange(3 * self.robot_dof, 5 * self.robot_dof)])
-            
-            control_durations.append(xs_temp[i][5 * self.robot_dof])        
-        '''if self.dynamic_problem:
-            all_states = v2_double()
-            print "getting all states"
-            path_planner2.getAllStates(all_states)
-            print "got all states " + str(len(all_states))
-            plot_states_states = [np.array(all_states[i][0:3]) for i in xrange(len(all_states))]
-            plot_states_velocities = [np.array(all_states[i][3:6]) for i in xrange(len(all_states))]
-            from plot import plot_3d_points
-            scale = [-np.pi - 0.01, np.pi + 0.01]
-            scale2 = [-11, 11]
-            plot_3d_points(np.array(plot_states_states),
-                           scale,
-                           scale,
-                           scale)
-            plot_3d_points(np.array(plot_states_velocities),
-                           scale2,
-                           scale2,
-                           scale2)'''      
+            control_durations.append(xs_temp[i][5 * self.robot_dof])
         return xs, us, zs, control_durations, True
     
 if __name__ == "__main__":
