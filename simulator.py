@@ -31,7 +31,8 @@ class Simulator:
                       joint_velocity_limit,                      
                       show_viewer,
                       model_file,
-                      env_file):
+                      env_file,
+                      knows_collision):
         self.A = A
         self.B = B
         self.C = C
@@ -73,7 +74,8 @@ class Simulator:
         self.show_viewer = show_viewer
         active_joints = v_string()
         self.robot.getActiveJoints(active_joints)
-        self.robot_dof = self.robot.getDOF()      
+        self.robot_dof = self.robot.getDOF()
+        self.knows_collision = knows_collision      
         if show_viewer:
             self.robot.setupViewer(model_file, env_file)               
         
@@ -280,14 +282,17 @@ class Simulator:
                 in_collision_true_state, colliding_obstacle = self.is_in_collision(x_true, x_true_temp)
                 self.set_colliding_obstacle(colliding_obstacle)    
                                                                 
-                if in_collision_true_state:                                 
+                if in_collision_true_state or current_step == 7:                                                 
                     for j in xrange(len(x_true) / 2, len(x_true)):
                         x_true[j] = 0.0
                         x_true_linear[j] = 0.0                   
                     logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
                     total_reward += discount * (-1.0 * self.illegal_move_penalty)
                     history_entries[-1].set_reward(discount * (-1.0 * self.illegal_move_penalty))
-                    history_entries[-1].set_colliding_obstacle(colliding_obstacle.getName())
+                    try:
+                        history_entries[-1].set_colliding_obstacle(colliding_obstacle.getName())
+                    except:
+                        pass
                     history_entries[-1].set_colliding_state(x_true_temp)
                     collided = True
                     """ Calculate the state deviation from the nominal path """                           
@@ -339,7 +344,7 @@ class Simulator:
                                                     Ws[i], 
                                                     Ns[i])
                 
-                """ x_estimate_new is the estimated state """                            
+                """ x_estimate_new is the estimated state """                                    
                 x_estimate_new = x_tilde + xs[i + 1]
                 
                 """ Enforce the constraints to the estimated state """
@@ -350,13 +355,25 @@ class Simulator:
                 If yes, set it to the previous estimate (with velicity 0).
                 If no, set the true estimate to this estimate 
                 """
-                estimate_collided = True              
-                if not self.is_in_collision([], x_estimate_new)[0]:                                                                                                    
+                estimate_collided = True
+                if self.is_in_collision([], x_estimate_new)[0]:
+                    for l in xrange(len(x_estimate) / 2, len(x_estimate)):
+                        x_estimate[l] = 0
+                elif in_collision_true_state and self.knows_collision:
+                    for l in xrange(len(x_estimate) / 2, len(x_estimate)):
+                        x_estimate[l] = 0
+                else:
+                    x_estimate = x_estimate_new                   
+                    estimate_collided = False
+                    
+                                      
+                '''if not self.is_in_collision([], x_estimate_new)[0]:                                                                                                    
                     x_estimate = x_estimate_new                   
                     estimate_collided = False
                 else:                    
                     for l in xrange(len(x_estimate) / 2, len(x_estimate)):
-                        x_estimate[l] = 0                                          
+                        x_estimate[l] = 0'''
+                                                          
                 estimated_states.append(x_estimate)
                 estimated_covariances.append(P_t)
                 

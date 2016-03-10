@@ -149,7 +149,8 @@ class HRF:
                               self.max_velocity,                                  
                               self.show_viewer_simulation,
                               self.robot_file,
-                              self.environment_file)
+                              self.environment_file,
+                              self.knows_collision)
             path_evaluator.setup(A, B, C, D, H, M, N, V, W,                                     
                                  self.robot, 
                                  self.sample_size, 
@@ -231,7 +232,7 @@ class HRF:
                     '''if current_step == 7:
                         x_true = np.array([last_x_true[k] for k in xrange(len(last_x_true))])
                         for k in xrange(len(last_x_true) / 2, len(last_x_true)):
-                            last_x_true[k] = 0.0 '''  
+                            last_x_true[k] = 0.0'''   
                     """
                     Predict system state at t+1 using nominal path
                     """
@@ -343,8 +344,18 @@ class HRF:
                     """ Make sure x_estimated fulfills the constraints """                 
                     if self.enforce_constraints:     
                         x_estimated_temp = sim.check_constraints(x_estimated_temp) 
-                    in_collision, colliding_obstacle = sim.is_in_collision([], x_estimated_temp)                          
-                    if not in_collision:                                                                                                    
+                    in_collision, colliding_obstacle = sim.is_in_collision([], x_estimated_temp)
+                    if in_collision:
+                        history_entries[-1].set_estimate_collided(True)                        
+                        for l in xrange(len(x_estimated) / 2, len(x_estimated)):
+                            x_estimated[l] = 0
+                    elif history_entries[-1].collided and self.knows_collision:
+                        for l in xrange(len(x_estimated) / 2, len(x_estimated)):
+                            x_estimated[l] = 0
+                    else:
+                        x_estimated = x_estimated_temp                         
+                        history_entries[-1].set_estimate_collided(False)                        
+                    '''if not in_collision:                                                                                                    
                         x_estimated = x_estimated_temp                         
                         history_entries[-1].set_estimate_collided(False)
                         #history_entries[-1].set_colliding_obstacle("")    
@@ -352,7 +363,7 @@ class HRF:
                         history_entries[-1].set_estimate_collided(True)
                         #history_entries[-1].set_colliding_obstacle(colliding_obstacle.getName())
                         for l in xrange(len(x_estimated) / 2, len(x_estimated)):
-                            x_estimated[l] = 0
+                            x_estimated[l] = 0'''
                     
                     history_entries[-1].serialize(tmp_dir, "log.log")
                     """
@@ -690,6 +701,7 @@ class HRF:
         self.num_cores = config['num_cores']
         self.replan_when_colliding = config['replan_when_colliding']
         self.acceleration_limit = config['acceleration_limit']
+        self.knows_collision = config['knows_collision']
 
 if __name__ == "__main__":
     HRF()
