@@ -47,6 +47,7 @@ class Play:
         if not self.init_environment():
             return
         print "PLAY"
+        
         self.user_input = user_input
         self.play_runs(dir, 
                        algorithm, 
@@ -249,12 +250,12 @@ class Play:
                             break
             except:
                 pass
-            
-           
                          
-            time.sleep(0.3)
+            
             if self.user_input:
                 raw_input("Press Enter to continue...")
+            else:
+                time.sleep(1.0)
             
     def is_in_collision(self, previous_state, state):
         """
