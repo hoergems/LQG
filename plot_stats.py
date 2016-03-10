@@ -13,7 +13,7 @@ from EMD import EMD
 import sets
 import random
 import argparse
-#from emd import emd
+from emd import emd
 from tabulate import tabulate
 
 class PlotStats:
@@ -21,28 +21,30 @@ class PlotStats:
         if not os.path.isdir(dir):
             print "Error: Directory doesn't exist"
             return
-        self.cleanup(dir=dir) 
+        self.cleanup(dir=dir)
         self.config_file = glob.glob(os.path.join(dir + "/config_*"))[0]
-        
         self.color_dict = dict()
         self.color_dict["abt"] = "#ff0000"
         self.color_dict["lqg"] = "#00ff00"
-        self.color_dict["hrf"] = "#0000ff"
+        self.color_dict["hrf"] = "#0000ff"        
               
         self.save = save_plots        
         serializer = Serializer()
         
         if self.setup_robot(dir) and plot_emds:            
-            self.plot_emds(show_particles, dir=dir)    
+            self.plot_emds(show_particles, dir=dir)
+        #self.plot_estimate_error_normalized(dir=dir)    
         
         self.save_estimation_error("estimation_error_stats", dir=dir)
+        self.plot_number_of_steps_stats("num_step_stats", dir=dir)
         self.plot_stat_from_txt_file("estimation_error_stats", "mean_estimation_error", dir=dir)
         
-        print "sving collision information"
+        print "saving collision information"
         self.plot_bla(["collided", "Trans: Collision detected"], "collision_stats", dir=dir)
         print "saving reward information"
-        self.plot_bla(["R:"], "reward_stats", dir=dir)
+        self.plot_bla(["Reward:"], "reward_stats", dir=dir)
         self.to_latex_table(dir=dir)
+        
         
         logging.info("Plotting average distance to goal")
         try:        
@@ -75,6 +77,9 @@ class PlotStats:
               
         logging.info("Plotting mean planning times")
         self.plot_stat("Mean planning time", "mean_planning_time", dir=dir)
+        
+        logging.info("Plotting mean num generated paths per step")
+        self.plot_stat("Mean number of generated paths per step", "mean_num_generated_paths_per_step", dir=dir)
         
         logging.info("Plotting mean number of collisions per run") 
         self.plot_stat("Mean num collisions per run", "mean_num_collision_per_run", dir=dir)
@@ -118,12 +123,65 @@ class PlotStats:
             except Exception as e:
                 print e
                 pass
+            
+    ##################################################################################
+    def plot_estimate_error_normalized(self, dir="stats"):
+        files = glob.glob(os.path.join(dir, "log*.log"))
+        file = files[0]
+        stats_sets = []
+        set_1 = []
+        labels = ["hfr"]
+        min_e = 1000000000000
+        max_e = -1000000000000
+        n = 0
+        color_map = [self.color_dict["hrf"]]
+        with open(file, "r") as f:
+            lines = f.readlines() 
+            
+            for i in xrange(len(lines)):                
+                if "Estimation error normalized:" in lines[i]: 
+                    try:       
+                        err = float(lines[i].split(":")[1].strip())
+                        if err < min_e:
+                            min_e = err
+                        if err > max_e:
+                            max_e = err       
+                        elem = [n, err]
+                        n+=1
+                        set_1.append(elem)
+                    except:
+                        pass
+                    
+        stats_sets.append(np.array(set_1))
+        print stats_sets
+                    
+        Plot.plot_2d_n_sets(stats_sets,
+                            labels=labels,
+                            xlabel="step",
+                            ylabel="estimation error joint angles",
+                            x_range=[0, n],
+                            y_range=[min_e, max_e * 1.05],
+                            show_legend=False,
+                            lw=3,
+                            color_map=color_map,
+                            save=self.save,
+                            filename=dir + "/estimation_error.png")
+        sleep
+    ##################################################################################
+    
+    def to_latex_table_reward_stats(self, dir="stats"):
+        files_temp = glob.glob(os.path.join(dir, "out_*.txt")) 
+        files = []
+        for file in files_temp:
+            if "reward" in file:
+                files.append(file)
+        print files
         
     def to_latex_table(self, dir="stats"):
-        files = glob.glob(os.path.join(dir, "out_*.txt"))
-        print files
+        files = glob.glob(os.path.join(dir, "out_*.txt"))       
+               
         for file in files:            
-            headers = []
+            headers = [0.1]
             table_entries = []
             latex_filename = file.split("/")[-1].split(".txt")[0] + ".tex" 
             cov = 0.0           
@@ -152,7 +210,7 @@ class PlotStats:
         
     def plot_emds(self, show_particles, dir="stats"):        
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
-        files = [files[i] for i in xrange(len(files)) if not "abt" in files[i]]
+        files = [files[i] for i in xrange(len(files)) if not "abt" in files[i] and not "hrf" in files[i]]
         
         d = dict()
         d["lqg"] = [] 
@@ -183,8 +241,9 @@ class PlotStats:
                 for line in f:
                     if "Length best path: " in line:
                         num_steps = int(line.split(" ")[3]) 
-                               
-            file_str = file.split("/")[2].split("_")[1]
+                      
+            #print file.split("/")         
+            #file_str = file.split("/")[2].split("_")[1]
             emds = []
             for n in xrange(num_steps):                
                 print "step " + str(n)                
@@ -386,6 +445,55 @@ class PlotStats:
                 f.write("skewness: " + str(skew) + " \n")
                 f.write("kurtosis: " + str(kurt) + " \n \n")        
         
+    def plot_number_of_steps_stats(self, output_file_str, dir="stats"):
+        files = glob.glob(os.path.join(os.path.join(dir, "*.log")))        
+        d = dict()
+        m_covs = []
+        for file in sorted(files):
+            m_cov = float(str(file.split("/")[-1].split("_")[-1].split(".")[0] + "." + str(file.split("/")[-1].split("_")[-1].split(".")[1])))
+            m_covs.append(m_cov)
+        for i in xrange(len(m_covs)):
+            out_files = glob.glob(os.path.join(os.path.join(dir, "out_" + str(output_file_str) + "*")))
+            for out_file in out_files:
+                os.remove(out_file) 
+        for file in sorted(files):
+            num_runs = 0
+            ts = []
+            file_str = "alg: " + file.split("/")[-1].split("_")[1]
+            with open(file, "r") as f:
+                for line in f:
+                    if "inc_covariance: " in line:                        
+                        inc_covariance = line.rstrip("\n").split(": ")[1]
+                        if inc_covariance == 'process':
+                            cov_str = "Process covariance:"
+                        elif inc_covariance == 'observation':
+                            cov_str = "Observation covariance:"
+            with open(file, "r") as f:
+                t = 0
+                for line in f:
+                    if cov_str in line:                                             
+                        m_cov = float(line.split(" ")[2])
+                    if "t =" in line:
+                        t = float(line.split("=")[1].strip())
+                    elif ("RUN #" in line or 
+                          "Run #" in line):
+                        num_runs += 1
+                        if t != 0:
+                            ts.append(t)
+                    elif "############" in line:
+                        ts.append(t)
+            n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(ts))
+            with open(os.path.join(dir, "out_" + str(output_file_str) + "_" + str(m_cov) + ".txt"), "a+") as f:
+                f.write(file_str + " " + str(m_cov) + ": \n")
+                f.write("mean per run: " + str(mean) + " \n")
+                f.write("variance: " + str(var) + " \n")
+                f.write("min: " + str(min_max[0]) + " \n")
+                f.write("max: " + str(min_max[1]) + " \n")
+                f.write("skewness: " + str(skew) + " \n")
+                f.write("kurtosis: " + str(kurt) + " \n \n")
+                
+                        
+        
         
     def plot_bla(self, stat_strings, output_file_str, dir="stats", y_label=""):        
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))        
@@ -460,9 +568,7 @@ class PlotStats:
                 f.write("mean per run: " + str(mean2) + " \n")
                 f.write("variance: " + str(var2) + " \n")
                 f.write("min: " + str(min_max[0]) + " \n")
-                f.write("max: " + str(min_max[1]) + " \n")
-                f.write("skewness: " + str(skew) + " \n")
-                f.write("kurtosis: " + str(kurt) + " \n \n")
+                f.write("max: " + str(min_max[1]) + " \n")                
                 #f.write(file_str + " " + str(m_cov) + " " + str(mean) + ", " + str(var) + " \n")
              
     def plot_stat_from_txt_file(self, stat_str, output_file_str, dir="stats", y_label=""):
@@ -599,8 +705,7 @@ class PlotStats:
                 for j in xrange(len(stats_sets[i])):
                     string = str(stats_sets[i][j][0]) + ", "  + str(stats_sets[i][j][1])
                     f.write(string + " \n")
-                f.write("\n")                 
-        
+                f.write("\n")
         Plot.plot_2d_n_sets(stats_sets,
                             labels=labels,
                             xlabel="joint covariance",

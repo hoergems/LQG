@@ -8,7 +8,14 @@ from libutil import *
 from libobstacle import *
 
 class Play:
-    def __init__(self, algorithm, dir, numb, play_failed, user_input, nominal_trajectory):
+    def __init__(self, 
+                 algorithm, 
+                 dir, 
+                 numb, 
+                 play_failed, 
+                 user_input, 
+                 nominal_trajectory,
+                 colliding_states):
         robot_files = glob.glob(os.path.join(os.path.join(dir + "/model/", "*.urdf")))
         environment_files = glob.glob(os.path.join(os.path.join(dir + "/environment/", "*.xml")))
         
@@ -41,7 +48,12 @@ class Play:
             return
         print "PLAY"
         self.user_input = user_input
-        self.play_runs(dir, algorithm, numb, play_failed, nominal_trajectory)
+        self.play_runs(dir, 
+                       algorithm, 
+                       numb, 
+                       play_failed, 
+                       nominal_trajectory,
+                       colliding_states)
         
     def is_terminal(self, state):
         ja = v_double()
@@ -54,7 +66,13 @@ class Play:
             return True
         return False        
         
-    def play_runs(self, dir, algorithm, numb, play_failed, nominal_trajectory):      
+    def play_runs(self, 
+                  dir, 
+                  algorithm, 
+                  numb, 
+                  play_failed, 
+                  nominal_trajectory,
+                  colliding_states):      
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
         first_particle = 1
         log_files = []
@@ -69,6 +87,7 @@ class Play:
             nominal_states = []
             col = []
             col_obstacles = []
+            coll_states = []
             terminal = False
             for line in f:
                 if "S: " in line:
@@ -96,7 +115,13 @@ class Play:
                             else:
                                 col.append(False)
                 elif "colliding obstacle:" in line:
-                    col_obstacles.append(line.split(":")[1].strip())                    
+                    col_obstacles.append(line.split(":")[1].strip())  
+                elif "colliding state:" in line:
+                    coll_state_str = line.split(":")[1].strip()
+                    coll_state = None
+                    if not coll_state_str == "None" and colliding_states:
+                        coll_state = np.array([float(k) for k in coll_state_str.split(" ")])                    
+                    coll_states.append(coll_state)                 
                 elif "PARTICLES BEGIN" in line:
                     particles = []
                 elif "PARTICLES END" in line:
@@ -127,7 +152,12 @@ class Play:
                     else:
                         
                         self.show_nominal_path(nominal_states)                        
-                        self.play_states(states, col, col_obstacles, all_particles, first_particle)
+                        self.play_states(states, 
+                                         col, 
+                                         col_obstacles,
+                                         coll_states, 
+                                         all_particles, 
+                                         first_particle)
                     states = []
                     nominal_states = []
                     col = []
@@ -154,7 +184,13 @@ class Play:
         self.robot.addPermanentViewerParticles(particle_joint_values,
                                                particle_joint_colors)
                     
-    def play_states(self, states, col, col_obstacles, particles, first_particle):        
+    def play_states(self, 
+                    states, 
+                    col, 
+                    col_obstacles,
+                    coll_states, 
+                    particles, 
+                    first_particle):        
         if not self.viewer_initialized:
             self.robot.setupViewer(self.robot_file, self.environment_file)
             self.viewer_initialized = True
@@ -176,6 +212,12 @@ class Play:
                     particle_color[:] = [0.2, 0.8, 0.5, 0.0]
                     particle_joint_values.append(particle)
                     particle_joint_colors.append(particle_color)
+            if coll_states[i] != None:
+                part = v_double()
+                part[:] = [coll_states[i][k] for k in xrange(len(coll_states[i]))]
+                particle_color[:] = [0.0, 0.0, 0.0, 0.0]
+                particle_joint_values.append(part)
+                particle_joint_colors.append(particle_color)
             self.robot.updateViewerValues(cjvals, 
                                           cjvels,
                                           particle_joint_values,
@@ -206,7 +248,10 @@ class Play:
                                                     ambient_col)
                             break
             except:
-                pass           
+                pass
+            
+           
+                         
             time.sleep(0.3)
             if self.user_input:
                 raw_input("Press Enter to continue...")
@@ -273,5 +318,14 @@ if __name__ == "__main__":
     parser.add_argument("-u", "--user_input",
                         help="Wait for user input",
                         action="store_true")
+    parser.add_argument("-cs", "--colliding_states",
+                        help="Show the colliding states",
+                        action="store_true")
     args = parser.parse_args()
-    Play(args.algorithm, args.directory, args.numb, args.play_failed, args.user_input,  args.nominal_trajectory)
+    Play(args.algorithm, 
+         args.directory, 
+         args.numb, 
+         args.play_failed, 
+         args.user_input,  
+         args.nominal_trajectory, 
+         args.colliding_states)

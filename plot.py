@@ -51,16 +51,17 @@ def plot_2d_n_sets(sets,
     for circle in circles:               
         ax = fig.add_subplot(111)
         circ = plt.Circle((circle[0], circle[1]), radius=circle[2], color='g', fill=True)
-        ax.add_patch(circ)
-    box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-    ax.legend(loc='upper left', bbox_to_anchor=(1, 1))    
+        ax.add_patch(circ)    
+    if show_legend:
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+        ax.legend(loc='upper left', bbox_to_anchor=(1, 1))    
         
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.xlim([x_range[0], x_range[1]])
     plt.ylim([y_range[0], y_range[1]]) 
-    
+    plt.xticks(np.arange(x_range[0], x_range[1]+1, 1.0))
     if save:
         for file in glob.glob(os.path.join(path, filename)):
             os.remove(file)

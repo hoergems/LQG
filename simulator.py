@@ -214,8 +214,15 @@ class Simulator:
                                                     False,
                                                     False,
                                                     0.0)) 
-                x_true_norm = np.array(x_true) / np.linalg.norm(np.array(x_true))
-                x_estimate_norm = np.array(x_estimate) / np.linalg.norm(np.array(x_estimate))                               
+                x_t_n = np.linalg.norm(np.array([x_true[k] for k in xrange(len(x_true) / 2)]))
+                x_e_n = np.linalg.norm(np.array([x_estimate[k] for k in xrange(len(x_estimate) / 2)]))
+                x_true_norm = np.array([0.0 for k in xrange(len(x_true) / 2)])
+                x_estimate_norm = np.array([0.0 for k in xrange(len(x_estimate) / 2)])
+                if x_t_n != 0:
+                    x_true_norm = np.array([x_true[k] for k in xrange(len(x_true) / 2)]) / x_t_n   
+                if x_e_n != 0:
+                    x_estimate_norm = np.array([x_estimate[k] for k in xrange(len(x_estimate) / 2)]) / x_e_n         
+                
                 history_entries[-1].set_estimation_error(np.linalg.norm(np.array(x_true) - np.array(x_estimate)))
                 history_entries[-1].set_estimation_error_normalized(np.linalg.norm(np.array(x_true_norm) - np.array(x_estimate_norm)))
                 
@@ -227,7 +234,9 @@ class Simulator:
                 """
                 try:                    
                     u_dash = np.dot(Ls[i], x_tilde)
-                except:
+                except Exception as e:
+                    print e
+                    print "i " + str(i)
                     print "len(LS) " + str(len(Ls))
                     print "len(xs) " + str(len(xs))                
                 history_entries[-1].set_u_dash(u_dash)
@@ -286,11 +295,12 @@ class Simulator:
                     x_dash_linear = np.subtract(x_true_linear , xs[i])
                 else:
                     total_reward += discount * (-1.0 * self.step_penalty)
-                    history_entries[-1].set_reward(discount * (-1.0 * self.illegal_move_penalty))
+                    history_entries[-1].set_reward(discount * (-1.0 * self.step_penalty))
                     x_true = x_true_temp 
                     x_true_linear = x_true_linear_temp
                     x_dash = np.subtract(x_true, xs[i + 1])
-                    x_dash_linear = np.subtract(x_true_linear , xs[i + 1])               
+                    x_dash_linear = np.subtract(x_true_linear , xs[i + 1])
+                print "reward " + str(history_entries[-1].reward)               
                 
                 """ Do the same for the linearized true state """ 
                 '''if self.is_in_collision(x_true_linear, x_true_linear_temp)[0]:

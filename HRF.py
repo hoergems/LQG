@@ -198,7 +198,8 @@ class HRF:
                 deviation_covariance = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])
                 estimated_deviation_covariance = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])              
                 total_reward = 0.0
-                terminal = False                
+                terminal = False 
+                last_x_true = None               
                 
                 """
                 Obtain a nominal path
@@ -226,7 +227,11 @@ class HRF:
                                                                           estimated_deviation_covariance, 
                                                                           0.0)
                 while True: 
-                    print "current step " + str(current_step)       
+                    print "current step " + str(current_step) 
+                    '''if current_step == 7:
+                        x_true = np.array([last_x_true[k] for k in xrange(len(last_x_true))])
+                        for k in xrange(len(last_x_true) / 2, len(last_x_true)):
+                            last_x_true[k] = 0.0 '''  
                     """
                     Predict system state at t+1 using nominal path
                     """
@@ -257,7 +262,9 @@ class HRF:
                         print "X_PREDICTED COLLIDES!"
                         x_predicted = x_estimated         
                         for l in xrange(len(x_predicted) / 2, len(x_predicted)):
-                            x_predicted[l] = 0   
+                            x_predicted[l] = 0 
+                            
+                    last_x_true = np.array([x_true[k] for k in xrange(len(x_true))])  
                     
                     """
                     Execute path for 1 time step

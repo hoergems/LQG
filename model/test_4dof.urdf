@@ -1,6 +1,16 @@
 <?xml version="1.0" ?>
 <robot name="lbr_iiwa">
-    <link name="world" />    
+    <link name="world"> 
+        <visual>
+          <origin rpy="0 0 0" xyz="0 0 0"/>
+          <geometry>
+            <box size="1 0.15 0.15"/>
+          </geometry>
+          <material name="black">
+            <color rgba=".9 .9 .9 1"/>
+          </material>
+    </visual>
+    </link>   
 
     <link name="link1">
     <inertial>
