@@ -250,7 +250,7 @@ class HRF:
                                                                            Bs[0],
                                                                            Vs[0],
                                                                            Ms[0],
-                                                                           P_ext_t)
+                                                                           P_ext_t)                    
                     
                     """ Make sure x_predicted fulfills the constraints """                 
                     if self.enforce_constraints:     
