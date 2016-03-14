@@ -108,8 +108,8 @@ std::vector<std::shared_ptr<shared::ObstacleWrapper>> Utils::generateObstacle(st
 						                  y_size,
 							              z_size,
 							              terrain));
-	std::vector<double> d_color({0.0, 0.0, 0.0, 1.0});
-	std::vector<double> a_color({0.0, 0.0, 0.0, 1.0});
+	std::vector<double> d_color({0.5, 0.0, 0.3, 1.0});
+	std::vector<double> a_color({0.25, 0.0, 0.15, 1.0});
 	obst[obst.size() - 1]->setStandardColor(d_color, a_color);
 	/**obstacles.push_back(std::static_pointer_cast<shared::ObstacleWrapper>(std::make_shared<shared::BoxObstacle>(name,
             x_pos,

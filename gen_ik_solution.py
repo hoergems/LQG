@@ -58,7 +58,8 @@ class IKSolutionGenerator:
         """
         Goal position is w.r.t. base frame
         """       
-        goal_position = self.transform_goal(goal_position)         
+        goal_position = self.transform_goal(goal_position) 
+        print "Get possible ik solutions"        
         possible_ik_solutions = ik.get_goal_states(self.robot, 
                                                    goal_position, 
                                                    self.obstacles, 
@@ -69,9 +70,10 @@ class IKSolutionGenerator:
         for i in xrange(len(possible_ik_solutions)):                   
             logging.info("IKSolutionGenerator: Checking ik solution " + str(i) + " for validity")            
             ik_solution = [possible_ik_solutions[i][k] for k in xrange(len(start_state) / 2)]                        
-            ik_solution.extend([0.0 for j in xrange(len(start_state) / 2)])            
+            ik_solution.extend([0.0 for j in xrange(len(start_state) / 2)])
+            print "plan path"            
             self.path_planner.set_start_and_goal(start_state, [ik_solution], goal_position, goal_threshold)                   
-            path = self.path_planner.plan_paths(1, 0)            
+            path = self.path_planner.plan_paths(1, 0, planning_timeout=2.0)            
             if len(path) != 0:
                 logging.warn("IKSolutionGenerator: ik solution " + str(i) + " is a valid ik solution")
                 solutions.append(ik_solution)

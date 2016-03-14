@@ -1,5 +1,6 @@
 import numpy as np
 from librobot import v_double, v2_double, v_string
+import time
 
 def get_goal_states(robot, goal_position, obstacles, num=1):
     """ Get 'num' states for which the end-effector is close to the goal position
@@ -7,10 +8,13 @@ def get_goal_states(robot, goal_position, obstacles, num=1):
     solutions = []    
     goal_position = np.array(goal_position)
     dof = robot.getDOF()
+    timeout = False
+    t0 = time.time()
     while len(solutions) < num:
         breaking = False   
         state = get_random_state(robot)       
         dist = 10000000.0
+        
         while dist > 0.0003:
             ee_position = transform_ee_position(robot, get_end_effector_position(robot, state))
             delta_p = goal_position - ee_position
@@ -25,11 +29,19 @@ def get_goal_states(robot, goal_position, obstacles, num=1):
             if old_dist - dist < 1e-10:
                 breaking = True
                 break
+            if time.time() - t0 > 1.0:
+                print "TIMEOUT"
+                timeout = True
+                breaking = True
+                break
         if not breaking:            
             if check_constraints(robot, state) and not in_collision(robot, state, obstacles):
                 #print state
                 #sleep
                 solutions.append([state[k] for k in xrange(len(state))])
+        if time.time() - t0 > 1.0:
+            print "Timeout while getting valuid ik solution"
+            return solutions
     
     return solutions
 
