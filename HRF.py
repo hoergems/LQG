@@ -10,7 +10,7 @@ from plan_adjuster import PlanAdjuster
 from serializer import Serializer
 from libutil import *
 import logging
-from librobot import v_string, Robot
+from librobot import v_string, Robot, v_obstacle
 from util_py import check_positive_definite, get_goal_states, copyToTmp
 from simulator import Simulator
 from path_evaluator import PathEvaluator
@@ -46,6 +46,7 @@ class HRF:
             return               
         if not self.setup_scene(self.environment_file, self.robot):
             return
+        self.create_random_obstacles(3)
             
         self.clear_stats(dir)
         logging.info("Start up simulator")
@@ -55,6 +56,10 @@ class HRF:
         path_planner = PathPlanningInterface()
         if self.show_viewer_simulation:
             self.robot.setupViewer(self.robot_file, self.environment_file)
+            
+        obst = v_obstacle()
+        obst[:] = self.obstacles
+        self.robot.addObstacles(obst)
         logging.info("HRF: Generating goal states...") 
         goal_states = get_goal_states("hrf",
                                       self.abs_path,
@@ -250,7 +255,7 @@ class HRF:
                                                                            Bs[0],
                                                                            Vs[0],
                                                                            Ms[0],
-                                                                           P_ext_t)
+                                                                           P_ext_t)                    
                     
                     """ Make sure x_predicted fulfills the constraints """                 
                     if self.enforce_constraints:     
@@ -592,6 +597,28 @@ class HRF:
         self.goal_position = [goal_area[i] for i in xrange(0, 3)]
         self.goal_radius = goal_area[3]
         return True
+    
+    def create_random_obstacles(self, n):
+        self.obstacles = []        
+        for i in xrange(n): 
+            name = "obst_" + str(i)           
+            x_pos = np.random.uniform(-4.0, 4.0)
+            y_pos = np.random.uniform(-4.0, 4.0)
+            z_pos = np.random.uniform(-4.0, 4.0)
+        
+            x_size = 1.0
+            y_size = 1.0
+            z_size = 1.0
+            
+            obst = self.utils.generateObstacle(name,
+                                               x_pos,
+                                               y_pos,
+                                               z_pos,
+                                               x_size,
+                                               y_size,
+                                               z_size)            
+            self.obstacles.append(obst[0])
+                
     
     def clear_stats(self, dir):
         if os.path.isdir(dir):

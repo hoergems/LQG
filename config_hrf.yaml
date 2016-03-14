@@ -153,3 +153,5 @@ replan_when_colliding: True
 # Maximum allowed planning time per step in seconds
 timeout: 1.0
 
+knows_collision: True
+

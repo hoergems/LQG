@@ -571,6 +571,25 @@ void Robot::setupViewer(std::string model_file, std::string environment_file) {
 	viewer_->setupViewer(model_file, environment_file);	
 }
 
+void Robot::addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles) {
+	for (size_t i = 0; i < obstacles.size(); i++) {
+		std::vector<double> dims;		
+		std::shared_ptr<shared::Obstacle> o = std::static_pointer_cast<shared::Obstacle>(obstacles[i]);
+		std::shared_ptr<shared::BoxObstacle> o_box = std::static_pointer_cast<shared::BoxObstacle>(o);
+		dims.push_back(o_box->pos_x_);
+		dims.push_back(o_box->pos_y_);
+		dims.push_back(o_box->pos_z_);
+		dims.push_back(o_box->size_x_);
+		dims.push_back(o_box->size_y_);
+		dims.push_back(o_box->size_z_);
+		
+		std::string name = o_box->getName();
+		viewer_->addObstacle(name,
+				             dims);
+	}
+	
+}
+
 void Robot::addPermanentViewerParticles(const std::vector<std::vector<double>> &particle_joint_values,
 							            const std::vector<std::vector<double>> &particle_colors) {
 	assert(particle_joint_values.size() == particle_colors.size() &&  
@@ -1005,7 +1024,10 @@ BOOST_PYTHON_MODULE(librobot) {
              .def(vector_indexing_suite<std::vector<std::vector<int> > >());
     
     class_<std::vector<std::string> > ("v_string")
-                 .def(vector_indexing_suite<std::vector<std::string> >());   
+                 .def(vector_indexing_suite<std::vector<std::string> >());  
+    
+    class_<std::vector<std::shared_ptr<shared::ObstacleWrapper>> > ("v_obstacle")
+                 .def(vector_indexing_suite<std::vector<std::shared_ptr<shared::ObstacleWrapper>> >()); 
     
     
     class_<fcl::OBB>("OBB");
@@ -1054,6 +1076,7 @@ BOOST_PYTHON_MODULE(librobot) {
 						.def("getEndEffectorJacobian", &Robot::getEndEffectorJacobian)
 #ifdef USE_URDF
 						.def("setupViewer", &Robot::setupViewer)
+						.def("addObstacles", &Robot::addObstacles)
 						.def("updateViewerValues", &Robot::updateViewerValues)
 						.def("setViewerSize", &Robot::setViewerSize)
 						.def("setViewerBackgroundColor", &Robot::setViewerBackgroundColor)

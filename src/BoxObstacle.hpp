@@ -31,7 +31,7 @@ class BoxObstacle: public Obstacle  {
                 
         virtual void createCollisionObject() override;
 
-    private:        
+           
         double pos_x_;
         double pos_y_;
         double pos_z_;

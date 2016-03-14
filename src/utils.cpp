@@ -85,6 +85,48 @@ std::vector<std::vector<double>> Utils::loadGoalStates() {
 
 }
 
+std::vector<std::shared_ptr<shared::ObstacleWrapper>> Utils::generateObstacle(std::string name,
+		                                                                      double x_pos,
+			                                                                  double y_pos,
+																			  double z_pos,
+																			  double x_size,
+																			  double y_size,
+																			  double z_size) {
+	std::vector<std::shared_ptr<shared::ObstacleWrapper>> obstacles;
+	std::vector<std::shared_ptr<shared::Obstacle> > obst;
+	
+	shared::Terrain terrain(name + "_terrain",
+		                    0.0,
+		                    0.0,
+		                    false);
+	
+	obst.push_back(std::make_shared<shared::BoxObstacle>(name,
+		    			                  x_pos,
+	                                      y_pos,
+	                                      z_pos,
+					                      x_size,
+						                  y_size,
+							              z_size,
+							              terrain));
+	std::vector<double> d_color({0.0, 0.0, 0.0, 1.0});
+	std::vector<double> a_color({0.0, 0.0, 0.0, 1.0});
+	obst[obst.size() - 1]->setStandardColor(d_color, a_color);
+	/**obstacles.push_back(std::static_pointer_cast<shared::ObstacleWrapper>(std::make_shared<shared::BoxObstacle>(name,
+            x_pos,
+            y_pos,
+            z_pos,
+            x_size,
+            y_size,
+            z_size,
+            terrain)));*/
+	
+	for (size_t i = 0; i < obst.size(); i++) {
+		obstacles.push_back(std::static_pointer_cast<shared::ObstacleWrapper>(obst[i]));
+	}
+	cout << "obstacles.size() " << obstacles.size() << endl;
+	return obstacles;
+}
+
 std::vector<std::shared_ptr<shared::ObstacleWrapper>> Utils::loadObstaclesXMLPy(std::string obstacles_file) {
 	std::vector<std::shared_ptr<shared::ObstacleWrapper>> obstacles;	
 	std::vector<std::shared_ptr<shared::Obstacle> > obst;
@@ -391,6 +433,7 @@ BOOST_PYTHON_MODULE(libutil) {
     class_<Utils>("Utils", init<>())
     		.def("loadObstaclesXML", &Utils::loadObstaclesXMLPy)
 			.def("loadGoalArea", &Utils::loadGoalAreaPy)
+			.def("generateObstacle", &Utils::generateObstacle)
          
          
     ;
