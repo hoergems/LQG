@@ -146,7 +146,11 @@ add_library(robot SHARED
             robot.cpp
             propagator.cpp                      
             integrate.cpp
-            Kinematics.cpp)
+            Kinematics.cpp
+            Obstacle.cpp
+            BoxObstacle.cpp
+            SphereObstacle.cpp
+            Terrain.cpp)
             
 add_library(path_planner SHARED
             path_planner.cpp
@@ -159,7 +163,7 @@ add_library(path_planner SHARED
             utils.cpp
             Terrain.cpp
             Obstacle.cpp
-            BoxObstacle.cpp
+            BoxObstacle.cpp            
             SphereObstacle.cpp)
             
 add_library(dynamic_path_planner SHARED 

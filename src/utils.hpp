@@ -28,6 +28,14 @@ double euclideanDistance(std::vector<double> &vec1, std::vector<double> &vec2);
 class Utils {      
     public:
 	   std::vector<std::shared_ptr<shared::ObstacleWrapper>> loadObstaclesXMLPy(std::string obstacles_file);
+	   
+	   std::vector<std::shared_ptr<shared::ObstacleWrapper>> generateObstacle(std::string name,
+			                                                                  double x_pos,
+			                                                                  double y_pos,
+																			  double z_pos,
+																			  double x_size,
+																			  double y_size,
+																			  double z_size);
 	
 		void loadObstaclesXML(std::string &obstacles_file,
                               std::vector<std::shared_ptr<shared::Obstacle> > &obst);

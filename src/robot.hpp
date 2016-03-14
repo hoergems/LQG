@@ -15,6 +15,8 @@
 
 #include "propagator.hpp"
 #include "Kinematics.hpp"
+#include "Obstacle.hpp"
+#include "BoxObstacle.hpp"
 
 #ifdef USE_URDF
    #include <viewer_interface/viewer_interface.hpp>
@@ -240,6 +242,8 @@ struct Joint {
     	    void removePermanentViewerParticles();
     	        	    
     	    void setupViewer(std::string model_file, std::string environment_file);
+    	    
+    	    void addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles);
     	    
     	    void addSensor(std::string sensor_file);
     	    
