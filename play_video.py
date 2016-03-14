@@ -15,7 +15,8 @@ class Play:
                  play_failed, 
                  user_input, 
                  nominal_trajectory,
-                 colliding_states):
+                 colliding_states,
+                 covariance):        
         robot_files = glob.glob(os.path.join(os.path.join(dir + "/model/", "*.urdf")))
         environment_files = glob.glob(os.path.join(os.path.join(dir + "/environment/", "*.xml")))
         
@@ -54,7 +55,8 @@ class Play:
                        numb, 
                        play_failed, 
                        nominal_trajectory,
-                       colliding_states)
+                       colliding_states,
+                       covariance)
         
     def is_terminal(self, state):
         ja = v_double()
@@ -73,14 +75,19 @@ class Play:
                   numb, 
                   play_failed, 
                   nominal_trajectory,
-                  colliding_states):      
+                  colliding_states,
+                  covariance):      
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
         first_particle = 1
         log_files = []
         for file in files:
-            file_str = file.split("/")[-1]
+            file_str = file.split("/")[-1]            
             if algorithm in file_str:
-                log_files.append(file)        
+                if covariance != None:
+                    if str(covariance) in file_str:                        
+                        log_files.append(file) 
+                else:
+                    log_files.append(file)
         with open(sorted(log_files)[numb]) as f:
             states = []
             all_particles = []
@@ -90,11 +97,12 @@ class Play:
             col_obstacles = []
             coll_states = []
             terminal = False
-            for line in f:
+            for line in f:                
                 if "S: " in line:
                     line_arr = line.rstrip("\n ").split(" ")
                     state = np.array([float(line_arr[i]) for i in xrange(1, len(line_arr))])
-                    states.append(state)                    
+                    states.append(state)
+                    coll_states.append(None)                    
                 elif "S_NOMINAL: " in line and nominal_trajectory:
                     line_arr = line.rstrip("\n ").split(" ")                    
                     state = np.array([float(line_arr[i]) for i in xrange(1, len(line_arr))])
@@ -122,7 +130,7 @@ class Play:
                     coll_state = None
                     if not coll_state_str == "None" and colliding_states:
                         coll_state = np.array([float(k) for k in coll_state_str.split(" ")])                    
-                    coll_states.append(coll_state)                 
+                    coll_states[-1] = coll_state                
                 elif "PARTICLES BEGIN" in line:
                     particles = []
                 elif "PARTICLES END" in line:
@@ -149,7 +157,12 @@ class Play:
                     if play_failed:
                         if terminal == False:
                             self.show_nominal_path(nominal_states)                            
-                            self.play_states(states, col, all_particles, first_particle)
+                            self.play_states(states, 
+                                             col,
+                                             col_obstacles,
+                                             coll_states,
+                                             all_particles, 
+                                             first_particle)
                     else:
                         
                         self.show_nominal_path(nominal_states)                        
@@ -203,19 +216,20 @@ class Play:
             cjvals[:] = cjvals_arr
             cjvels[:] = cjvels_arr            
             particle_joint_values = v2_double()
-            particle_joint_colors = v2_double()
-            
+            particle_joint_colors = v2_double()            
             if i > 1 and len(particles) > 0:                
                 for p in particles[i - first_particle]:
                     particle = v_double()
                     particle_color = v_double()
-                    particle[:] = [p[k] for k in xrange(len(p) / 2)]
+                    particle_vec = [p[k] for k in xrange(len(p) / 2)]                    
+                    particle[:] = particle_vec
                     particle_color[:] = [0.2, 0.8, 0.5, 0.0]
                     particle_joint_values.append(particle)
                     particle_joint_colors.append(particle_color)
             if coll_states[i] != None:
                 part = v_double()
                 part[:] = [coll_states[i][k] for k in xrange(len(coll_states[i]))]
+                particle_color = v_double()
                 particle_color[:] = [0.0, 0.0, 0.0, 0.0]
                 particle_joint_values.append(part)
                 particle_joint_colors.append(particle_color)
@@ -309,6 +323,7 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--algorithm", help="The algorithm to play")
     parser.add_argument("-d", "--directory", help="The directory of the logfiles")
     parser.add_argument("-n", "--numb", nargs='?', help="The number of covariance value to play", type=int, const=0)
+    parser.add_argument("-cov", "--covariance", nargs="?", help="play runs from covariance value", type=float, const=0)
     parser.add_argument("-nt", "--nominal_trajectory", 
                         help="Show the nominal trajectory", 
                         action="store_true")
@@ -329,4 +344,5 @@ if __name__ == "__main__":
          args.play_failed, 
          args.user_input,  
          args.nominal_trajectory, 
-         args.colliding_states)
+         args.colliding_states,
+         args.covariance)
