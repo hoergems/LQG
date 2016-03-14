@@ -17,10 +17,14 @@ from path_evaluator import PathEvaluator
 from path_planning_interface import PathPlanningInterface
 from libobstacle import Obstacle, Terrain
 import warnings
+import subprocess
 
 class HRF:
     def __init__(self):
         self.abs_path = os.path.dirname(os.path.abspath(__file__))
+        cmd = "rm -rf " + self.abs_path + "/tmp"
+        popen = subprocess.Popen(cmd, cwd=self.abs_path, shell=True)
+        popen.wait()
         """ Reading the config """
         warnings.filterwarnings("ignore")
         self.init_serializer()
@@ -45,8 +49,7 @@ class HRF:
             logging.error("HRF: Couldn't initialize robot")
             return               
         if not self.setup_scene(self.environment_file, self.robot):
-            return
-        self.create_random_obstacles(3)
+            return        
             
         self.clear_stats(dir)
         logging.info("Start up simulator")
@@ -55,32 +58,37 @@ class HRF:
         path_evaluator = PathEvaluator()
         path_planner = PathPlanningInterface()
         if self.show_viewer_simulation:
-            self.robot.setupViewer(self.robot_file, self.environment_file)
+            self.robot.setupViewer(self.robot_file, self.environment_file)            
+        
+        logging.info("HRF: Generating goal states...")
+        problem_feasible = False
+        while not problem_feasible:
+            print "Creating random scene..." 
+            self.create_random_obstacles(30)
+            goal_states = get_goal_states("hrf",
+                                          self.abs_path,
+                                          self.serializer, 
+                                          self.obstacles,                                                                           
+                                          self.robot,                                    
+                                          self.max_velocity,
+                                          self.delta_t,
+                                          self.start_state,
+                                          self.goal_position,
+                                          self.goal_radius,
+                                          self.planning_algortihm,
+                                          self.path_timeout,
+                                          self.num_generated_goal_states,
+                                          self.continuous_collision,
+                                          self.environment_file,
+                                          self.num_cores)
             
+            if len(goal_states) == 0:
+                logging.error("HRF: Couldn't generate any goal states. Problem seems to be infeasible")
+            else:
+                problem_feasible = True
         obst = v_obstacle()
         obst[:] = self.obstacles
         self.robot.addObstacles(obst)
-        logging.info("HRF: Generating goal states...") 
-        goal_states = get_goal_states("hrf",
-                                      self.abs_path,
-                                      self.serializer, 
-                                      self.obstacles,                                                                           
-                                      self.robot,                                    
-                                      self.max_velocity,
-                                      self.delta_t,
-                                      self.start_state,
-                                      self.goal_position,
-                                      self.goal_radius,
-                                      self.planning_algortihm,
-                                      self.path_timeout,
-                                      self.num_generated_goal_states,
-                                      self.continuous_collision,
-                                      self.environment_file,
-                                      self.num_cores)
-        
-        if len(goal_states) == 0:
-            logging.error("HRF: Couldn't generate any goal states. Problem seems to be infeasible")
-            return
         logging.info("HRF: Generated " + str(len(goal_states)) + " goal states")
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)
         path_planner.setup(self.robot,                         
@@ -602,13 +610,13 @@ class HRF:
         self.obstacles = []        
         for i in xrange(n): 
             name = "obst_" + str(i)           
-            x_pos = np.random.uniform(-4.0, 4.0)
-            y_pos = np.random.uniform(-4.0, 4.0)
-            z_pos = np.random.uniform(-4.0, 4.0)
+            x_pos = np.random.uniform(-1.0, 4.0)
+            y_pos = np.random.uniform(-1.0, 4.0)
+            z_pos = np.random.uniform(3.0, 6.0)
         
-            x_size = 1.0
-            y_size = 1.0
-            z_size = 1.0
+            x_size = 0.25
+            y_size = 0.25
+            z_size = 0.25
             
             obst = self.utils.generateObstacle(name,
                                                x_pos,
