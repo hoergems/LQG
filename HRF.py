@@ -10,7 +10,8 @@ from plan_adjuster import PlanAdjuster
 from serializer import Serializer
 from libutil import *
 import logging
-from librobot import v_string, Robot, v_obstacle
+#from librobot import v_string, Robot, v_obstacle
+from librobot import v_string, Robot
 from util_py import check_positive_definite, get_goal_states, copyToTmp
 from simulator import Simulator
 from path_evaluator import PathEvaluator
@@ -86,9 +87,9 @@ class HRF:
                 logging.error("HRF: Couldn't generate any goal states. Problem seems to be infeasible")
             else:
                 problem_feasible = True
-        obst = v_obstacle()
+        '''obst = v_obstacle()
         obst[:] = self.obstacles
-        self.robot.addObstacles(obst)
+        self.robot.addObstacles(obst)'''
         logging.info("HRF: Generated " + str(len(goal_states)) + " goal states")
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)
         path_planner.setup(self.robot,                         
