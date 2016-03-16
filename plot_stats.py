@@ -33,7 +33,8 @@ class PlotStats:
         
         if self.setup_robot(dir) and plot_emds:            
             self.plot_emds(show_particles, dir=dir)
-        #self.plot_estimate_error_normalized(dir=dir)    
+        self.plot_estimate_error(dir=dir)
+        return    
         
         self.save_estimation_error("estimation_error_stats", dir=dir)
         self.plot_number_of_steps_stats("num_step_stats", dir=dir)
@@ -125,35 +126,55 @@ class PlotStats:
                 pass
             
     ##################################################################################
-    def plot_estimate_error_normalized(self, dir="stats"):
+    def plot_estimate_error(self, dir="stats", normalized=False):
         files = glob.glob(os.path.join(dir, "log*.log"))
-        file = files[0]
+        #file = files[0]
         stats_sets = []
-        set_1 = []
-        labels = ["hfr"]
+        
+        labels = []
         min_e = 1000000000000
         max_e = -1000000000000
-        n = 0
-        color_map = [self.color_dict["hrf"]]
-        with open(file, "r") as f:
-            lines = f.readlines() 
+        
+        color_map = [self.gen_random_color() for i in xrange(len(files))]
+        
+        for file in files:
+            set_1 = []
+            n = 0
+            labels.append(file.split("_")[-1].split(".log")[0])
             
-            for i in xrange(len(lines)):                
-                if "Estimation error normalized:" in lines[i]: 
-                    try:       
-                        err = float(lines[i].split(":")[1].strip())
-                        if err < min_e:
-                            min_e = err
-                        if err > max_e:
-                            max_e = err       
-                        elem = [n, err]
-                        n+=1
-                        set_1.append(elem)
-                    except:
-                        pass
-                    
-        stats_sets.append(np.array(set_1))
-        print stats_sets
+            with open(file, "r") as f:
+                lines = f.readlines() 
+                
+                for i in xrange(len(lines)): 
+                    if normalized:               
+                        if "Estimation error normalized:" in lines[i]: 
+                            try:       
+                                err = float(lines[i].split(":")[1].strip())
+                                if err < min_e:
+                                    min_e = err
+                                if err > max_e:
+                                    max_e = err       
+                                elem = [n, err]
+                                n+=1
+                                set_1.append(elem)
+                            except:
+                                pass
+                    else:
+                        if "Estimation error:" in lines[i]: 
+                            try:       
+                                err = float(lines[i].split(":")[1].strip())
+                                if err < min_e:
+                                    min_e = err
+                                if err > max_e:
+                                    max_e = err       
+                                elem = [n, err]
+                                n+=1
+                                set_1.append(elem)
+                            except:
+                                pass
+                        
+            stats_sets.append(np.array(set_1))
+        
                     
         Plot.plot_2d_n_sets(stats_sets,
                             labels=labels,
@@ -161,7 +182,7 @@ class PlotStats:
                             ylabel="estimation error joint angles",
                             x_range=[0, n],
                             y_range=[min_e, max_e * 1.05],
-                            show_legend=False,
+                            show_legend=True,
                             lw=3,
                             color_map=color_map,
                             save=self.save,

@@ -29,7 +29,7 @@ def get_goal_states(robot, goal_position, obstacles, num=1):
             if old_dist - dist < 1e-10:
                 breaking = True
                 break
-            if time.time() - t0 > 1.0:
+            if time.time() - t0 > 10.0:
                 print "TIMEOUT"
                 timeout = True
                 breaking = True

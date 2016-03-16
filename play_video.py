@@ -135,9 +135,15 @@ class Play:
                     particles = []
                 elif "PARTICLES END" in line:
                     all_particles.append(particles)
-                elif "p: " in line:
+                elif "p: " in line and not "step" in line:
                     line_arr = line.rstrip("\n").split(": ")[1].split(" ")
-                    particle = np.array([float(line_arr[i]) for i in xrange(len(line_arr))])
+                    try:
+                        particle = np.array([float(line_arr[i]) for i in xrange(len(line_arr))])
+                    except Exception as e:
+                        print e
+                        print line_arr
+                        print line
+                        return
                     particles.append(particle)                   
                 elif "Final State:" in line:
                     line_arr = line.rstrip("\n ").split(": ")[1].split(" ")
@@ -226,7 +232,7 @@ class Play:
                     particle_color[:] = [0.2, 0.8, 0.5, 0.0]
                     particle_joint_values.append(particle)
                     particle_joint_colors.append(particle_color)
-            if coll_states[i] != None:
+            if not i == len(coll_states) and coll_states[i] != None:
                 part = v_double()
                 part[:] = [coll_states[i][k] for k in xrange(len(coll_states[i]))]
                 particle_color = v_double()
@@ -269,7 +275,7 @@ class Play:
             if self.user_input:
                 raw_input("Press Enter to continue...")
             else:
-                time.sleep(1.0)
+                time.sleep(0.1)
             
     def is_in_collision(self, previous_state, state):
         """

@@ -173,7 +173,7 @@ class Simulator:
                          n_steps,
                          deviation_covariances,
                          estimated_deviation_covariances,
-                         max_num_steps=None):
+                         max_num_steps=None):        
         history_entries = []        
         terminal_state_reached = False
         success = False
@@ -250,6 +250,7 @@ class Simulator:
                 if self.control_constraints_enforced:                    
                     u, u_dash = self.enforce_control_constraints(u, us[i])                          
                 history_entries[-1].set_action(u)
+                
                 history_entries[-1].set_nominal_action(us[i])
                 
                 
@@ -282,8 +283,9 @@ class Simulator:
                 in_collision_true_state, colliding_obstacle = self.is_in_collision(x_true, x_true_temp)
                 self.set_colliding_obstacle(colliding_obstacle)    
                                                                 
-                if in_collision_true_state:                                                                    
-                    for j in xrange(len(x_true) / 2, len(x_true)):
+                if in_collision_true_state: #or current_step == 7:
+                    print "in collision!!!!"                                                                    
+                    for j in xrange(len(x_true) / 2, len(x_true)):                        
                         x_true[j] = 0.0
                         x_true_linear[j] = 0.0                   
                     logging.info("Simulator: Collision detected. Setting state estimate to the previous state")
@@ -358,10 +360,10 @@ class Simulator:
                 """
                 estimate_collided = True
                 if self.is_in_collision([], x_estimate_new)[0]:
-                    for l in xrange(len(x_estimate) / 2, len(x_estimate)):
+                    for l in xrange(len(x_estimate) / 2, len(x_estimate)):                        
                         x_estimate[l] = 0
                 elif in_collision_true_state and self.knows_collision:
-                    for l in xrange(len(x_estimate) / 2, len(x_estimate)):
+                    for l in xrange(len(x_estimate) / 2, len(x_estimate)):                        
                         x_estimate[l] = 0
                 else:
                     x_estimate = x_estimate_new                   
@@ -470,13 +472,6 @@ class Simulator:
                 elif state[i + len(state) / 2] > self.velocity_constraints[i] - 0.0000001:
                     state[i + len(state) / 2] = self.velocity_constraints[i]
         return state
-        for i in xrange(len(state) / 2):                          
-            if state[i] < self.lower_position_constraints[i]:
-                state[i] = self.lower_position_constraints[i] + 0.00001
-            if state[i] > self.upper_position_constraints[i]:
-                state[i] = self.upper_position_constraints[i] - 0.00001        
-        return state
-    
     
     def is_in_collision(self, previous_state, state):
         """

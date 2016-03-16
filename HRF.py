@@ -64,7 +64,7 @@ class HRF:
         problem_feasible = False
         while not problem_feasible:
             print "Creating random scene..." 
-            self.create_random_obstacles(30)
+            #self.create_random_obstacles(20)
             goal_states = get_goal_states("hrf",
                                           self.abs_path,
                                           self.serializer, 
@@ -203,10 +203,12 @@ class HRF:
                 print "HRF: Run " + str(k + 1)                                
                 self.serializer.write_line("log.log", tmp_dir, "RUN #" + str(k + 1) + " \n")
                 current_step = 0
-                x_true = self.start_state
-                x_estimated = self.start_state 
+                x_true = [self.start_state[m] for m in xrange(len(self.start_state))]
+                x_estimated = [self.start_state[m] for m in xrange(len(self.start_state))]
+                #x_estimated[0] += 0.2
+                print x_estimated
                 #x_estimated[0] = 0.4             
-                x_predicted = self.start_state                               
+                #x_predicted = self.start_state                               
                 P_t = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)]) 
                 P_ext_t = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)]) 
                 deviation_covariance = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])
@@ -251,7 +253,8 @@ class HRF:
                     """
                     
                     """ Get state matrices """
-                    As, Bs, Vs, Ms, Hs, Ws, Ns = sim.get_linear_model_matrices(xs, us, control_durations)
+                    #As, Bs, Vs, Ms, Hs, Ws, Ns = sim.get_linear_model_matrices(xs, us, control_durations)
+                    As, Bs, Vs, Ms, Hs, Ws, Ns = sim.get_linear_model_matrices([x_estimated], [us[0]], control_durations)
                     
                     """ Predict using EKF """
                     (x_predicted_temp, P_predicted) = kalman.predict_state(self.robot,
@@ -275,7 +278,7 @@ class HRF:
                     else: 
                         print "X_PREDICTED COLLIDES!"
                         x_predicted = x_estimated         
-                        for l in xrange(len(x_predicted) / 2, len(x_predicted)):
+                        for l in xrange(len(x_predicted) / 2, len(x_predicted)):                            
                             x_predicted[l] = 0 
                             
                     last_x_true = np.array([x_true[k] for k in xrange(len(x_true))])  
@@ -336,7 +339,8 @@ class HRF:
                         if terminal:
                             print "Terminal state reached"
                             successful_runs += 1
-                        break
+                        break                    
+                        
                     
                     
                     """
@@ -354,29 +358,21 @@ class HRF:
                     """
                     (x_estimated_temp, P_ext_t) = kalman.filter_update(x_predicted, P_predicted, z, Hs[0], Ws[0], Ns[0])
                     
+                    
                     """ Make sure x_estimated fulfills the constraints """                 
                     if self.enforce_constraints:     
                         x_estimated_temp = sim.check_constraints(x_estimated_temp) 
                     in_collision, colliding_obstacle = sim.is_in_collision([], x_estimated_temp)
                     if in_collision:
                         history_entries[-1].set_estimate_collided(True)                        
-                        for l in xrange(len(x_estimated) / 2, len(x_estimated)):
+                        for l in xrange(len(x_estimated) / 2, len(x_estimated)):                            
                             x_estimated[l] = 0
                     elif history_entries[-1].collided and self.knows_collision:
-                        for l in xrange(len(x_estimated) / 2, len(x_estimated)):
+                        for l in xrange(len(x_estimated) / 2, len(x_estimated)):                            
                             x_estimated[l] = 0
                     else:
                         x_estimated = x_estimated_temp                         
-                        history_entries[-1].set_estimate_collided(False)                        
-                    '''if not in_collision:                                                                                                    
-                        x_estimated = x_estimated_temp                         
                         history_entries[-1].set_estimate_collided(False)
-                        #history_entries[-1].set_colliding_obstacle("")    
-                    else:      
-                        history_entries[-1].set_estimate_collided(True)
-                        #history_entries[-1].set_colliding_obstacle(colliding_obstacle.getName())
-                        for l in xrange(len(x_estimated) / 2, len(x_estimated)):
-                            x_estimated[l] = 0'''
                     
                     history_entries[-1].serialize(tmp_dir, "log.log")
                     """
