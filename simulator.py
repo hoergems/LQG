@@ -233,10 +233,7 @@ class Simulator:
                 
                 
                 
-                """ Apply the control 'u' and propagate the state 'x_true' """
-                print "x_true " + str(x_true)
-                print "u " + str(u)
-                print "control_durations " + str(control_durations[i])
+                """ Apply the control 'u' and propagate the state 'x_true' """                
                 x_true_temp, ce = self.apply_control(x_true, 
                                                      u,
                                                      control_durations[i], 
@@ -245,8 +242,7 @@ class Simulator:
                                                      Vs[i], 
                                                      Ms[i],
                                                      xs[i],
-                                                     us[i])
-                print "x_true_temp " + str(x_true_temp)
+                                                     us[i])                
                 
                 x_dash_linear_temp = self.get_linearized_next_state(x_dash, u_dash, ce, As[i], Bs[i], Vs[i])
                 x_true_linear_temp = np.add(x_dash_linear_temp, xs[i+1]) 

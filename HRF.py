@@ -50,90 +50,24 @@ class HRF:
         
         if self.init_modules() == False:
             return
-        
-        logging.info("HRF: Generating goal states...")
-        goal_states = self.create_feasible_problem() 
-            
-        self.setup()
-        logging.info("HRF: Generated " + str(len(goal_states)) + " goal states")       
-        
-        
         A, H, B, V, W, C, D, M_base, N_base = self.problem_setup(self.delta_t, self.robot_dof)
-        self.plan_adjuster.set_model_matrices(A, B, V)
-        time_to_generate_paths = 0.0
+        self.plan_adjuster.set_model_matrices(A, B, V)        
         if check_positive_definite([C, D]):
-            m_covs = None
-            if self.inc_covariance == "process":
-                m_covs = np.linspace(self.min_process_covariance, 
-                                     self.max_process_covariance, 
-                                     self.covariance_steps)                 
-            elif self.inc_covariance == "observation":          
-                m_covs = np.linspace(self.min_observation_covariance, 
-                                     self.max_observation_covariance,
-                                     self.covariance_steps)
-        for j in xrange(len(m_covs)):
-            M = None
-            N = None
-            if self.inc_covariance == "process":
-                """ The process noise covariance matrix """
-                M = self.calc_covariance_value(self.robot, m_covs[j], M_base)
-                #M = m_covs[j] * M_base
+            m_covs = np.linspace(self.min_process_covariance, 
+                                 self.max_process_covariance, 
+                                 self.covariance_steps)
+            n_covs = np.linspace(self.min_observation_covariance, 
+                                 self.max_observation_covariance,
+                                 self.covariance_steps)
+            
+        for j in xrange(len(m_covs)):                       
+            M = self.calc_covariance_value(self.robot, m_covs[j], M_base)               
                     
-                """ The observation error covariance matrix """
-                N = self.calc_covariance_value(self.robot, 
-                                               self.min_observation_covariance, 
-                                               N_base, 
-                                               covariance_type='observation')                    
-            elif self.inc_covariance == "observation":
-                M = self.calc_covariance_value(self.robot, 
-                                               self.min_process_covariance,
-                                               M_base)
-                N = self.calc_covariance_value(self.robot, 
-                                               m_covs[j],
-                                               N_base, 
-                                               covariance_type='observation')
-            
-            self.path_planner.setup_path_evaluator(A, B, C, D, H, M, N, V, W,                                     
-                                                   self.robot, 
-                                                   self.sample_size, 
-                                                   self.obstacles,
-                                                   self.goal_position,
-                                                   self.goal_radius,                                              
-                                                   self.robot_file,
-                                                   self.environment_file)
-            self.sim.setup_problem(A, B, C, D, H, V, W, M, N,
-                                   self.robot, 
-                                   self.enforce_control_constraints,
-                                   self.obstacles, 
-                                   self.goal_position, 
-                                   self.goal_radius,
-                                   self.max_velocity,                                  
-                                   self.show_viewer_simulation,
-                                   self.robot_file,
-                                   self.environment_file,
-                                   self.knows_collision)
-            self.path_evaluator.setup(A, B, C, D, H, M, N, V, W,                                     
-                                      self.robot, 
-                                      self.sample_size, 
-                                      self.obstacles,
-                                      self.goal_position,
-                                      self.goal_radius,
-                                      self.show_viewer_evaluation,
-                                      self.robot_file,
-                                      self.environment_file,
-                                      self.num_cores)
-            
-            self.plan_adjuster.setup(self.robot,
-                                     M, 
-                                     H, 
-                                     W, 
-                                     N, 
-                                     C, 
-                                     D,
-                                     self.dynamic_problem, 
-                                     self.enforce_control_constraints) 
-            if self.dynamic_problem:
-                self.setup_dynamic_problem()           
+            """ The observation error covariance matrix """
+            N = self.calc_covariance_value(self.robot, 
+                                           n_covs[j], 
+                                           N_base, 
+                                           covariance_type='observation')          
             
             mean_number_planning_steps = 0.0
             number_of_steps = 0.0
@@ -145,14 +79,15 @@ class HRF:
             final_states= []
             rewards_cov = []
             for k in xrange(self.num_simulation_runs):
+                logging.info("HRF: Generating goal states...")               
+                goal_states = self.create_feasible_problem(self.num_obstacles)            
+                self.setup()
+                self.setup_after_init(A, B, C, D, H, M, N, V, W) 
                 print "HRF: Run " + str(k + 1)                                
                 self.serializer.write_line("log.log", tmp_dir, "RUN #" + str(k + 1) + " \n")
                 current_step = 0
-                x_true = [self.start_state[m] for m in xrange(len(self.start_state))]
-                x_estimated = np.array([self.start_state[m] for m in xrange(len(self.start_state))])
-                #x_estimated[0] += 0.2                
-                #x_estimated[0] = 0.4             
-                #x_predicted = self.start_state                               
+                x_true = np.array([self.start_state[m] for m in xrange(len(self.start_state))])
+                x_estimated = np.array([self.start_state[m] for m in xrange(len(self.start_state))])                                              
                 P_t = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)]) 
                 P_ext_t = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)]) 
                 deviation_covariance = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)])
@@ -293,7 +228,7 @@ class HRF:
                     """
                     self.path_planner.set_start_and_goal(x_predicted, goal_states, self.goal_position, self.goal_radius) 
                     t0 = time.time()                   
-                    paths = self.path_planner.plan_paths(self.num_paths, 0, planning_timeout=self.timeout, min_num_paths=1)
+                    paths = self.path_planner.plan_paths(self.num_paths, 0, planning_timeout=self.timeout, min_num_paths=0)
                     mean_planning_time += time.time() - t0
                     mean_number_planning_steps += 1.0
                     num_generated_paths_run += len(paths)                    
@@ -492,10 +427,64 @@ class HRF:
         if self.show_viewer_simulation:
             self.robot.setupViewer(self.robot_file, self.environment_file)
         return True
+    
+    def setup_after_init(self,
+                         A,
+                         B, 
+                         C,
+                         D,
+                         H,
+                         M,
+                         N,
+                         V,
+                         W):
+        self.path_planner.setup_path_evaluator(A, B, C, D, H, M, N, V, W,                                     
+                                               self.robot, 
+                                               self.sample_size, 
+                                               self.obstacles,
+                                               self.goal_position,
+                                               self.goal_radius,                                              
+                                               self.robot_file,
+                                               self.environment_file)
+        self.sim.setup_problem(A, B, C, D, H, V, W, M, N,
+                               self.robot, 
+                               self.enforce_control_constraints,
+                               self.obstacles, 
+                               self.goal_position, 
+                               self.goal_radius,
+                               self.max_velocity,                                  
+                               self.show_viewer_simulation,
+                               self.robot_file,
+                               self.environment_file,
+                               self.knows_collision)
+        self.path_evaluator.setup(A, B, C, D, H, M, N, V, W,                                     
+                                  self.robot, 
+                                  self.sample_size, 
+                                  self.obstacles,
+                                  self.goal_position,
+                                  self.goal_radius,
+                                  self.show_viewer_evaluation,
+                                  self.robot_file,
+                                  self.environment_file,
+                                  self.num_cores)
+            
+        self.plan_adjuster.setup(self.robot,
+                                 M, 
+                                 H, 
+                                 W, 
+                                 N, 
+                                 C, 
+                                 D,
+                                 self.dynamic_problem, 
+                                 self.enforce_control_constraints) 
+        if self.dynamic_problem:
+            self.setup_dynamic_problem()
+        
         
     def setup(self):
         obst = v_obstacle()
         obst[:] = self.obstacles
+        self.robot.removeObstacles()
         self.robot.addObstacles(obst)
         self.sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)
         self.path_planner.setup(self.robot,                         
@@ -521,11 +510,11 @@ class HRF:
                                                 self.illegal_move_penalty, 
                                                 self.discount_factor)
         
-    def create_feasible_problem(self):
+    def create_feasible_problem(self, num_obstacles):
         ik_solution_generator = IKSolutionGenerator()        
         while True:
             print "Creating random scene..." 
-            self.create_random_obstacles(10)
+            self.create_random_obstacles(num_obstacles)
             ik_solution_generator.setup(self.robot,
                                         self.obstacles,
                                         self.max_velocity,
@@ -767,6 +756,8 @@ class HRF:
         self.replan_when_colliding = config['replan_when_colliding']
         self.acceleration_limit = config['acceleration_limit']
         self.knows_collision = config['knows_collision']
+        self.num_obstacles = config['num_obstacles']
+        
 
 if __name__ == "__main__":
     HRF()

@@ -2,7 +2,9 @@
 seed: -1
 
 # Number of cores used for parallel path construction and evaluation
-num_cores: 4
+num_cores: 8
+
+num_obstacles: 10
 
 # Verbose output
 verbose: False
@@ -26,7 +28,7 @@ path_timeout: 10.0
 use_linear_path: False
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 1
+num_simulation_runs: 25
 
 # Maximum angular velocity of the joints for the kinematic problem (in rad/sec)
 max_velocity: 4.0
@@ -47,13 +49,13 @@ num_bins: 201
 #################################################
 # The error variables are defined as the standard deviation in percentage of the value range
 # The minimum joint state covariance
-min_process_covariance: 2.5
+min_process_covariance: 0.01
 
 # The maximum joint state covariance
 max_process_covariance: 5.0
 
 # The minimum observation covariance
-min_observation_covariance: 2.5
+min_observation_covariance: 0.01
 
 # The maximum observation covariance
 max_observation_covariance: 5.0
@@ -63,7 +65,7 @@ max_observation_covariance: 5.0
 inc_covariance: observation
 
 # The number of covariance steps
-covariance_steps: 1
+covariance_steps: 5
 
 path_deviation_cost: 500.0
 
@@ -135,7 +137,7 @@ add_intermediate_states: True
 # Visualization
 #########################################
 show_viewer_evaluation: False
-show_viewer_simulation: True
+show_viewer_simulation: False
 
 ######## MPC parameters ############
 # The number of steps a path gets evaluated for (-1 => Evaluate full path)

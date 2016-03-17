@@ -572,6 +572,7 @@ void Robot::setupViewer(std::string model_file, std::string environment_file) {
 }
 
 void Robot::addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles) {
+#ifdef USE_URDF
 	for (size_t i = 0; i < obstacles.size(); i++) {
 		std::vector<double> dims;		
 		std::shared_ptr<shared::Obstacle> o = std::static_pointer_cast<shared::Obstacle>(obstacles[i]);
@@ -587,7 +588,13 @@ void Robot::addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &
 		viewer_->addObstacle(name,
 				             dims);
 	}
-	
+#endif	
+}
+
+void Robot::removeObstacles() {
+#ifdef USE_URDF
+	viewer_->removeObstacles();
+#endif
 }
 
 void Robot::addPermanentViewerParticles(const std::vector<std::vector<double>> &particle_joint_values,
@@ -1074,9 +1081,11 @@ BOOST_PYTHON_MODULE(librobot) {
 						.def("getEndEffectorVelocity", &Robot::getEndEffectorVelocity)
 						.def("getProcessMatrices", &Robot::getProcessMatrices)						
 						.def("getEndEffectorJacobian", &Robot::getEndEffectorJacobian)
+						.def("addObstacles", &Robot::addObstacles)
+						.def("removeObstacles", &Robot::removeObstacles)
 #ifdef USE_URDF
 						.def("setupViewer", &Robot::setupViewer)
-						.def("addObstacles", &Robot::addObstacles)
+						
 						.def("updateViewerValues", &Robot::updateViewerValues)
 						.def("setViewerSize", &Robot::setViewerSize)
 						.def("setViewerBackgroundColor", &Robot::setViewerBackgroundColor)

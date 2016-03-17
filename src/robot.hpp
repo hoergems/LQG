@@ -245,6 +245,8 @@ struct Joint {
     	    
     	    void addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles);
     	    
+    	    void removeObstacles();
+    	    
     	    void addSensor(std::string sensor_file);
     	    
     	    void setSensorTransform(std::vector<double> &joint_angles);
