@@ -203,6 +203,9 @@ struct Joint {
     	    std::vector<double> getProcessMatrices(std::vector<double> &x, 
                                                    std::vector<double> &rho, 
 				                                   double t_e);
+    	    void addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles);
+    	        	    
+    	    void removeObstacles();
 #ifdef USE_URDF	    
     	    /**
     	     * Set the size of the attached viewer
@@ -242,10 +245,6 @@ struct Joint {
     	    void removePermanentViewerParticles();
     	        	    
     	    void setupViewer(std::string model_file, std::string environment_file);
-    	    
-    	    void addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles);
-    	    
-    	    void removeObstacles();
     	    
     	    void addSensor(std::string sensor_file);
     	    
