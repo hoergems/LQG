@@ -562,15 +562,6 @@ void Robot::getEndEffectorPosition(const std::vector<double> &joint_angles, std:
 	kinematics_->getEndEffectorPosition(joint_angles, end_effector_position);
 }
 
-
-/****************************************
- * Viewer functions
- */
-#ifdef USE_URDF
-void Robot::setupViewer(std::string model_file, std::string environment_file) {	
-	viewer_->setupViewer(model_file, environment_file);	
-}
-
 void Robot::addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles) {
 #ifdef USE_URDF
 	for (size_t i = 0; i < obstacles.size(); i++) {
@@ -596,6 +587,17 @@ void Robot::removeObstacles() {
 	viewer_->removeObstacles();
 #endif
 }
+
+
+/****************************************
+ * Viewer functions
+ */
+#ifdef USE_URDF
+void Robot::setupViewer(std::string model_file, std::string environment_file) {	
+	viewer_->setupViewer(model_file, environment_file);	
+}
+
+
 
 void Robot::addPermanentViewerParticles(const std::vector<std::vector<double>> &particle_joint_values,
 							            const std::vector<std::vector<double>> &particle_colors) {
