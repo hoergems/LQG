@@ -43,17 +43,7 @@ namespace shared {
         	ee_g.push_back(ee_goal_position_[i]);
         }*/
         
-        double distance = utils::euclideanDistance(ee_position, ee_goal_position_); 
-        if (distance < 0.3) {
-        	cout << "WAAAAAAAAAAAAAAAAAAA" << endl;
-        	sleep(10);
-        }
-        cout << "state: ";
-        for (auto &k: v1) {
-        	cout << k << ", ";
-        }
-        cout << endl;
-        cout << "dist: " << distance << endl;
+        double distance = utils::euclideanDistance(ee_position, ee_goal_position_);        
         return distance;             
     } 
     

@@ -317,8 +317,7 @@ class PathPlanningInterface:
                                                         self.verbose,
                                                         self.planning_algorithm)
             path_planner2.setup()            
-        else: 
-            print "SETUP DYNAMIC"           
+        else:                      
             path_planner2 = libdynamic_path_planner.DynamicPathPlanner(robot,                                                                       
                                                                        self.verbose)            
             path_planner2.setupMotionValidator(self.continuous_collision)

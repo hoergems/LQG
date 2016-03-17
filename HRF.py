@@ -46,96 +46,20 @@ class HRF:
         np.set_printoptions(precision=16)
         dir = self.abs_path + "/stats/hrf"
         tmp_dir = self.abs_path + "/tmp/hrf"
-        self.utils = Utils()
-        if not self.init_robot(self.robot_file):
-            logging.error("HRF: Couldn't initialize robot")
-            return               
-        if not self.setup_scene(self.environment_file, self.robot):
-            return        
-            
         self.clear_stats(dir)
-        logging.info("Start up simulator")
-        sim = Simulator() 
-        plan_adjuster = PlanAdjuster()       
-        path_evaluator = PathEvaluator()
-        path_planner = PathPlanningInterface()
-        if self.show_viewer_simulation:
-            self.robot.setupViewer(self.robot_file, self.environment_file)            
         
-        ik_solution_generator = IKSolutionGenerator()
+        if self.init_modules() == False:
+            return
         
         logging.info("HRF: Generating goal states...")
-        problem_feasible = False
-        while not problem_feasible:
-            print "Creating random scene..." 
-            #self.create_random_obstacles(1)
-            ik_solution_generator.setup(self.robot,
-                                        self.obstacles,
-                                        self.max_velocity,
-                                        self.delta_t,
-                                        self.planning_algorithm,
-                                        self.path_timeout,
-                                        self.continuous_collision,
-                                        self.num_cores)
-            if self.dynamic_problem:
-                ik_solution_generator.setup_dynamic_problem(self.simulation_step_size,
-                                                            self.num_control_samples,
-                                                            self.min_control_duration,
-                                                            self.max_control_duration,
-                                                            self.add_intermediate_states,
-                                                            self.rrt_goal_bias,
-                                                            self.control_sampler)
-            ik_solutions = ik_solution_generator.generate(self.start_state, 
-                                                          self.goal_position, 
-                                                          self.goal_radius,
-                                                          self.num_generated_goal_states)        
-            if len(ik_solutions) != 0:
-                problem_feasible = True       
-            '''goal_states = get_goal_states("hrf",
-                                          self.abs_path,
-                                          self.serializer, 
-                                          self.obstacles,                                                                           
-                                          self.robot,                                    
-                                          self.max_velocity,
-                                          self.delta_t,
-                                          self.start_state,
-                                          self.goal_position,
-                                          self.goal_radius,
-                                          self.planning_algorithm,
-                                          self.path_timeout,
-                                          self.num_generated_goal_states,
-                                          self.continuous_collision,
-                                          self.environment_file,
-                                          self.num_cores)'''
+        goal_states = self.create_feasible_problem() 
             
-            '''if len(goal_states) == 0:
-                logging.error("HRF: Couldn't generate any goal states. Problem seems to be infeasible")
-            else:
-                problem_feasible = True'''
-        obst = v_obstacle()
-        obst[:] = self.obstacles
-        self.robot.addObstacles(obst)
-        logging.info("HRF: Generated " + str(len(goal_states)) + " goal states")
-        sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)
-        path_planner.setup(self.robot,                         
-                           self.obstacles,  
-                           self.max_velocity, 
-                           self.delta_t, 
-                           self.use_linear_path,
-                           self.planning_algorithm,
-                           self.path_timeout,
-                           self.continuous_collision,
-                           self.num_cores)
-        if self.dynamic_problem:
-            path_planner.setup_dynamic_problem(self.simulation_step_size,
-                                               self.num_control_samples,
-                                               self.min_control_duration,
-                                               self.max_control_duration,
-                                               self.add_intermediate_states,
-                                               self.rrt_goal_bias,
-                                               self.control_sampler)
+        self.setup()
+        logging.info("HRF: Generated " + str(len(goal_states)) + " goal states")       
+        
         
         A, H, B, V, W, C, D, M_base, N_base = self.problem_setup(self.delta_t, self.robot_dof)
+        self.plan_adjuster.set_model_matrices(A, B, V)
         time_to_generate_paths = 0.0
         if check_positive_definite([C, D]):
             m_covs = None
@@ -169,54 +93,48 @@ class HRF:
                                                N_base, 
                                                covariance_type='observation')
             
-            path_planner.setup_path_evaluator(A, B, C, D, H, M, N, V, W,                                     
-                                              self.robot, 
-                                              self.sample_size, 
-                                              self.obstacles,
-                                              self.goal_position,
-                                              self.goal_radius,                                              
-                                              self.robot_file,
-                                              self.environment_file)
-            sim.setup_problem(A, B, C, D, H, V, W, M, N,
-                              self.robot, 
-                              self.enforce_control_constraints,
-                              self.obstacles, 
-                              self.goal_position, 
-                              self.goal_radius,
-                              self.max_velocity,                                  
-                              self.show_viewer_simulation,
-                              self.robot_file,
-                              self.environment_file,
-                              self.knows_collision)
-            path_evaluator.setup(A, B, C, D, H, M, N, V, W,                                     
-                                 self.robot, 
-                                 self.sample_size, 
-                                 self.obstacles,
-                                 self.goal_position,
-                                 self.goal_radius,
-                                 self.show_viewer_evaluation,
-                                 self.robot_file,
-                                 self.environment_file,
-                                 self.num_cores)
-            path_evaluator.setup_reward_function(self.step_penalty, self.illegal_move_penalty, self.exit_reward, self.discount_factor)
-            plan_adjuster.setup(self.robot,
-                                M, 
-                                H, 
-                                W, 
-                                N, 
-                                C, 
-                                D,
-                                self.dynamic_problem, 
-                                self.enforce_control_constraints)
-            plan_adjuster.set_simulation_step_size(self.simulation_step_size)
-            plan_adjuster.set_model_matrices(A, B, V)
-            if not self.dynamic_problem:
-                plan_adjuster.set_max_joint_velocities_linear_problem(np.array([self.max_velocity for i in xrange(self.robot_dof)]))
-            sim.set_stop_when_colliding(self.replan_when_colliding)
+            self.path_planner.setup_path_evaluator(A, B, C, D, H, M, N, V, W,                                     
+                                                   self.robot, 
+                                                   self.sample_size, 
+                                                   self.obstacles,
+                                                   self.goal_position,
+                                                   self.goal_radius,                                              
+                                                   self.robot_file,
+                                                   self.environment_file)
+            self.sim.setup_problem(A, B, C, D, H, V, W, M, N,
+                                   self.robot, 
+                                   self.enforce_control_constraints,
+                                   self.obstacles, 
+                                   self.goal_position, 
+                                   self.goal_radius,
+                                   self.max_velocity,                                  
+                                   self.show_viewer_simulation,
+                                   self.robot_file,
+                                   self.environment_file,
+                                   self.knows_collision)
+            self.path_evaluator.setup(A, B, C, D, H, M, N, V, W,                                     
+                                      self.robot, 
+                                      self.sample_size, 
+                                      self.obstacles,
+                                      self.goal_position,
+                                      self.goal_radius,
+                                      self.show_viewer_evaluation,
+                                      self.robot_file,
+                                      self.environment_file,
+                                      self.num_cores)
+            
+            self.plan_adjuster.setup(self.robot,
+                                     M, 
+                                     H, 
+                                     W, 
+                                     N, 
+                                     C, 
+                                     D,
+                                     self.dynamic_problem, 
+                                     self.enforce_control_constraints) 
             if self.dynamic_problem:
-                path_evaluator.setup_dynamic_problem()
-                sim.setup_dynamic_problem(self.simulation_step_size)
-            path_planner.setup_reward_function(self.step_penalty, self.exit_reward, self.illegal_move_penalty, self.discount_factor)
+                self.setup_dynamic_problem()           
+            
             mean_number_planning_steps = 0.0
             number_of_steps = 0.0
             mean_planning_time = 0.0
@@ -231,7 +149,7 @@ class HRF:
                 self.serializer.write_line("log.log", tmp_dir, "RUN #" + str(k + 1) + " \n")
                 current_step = 0
                 x_true = [self.start_state[m] for m in xrange(len(self.start_state))]
-                x_estimated = [self.start_state[m] for m in xrange(len(self.start_state))]
+                x_estimated = np.array([self.start_state[m] for m in xrange(len(self.start_state))])
                 #x_estimated[0] += 0.2                
                 #x_estimated[0] = 0.4             
                 #x_predicted = self.start_state                               
@@ -246,7 +164,7 @@ class HRF:
                 """
                 Obtain a nominal path
                 """
-                path_planner.set_start_and_goal(x_estimated, goal_states, self.goal_position, self.goal_radius)
+                self.path_planner.set_start_and_goal(x_estimated, goal_states, self.goal_position, self.goal_radius)
                 t0 = time.time()                
                 (xs, 
                  us, 
@@ -260,14 +178,14 @@ class HRF:
                  mean_gen_times, 
                  mean_eval_times,
                  total_gen_times,
-                 total_eval_times) = path_planner.plan_and_evaluate_paths(1, 
-                                                                          0, 
-                                                                          current_step, 
-                                                                          self.evaluation_horizon, 
-                                                                          P_t,
-                                                                          deviation_covariance,
-                                                                          estimated_deviation_covariance, 
-                                                                          0.0)
+                 total_eval_times) = self.path_planner.plan_and_evaluate_paths(1, 
+                                                                               0, 
+                                                                               current_step, 
+                                                                               self.evaluation_horizon, 
+                                                                               P_t,
+                                                                               deviation_covariance,
+                                                                               estimated_deviation_covariance, 
+                                                                              0.0)
                 while True: 
                     print "current step " + str(current_step) 
                     '''if current_step == 7:
@@ -280,7 +198,7 @@ class HRF:
                     
                     """ Get state matrices """
                     #As, Bs, Vs, Ms, Hs, Ws, Ns = sim.get_linear_model_matrices(xs, us, control_durations)
-                    As, Bs, Vs, Ms, Hs, Ws, Ns = sim.get_linear_model_matrices([x_estimated], [us[0]], control_durations)
+                    As, Bs, Vs, Ms, Hs, Ws, Ns = self.sim.get_linear_model_matrices([x_estimated], [us[0]], control_durations)
                     
                     """ Predict using EKF """
                     (x_predicted_temp, P_predicted) = kalman.predict_state(self.robot,
@@ -297,9 +215,9 @@ class HRF:
                     
                     """ Make sure x_predicted fulfills the constraints """                 
                     if self.enforce_constraints:     
-                        x_predicted_temp = sim.check_constraints(x_predicted_temp)
+                        x_predicted_temp = self.sim.check_constraints(x_predicted_temp)
                     predicted_collided = True              
-                    if not sim.is_in_collision([], x_predicted_temp)[0]:                                                                                                    
+                    if not self.sim.is_in_collision([], x_predicted_temp)[0]:                                                                                                    
                         x_predicted = x_predicted_temp
                         predicted_collided = False
                     else: 
@@ -324,17 +242,17 @@ class HRF:
                      terminal,
                      estimated_s,
                      estimated_c,
-                     history_entries) = sim.simulate_n_steps(xs, us, zs,
-                                                             control_durations,
-                                                             x_true,
-                                                             x_estimated,
-                                                             P_t,
-                                                             total_reward,                                                                 
-                                                             current_step,
-                                                             1,
-                                                             0.0,
-                                                             0.0,
-                                                             max_num_steps=self.max_num_steps)
+                     history_entries) = self.sim.simulate_n_steps(xs, us, zs,
+                                                                  control_durations,
+                                                                  x_true,
+                                                                  x_estimated,
+                                                                  P_t,
+                                                                  total_reward,                                                                 
+                                                                  current_step,
+                                                                  1,
+                                                                  0.0,
+                                                                  0.0,
+                                                                  max_num_steps=self.max_num_steps)
                                         
                      
                     """
@@ -373,9 +291,9 @@ class HRF:
                     """
                     Plan new trajectories from predicted state
                     """
-                    path_planner.set_start_and_goal(x_predicted, goal_states, self.goal_position, self.goal_radius) 
+                    self.path_planner.set_start_and_goal(x_predicted, goal_states, self.goal_position, self.goal_radius) 
                     t0 = time.time()                   
-                    paths = path_planner.plan_paths(self.num_paths, 0, planning_timeout=self.timeout, min_num_paths=1)
+                    paths = self.path_planner.plan_paths(self.num_paths, 0, planning_timeout=self.timeout, min_num_paths=1)
                     mean_planning_time += time.time() - t0
                     mean_number_planning_steps += 1.0
                     num_generated_paths_run += len(paths)                    
@@ -388,8 +306,8 @@ class HRF:
                     
                     """ Make sure x_estimated fulfills the constraints """                 
                     if self.enforce_constraints:     
-                        x_estimated_temp = sim.check_constraints(x_estimated_temp) 
-                    in_collision, colliding_obstacle = sim.is_in_collision([], x_estimated_temp)
+                        x_estimated_temp = self.sim.check_constraints(x_estimated_temp) 
+                    in_collision, colliding_obstacle = self.sim.is_in_collision([], x_estimated_temp)
                     if in_collision:
                         history_entries[-1].set_estimate_collided(True)                        
                         for l in xrange(len(x_estimated) / 2, len(x_estimated)):                            
@@ -406,12 +324,16 @@ class HRF:
                     Adjust plan
                     """ 
                     t0 = time.time()                   
-                    (xs_adj, us_adj, zs_adj, control_durations_adj) = plan_adjuster.adjust_plan(self.robot,
-                                                                                                (xs, us, zs, control_durations),                                                                                                
-                                                                                                x_estimated,
-                                                                                                P_t)
+                    (xs_adj, us_adj, zs_adj, control_durations_adj) = self.plan_adjuster.adjust_plan(self.robot,
+                                                                                                    (xs, us, zs, control_durations),                                                                                                
+                                                                                                     x_estimated,
+                                                                                                     P_t)
                     if self.show_viewer_simulation:
-                        sim.update_viewer(x_true, x_estimated, z, control_duration=0.03, colliding_obstacle=sim.colliding_obstacle)
+                        self.sim.update_viewer(x_true, 
+                                               x_estimated, 
+                                               z, 
+                                               control_duration=0.03, 
+                                               colliding_obstacle=self.sim.colliding_obstacle)
                     
                     """
                     Evaluate the adjusted plan and the planned paths
@@ -438,9 +360,9 @@ class HRF:
                      objective, 
                      state_covariances,
                      deviation_covariances,
-                     estimated_deviation_covariances) = path_evaluator.evaluate_paths(paths, 
-                                                                                      P_t, 
-                                                                                      current_step)
+                     estimated_deviation_covariances) = self.path_evaluator.evaluate_paths(paths, 
+                                                                                           P_t, 
+                                                                                           current_step)
                     mean_planning_time += time.time() - t0
                     if path_index == None:
                         """
@@ -543,6 +465,91 @@ class HRF:
         cmd = "cp " + self.abs_path + "/" + self.robot_file + " " + dir + "/model"
         os.system(cmd)
         print "Done."
+        
+    def setup_dynamic_problem(self):
+        self.path_planner.setup_dynamic_problem(self.simulation_step_size,
+                                                self.num_control_samples,
+                                                self.min_control_duration,
+                                                self.max_control_duration,
+                                                self.add_intermediate_states,
+                                                self.rrt_goal_bias,
+                                                self.control_sampler)
+        self.path_evaluator.setup_dynamic_problem()
+        self.sim.setup_dynamic_problem(self.simulation_step_size)        
+        
+    def init_modules(self):
+        self.utils = Utils()
+        if not self.init_robot(self.robot_file):
+            logging.error("HRF: Couldn't initialize robot")
+            return False         
+        if not self.setup_scene(self.environment_file, self.robot):
+            return False
+        
+        self.sim = Simulator() 
+        self.plan_adjuster = PlanAdjuster()       
+        self.path_evaluator = PathEvaluator()
+        self.path_planner = PathPlanningInterface()
+        if self.show_viewer_simulation:
+            self.robot.setupViewer(self.robot_file, self.environment_file)
+        return True
+        
+    def setup(self):
+        obst = v_obstacle()
+        obst[:] = self.obstacles
+        self.robot.addObstacles(obst)
+        self.sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)
+        self.path_planner.setup(self.robot,                         
+                                self.obstacles,  
+                                self.max_velocity, 
+                                self.delta_t, 
+                                self.use_linear_path,
+                                self.planning_algorithm,
+                                self.path_timeout,
+                                self.continuous_collision,
+                                self.num_cores)
+        print "dynamic problem " + str(self.dynamic_problem)        
+        self.plan_adjuster.set_max_joint_velocities_linear_problem(np.array([self.max_velocity for i in xrange(self.robot_dof)]))
+        self.path_evaluator.setup_reward_function(self.step_penalty, 
+                                                  self.illegal_move_penalty, 
+                                                  self.exit_reward, 
+                                                  self.discount_factor)
+        self.plan_adjuster.set_simulation_step_size(self.simulation_step_size)
+        
+        self.sim.set_stop_when_colliding(self.replan_when_colliding)
+        self.path_planner.setup_reward_function(self.step_penalty, 
+                                                self.exit_reward, 
+                                                self.illegal_move_penalty, 
+                                                self.discount_factor)
+        
+    def create_feasible_problem(self):
+        ik_solution_generator = IKSolutionGenerator()        
+        while True:
+            print "Creating random scene..." 
+            self.create_random_obstacles(10)
+            ik_solution_generator.setup(self.robot,
+                                        self.obstacles,
+                                        self.max_velocity,
+                                        self.delta_t,
+                                        self.planning_algorithm,
+                                        self.path_timeout,
+                                        self.continuous_collision,
+                                        self.num_cores)
+            if self.dynamic_problem:
+                ik_solution_generator.setup_dynamic_problem(self.simulation_step_size,
+                                                            self.num_control_samples,
+                                                            self.min_control_duration,
+                                                            self.max_control_duration,
+                                                            self.add_intermediate_states,
+                                                            self.rrt_goal_bias,
+                                                            self.control_sampler)
+            goal_states = ik_solution_generator.generate(self.start_state, 
+                                                         self.goal_position, 
+                                                         self.goal_radius,
+                                                         self.num_generated_goal_states)        
+            if len(goal_states) != 0:
+                return goal_states
+         
+            
                     
     def is_terminal(self, x):
         """
