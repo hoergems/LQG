@@ -93,9 +93,7 @@ class PathPlanningInterface:
         self.path_timeout = path_timeout 
         self.continuous_collision = continuous_collision
         
-    def setup_dynamic_problem(self, 
-                              urdf_model,
-                              environment_model, 
+    def setup_dynamic_problem(self,                              
                               simulation_step_size,
                               num_control_samples,
                               min_control_duration,
@@ -103,9 +101,7 @@ class PathPlanningInterface:
                               add_intermediate_states,
                               rrt_goal_bias,
                               control_sampler):
-        self.dynamic_problem = True
-        self.model_file = urdf_model
-        self.environment_file = environment_model
+        self.dynamic_problem = True        
         self.simulation_step_size = simulation_step_size
         self.num_control_samples = num_control_samples
         self.min_control_duration = min_control_duration
@@ -321,7 +317,8 @@ class PathPlanningInterface:
                                                         self.verbose,
                                                         self.planning_algorithm)
             path_planner2.setup()            
-        else:            
+        else: 
+            print "SETUP DYNAMIC"           
             path_planner2 = libdynamic_path_planner.DynamicPathPlanner(robot,                                                                       
                                                                        self.verbose)            
             path_planner2.setupMotionValidator(self.continuous_collision)

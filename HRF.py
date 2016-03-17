@@ -17,6 +17,7 @@ from simulator import Simulator
 from path_evaluator import PathEvaluator
 from path_planning_interface import PathPlanningInterface
 from libobstacle import Obstacle, Terrain
+from gen_ik_solution import IKSolutionGenerator
 import warnings
 import subprocess
 
@@ -61,12 +62,36 @@ class HRF:
         if self.show_viewer_simulation:
             self.robot.setupViewer(self.robot_file, self.environment_file)            
         
+        ik_solution_generator = IKSolutionGenerator()
+        
         logging.info("HRF: Generating goal states...")
         problem_feasible = False
         while not problem_feasible:
             print "Creating random scene..." 
-            #self.create_random_obstacles(20)
-            goal_states = get_goal_states("hrf",
+            #self.create_random_obstacles(1)
+            ik_solution_generator.setup(self.robot,
+                                        self.obstacles,
+                                        self.max_velocity,
+                                        self.delta_t,
+                                        self.planning_algorithm,
+                                        self.path_timeout,
+                                        self.continuous_collision,
+                                        self.num_cores)
+            if self.dynamic_problem:
+                ik_solution_generator.setup_dynamic_problem(self.simulation_step_size,
+                                                            self.num_control_samples,
+                                                            self.min_control_duration,
+                                                            self.max_control_duration,
+                                                            self.add_intermediate_states,
+                                                            self.rrt_goal_bias,
+                                                            self.control_sampler)
+            ik_solutions = ik_solution_generator.generate(self.start_state, 
+                                                          self.goal_position, 
+                                                          self.goal_radius,
+                                                          self.num_generated_goal_states)        
+            if len(ik_solutions) != 0:
+                problem_feasible = True       
+            '''goal_states = get_goal_states("hrf",
                                           self.abs_path,
                                           self.serializer, 
                                           self.obstacles,                                                                           
@@ -76,20 +101,20 @@ class HRF:
                                           self.start_state,
                                           self.goal_position,
                                           self.goal_radius,
-                                          self.planning_algortihm,
+                                          self.planning_algorithm,
                                           self.path_timeout,
                                           self.num_generated_goal_states,
                                           self.continuous_collision,
                                           self.environment_file,
-                                          self.num_cores)
+                                          self.num_cores)'''
             
-            if len(goal_states) == 0:
+            '''if len(goal_states) == 0:
                 logging.error("HRF: Couldn't generate any goal states. Problem seems to be infeasible")
             else:
-                problem_feasible = True
-        '''obst = v_obstacle()
+                problem_feasible = True'''
+        obst = v_obstacle()
         obst[:] = self.obstacles
-        self.robot.addObstacles(obst)'''
+        self.robot.addObstacles(obst)
         logging.info("HRF: Generated " + str(len(goal_states)) + " goal states")
         sim.setup_reward_function(self.discount_factor, self.step_penalty, self.illegal_move_penalty, self.exit_reward)
         path_planner.setup(self.robot,                         
@@ -97,14 +122,12 @@ class HRF:
                            self.max_velocity, 
                            self.delta_t, 
                            self.use_linear_path,
-                           self.planning_algortihm,
+                           self.planning_algorithm,
                            self.path_timeout,
                            self.continuous_collision,
                            self.num_cores)
         if self.dynamic_problem:
-            path_planner.setup_dynamic_problem(self.robot_file,
-                                               self.environment_file,
-                                               self.simulation_step_size,
+            path_planner.setup_dynamic_problem(self.simulation_step_size,
                                                self.num_control_samples,
                                                self.min_control_duration,
                                                self.max_control_duration,
@@ -709,7 +732,7 @@ class HRF:
         self.enforce_control_constraints = config['enforce_control_constraints']
         self.sample_size = config['sample_size']
         self.plot_paths = config['plot_paths']
-        self.planning_algortihm = config['planning_algorithm']
+        self.planning_algorithm = config['planning_algorithm']
         self.dynamic_problem = config['dynamic_problem'] 
         self.simulation_step_size = config['simulation_step_size']        
         self.path_timeout = config['path_timeout'] 

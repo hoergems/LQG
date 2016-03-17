@@ -27,7 +27,7 @@ class IKSolutionGenerator:
         self.link_dimensions = v2_double()
         self.robot.getActiveLinkDimensions(self.link_dimensions)        
         self.path_planner = PathPlanningInterface()
-        self.obstacles = obstacles
+        self.obstacles = obstacles        
         self.path_planner.setup(robot, 
                                 obstacles, 
                                 max_velocity, 
@@ -36,7 +36,23 @@ class IKSolutionGenerator:
                                 planning_algorithm,
                                 path_timeout,
                                 continuous_collision,
-                                num_cores)        
+                                num_cores) 
+        
+    def setup_dynamic_problem(self,                              
+                              simulation_step_size,
+                              num_control_samples,
+                              min_control_duration,
+                              max_control_duration,
+                              add_intermediate_states,
+                              rrt_goal_bias,
+                              control_sampler):
+        self.path_planner.setup_dynamic_problem(simulation_step_size,
+                                                num_control_samples,
+                                                min_control_duration,
+                                                max_control_duration,
+                                                add_intermediate_states,
+                                                rrt_goal_bias,
+                                                control_sampler)      
         
     def transform_goal(self, goal_position):
         """
@@ -71,9 +87,10 @@ class IKSolutionGenerator:
             logging.info("IKSolutionGenerator: Checking ik solution " + str(i) + " for validity")            
             ik_solution = [possible_ik_solutions[i][k] for k in xrange(len(start_state) / 2)]                        
             ik_solution.extend([0.0 for j in xrange(len(start_state) / 2)])
+            
             print "plan path"            
             self.path_planner.set_start_and_goal(start_state, [ik_solution], goal_position, goal_threshold)                   
-            path = self.path_planner.plan_paths(1, 0, planning_timeout=2.0)            
+            path = self.path_planner.plan_paths(1, 0, planning_timeout=10.0)            
             if len(path) != 0:
                 logging.warn("IKSolutionGenerator: ik solution " + str(i) + " is a valid ik solution")
                 solutions.append(ik_solution)
