@@ -225,7 +225,7 @@ class PathPlanningInterface:
                                    queue,
                                    i)) for i in xrange(self.num_cores - 1)]
         t0 = time.time() 
-        for i in xrange(len(processes)):
+        for i in xrange(len(processes)):           
             processes[i].daemon = True
             processes[i].start()            
         curr_len = 0

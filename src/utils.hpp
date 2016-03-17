@@ -23,7 +23,7 @@ using boost::property_tree::ptree;
 
 namespace utils {
 
-double euclideanDistance(std::vector<double> &vec1, std::vector<double> &vec2);
+double euclideanDistance(const std::vector<double> &vec1, const std::vector<double> &vec2);
 
 class Utils {      
     public:

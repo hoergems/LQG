@@ -34,6 +34,7 @@ class PlotStats:
         if self.setup_robot(dir) and plot_emds:            
             self.plot_emds(show_particles, dir=dir)
         self.plot_estimate_error(dir=dir)
+        self.plot_linearisation_error(dir=dir)
         return    
         
         self.save_estimation_error("estimation_error_stats", dir=dir)
@@ -126,25 +127,58 @@ class PlotStats:
                 pass
             
     ##################################################################################
-    def plot_estimate_error(self, dir="stats", normalized=False):
-        files = glob.glob(os.path.join(dir, "log*.log"))
-        #file = files[0]
-        stats_sets = []
-        
+    def plot_linearisation_error(self, dir="stats"):
+        files = glob.glob(os.path.join(dir, "log*.log"))        
+        stats_sets = []        
         labels = []
         min_e = 1000000000000
-        max_e = -1000000000000
-        
-        color_map = [self.gen_random_color() for i in xrange(len(files))]
-        
+        max_e = -1000000000000        
+        color_map = [self.gen_random_color() for i in xrange(len(files))]        
         for file in files:
             set_1 = []
             n = 0
-            labels.append(file.split("_")[-1].split(".log")[0])
-            
+            labels.append(file.split("_")[-1].split(".log")[0])            
             with open(file, "r") as f:
-                lines = f.readlines() 
-                
+                lines = f.readlines()                
+                for i in xrange(len(lines)):
+                    if "Linearization error:" in lines[i]: 
+                        try:       
+                            err = float(lines[i].split(":")[1].strip())
+                            if err < min_e:
+                                min_e = err
+                            if err > max_e:
+                                max_e = err       
+                            elem = [n, err]
+                            n+=1
+                            set_1.append(elem)
+                        except:
+                            pass                        
+            stats_sets.append(np.array(set_1))
+        Plot.plot_2d_n_sets(stats_sets,
+                            labels=labels,
+                            xlabel="step",
+                            ylabel="linearisation error",
+                            x_range=[0, n],
+                            y_range=[min_e, max_e * 1.05],
+                            show_legend=True,
+                            lw=3,
+                            color_map=color_map,
+                            save=self.save,
+                            filename=dir + "/linearisation_error.png")
+    
+    def plot_estimate_error(self, dir="stats", normalized=False):
+        files = glob.glob(os.path.join(dir, "log*.log"))        
+        stats_sets = []        
+        labels = []
+        min_e = 1000000000000
+        max_e = -1000000000000        
+        color_map = [self.gen_random_color() for i in xrange(len(files))]        
+        for file in files:
+            set_1 = []
+            n = 0
+            labels.append(file.split("_")[-1].split(".log")[0])            
+            with open(file, "r") as f:
+                lines = f.readlines()                
                 for i in xrange(len(lines)): 
                     if normalized:               
                         if "Estimation error normalized:" in lines[i]: 
@@ -171,11 +205,8 @@ class PlotStats:
                                 n+=1
                                 set_1.append(elem)
                             except:
-                                pass
-                        
+                                pass                        
             stats_sets.append(np.array(set_1))
-        
-                    
         Plot.plot_2d_n_sets(stats_sets,
                             labels=labels,
                             xlabel="step",
@@ -187,7 +218,7 @@ class PlotStats:
                             color_map=color_map,
                             save=self.save,
                             filename=dir + "/estimation_error.png")
-        sleep
+        
     ##################################################################################
     
     def to_latex_table_reward_stats(self, dir="stats"):

@@ -51,27 +51,33 @@ def predict_state(robot,
                   B,
                   V, 
                   M,
-                  P_t):        
+                  P_t,
+                  dynamic_problem):        
     """
     Predidcts the state at the next time step using an extended kalman filter
     """
-    current_state = v_double()
-    current_state[:] = x_estimated
-    control = v_double()
-    control[:] = u
-    control_error = v_double()
-    control_error[:] = [0.0 for i in xrange(len(u))]
-    result = v_double()
-    robot.propagate(current_state,
-                    control,
-                    control_error,
-                    simulation_step_size,
-                    control_duration,
-                    result)
-    x_predicted = np.array([result[i] for i in xrange(len(result))])
-        
-    x_tilde_dash, P_predicted = kalman_predict(x_estimated, u, A, B, P_t, V, M)
-    return (x_predicted, P_predicted)
+    if dynamic_problem:
+        current_state = v_double()
+        current_state[:] = x_estimated
+        control = v_double()
+        control[:] = u
+        control_error = v_double()
+        control_error[:] = [0.0 for i in xrange(len(u))]
+        result = v_double()
+        robot.propagate(current_state,
+                        control,
+                        control_error,
+                        simulation_step_size,
+                        control_duration,
+                        result)
+        x_predicted = np.array([result[i] for i in xrange(len(result))])
+            
+        x_tilde_dash, P_predicted = kalman_predict(x_estimated, u, A, B, P_t, V, M)
+        return (x_predicted, P_predicted)
+    else:
+        x_predicted = np.dot(A, x_estimated) + np.dot(B, u)
+        x_tilde_dash, P_predicted = kalman_predict(x_estimated, u, A, B, P_t, V, M)
+        return (x_predicted, P_predicted)
 
 def filter_update(x_predicted, P_dash, observation, H, W, N):
     return kalman_update(x_predicted, observation, H, P_dash, W, N)    

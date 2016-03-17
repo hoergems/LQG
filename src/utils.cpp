@@ -45,7 +45,7 @@ struct VecToList
     }
 };
 
-double euclideanDistance(std::vector<double> &vec1, std::vector<double> &vec2) {
+double euclideanDistance(const std::vector<double> &vec1, const std::vector<double> &vec2) {
     double sum = 0.0;
     for (size_t i = 0; i < vec1.size(); i++) {
         sum += pow(vec2[i] - vec1[i], 2);

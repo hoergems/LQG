@@ -94,6 +94,9 @@ void DynamicPathPlanner::addIntermediateStates(bool add_intermediate_states) {
 	if (planner_str_ == "RRT") {
 		boost::static_pointer_cast<RRTControl>(planner_)->setIntermediateStates(add_intermediate_states);
 	}	
+	else if (planner_str_ == "EST") {
+	    boost::static_pointer_cast<ESTControl>(planner_)->setIntermediateStates(true);
+	}
 }
 
 bool DynamicPathPlanner::setup_ompl_(double &simulation_step_size,
@@ -117,10 +120,7 @@ bool DynamicPathPlanner::setup_ompl_(double &simulation_step_size,
     	planner_ = boost::make_shared<RRTControl>(space_information_);
     }
     
-    planner_->setProblemDefinition(problem_definition_);
-    if (planner_str_ == "EST") {
-    	boost::static_pointer_cast<RRTControl>(planner_)->setIntermediateStates(true);
-    }
+    planner_->setProblemDefinition(problem_definition_);    
     
     state_propagator_ = boost::make_shared<StatePropagator>(space_information_,
     		                                                robot_,

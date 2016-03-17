@@ -12,6 +12,10 @@ ESTControl::ESTControl(const ompl::control::SpaceInformationPtr &si):
 	
 }
 
+void ESTControl::setIntermediateStates(bool addIntermediateStates) {
+	addIntermediateStates_ = addIntermediateStates;
+}
+
 ompl::base::PlannerStatus ESTControl::solve(const ompl::base::PlannerTerminationCondition &ptc)
 {
 	ManipulatorSpaceInformation const * msiC_ = static_cast<ManipulatorSpaceInformation const *>(siC_);

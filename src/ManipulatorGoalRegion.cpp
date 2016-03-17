@@ -38,12 +38,12 @@ namespace shared {
         std::vector<double> ee_position;        
         robot_->getEndEffectorPosition(v1, ee_position);
         
-        std::vector<double> ee_g;
+        /**std::vector<double> ee_g;
         for (size_t i = 0; i < ee_goal_position_.size(); i++) {
         	ee_g.push_back(ee_goal_position_[i]);
-        }
+        }*/
         
-        double distance = utils::euclideanDistance(ee_position, ee_g);        
+        double distance = utils::euclideanDistance(ee_position, ee_goal_position_);        
         return distance;             
     } 
     

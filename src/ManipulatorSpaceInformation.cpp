@@ -57,42 +57,13 @@ unsigned int ManipulatorSpaceInformation::propagateWhileValid(const ompl::base::
 		        freeState(result[st]);
 		        result.resize(st);
 		    }
-		}
-		/**if (isValid(result[st])) {
-            ++st;
-		    while (st < steps) {
-		        if (alloc) {
-				    result[st] = allocState();
-		        }
-				
-		        statePropagator_->propagate(result[st-1], control, signedStepSize, result[st]);		       
-				if (!isValid(result[st])) {
-				    if (alloc) {
-				        freeState(result[st]);
-				        result.resize(st);
-				    }
-				    break;
-				}
-				else {
-				    ++st;
-				}
-		    }
-		}
-		else {
-		    if (alloc) {
-		        freeState(result[st]);
-				result.resize(st);
-		    }
-		}*/
+		}		
     }
 
 	return st;
 }
 
-ompl::control::DirectedControlSamplerPtr ManipulatorSpaceInformation::allocDirectedControlSampler() const {
-	/**ompl::control::DirectedControlSamplerPtr ptr(new ompl::control::SimpleDirectedControlSampler(this));
-    boost::dynamic_pointer_cast<ompl::control::SimpleDirectedControlSampler>(ptr)->setNumControlSamples(num_control_samples_);	
-    return ptr;*/
+ompl::control::DirectedControlSamplerPtr ManipulatorSpaceInformation::allocDirectedControlSampler() const {	
 	ompl::control::DirectedControlSamplerPtr ptr(new shared::ManipulatorDirectedControlSampler(this, num_control_samples_));	
 	boost::dynamic_pointer_cast<shared::ManipulatorDirectedControlSampler>(ptr)->setNumControlSamples(num_control_samples_);
 	return ptr;

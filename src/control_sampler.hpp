@@ -23,6 +23,10 @@ namespace shared {
             
         private:
             const ompl::control::ControlSpace *space_;
+            
+            std::vector<double> low_;
+            
+            std::vector<double> high_;
     
     };
     
@@ -39,6 +43,10 @@ namespace shared {
     	    
     	private:
     	    const ompl::control::ControlSpace *space_;
+    	    
+    	    std::vector<double> low_;
+    	                
+    	    std::vector<double> high_;
     	
     };
 }

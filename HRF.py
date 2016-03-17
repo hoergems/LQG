@@ -10,7 +10,7 @@ from plan_adjuster import PlanAdjuster
 from serializer import Serializer
 from libutil import *
 import logging
-#from librobot import v_string, Robot, v_obstacle
+from librobot import v_string, Robot, v_obstacle
 from librobot import v_string, Robot
 from util_py import check_positive_definite, get_goal_states, copyToTmp
 from simulator import Simulator
@@ -186,6 +186,9 @@ class HRF:
                                 self.dynamic_problem, 
                                 self.enforce_control_constraints)
             plan_adjuster.set_simulation_step_size(self.simulation_step_size)
+            plan_adjuster.set_model_matrices(A, B, V)
+            if not self.dynamic_problem:
+                plan_adjuster.set_max_joint_velocities_linear_problem(np.array([self.max_velocity for i in xrange(self.robot_dof)]))
             sim.set_stop_when_colliding(self.replan_when_colliding)
             if self.dynamic_problem:
                 path_evaluator.setup_dynamic_problem()
@@ -206,8 +209,7 @@ class HRF:
                 current_step = 0
                 x_true = [self.start_state[m] for m in xrange(len(self.start_state))]
                 x_estimated = [self.start_state[m] for m in xrange(len(self.start_state))]
-                #x_estimated[0] += 0.2
-                print x_estimated
+                #x_estimated[0] += 0.2                
                 #x_estimated[0] = 0.4             
                 #x_predicted = self.start_state                               
                 P_t = np.array([[0.0 for i in xrange(2 * self.robot_dof)] for i in xrange(2 * self.robot_dof)]) 
@@ -267,7 +269,8 @@ class HRF:
                                                                            Bs[0],
                                                                            Vs[0],
                                                                            Ms[0],
-                                                                           P_ext_t)                    
+                                                                           P_ext_t,
+                                                                           self.dynamic_problem)                    
                     
                     """ Make sure x_predicted fulfills the constraints """                 
                     if self.enforce_constraints:     
@@ -349,7 +352,7 @@ class HRF:
                     """
                     path_planner.set_start_and_goal(x_predicted, goal_states, self.goal_position, self.goal_radius) 
                     t0 = time.time()                   
-                    paths = path_planner.plan_paths(self.num_paths, 0, planning_timeout=self.timeout, min_num_paths=0)
+                    paths = path_planner.plan_paths(self.num_paths, 0, planning_timeout=self.timeout, min_num_paths=1)
                     mean_planning_time += time.time() - t0
                     mean_number_planning_steps += 1.0
                     num_generated_paths_run += len(paths)                    

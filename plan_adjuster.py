@@ -41,6 +41,14 @@ class PlanAdjuster:
     def set_simulation_step_size(self, simulation_step_size):
         self.simulation_step_size = simulation_step_size
         
+    def set_max_joint_velocities_linear_problem(self, max_joint_velocities):
+        self.max_joint_velocities = max_joint_velocities
+        
+    def set_model_matrices(self, A, B, V):
+        self.A = A
+        self.B = B
+        self.V = V
+        
     def enforce_control_constraints(self, u):
         """ Enforces the control constraints on control 'u' and return
         the enforced control and enforced control deviation 'u_dash'
@@ -57,8 +65,39 @@ class PlanAdjuster:
                     u[i] = self.max_joint_velocities[i]
                 elif u[i] < -self.max_joint_velocities[i]:
                     u[i] = -self.max_joint_velocities[i]
-            u_dash = u - us
+            
         return u
+    
+    def get_linear_model_matrices(self, robot, xs, us, control_durations):
+        if self.dynamic_problem:
+            return kalman.get_linear_model_matrices(robot, 
+                                                    xs, 
+                                                    us, 
+                                                    control_durations, 
+                                                    True,
+                                                    self.M,
+                                                    self.H,
+                                                    self.W,
+                                                    self.N)
+        
+        else:
+            As = []
+            Bs = []
+            Vs = []
+            Ms = []
+            Hs = []
+            Ws = []
+            Ns = []
+            for i in xrange(len(xs) + 1):
+                As.append(self.A)
+                Bs.append(self.B)
+                Vs.append(self.V)
+                Ms.append(self.M)
+                Hs.append(self.H)
+                Ws.append(self.W)
+                Ns.append(self.N)
+            return As, Bs, Vs, Ms, Hs, Ws, Ns
+        
     
     def adjust_plan(self, 
                     robot,                    
@@ -69,15 +108,10 @@ class PlanAdjuster:
         us = [plan[1][i] for i in xrange(1, len(plan[1]))]
         zs = [plan[2][i] for i in xrange(1, len(plan[2]))]
         control_durations = [plan[3][i] for i in xrange(1, len(plan[3]))]
-        As, Bs, Vs, Ms, Hs, Ws, Ns = kalman.get_linear_model_matrices(robot, 
-                                                                      xs, 
-                                                                      us, 
-                                                                      control_durations, 
-                                                                      True,
-                                                                      self.M,
-                                                                      self.H,
-                                                                      self.W,
-                                                                      self.N)
+        As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(robot, 
+                                                                    xs, 
+                                                                    us,                                                                    
+                                                                    control_durations)
         Ls = kalman.compute_gain(As, Bs, self.C, self.D, len(xs) - 1) 
         
         xs_adjusted = []
@@ -88,30 +122,37 @@ class PlanAdjuster:
         zs_adjusted.append(zs[0])
         x_tilde = x_estimated - xs[0]        
         for i in xrange(len(xs) - 1):
-            x_predicted = np.array([xs[i][k] for k in xrange(len(xs[i]))])            
-            
-            u = np.dot(Ls[i], x_estimated - x_predicted) + us[i]
-            if self.control_constraints_enforced:
-                u = self.enforce_control_constraints(u)            
-            current_state = v_double()
-            current_state[:] = [xs_adjusted[i][j] for j in xrange(len(xs_adjusted[i]))]
-            control = v_double()
-            control[:] = u
-            
-            control_error = v_double()
-            control_error[:] = [0.0 for k in xrange(len(u))]
-            result = v_double()
-            robot.propagate(current_state,
-                            control,
-                            control_error,
-                            self.simulation_step_size,
-                            control_durations[i],
-                            result)
-            xs_adjusted.append(np.array([result[k] for k in xrange(len(result))]))            
-            us_adjusted.append(np.array([u[k] for k in xrange(len(u))]))
-            zs_adjusted.append(np.array([result[k] for k in xrange(len(result))]))
-            #print "xs_adjusted: " + str(np.array([result[k] for k in xrange(len(result))]))
-            #print "xs_prior: " + str(xs[i + 1])
+            x_predicted = np.array([xs[i][k] for k in xrange(len(xs[i]))])
+            u = np.dot(Ls[i], x_estimated - x_predicted) + us[i]            
+            if self.control_constraints_enforced:                
+                u = self.enforce_control_constraints(u) 
+            if self.dynamic_problem:
+                current_state = v_double()
+                current_state[:] = [xs_adjusted[i][j] for j in xrange(len(xs_adjusted[i]))]
+                control = v_double()
+                control[:] = u
+                
+                control_error = v_double()
+                control_error[:] = [0.0 for k in xrange(len(u))]
+                result = v_double()
+                robot.propagate(current_state,
+                                control,
+                                control_error,
+                                self.simulation_step_size,
+                                control_durations[i],
+                                result)
+                xs_adjusted.append(np.array([result[k] for k in xrange(len(result))]))            
+                us_adjusted.append(np.array([u[k] for k in xrange(len(u))]))
+                zs_adjusted.append(np.array([result[k] for k in xrange(len(result))]))
+                #print "xs_adjusted: " + str(np.array([result[k] for k in xrange(len(result))]))
+                #print "xs_prior: " + str(xs[i + 1])
+            else:
+                current_state = np.array([xs_adjusted[i][j] for j in xrange(len(xs_adjusted[i]))])
+                result = np.dot(As[i], current_state) + np.dot(Bs[i], u)
+                xs_adjusted.append(np.array([result[k] for k in xrange(len(result))]))            
+                us_adjusted.append(np.array([u[k] for k in xrange(len(u))]))
+                zs_adjusted.append(np.array([result[k] for k in xrange(len(result))]))
+                
             
             u_dash = u - us[i]
             z_dash = np.array([0.0 for k in xrange(len(zs_adjusted[-1]))])

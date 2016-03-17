@@ -13,6 +13,8 @@ namespace shared {
 		    
 		    ompl::base::PlannerStatus solve(const ompl::base::PlannerTerminationCondition &ptc);
 		    
+		    void setIntermediateStates(bool addIntermediateStates);
+		    
 	    private:
 		    bool addIntermediateStates_;
 	};

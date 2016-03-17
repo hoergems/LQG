@@ -96,41 +96,25 @@ class Simulator:
     def get_linear_model_matrices(self, state_path, control_path, control_durations):
         """ Get the linearized model matrices along a given nominal path
         """
-        As = []
-        Bs = []
-        Vs = []
-        Ms = []
-        Hs = []
-        Ws = []
-        Ns = []
+        
         if self.dynamic_problem:           
-            
-            for i in xrange(len(state_path)):
-                state = v_double()
-                control = v_double()
-                state[:] = state_path[i]
-                control[:] = control_path[i]
-                A = self.robot.getProcessMatrices(state, control, control_durations[i])       
-                Matr_list = [A[j] for j in xrange(len(A))]
-                A_list = np.array([Matr_list[j] for j in xrange(len(state)**2)])
-                start_index = len(state)**2
-                B_list = np.array([Matr_list[j] for j in xrange(start_index, 
-                                                                start_index + (len(state) * (len(state) / 2)))])
-                start_index = start_index + (len(state) * (len(state) / 2))
-                V_list = np.array([Matr_list[j] for j in xrange(start_index, 
-                                                                start_index + (len(state) * (len(state) / 2)))])
-                A_Matr = A_list.reshape(len(state), len(state)).T
-                B_Matr = B_list.reshape(len(state)/ 2, len(state)).T
-                V_Matr = V_list.reshape(len(state) / 2, len(state)).T
-                
-                As.append(A_Matr)
-                Bs.append(B_Matr)
-                Vs.append(V_Matr)                
-                Ms.append(self.M)
-                Hs.append(self.H)
-                Ws.append(self.W)
-                Ns.append(self.N)
+            return kalman.get_linear_model_matrices(self.robot, 
+                                                    state_path, 
+                                                    control_path, 
+                                                    control_durations,
+                                                    self.dynamic_problem,                                                    
+                                                    self.M,
+                                                    self.H,
+                                                    self.W,
+                                                    self.N)            
         else:
+            As = []
+            Bs = []
+            Vs = []
+            Ms = []
+            Hs = []
+            Ws = []
+            Ns = []
             for i in xrange(len(state_path) + 1):
                 As.append(self.A)
                 Bs.append(self.B)
@@ -139,7 +123,7 @@ class Simulator:
                 Hs.append(self.H)
                 Ws.append(self.W)
                 Ns.append(self.N)
-        return As, Bs, Vs, Ms, Hs, Ws, Ns
+            return As, Bs, Vs, Ms, Hs, Ws, Ns
     
     def enforce_control_constraints(self, u, us):
         """ Enforces the control constraints on control 'u' and return
@@ -183,15 +167,9 @@ class Simulator:
         x_dash_linear = np.copy(x_dash)
         x_true_linear = x_true        
         x_tilde = np.array(x_estimate) - np.array(xs[0])
-        As, Bs, Vs, Ms, Hs, Ws, Ns = kalman.get_linear_model_matrices(self.robot, 
-                                                                      xs, 
-                                                                      us, 
-                                                                      control_durations,
-                                                                      self.dynamic_problem,
-                                                                      self.M,
-                                                                      self.H,
-                                                                      self.W,
-                                                                      self.N)
+        As, Bs, Vs, Ms, Hs, Ws, Ns = self.get_linear_model_matrices(xs, 
+                                                                    us, 
+                                                                    control_durations)
         Ls = kalman.compute_gain(As, Bs, self.C, self.D, len(xs) - 1)
         logging.info("Simulator: Executing for " + str(n_steps) + " steps") 
         estimated_states = []
