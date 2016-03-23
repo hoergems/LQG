@@ -285,8 +285,7 @@ class Simulator:
                     x_true = x_true_temp 
                     x_true_linear = x_true_linear_temp
                     x_dash = np.subtract(x_true, xs[i + 1])
-                    x_dash_linear = np.subtract(x_true_linear , xs[i + 1])
-                print "reward " + str(history_entries[-1].reward)               
+                    x_dash_linear = np.subtract(x_true_linear , xs[i + 1])                              
                 
                 """ Do the same for the linearized true state """ 
                 '''if self.is_in_collision(x_true_linear, x_true_linear_temp)[0]:
