@@ -187,8 +187,7 @@ class HRF:
                                                                   1,
                                                                   0.0,
                                                                   0.0,
-                                                                  max_num_steps=self.max_num_steps)
-                    print "set best reward " + str(len(history_entries))
+                                                                  max_num_steps=self.max_num_steps)                    
                     history_entries[-1].set_best_reward(objective)
                                         
                      
