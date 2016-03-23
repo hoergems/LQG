@@ -223,6 +223,7 @@ class HRF:
                 """
                 Obtain a nominal path
                 """
+                print "plan"
                 path_planner.set_start_and_goal(x_estimated, goal_states, self.goal_position, self.goal_radius)
                 t0 = time.time()                
                 (xs, 
@@ -245,6 +246,8 @@ class HRF:
                                                                           deviation_covariance,
                                                                           estimated_deviation_covariance, 
                                                                           0.0)
+                print "objective " + str(objective)
+                
                 while True: 
                     print "current step " + str(current_step) 
                     '''if current_step == 7:
@@ -312,6 +315,7 @@ class HRF:
                                                              0.0,
                                                              0.0,
                                                              max_num_steps=self.max_num_steps)
+                    
                     history_entries[-1].set_best_reward(objective)                                        
                      
                     """

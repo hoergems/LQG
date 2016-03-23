@@ -563,22 +563,24 @@ class LQG:
         fz = 0.0
         f_roll = 0.0
         f_pitch = 0.0
-        f_yaw = 0.0         
-        x = [0.0 for i in xrange(2 * self.robot_dof)]
+        f_yaw = 0.0
+        x = self.start_state         
+        ''''x = [0.0 for i in xrange(2 * self.robot_dof)]
         x = [0.0, 0.0, 0.0, 0.0,
              0.0,
              0.0,
              0.0,
              0.0]
-        x_true = [0.0 for i in xrange(2 * self.robot_dof)]        
+        x_true = [0.0 for i in xrange(2 * self.robot_dof)]'''        
         integration_times = [] 
         collision_check_times1 = []
         collision_check_times2 = []     
         
-        y = 0
+        y = 0        
         while True:                    
             #u_in = [3.0, 1.5, 0.0, 0.0, 0.0, 0.0]
             u_in = [0.0 for i in xrange(self.robot_dof)]
+            
             #u_in[0] = 150.0
             #u_in[1] = 70.0
             current_state = v_double()            
@@ -591,12 +593,12 @@ class LQG:
             control_error[:] = ce
             result = v_double()            
             
-            t0 = time.time()                    
+            t0 = time.time()                              
             self.robot.propagate(current_state,
                                  control,
                                  control_error,
                                  self.simulation_step_size,
-                                 0.03,
+                                 self.delta_t,
                                  result)
             t = time.time() - t0
             integration_times.append(t)
@@ -610,7 +612,7 @@ class LQG:
                 t_mean = sum(collision_check_times2) / len(collision_check_times2)
                 print "mean collision check times new " + str(t_mean)
                 sleep            
-            
+            print "current state " + str([current_state[i] for i in xrange(len(current_state))])
             ja_start = v_double()            
             ja_start[:] = [current_state[i] for i in xrange(len(current_state) / 2)]                     
             collision_objects_start = self.robot.createRobotCollisionObjects(ja_start)
@@ -629,17 +631,9 @@ class LQG:
             #self.robot.getEndEffectorPosition(joint_angles, ee_position)                      
             #ee_collision_objects = self.robot.createEndEffectorCollisionObject(joint_angles)
             in_collision = False
-            t_c = time.time()            
-            for o in self.obstacles:                
-                if o.inCollisionDiscrete(collision_objects_goal):                                        
-                    in_collision = True
-                    break                              
-                '''for i in xrange(len(collision_objects_start)):                        
-                    if o.inCollisionContinuous([collision_objects_start[i], collision_objects_goal[i]]):
-                        in_collision = True
-                        break'''               
-                if in_collision:
-                    break
+            t_c = time.time() 
+            print "check coll"         
+            
                     
             t = time.time() - t_c            
             collision_check_times1.append(t)          
@@ -658,7 +652,7 @@ class LQG:
                                               cjvels,
                                               particle_joint_values,
                                               particle_joint_values)
-            time.sleep(0.03) 
+            time.sleep(self.delta_t) 
             
             y += 1
             print y

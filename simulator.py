@@ -465,7 +465,7 @@ class Simulator:
             """            
             joint_angles_start = v_double()        
             joint_angles_start[:] = [previous_state[i] for i in xrange(self.robot_dof)]
-            collision_objects_start = self.robot.createRobotCollisionObjects(joint_angles_start)
+            collision_objects_start = self.robot.createRobotCollisionObjects(joint_angles_start)                      
             for obstacle in collidable_obstacles:
                 for i in xrange(len(collision_objects_start)):                    
                     if obstacle.inCollisionContinuous([collision_objects_start[i], collision_objects_goal[i]]):

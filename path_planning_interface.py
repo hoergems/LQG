@@ -190,7 +190,7 @@ class PathPlanningInterface:
         best_deviation_covariances = deviation_covariances[0]
         best_estimated_deviation_covariances = estimated_deviation_covariances[0]        
         for i in xrange(1, len(evaluated_paths)):
-            if evaluated_paths[i][1] < best_val:                
+            if evaluated_paths[i][1] > best_val:                
                 best_val = evaluated_paths[i][1]
                 best_path = evaluated_paths[i][0]
                 best_estimated_state_covariances = state_covariances[i]                

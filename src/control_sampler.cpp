@@ -46,7 +46,7 @@ DiscreteControlSampler::DiscreteControlSampler(const ompl::control::ControlSpace
 
 void DiscreteControlSampler::sample(ompl::control::Control *control) {	
 	for (size_t i = 0; i < space_->getDimension(); i++) { 
-		/**int rand_int = rng_.uniformInt(0, 2);
+		int rand_int = rng_.uniformInt(0, 2);
 		if (rand_int == 0) {
 			control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i] = low_[i];
 		}
@@ -56,14 +56,14 @@ void DiscreteControlSampler::sample(ompl::control::Control *control) {
 		
 		else {
 			control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i] = high_[i];
-		}*/
-		int rand_int = rng_.uniformInt(0, 1);
+		}
+		/**int rand_int = rng_.uniformInt(0, 1);
 		if (rand_int == 0) {
 			control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i] = low_[i];
 		}
 		else{
 			control->as<ompl::control::RealVectorControlSpace::ControlType>()->values[i] = high_[i];
-		}
+		}*/
 	}
 }
 

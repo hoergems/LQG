@@ -15,6 +15,7 @@
 #include "fcl/collision_object.h"
 #include "fcl/collision_data.h"
 #include "fcl/collision.h"
+#include "fcl/distance.h"
 #include "fcl/continuous_collision.h"
 #include "fcl/shape/geometric_shapes.h"
 #include "fcl/shape/geometric_shapes_utility.h"
@@ -48,6 +49,11 @@ class Obstacle {
         bool in_collision(std::vector<std::shared_ptr<fcl::CollisionObject>> &other_collision_objects) const; 
         
         /**
+         * Computes the smallest distance between the obstacle and the given collision objects
+         */
+        double distance(std::vector<std::shared_ptr<fcl::CollisionObject>> &other_collision_objects) const;
+        
+        /**
          * Checks if the obstacle collides with another moving collision object.
          * The motion of of the other collision object is determined by a start
          * and goal transformation
@@ -71,6 +77,9 @@ class Obstacle {
          * Python interface for continuous collision check
          */
         virtual bool in_collision_continuous(boost::python::list &ns); 
+        
+        virtual double distancePy(boost::python::list &ns);
+        
 
         /**
          * Get the terrain this obstacle consists of
@@ -142,6 +151,10 @@ public:
 	
 	void createCollisionObject() {
 		this->get_override("createCollisionObject")();
+	}
+	
+	double distancePy(boost::python::list &ns) {
+		this->get_override("distancePy")(ns);
 	}
 	
 	bool in_collision_discrete(boost::python::list &ns) {		
