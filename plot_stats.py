@@ -33,12 +33,14 @@ class PlotStats:
         
         if self.setup_robot(dir) and plot_emds:            
             self.plot_emds(show_particles, dir=dir)
-        self.plot_estimate_error(dir=dir)
+        
+        '''self.plot_estimate_error(dir=dir)
         self.plot_linearisation_error(dir=dir)
-        return    
+        return'''    
         
         self.save_estimation_error("estimation_error_stats", dir=dir)
         self.plot_number_of_steps_stats("num_step_stats", dir=dir)
+        print "Plotting estimation error"
         self.plot_stat_from_txt_file("estimation_error_stats", "mean_estimation_error", dir=dir)
         
         print "saving collision information"
@@ -482,16 +484,20 @@ class PlotStats:
                             state = np.array([float(el) for el in line.split("S: ")[1].strip().split(" ")])                            
                         elif "S_ESTIMATED:" in line:
                             estimated_state = np.array([float(el) for el in line.split("S_ESTIMATED: ")[1].strip().split(" ")])
-                            vals.append(np.linalg.norm(state - estimated_state))
+                            error = np.linalg.norm(state - estimated_state)
+                            print error
+                            vals.append(error)
+            
             n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(all_vals))
+            '''print "mean " + str(mean)
             arr = []            
             for i in xrange(int(num_runs)):                            
                 arr.append(sum(vals_per_run[i]))            
-            n, min_max, mean2, var2, skew, kurt = scipy.stats.describe(np.array(arr))
+            n, min_max, mean2, var2, skew, kurt = scipy.stats.describe(np.array(arr))'''
             with open(os.path.join(dir, "out_" + str(output_file_str) + "_" + str(m_cov) + ".txt"), "a+") as f:
                 f.write(file_str + " " + str(m_cov) + ": \n")
-                f.write("mean per run: " + str(mean2) + " \n")
-                f.write("variance: " + str(var2) + " \n")
+                f.write("mean per run: " + str(mean) + " \n")
+                f.write("variance: " + str(var) + " \n")
                 f.write("min: " + str(min_max[0]) + " \n")
                 f.write("max: " + str(min_max[1]) + " \n")
                 f.write("skewness: " + str(skew) + " \n")
@@ -634,7 +640,7 @@ class PlotStats:
         d = dict()
         for file in sorted(possible_files):
             if stat_str in file:
-                files.append(file)
+                files.append(file)        
         for file in files:
             with open(file, "r") as f:
                 cov_val = 0.0               
@@ -645,8 +651,8 @@ class PlotStats:
                         if not alg in d:
                             d[alg] = []                        
                     if "mean per run:" in line:
-                        val = float(line.split(": ")[1].strip())
-                        d[alg].append([cov_val, val])
+                        val = float(line.split(": ")[1].strip())                        
+                        d[alg].append([cov_val, val])       
                         
         m_covs = []
         min_m = 100000.0
@@ -660,24 +666,23 @@ class PlotStats:
             labels.append(key)
             stats_sets.append(np.array(d[key]))
             for i in xrange(len(d[key])):
-                m_covs.append(d[key][i][0])
+                m_covs.append(d[key][i][0])                
                 if d[key][i][1] > max_m:
                     max_m = d[key][i][1]
-                elif d[key][i][1] < min_m:
-                    min_m = d[key][i][1]
-                               
-        
-        Plot.plot_2d_n_sets(stats_sets,
-                            labels=labels,
-                            xlabel="joint covariance",
-                            ylabel=y_label,
-                            x_range=[min(m_covs), max(m_covs)],
-                            y_range=[min_m, max_m * 1.05],
-                            show_legend=True,
-                            lw=3,
-                            color_map=color_map,
-                            save=self.save,
-                            filename=dir + "/" + output_file_str + ".png")
+                if d[key][i][1] < min_m:                    
+                    min_m = d[key][i][1]        
+        if len(m_covs) > 0:
+            Plot.plot_2d_n_sets(stats_sets,
+                                labels=labels,
+                                xlabel="joint covariance",
+                                ylabel=y_label,
+                                x_range=[min(m_covs), max(m_covs)],
+                                y_range=[min_m, max_m * 1.05],
+                                show_legend=True,
+                                lw=3,
+                                color_map=color_map,
+                                save=self.save,
+                                filename=dir + "/" + output_file_str + ".png")
         
     def plot_stat(self, stat_str, output_file_str, dir="stats", y_label=""):
         if y_label == "":
