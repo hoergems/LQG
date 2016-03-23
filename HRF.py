@@ -230,7 +230,7 @@ class HRF:
                  zs,
                  control_durations, 
                  num_generated_paths, 
-                 best_val,
+                 objective,
                  state_covariances,
                  deviation_covariances,
                  estimated_deviation_covariances, 
@@ -312,7 +312,7 @@ class HRF:
                                                              0.0,
                                                              0.0,
                                                              max_num_steps=self.max_num_steps)
-                                        
+                    history_entries[-1].set_best_reward(objective)                                        
                      
                     """
                     Process history entries
@@ -337,6 +337,8 @@ class HRF:
                             num_collisions += 1                            
                         linearization_error += history_entries[l].linearization_error
                     if (current_step == self.max_num_steps) or terminal:
+                        history_entries[len(history_entries) - 2].set_best_reward(objective)
+                        history_entries[-1].set_best_reward(None)
                         for l in xrange(len(history_entries)):                            
                             history_entries[l].serialize(tmp_dir, "log.log")
                         final_states.append(history_entries[-1].x_true)                        

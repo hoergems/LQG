@@ -48,6 +48,10 @@ class HistoryEntry:
         self.replanning = False
         self.estimation_error = None
         self.estimation_error_normalized = None
+        self.best_reward = None
+        
+    def set_best_reward(self, best_reward):
+        self.best_reward = best_reward
         
     def set_estimation_error(self, estimation_error):
         self.estimation_error = estimation_error
@@ -233,6 +237,10 @@ class HistoryEntry:
             
             err_string = "Linearization error: " + str(self.linearization_error)
             f.write(err_string + " \n")
+            
+            if self.best_reward != None:
+                best_reward_str = "Best reward: " + str(self.best_reward)
+                f.write(best_reward_str + " \n") 
             
             f.write(" \n")
                
