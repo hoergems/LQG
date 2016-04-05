@@ -22,7 +22,7 @@ def plot_2d_n_sets(sets,
                    color_map=[],
                    save=False,
                    path="",
-                   filename="emd.png"):
+                   filename="emd.png"):    
     ps = []    
     if len(labels) != len(sets):         
         labels=['default' for i in xrange(len(sets))]
