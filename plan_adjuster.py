@@ -128,7 +128,7 @@ class PlanAdjuster:
             print "x_estimated " + str(x_estimated)
             print "xs[0] " + str(xs[0])
             print "xs " + str(xs)
-            raise ValueError("Raised")       
+            return (None, None, None, None, True)                   
         for i in xrange(len(xs) - 1):
             x_predicted = np.array([xs[i][k] for k in xrange(len(xs[i]))])
             u = np.dot(Ls[i], x_estimated - x_predicted) + us[i]            

@@ -396,6 +396,7 @@ class HRF:
                     if not adjusted:
                         final_states.append(history_entries[-1].x_true)
                         print "current step " + str(current_step)
+                        raise ValueError("Raised")
                         break
                     if self.show_viewer_simulation:
                         sim.update_viewer(x_true, x_estimated, z, control_duration=0.03, colliding_obstacle=sim.colliding_obstacle)
