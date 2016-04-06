@@ -120,7 +120,15 @@ class PlanAdjuster:
         
         xs_adjusted.append(xs[0])
         zs_adjusted.append(zs[0])
-        x_tilde = x_estimated - xs[0]        
+        try:
+            x_tilde = x_estimated - xs[0] 
+        except Exception as e:
+            print e
+            print "==================="
+            print "x_estimated " + str(x_estimated)
+            print "xs[0] " + str(xs[0])
+            print "xs " + str(xs)
+            raise ValueError("Raised")       
         for i in xrange(len(xs) - 1):
             x_predicted = np.array([xs[i][k] for k in xrange(len(xs[i]))])
             u = np.dot(Ls[i], x_estimated - x_predicted) + us[i]            
@@ -174,7 +182,7 @@ class PlanAdjuster:
         us_adjusted.append(np.array([0.0 for i in xrange(len(us[0]))]))
         control_durations_adjusted = [control_durations[i] for i in xrange(len(control_durations))]
         control_durations_adjusted.append(0.0)
-        return (xs_adjusted, us_adjusted, zs_adjusted, control_durations_adjusted)
+        return (xs_adjusted, us_adjusted, zs_adjusted, control_durations_adjusted, True)
 
 
 if __name__ == "__main__":

@@ -389,10 +389,14 @@ class HRF:
                     Adjust plan
                     """ 
                     t0 = time.time()                   
-                    (xs_adj, us_adj, zs_adj, control_durations_adj) = plan_adjuster.adjust_plan(self.robot,
-                                                                                                (xs, us, zs, control_durations),                                                                                                
-                                                                                                x_estimated,
-                                                                                                P_t)
+                    (xs_adj, us_adj, zs_adj, control_durations_adj, adjusted) = plan_adjuster.adjust_plan(self.robot,
+                                                                                                         (xs, us, zs, control_durations),                                                                                                
+                                                                                                         x_estimated,
+                                                                                                         P_t)
+                    if not adjusted:
+                        final_states.append(history_entries[-1].x_true)
+                        print "current step " + str(current_step)
+                        break
                     if self.show_viewer_simulation:
                         sim.update_viewer(x_true, x_estimated, z, control_duration=0.03, colliding_obstacle=sim.colliding_obstacle)
                     
