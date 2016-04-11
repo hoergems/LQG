@@ -245,10 +245,6 @@ struct Joint {
     	    
     	    void addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles);
     	    
-    	    void addSensor(std::string sensor_file);
-    	    
-    	    void setSensorTransform(std::vector<double> &joint_angles);
-    	    
     	    void setObstacleColor(std::string obstacle_name, 
     	     		                     std::vector<double> &diffuse_color, 
     	                                 std::vector<double> &ambient_color);

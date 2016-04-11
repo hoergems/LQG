@@ -13,6 +13,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/foreach.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 #include <tinyxml.h>
 #include <iostream>
 #include <iosfwd> 
@@ -36,6 +37,8 @@ class Utils {
 																			  double x_size,
 																			  double y_size,
 																			  double z_size);
+	   
+	    bool file_exists(std::string &filename);
 	
 		void loadObstaclesXML(std::string &obstacles_file,
                               std::vector<std::shared_ptr<shared::Obstacle> > &obst);

@@ -354,8 +354,12 @@ std::vector<std::vector<double>> DynamicPathPlanner::solve(const std::vector<dou
 BOOST_PYTHON_MODULE(libdynamic_path_planner) {
     using namespace boost::python;
     
-    class_<std::vector<int> > ("v_int")
-             .def(vector_indexing_suite<std::vector<int> >());
+    boost::python::type_info info = boost::python::type_id<std::vector<int>>();
+    const boost::python::converter::registration* reg_int = boost::python::converter::registry::query(info);
+    if (reg_int == NULL || (*reg_int).m_to_python == NULL)  {    
+        class_<std::vector<int> > ("v_int")
+            .def(vector_indexing_suite<std::vector<int> >());
+    }
    
     class_<DynamicPathPlanner>("DynamicPathPlanner", init<boost::shared_ptr<shared::Robot> &, bool>())
 							   .def("solve", &DynamicPathPlanner::solve)
@@ -370,9 +374,6 @@ BOOST_PYTHON_MODULE(libdynamic_path_planner) {
 							   .def("addIntermediateStates", &DynamicPathPlanner::addIntermediateStates)
 							   .def("setRRTGoalBias", &DynamicPathPlanner::setRRTGoalBias)
 							   .def("setControlSampler", &DynamicPathPlanner::setControlSampler)
-										            		 
-                        //.def("doIntegration", &Integrate::do_integration)                        
-                        //.def("getResult", &Integrate::getResult)
     ;
 }
  
