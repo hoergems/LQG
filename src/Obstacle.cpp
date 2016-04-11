@@ -1,5 +1,6 @@
 #include "Obstacle.hpp"
 #include <iostream> 
+#include <boost/python/converter/registry.hpp>
 
 using std::cout;
 using std::endl;
@@ -82,6 +83,23 @@ bool Obstacle::in_collision_point(std::vector<double> &point) {
     return collision_object_ptr_->getAABB().contain(p_vec);    
 }
 
+double Obstacle::distance(std::vector<std::shared_ptr<fcl::CollisionObject>> &other_collision_objects) const {
+	double min_distance = 1000000.0;
+	for (size_t i = 0; i < other_collision_objects.size(); i++) {
+		fcl::DistanceRequest request;
+		fcl::DistanceResult result;
+		fcl::distance(other_collision_objects[i].get(),
+				      collision_object_ptr_.get(),
+					  request,
+					  result);
+		if (result.min_distance < min_distance) {
+			min_distance = result.min_distance;
+		}
+	}
+	
+	return min_distance;
+}
+
 bool Obstacle::in_collision(std::vector<std::shared_ptr<fcl::CollisionObject>> &other_collision_objects) const {	
 	for (size_t i = 0; i < other_collision_objects.size(); i++) {
 		fcl::CollisionRequest request;		
@@ -133,6 +151,16 @@ bool Obstacle::in_collision(std::shared_ptr<fcl::CollisionObject> &collision_obj
     return result.is_collide;    
 }
 
+double Obstacle::distancePy(boost::python::list &ns) {	
+	std::vector<std::shared_ptr<fcl::CollisionObject>> other_collision_objects;
+	for (int i = 0; i < len(ns); ++i)
+	{
+	   other_collision_objects.push_back(boost::python::extract<std::shared_ptr<fcl::CollisionObject>>(ns[i]));
+	}
+	    
+	return distance(other_collision_objects);
+}
+
 bool Obstacle::in_collision_discrete(boost::python::list &ns) {
     std::vector<std::shared_ptr<fcl::CollisionObject>> other_collision_objects;
     for (int i = 0; i < len(ns); ++i)
@@ -174,11 +202,17 @@ BOOST_PYTHON_MODULE(libobstacle)
     bool (ObstacleWrapper::*in_collision_d)(boost::python::list&) = &ObstacleWrapper::in_collision_discrete;
     bool (ObstacleWrapper::*in_collision_c)(boost::python::list&) = &ObstacleWrapper::in_collision_continuous;
     bool (ObstacleWrapper::*in_collision_p)(std::vector<double>&) = &ObstacleWrapper::in_collision_point;
+    //double (ObstacleWrapper::*distance_d)(boost::python::list&) = &ObstacleWrapper::distancePy;    
     
-    to_python_converter<std::vector<std::shared_ptr<ObstacleWrapper>, std::allocator<std::shared_ptr<ObstacleWrapper>> >, 
-    	                    VecToList<std::shared_ptr<ObstacleWrapper>> >();
-    
-    register_ptr_to_python<std::shared_ptr<ObstacleWrapper>>();
+    boost::python::type_info info = boost::python::type_id<std::vector<std::shared_ptr<shared::ObstacleWrapper>>>();
+    const boost::python::converter::registration* reg_vobst = boost::python::converter::registry::query(info);
+    if (reg_vobst == NULL || (*reg_vobst).m_to_python == NULL)  { 
+        class_<std::vector<std::shared_ptr<shared::ObstacleWrapper>> > ("v_obstacle")
+            .def(vector_indexing_suite<std::vector<std::shared_ptr<shared::ObstacleWrapper>> >());
+        to_python_converter<std::vector<std::shared_ptr<shared::ObstacleWrapper>, std::allocator<std::shared_ptr<shared::ObstacleWrapper>> >, 
+        	VecToList<std::shared_ptr<shared::ObstacleWrapper>> >();
+        register_ptr_to_python<std::shared_ptr<shared::ObstacleWrapper>>();
+    }
     
     class_<Terrain>("Terrain", init<const std::string, const double, const double, const bool>())
          .def("getTraversalCost", &Terrain::getTraversalCost)
@@ -197,6 +231,7 @@ BOOST_PYTHON_MODULE(libobstacle)
 		 .def("getName", &ObstacleWrapper::getName)
 		 .def("getStandardDiffuseColor", &ObstacleWrapper::getStandardDiffuseColor)
 		 .def("getStandardAmbientColor", &ObstacleWrapper::getStandardAmbientColor)
+		 .def("distance", &ObstacleWrapper::distancePy)
     ;
 }
 

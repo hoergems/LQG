@@ -82,7 +82,7 @@ endif()
 
 
 ############################# LOAD BOOST #############################
-find_package(Boost ${BOOST_MIN_VERSION} REQUIRED COMPONENTS python system thread random timer)
+find_package(Boost ${BOOST_MIN_VERSION} REQUIRED COMPONENTS python system thread random timer filesystem)
 if (NOT Boost_FOUND)
     set(Boost_INCLUDE_DIRS "${BOOST_INCLUDE_DIRS}")
     IF ( NOT Boost_INCLUDE_DIRS )

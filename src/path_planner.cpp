@@ -423,10 +423,7 @@ std::vector<std::vector<double>> PathPlanner::augmentPath_(std::vector<std::vect
 }
 
 BOOST_PYTHON_MODULE(libpath_planner) {
-    using namespace boost::python;  
-    
-    
-    
+    using namespace boost::python;
     class_<PathPlanner>("PathPlanner", init<boost::shared_ptr<shared::Robot>&,    		                                                                     
                                             double,
                                             bool,                                            

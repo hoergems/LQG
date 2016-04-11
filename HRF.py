@@ -10,8 +10,7 @@ from plan_adjuster import PlanAdjuster
 from serializer import Serializer
 from libutil import *
 import logging
-from librobot import v_string, Robot, v_obstacle
-from librobot import v_string, Robot
+from librobot import v_string, Robot, v_obstacle, v_double, v2_double
 from util_py import check_positive_definite, get_goal_states, copyToTmp
 from simulator import Simulator
 from path_evaluator import PathEvaluator

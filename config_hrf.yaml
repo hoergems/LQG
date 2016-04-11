@@ -4,7 +4,7 @@ seed: -1
 # Number of cores used for parallel path construction and evaluation
 num_cores: 8
 
-num_obstacles: 10
+num_obstacles: 3
 
 # Verbose output
 verbose: False
@@ -137,7 +137,7 @@ add_intermediate_states: True
 # Visualization
 #########################################
 show_viewer_evaluation: False
-show_viewer_simulation: False
+show_viewer_simulation: True
 
 ######## MPC parameters ############
 # The number of steps a path gets evaluated for (-1 => Evaluate full path)
