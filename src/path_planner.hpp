@@ -69,7 +69,7 @@ namespace shared {
             
             ompl::base::MotionValidatorPtr getMotionValidator();
 
-            boost::shared_ptr<ManipulatorGoalRegion> getOrCreateGoalRegion();
+            boost::shared_ptr<shared::ManipulatorGoalRegion> getOrCreateGoalRegion();
  
             void setGoalStates(std::vector<std::vector<double>> &goal_states,
             		           std::vector<double> &ee_goal_position,

@@ -561,25 +561,6 @@ void Robot::setupViewer(std::string model_file, std::string environment_file) {
 	viewer_->setupViewer(model_file, environment_file);	
 }
 
-void Robot::addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles) {
-	for (size_t i = 0; i < obstacles.size(); i++) {
-		std::vector<double> dims;		
-		std::shared_ptr<shared::Obstacle> o = std::static_pointer_cast<shared::Obstacle>(obstacles[i]);
-		std::shared_ptr<shared::BoxObstacle> o_box = std::static_pointer_cast<shared::BoxObstacle>(o);
-		dims.push_back(o_box->pos_x_);
-		dims.push_back(o_box->pos_y_);
-		dims.push_back(o_box->pos_z_);
-		dims.push_back(o_box->size_x_);
-		dims.push_back(o_box->size_y_);
-		dims.push_back(o_box->size_z_);
-		
-		std::string name = o_box->getName();
-		viewer_->addObstacle(name,
-				             dims);
-	}
-	
-}
-
 void Robot::addPermanentViewerParticles(const std::vector<std::vector<double>> &particle_joint_values,
 							            const std::vector<std::vector<double>> &particle_colors) {
 	assert(particle_joint_values.size() == particle_colors.size() &&  
@@ -629,6 +610,52 @@ void Robot::setObstacleColor(std::string obstacle_name,
 }
 
 #endif
+
+void Robot::addBoxObstacles(std::vector<std::shared_ptr<shared::Obstacle>> &obstacles) {
+#ifdef USE_URDF
+	for (size_t i = 0; i < obstacles.size(); i++) {
+		std::vector<double> dims;		
+		std::shared_ptr<shared::Obstacle> o = obstacles[i];
+		std::shared_ptr<shared::BoxObstacle> o_box = std::static_pointer_cast<shared::BoxObstacle>(o);
+		dims.push_back(o_box->pos_x_);
+		dims.push_back(o_box->pos_y_);
+		dims.push_back(o_box->pos_z_);
+		dims.push_back(o_box->size_x_);
+		dims.push_back(o_box->size_y_);
+		dims.push_back(o_box->size_z_);
+			
+		std::string name = o_box->getName();
+		viewer_->addObstacle(name,
+					         dims);
+	}
+#endif
+}
+
+void Robot::addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles) {
+#ifdef USE_URDF
+	for (size_t i = 0; i < obstacles.size(); i++) {
+		std::vector<double> dims;		
+		std::shared_ptr<shared::Obstacle> o = std::static_pointer_cast<shared::Obstacle>(obstacles[i]);
+		std::shared_ptr<shared::BoxObstacle> o_box = std::static_pointer_cast<shared::BoxObstacle>(o);
+		dims.push_back(o_box->pos_x_);
+		dims.push_back(o_box->pos_y_);
+		dims.push_back(o_box->pos_z_);
+		dims.push_back(o_box->size_x_);
+		dims.push_back(o_box->size_y_);
+		dims.push_back(o_box->size_z_);
+		
+		std::string name = o_box->getName();
+		viewer_->addObstacle(name,
+				             dims);
+	}
+#endif
+}
+
+void Robot::removeObstacles() {
+#ifdef USE_URDF
+	viewer_->removeObstacles();
+#endif
+}
 
 bool Robot::propagate_linear(std::vector<double> &current_state,
     	    		         std::vector<double> &control_input,
@@ -853,13 +880,6 @@ void Robot::getActiveLinkDimensions(std::vector<std::vector<double>> &dimensions
 	for (auto &k: active_link_dimensions_) {
 		dimensions.push_back(k);
 	}
-	/**for (size_t i = 0; i < link_names_.size(); i++) {
-		for (size_t j = 0; j < active_link_names_.size(); j ++) {
-			if (link_names_[i] == active_link_names_[j]) {
-				dimensions.push_back(link_dimensions_[i]);
-			}
-		}
-	}*/	
 }
 
 void Robot::getLinkDimension(std::vector<std::string> &link, std::vector<std::vector<double>> &dimension) {	
@@ -1079,9 +1099,10 @@ BOOST_PYTHON_MODULE(librobot) {
 						.def("getEndEffectorVelocity", &Robot::getEndEffectorVelocity)
 						.def("getProcessMatrices", &Robot::getProcessMatrices)						
 						.def("getEndEffectorJacobian", &Robot::getEndEffectorJacobian)
-#ifdef USE_URDF
-						.def("setupViewer", &Robot::setupViewer)
 						.def("addObstacles", &Robot::addObstacles)
+						.def("removeObstacles", &Robot::removeObstacles)
+#ifdef USE_URDF
+						.def("setupViewer", &Robot::setupViewer)						
 						.def("updateViewerValues", &Robot::updateViewerValues)
 						.def("setViewerSize", &Robot::setViewerSize)
 						.def("setViewerBackgroundColor", &Robot::setViewerBackgroundColor)
