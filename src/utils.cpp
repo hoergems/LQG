@@ -85,6 +85,85 @@ std::vector<std::vector<double>> Utils::loadGoalStates() {
 
 }
 
+bool Utils::checkProblemFeasibility(std::vector<std::shared_ptr<shared::Obstacle>> &obstacles,
+       		                 boost::shared_ptr<shared::Robot> &robot,
+       		                 std::vector<double> &start_state,
+       		                 std::vector<std::vector<double>> &goal_states,
+       		                 std::vector<double> &ee_goal_position,
+       		                 double &ee_goal_threshold,
+       		                 double &simulation_step_size,
+       		                 double &control_duration,       		                 
+       		                 double &planning_velocity) {
+	std::string planner = "RRT";
+	std::shared_ptr<shared::DynamicPathPlanner> path_planner = 
+			std::make_shared<shared::DynamicPathPlanner>(robot, 
+			                                             false);	
+	path_planner->setupMotionValidator(true);
+	path_planner->setup(simulation_step_size, control_duration, planner);
+	std::string control_sampler = "discrete";
+	path_planner->setControlSampler(control_sampler);
+	std::vector<int> num_control_samples({1});
+	path_planner->setNumControlSamples(num_control_samples);
+	path_planner->setRRTGoalBias(0.05);
+	std::vector<int> min_max_control_duration({1, 4});
+	path_planner->setMinMaxControlDuration(min_max_control_duration);
+	path_planner->addIntermediateStates(true);
+	path_planner->setObstacles(obstacles);
+	path_planner->setGoalStates(goal_states, ee_goal_position, ee_goal_threshold);
+	cout << "plan path" << endl;
+	std::vector<std::vector<double>> path = path_planner->solve(start_state, 5.0);
+	if (path.size() > 0) {
+		std::shared_ptr<shared::PathPlanner> path_planner_kin = 
+				std::make_shared<shared::PathPlanner>(robot,
+						                              control_duration,
+						                              true,
+						                              planning_velocity,
+						                              1.0,
+						                              false,
+						                              false,
+						                              "RRTConnect");
+		path_planner_kin->setGoalStates(goal_states, ee_goal_position, ee_goal_threshold);
+		path_planner_kin->setup();
+		path_planner_kin->setObstacles(obstacles);
+		std::vector<std::vector<double> > solution_path;
+		solution_path = path_planner_kin->solve(start_state, 0.1);
+		if (solution_path.size() > 0) {
+			return true;
+		}
+		else {
+			cout << "No deterministic linear solution" << endl;
+		}
+	}
+	cout << "return false" << endl;
+	return false;
+}
+
+std::shared_ptr<shared::Obstacle> Utils::generateBoxObstacle(std::string name,
+                                                             double x_pos,
+                                                             double y_pos,
+		                                                     double z_pos,
+		                                                     double x_size,
+		                                                     double y_size,
+		                                                     double z_size) {
+	shared::Terrain terrain(name + "_terrain",
+			                0.0,
+			                0.0,
+			                false);
+	std::shared_ptr<shared::Obstacle> obst = std::make_shared<shared::BoxObstacle>(name,
+			                                                                       x_pos,
+			                                                                       y_pos,
+			                                                                       z_pos,
+			                                                                       x_size,
+			                                                                       y_size,
+			                                                                       z_size,
+			                                                                       terrain);
+	std::vector<double> d_color({0.5, 0.0, 0.3, 1.0});
+    std::vector<double> a_color({0.25, 0.0, 0.15, 1.0});
+    obst->setStandardColor(d_color, a_color);
+    return obst;
+	
+}
+
 std::vector<std::shared_ptr<shared::ObstacleWrapper>> Utils::generateObstacle(std::string name,
 		                                                                      double x_pos,
 			                                                                  double y_pos,

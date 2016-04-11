@@ -26,6 +26,15 @@ namespace shared {
         	state_dimension_ = si->getStateDimension() / 2;
         }
     }
+    
+    double ManipulatorGoalRegion::euclideanDistance(const std::vector<double> &vec1, const std::vector<double> &vec2) const{
+        double sum = 0.0;
+        for (size_t i = 0; i < vec1.size(); i++) {
+            sum += pow(vec2[i] - vec1[i], 2);
+        }
+        
+        return sqrt(sum);
+    }
 
     double ManipulatorGoalRegion::distanceGoal(const ompl::base::State *st) const
     {	
@@ -43,7 +52,7 @@ namespace shared {
         	ee_g.push_back(ee_goal_position_[i]);
         }*/
         
-        double distance = utils::euclideanDistance(ee_position, ee_goal_position_);        
+        double distance = euclideanDistance(ee_position, ee_goal_position_);        
         return distance;             
     } 
     

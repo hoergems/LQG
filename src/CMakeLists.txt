@@ -159,11 +159,19 @@ add_library(path_planner SHARED
             robot.cpp
             Kinematics.cpp
             propagator.cpp
-            integrate.cpp
+            integrate.cpp            
             utils.cpp
+            dynamic_path_planner.cpp
+            EST_control.cpp
+            control_space.cpp
+            rrt_control.cpp
+            control_sampler.cpp
+            DirectedControlSampler.cpp
+            ManipulatorSpaceInformation.cpp
+            state_propagator.cpp
             Terrain.cpp
             Obstacle.cpp
-            BoxObstacle.cpp            
+            BoxObstacle.cpp
             SphereObstacle.cpp)
             
 add_library(dynamic_path_planner SHARED 
@@ -185,7 +193,8 @@ add_library(dynamic_path_planner SHARED
             SphereObstacle.cpp
             Terrain.cpp            
             control_space.cpp
-            control_sampler.cpp)
+            control_sampler.cpp
+            path_planner.cpp)
             
 add_library(obstacle SHARED
             Obstacle.cpp
@@ -196,7 +205,22 @@ add_library(util SHARED
             Terrain.cpp
             Obstacle.cpp
             BoxObstacle.cpp
-            SphereObstacle.cpp)
+            SphereObstacle.cpp
+            robot.cpp
+            Kinematics.cpp
+            propagator.cpp
+            dynamic_path_planner.cpp
+            path_planner.cpp
+            MotionValidator.cpp
+            integrate.cpp
+            ManipulatorGoalRegion.cpp
+            EST_control.cpp
+            control_space.cpp
+            rrt_control.cpp
+            control_sampler.cpp
+            DirectedControlSampler.cpp
+            ManipulatorSpaceInformation.cpp
+            state_propagator.cpp)
             
 add_library(area SHARED
             Area.cpp)
@@ -239,7 +263,9 @@ target_link_libraries (util
                        ${Boost_LIBRARIES}
                        ${PYTHON_LIBRARIES}                       
                        ${FCL_LIBRARIES}
-                       ${TINYXML_LIBRARIES})
+                       ${TINYXML_LIBRARIES}
+                       ${VIEWER_LIBRARIES}
+                       ${OMPL_LIBRARIES})
                        
 target_link_libraries(area
                       ${Boost_LIBRARIES}

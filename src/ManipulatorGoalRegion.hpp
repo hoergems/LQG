@@ -8,7 +8,6 @@
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/base/samplers/UniformValidStateSampler.h>
 #include <ompl/util/RandomNumbers.h>
-#include "utils.hpp"
 #include "robot.hpp"
 #include <iostream>
 #include <random>
@@ -39,6 +38,8 @@ namespace shared {
             bool isSatisfied(const ompl::base::State *st) const;
 
         private:
+            double euclideanDistance(const std::vector<double> &vec1, const std::vector<double> &vec2) const;
+            
             /** Forward kinematics */
             boost::shared_ptr<shared::Robot> robot_;
             
@@ -51,6 +52,8 @@ namespace shared {
             std::vector<double> ee_goal_position_;
             
             double ee_goal_threshold_;
+            
+            
     };
 
 }

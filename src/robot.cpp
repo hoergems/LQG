@@ -611,6 +611,26 @@ void Robot::setObstacleColor(std::string obstacle_name,
 
 #endif
 
+void Robot::addBoxObstacles(std::vector<std::shared_ptr<shared::Obstacle>> &obstacles) {
+#ifdef USE_URDF
+	for (size_t i = 0; i < obstacles.size(); i++) {
+		std::vector<double> dims;		
+		std::shared_ptr<shared::Obstacle> o = obstacles[i];
+		std::shared_ptr<shared::BoxObstacle> o_box = std::static_pointer_cast<shared::BoxObstacle>(o);
+		dims.push_back(o_box->pos_x_);
+		dims.push_back(o_box->pos_y_);
+		dims.push_back(o_box->pos_z_);
+		dims.push_back(o_box->size_x_);
+		dims.push_back(o_box->size_y_);
+		dims.push_back(o_box->size_z_);
+			
+		std::string name = o_box->getName();
+		viewer_->addObstacle(name,
+					         dims);
+	}
+#endif
+}
+
 void Robot::addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles) {
 #ifdef USE_URDF
 	for (size_t i = 0; i < obstacles.size(); i++) {

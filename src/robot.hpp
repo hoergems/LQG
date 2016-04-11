@@ -249,6 +249,8 @@ struct Joint {
 #endif
     	    void addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles);
     	    
+    	    void addBoxObstacles(std::vector<std::shared_ptr<shared::Obstacle>> &obstacles);
+    	    
     	    void removeObstacles();
     	    
         private:
