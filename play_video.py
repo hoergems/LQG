@@ -125,7 +125,8 @@ class Play:
                                 col.append(False)
                 elif "colliding obstacle:" in line:
                     col_obstacles.append(line.split(":")[1].strip())  
-                elif "colliding state:" in line:
+                elif "colliding state:" in line or "Colliding state:" in line:
+                    print "HELLO!"
                     coll_state_str = line.split(":")[1].strip()
                     coll_state = None
                     if not coll_state_str == "None" and colliding_states:
@@ -181,6 +182,8 @@ class Play:
                     states = []
                     nominal_states = []
                     col = []
+                    col_obstacles = []
+                    coll_states = []
                     all_particles = []
                     
     def show_nominal_path(self, path):
@@ -222,21 +225,25 @@ class Play:
             cjvals[:] = cjvals_arr
             cjvels[:] = cjvels_arr            
             particle_joint_values = v2_double()
-            particle_joint_colors = v2_double()            
-            if i > 1 and len(particles) > 0:                
-                for p in particles[i - first_particle]:
-                    particle = v_double()
-                    particle_color = v_double()
-                    particle_vec = [p[k] for k in xrange(len(p) / 2)]                    
-                    particle[:] = particle_vec
-                    particle_color[:] = [0.2, 0.8, 0.5, 0.0]
-                    particle_joint_values.append(particle)
-                    particle_joint_colors.append(particle_color)
-            if not i == len(coll_states) and coll_states[i] != None:
+            particle_joint_colors = v2_double() 
+            print len(coll_states)          
+            if i > 1 and len(particles) > 0:
+                for j in xrange(len(particles[i - first_particle])): 
+                    if j < 49:            
+                        #for p in particles[i - first_particle]:
+                        particle = v_double()
+                        particle_color = v_double()
+                        particle_vec = [particles[i - first_particle][j][k] for k in xrange(len(particles[i - first_particle][j]) / 2)]                                       
+                        particle[:] = particle_vec
+                        particle_color[:] = [0.2, 0.8, 0.5, 0.0]
+                        particle_joint_values.append(particle)
+                        particle_joint_colors.append(particle_color)
+            if not i == len(coll_states) and coll_states[i] != None:                
                 part = v_double()
+                arr = [coll_states[i][k] for k in xrange(len(coll_states[i]))]                
                 part[:] = [coll_states[i][k] for k in xrange(len(coll_states[i]))]
                 particle_color = v_double()
-                particle_color[:] = [0.0, 0.0, 0.0, 0.0]
+                particle_color[:] = [0.3, 0.3, 0.3, 0.3]                
                 particle_joint_values.append(part)
                 particle_joint_colors.append(particle_color)
             self.robot.updateViewerValues(cjvals, 
@@ -258,6 +265,7 @@ class Play:
                                                     diffuse_col, 
                                                     ambient_col)'''
                 if col_obstacles[i] != None:
+                    print "HELLO"
                     diffuse_col = v_double()
                     ambient_col = v_double()
                     diffuse_col[:] = [0.5, 0.0, 0.0, 0.0]

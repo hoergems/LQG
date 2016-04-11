@@ -28,7 +28,7 @@ path_timeout: 10.0
 use_linear_path: False
 
 # Number of simulation runs for the best found path
-num_simulation_runs: 25
+num_simulation_runs: 1
 
 # Maximum angular velocity of the joints for the kinematic problem (in rad/sec)
 max_velocity: 4.0
@@ -65,7 +65,7 @@ max_observation_covariance: 5.0
 inc_covariance: observation
 
 # The number of covariance steps
-covariance_steps: 5
+covariance_steps: 1
 
 path_deviation_cost: 500.0
 

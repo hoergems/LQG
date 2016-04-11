@@ -105,7 +105,7 @@ class HRF:
                  zs,
                  control_durations, 
                  num_generated_paths, 
-                 best_val,
+                 objective,
                  state_covariances,
                  deviation_covariances,
                  estimated_deviation_covariances, 
@@ -119,7 +119,7 @@ class HRF:
                                                                                P_t,
                                                                                deviation_covariance,
                                                                                estimated_deviation_covariance, 
-                                                                              0.0)
+                                                                               0.0)
                 while True: 
                     print "current step " + str(current_step) 
                     '''if current_step == 7:
@@ -186,7 +186,8 @@ class HRF:
                                                                   1,
                                                                   0.0,
                                                                   0.0,
-                                                                  max_num_steps=self.max_num_steps)
+                                                                  max_num_steps=self.max_num_steps)                    
+                    history_entries[-1].set_best_reward(objective)
                                         
                      
                     """
@@ -212,6 +213,8 @@ class HRF:
                             num_collisions += 1                            
                         linearization_error += history_entries[l].linearization_error
                     if (current_step == self.max_num_steps) or terminal:
+                        history_entries[len(history_entries) - 2].set_best_reward(objective)
+                        history_entries[-1].set_best_reward(None)
                         for l in xrange(len(history_entries)):                            
                             history_entries[l].serialize(tmp_dir, "log.log")
                         final_states.append(history_entries[-1].x_true)                        
@@ -253,7 +256,7 @@ class HRF:
                         x_estimated = x_estimated_temp                         
                         history_entries[-1].set_estimate_collided(False)
                     
-                    history_entries[-1].serialize(tmp_dir, "log.log")
+                    
                     """
                     Adjust plan
                     """ 
@@ -297,6 +300,8 @@ class HRF:
                      estimated_deviation_covariances) = self.path_evaluator.evaluate_paths(paths, 
                                                                                            P_t, 
                                                                                            current_step)
+                    
+                    history_entries[-1].serialize(tmp_dir, "log.log")
                     mean_planning_time += time.time() - t0
                     if path_index == None:
                         """

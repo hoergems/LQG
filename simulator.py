@@ -193,7 +193,7 @@ class Simulator:
                                                     False,
                                                     False,
                                                     False,
-                                                    0.0)) 
+                                                    0.0))                
                 x_t_n = np.linalg.norm(np.array([x_true[k] for k in xrange(len(x_true) / 2)]))
                 x_e_n = np.linalg.norm(np.array([x_estimate[k] for k in xrange(len(x_estimate) / 2)]))
                 x_true_norm = np.array([0.0 for k in xrange(len(x_true) / 2)])
