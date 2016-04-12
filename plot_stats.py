@@ -26,26 +26,54 @@ class PlotStats:
         self.color_dict = dict()
         self.color_dict["abt"] = "#ff0000"
         self.color_dict["lqg"] = "#00ff00"
-        self.color_dict["hrf"] = "#0000ff"        
+        self.color_dict["hrf"] = "#0000ff"  
+        self.linestyles = dict()
+        self.linestyles['abt'] = "solid"
+        self.linestyles['lqg'] = "dashed"
+        self.linestyles['hrf'] = 'dashdot'      
               
         self.save = save_plots        
         serializer = Serializer()
         
         if self.setup_robot(dir) and plot_emds:            
             self.plot_emds(show_particles, dir=dir)
-        self.plot_estimate_error(dir=dir)
+        '''self.plot_estimate_error(dir=dir)
         self.plot_linearisation_error(dir=dir)
-        return    
+        return'''
+               
+        
+        self.plot_num_succesful_runs("succ_stats", 
+                                     dir=dir, 
+                                     finish_when_collided=True)
+        self.plot_stat_from_txt_file("succ_stats", 
+                                     "num_succ", 
+                                     dir=dir, 
+                                     y_label="Succesful runs in %")
+        reward_model = {}
+        reward_model["step_penalty"] = -1.0
+        reward_model["collision_penalty"] = -500.0
+        reward_model["exit_reward"] = 1000.0
+        self.plot_reward(reward_model, "reward_stats", dir=dir, finish_when_collided=True)        
+        self.plot_stat_from_txt_file("reward_stats", 
+                                     "mean_rewards", 
+                                     dir=dir, 
+                                     y_label="mean reward")
+        #sleep    
         
         self.save_estimation_error("estimation_error_stats", dir=dir)
         self.plot_number_of_steps_stats("num_step_stats", dir=dir)
-        self.plot_stat_from_txt_file("estimation_error_stats", "mean_estimation_error", dir=dir)
+        self.plot_stat_from_txt_file("estimation_error_stats", 
+                                     "mean_estimation_error", 
+                                     dir=dir, 
+                                     y_label="mean estimation error")
         
         print "saving collision information"
         self.plot_bla(["collided", "Trans: Collision detected"], "collision_stats", dir=dir)
         print "saving reward information"
-        self.plot_bla(["Reward:"], "reward_stats", dir=dir)
-        self.to_latex_table(dir=dir)
+        #self.plot_bla(["Reward:"], "reward_stats", dir=dir)
+        
+        
+        self.to_latex_table(dir=dir) 
         
         
         logging.info("Plotting average distance to goal")
@@ -60,7 +88,7 @@ class PlotStats:
         self.plot_stat("Mean number of histories per step", "mean_num_histories", dir=dir)
                  
         logging.info("Plotting mean rewards")
-        self.plot_stat("Mean rewards", "mean_rewards", dir=dir)        
+        #self.plot_stat("Mean rewards", "mean_rewards", dir=dir)        
         
         logging.info("Plotting number of succesful runs")
         self.plot_stat("Num success", "succesful_runs", dir=dir)
@@ -69,10 +97,10 @@ class PlotStats:
         self.plot_stat("Percentage of successful runs", "percentage_succesful_runs", dir=dir, y_label="Succesful runs in %")
         
         logging.info("Plotting reward variance")
-        self.plot_stat("Reward variance", "sample_variances", dir=dir)
+        #self.plot_stat("Reward variance", "sample_variances", dir=dir)
         
         logging.info("Plotting reward standard deviation")
-        self.plot_stat("Reward standard deviation", "reward_standand_deviation", dir=dir)
+        #self.plot_stat("Reward standard deviation", "reward_standand_deviation", dir=dir)
         
         logging.info("Plotting mean number of steps")
         self.plot_stat("Mean number of steps", "mean_num_steps", dir=dir)
@@ -95,20 +123,7 @@ class PlotStats:
                                            filename="mean_num_generated_paths_per_run*.yaml",
                                            output="mean_num_generated_paths_per_run.pdf")'''
         logging.info("PlotStats: plotting mean number of steps per run")
-        '''self.plot_mean_num_steps(serializer,
-                                 dir,
-                                 filename="mean_num_planning_steps_per_run*.yaml",
-                                 output="mean_num_planning_steps_per_run.pdf")
-        self.plot_mean_num_steps(serializer,
-                                 dir,
-                                 filename="mean_num_steps_per_run*.yaml",
-                                 output="mean_num_steps_per_run.pdf")
-        cart_coords = serializer.load_cartesian_coords(dir, "cartesian_coords_" + algorithm + ".yaml")        
-        logging.info("PlotStats: plotting EMD graph...")
-       
-        self.plot_emd_graph(serializer, cart_coords, dir=dir)
-        logging.info("PlotStats: plotting histograms...")        
-        self.save_histogram_plots(serializer, cart_coords, dir=dir)'''
+        
         
     def cleanup(self, dir="stats"):
         txtfiles = glob.glob(os.path.join(dir, "*.txt"))
@@ -231,7 +246,7 @@ class PlotStats:
         
     def to_latex_table(self, dir="stats"):
         files = glob.glob(os.path.join(dir, "out_*.txt"))       
-               
+        print "files " + str(files)
         for file in files:            
             headers = [0.1]
             table_entries = []
@@ -240,21 +255,40 @@ class PlotStats:
             with open(file, "r") as f: 
                 lines = f.readlines()               
                 for i in xrange(len(lines)):
+                    if "mean" in lines[i]:
+                        mean = float(lines[i].strip().split(": ")[1])
+                        print lines[i]
+                        print mean
                     if "alg" in lines[i]:
                         headers.append(lines[i].strip().split(" ")[1])                        
                         cov = float(lines[i].strip().split(" ")[2].split(":")[0])
                         print headers
                     else:
                         value_found = False
-                        for k in xrange(len(table_entries)):
+                        for k in xrange(len(table_entries)):                           
                             if table_entries[k][0] == lines[i].strip().split(":")[0]:
-                                value_found = True
+                                value_found = True                                
                                 table_entries[k].append(float(lines[i].strip().split(":")[1].strip()))
                                 break
+                            if "conf" in lines[i].strip().split(":")[0]:
+                                if "confidence" in table_entries[k][0]:
+                                    value_found = True
+                                    conv = float(lines[i].strip().split(": ")[1])
+                                    val1 = mean - conf
+                                    val2 = mean + conf
+                                    table_entries[k].append(str(val1) + ", " + str(val2))           
                         if not len(lines[i].split()) == 0:
                             if not value_found:
-                                print lines[i].split()
-                                table_entries.append([lines[i].strip().split(":")[0], float(lines[i].strip().split(":")[1].strip())])
+                                print lines[i].strip().split(":")[0]
+                                if "conf" in lines[i].strip().split(":")[0]: 
+                                    conf = float(lines[i].strip().split(":")[1].strip())
+                                    val1 = mean - conf
+                                    val2 = mean + conf
+                                    e = str(val1) + ", " + str(val2)                                                                    
+                                    table_entries.append(["confidence", e])                                    
+                                else:
+                                    table_entries.append([lines[i].strip().split(":")[0], float(lines[i].strip().split(":")[1].strip())])
+                    
                 table = tabulate(table_entries, headers=headers, tablefmt="latex")
                 with open(os.path.join(dir, latex_filename), "a+") as f:
                     f.write(table)    
@@ -495,7 +529,8 @@ class PlotStats:
                 f.write("min: " + str(min_max[0]) + " \n")
                 f.write("max: " + str(min_max[1]) + " \n")
                 f.write("skewness: " + str(skew) + " \n")
-                f.write("kurtosis: " + str(kurt) + " \n \n")        
+                f.write("kurtosis: " + str(kurt) + " \n") 
+                f.write("conf: 0.0 \n")       
         
     def plot_number_of_steps_stats(self, output_file_str, dir="stats"):
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))        
@@ -544,8 +579,171 @@ class PlotStats:
                 f.write("skewness: " + str(skew) + " \n")
                 f.write("kurtosis: " + str(kurt) + " \n \n")
                 
-                        
+    def get_files(self, output_file_str, dir):
+        files = glob.glob(os.path.join(os.path.join(dir, "*.log")))
+        m_covs = []
+        algorithm = ""
+        for file in sorted(files):
+            m_cov = float(str(file.split("/")[-1].split("_")[-1].split(".")[0] + "." + str(file.split("/")[-1].split("_")[-1].split(".")[1])))
+            m_covs.append(m_cov)
+        for i in xrange(len(m_covs)):
+            out_files = glob.glob(os.path.join(os.path.join(dir, "out_" + str(output_file_str) + "*")))
+            for out_file in out_files:
+                os.remove(out_file)
+        return m_covs, sorted(files)
+                
+    def plot_num_succesful_runs(self, output_file_str, dir="stats", finish_when_collided=False):
+        m_covs, files = self.get_files(output_file_str, dir)
+        d = dict()
+        algorithm = ""
+        for file in files: 
+            num_succ = 0.0           
+            num_not_succ = 0.0
+            num_runs = 0.0
+            file_str = "alg: " + file.split("/")[-1].split("_")[1]
+            if not file_str in d:
+                d[file_str] = []
+            with open(file, "r") as f:
+                for line in f:
+                    if "inc_covariance: " in line:                        
+                        inc_covariance = line.rstrip("\n").split(": ")[1]
+                        if inc_covariance == 'process':
+                            cov_str = "Process covariance:"
+                        elif inc_covariance == 'observation':
+                            cov_str = "Observation covariance:"            
+            with open(file, "r") as f:
+                algorithm = file.split("/")[-1].split("_")[1]
+                block = False
+                for line in f:                                      
+                    if cov_str in line:                                             
+                        m_cov = float(line.split(" ")[2])
+                    if "collided: true" in line or "Collision detected: True" in line:
+                        if not block and finish_when_collided:                      
+                            num_not_succ += 1                        
+                            block = True
+                    elif ("RUN #" in line or 
+                          "Run #" in line): 
+                        num_runs += 1                       
+                        block = False
+                    elif "Num successes:" in line:
+                        num_succ = float(line.strip().split(": ")[1])
+            actual_successful_runs = num_runs - num_not_succ
+            print "file " + str(file)
+            print "num_runs " + str(num_runs)
+            print "num success " + str(num_succ)
+            print "actual_successful_runs " + str(actual_successful_runs)
+            print "num not success " + str(num_not_succ)
+            print "diff " + str(num_succ - num_not_succ)
+            print " "
+            percentage_succ_runs = (100.0 / num_runs) * actual_successful_runs
+            with open(os.path.join(dir, "out_" + str(output_file_str) + "_" + str(m_cov) + ".txt"), "a+") as f:
+                f.write(file_str + " " + str(m_cov) + ": \n")
+                f.write("mean per run: " + str(percentage_succ_runs) + " \n")
+                f.write("variance: " + str(0.0) + " \n")
+                f.write("min: " + str(0) + " \n")
+                f.write("max: " + str(0) + " \n")
+                f.write("conf: 0.0 \n")
         
+                
+    def mean_confidence_interval(self, data, confidence=0.95):
+        print data
+        a = 1.0 * np.array(data)
+        n = len(a)
+        m, se = np.mean(a), scipy.stats.sem(a)
+        h = se * scipy.stats.t._ppf((1+confidence)/2., n-1)
+        return m, h
+                        
+    def plot_reward(self, reward_model, output_file_str, dir="stats", finish_when_collided=False):
+        m_covs, files = self.get_files(output_file_str, dir)
+        d = dict()
+        algorithm = ""
+        arrs = []
+        for file in files:
+            vals = []
+            vals_per_run = []
+            all_vals = []
+            num_runs = 0.0
+            algorithm = ""
+            file_str = "alg: " + file.split("/")[-1].split("_")[1]
+            if not file_str in d:
+                d[file_str] = []
+            with open(file, "r") as f:
+                for line in f:
+                    if "inc_covariance: " in line:                        
+                        inc_covariance = line.rstrip("\n").split(": ")[1]
+                        if inc_covariance == 'process':
+                            cov_str = "Process covariance:"
+                        elif inc_covariance == 'observation':
+                            cov_str = "Observation covariance:"            
+            with open(file, "r") as f:
+                algorithm = file.split("/")[-1].split("_")[1]
+                reward_set = False
+                block = False
+                for line in f:                                      
+                    if cov_str in line:                                             
+                        m_cov = float(line.split(" ")[2])
+                    elif ("RUN #" in line or 
+                          "Run #" in line):
+                        num_runs += 1
+                        block = False
+                        if len(vals) != 0:
+                            vals_per_run.append(vals)
+                            all_vals.extend(vals)
+                            vals = []
+                    elif "############" in line:
+                        vals_per_run.append(vals)
+                        all_vals.extend(vals)
+                        vals = [] 
+                        block  = False            
+                    elif "t = " in line:
+                        if not block:                                               
+                            vals.append(reward_model['step_penalty'])                                                
+                    elif "collided: true" in line or "Collision detected: True" in line:
+                        if not block:                      
+                            vals[-1] = reward_model['collision_penalty']
+                        if finish_when_collided:
+                            block = True
+                    elif "Terminal: true" in line:
+                        if not block:
+                            vals[-1] = reward_model['exit_reward']
+                    elif "R: " in line and "abt" in algorithm:
+                        if not block:
+                            vals[-1] = float(line.strip().split(": ")[1])                        
+            arr = []            
+            for i in xrange(int(num_runs)): 
+                if algorithm == 'hrf':
+                    print sum(vals_per_run[i])                        
+                arr.append(sum(vals_per_run[i]))
+            arrs.append(arr)
+            mean, conf = self.mean_confidence_interval(arr)            
+            
+            #Plot.plot_histogram_from_data(arr, bin_width=1.0, title=algorithm)        
+            n, min_max, mean2, var2, skew, kurt = scipy.stats.describe(np.array(arr))
+            with open(os.path.join(dir, "out_" + str(output_file_str) + "_" + str(m_cov) + ".txt"), "a+") as f:
+                f.write(file_str + " " + str(m_cov) + ": \n")
+                f.write("mean per run: " + str(mean2) + " \n")
+                f.write("variance: " + str(var2) + " \n")
+                f.write("min: " + str(min_max[0]) + " \n")
+                f.write("max: " + str(min_max[1]) + " \n")
+                f.write("conf: " + str(conf) + " \n")
+        absmin = 1000000000
+        absmax = -1000000000
+        for i in xrange(len(arrs)):
+            for j in xrange(len(arrs[i])):
+                if arrs[i][j] < absmin:
+                    absmin = arrs[i][j]
+                if arrs[i][j] > absmax:
+                    absmax = arrs[i][j]
+        print "absmin " + str(absmin)
+        print "absmax " + str(absmax)
+        for i in xrange(len(arrs)):
+            '''Plot.plot_histogram_from_data(arrs[i], 
+                                          bin_width=30.0, 
+                                          absmin=absmin,
+                                          absmax=absmax)'''
+            pass             
+                                           
+            
         
     def plot_bla(self, stat_strings, output_file_str, dir="stats", y_label=""):        
         files = glob.glob(os.path.join(os.path.join(dir, "*.log")))        
@@ -631,50 +829,70 @@ class PlotStats:
         stats_sets = []
         labels = []
         color_map = []
-        d = dict()
-        for file in sorted(possible_files):
+        linestyles = []
+        d = dict()        
+        for file in sorted(possible_files):            
             if stat_str in file:
-                files.append(file)
+                files.append(file)              
         for file in files:
             with open(file, "r") as f:
-                cov_val = 0.0               
+                cov_val = 0.0 
+                mean = 0.0
+                conf_low = 0.0
+                conf_high = 0.0              
                 for line in f:                    
                     if "alg" in line:
-                        alg = line.split(": ")[1].split(" ")[0]                        
-                        cov_val = float(line.split(" ")[2].split(":")[0])                        
+                        alg = line.split(": ")[1].split(" ")[0]
+                        cov_val = float(line.split(" ")[2].split(":")[0])                                              
                         if not alg in d:
                             d[alg] = []                        
                     if "mean per run:" in line:
-                        val = float(line.split(": ")[1].strip())
-                        d[alg].append([cov_val, val])
+                        mean = float(line.split(": ")[1].strip())                        
+                    elif "variance" in line:
+                        standard_deviation = np.sqrt(float(line.strip().split(": ")[1]))
+                        #d[alg].append([cov_val, mean, standard_deviation])
+                    elif "conf:" in line:                        
+                        conf = float(line.strip().split(": ")[1])                  
+                        d[alg].append([cov_val, mean, conf])
+                        
                         
         m_covs = []
         min_m = 100000.0
-        max_m = -100000.0
+        max_m = -100000.0 
+        print d       
         for key in d.keys():
             if key in self.color_dict:
                 color_map.append(self.color_dict[key])
             else:
                 color_map.append(self.gen_random_color())
-            
+            linestyles.append(self.linestyles[key])
             labels.append(key)
-            stats_sets.append(np.array(d[key]))
+            stats_sets.append(np.array(d[key]))            
             for i in xrange(len(d[key])):
                 m_covs.append(d[key][i][0])
                 if d[key][i][1] > max_m:
                     max_m = d[key][i][1]
-                elif d[key][i][1] < min_m:
+                if d[key][i][1] + d[key][i][2] > max_m:
+                    max_m = d[key][i][1] + d[key][i][2]
+                if d[key][i][1] < min_m:
                     min_m = d[key][i][1]
-                               
+                if d[key][i][1] - d[key][i][2] < min_m:
+                    min_m = d[key][i][1] - d[key][i][2]
+        
+        x_range=[min(m_covs), max(m_covs) + 0.5]
+        y_range=[min_m, max_m + max_m * 0.1] 
+        if stat_str == "succ_stats":
+            y_range = [0, max_m + max_m * 0.1]                  
         
         Plot.plot_2d_n_sets(stats_sets,
                             labels=labels,
                             xlabel="joint covariance",
                             ylabel=y_label,
-                            x_range=[min(m_covs), max(m_covs)],
-                            y_range=[min_m, max_m * 1.05],
+                            x_range=x_range,
+                            y_range=y_range,
                             show_legend=True,
                             lw=3,
+                            linestyles=linestyles,
                             color_map=color_map,
                             save=self.save,
                             filename=dir + "/" + output_file_str + ".png")
@@ -689,14 +907,10 @@ class PlotStats:
         m_covs = []
         data = []
         color_map = []
+        linestyles = []
         d = dict()               
         for file in sorted(files):
-            file_str = file.split("/")[-1].split("_")[1]
-            #print file_str; sleep
-            #file_str = file.split("/")[2].split("_")[1]
-            
-            #print file_str
-            #sleep
+            file_str = file.split("/")[-1].split("_")[1]            
             if not file_str in d:
                 d[file_str] = []                 
             m_cov = -1
@@ -735,6 +949,7 @@ class PlotStats:
                 color_map.append(self.color_dict[k])
             else:
                 color_map.append(self.gen_random_color())
+            linestyles.append(self.linestyles[k])
             
             from operator import itemgetter            
             d[k] = sorted(d[k], key=itemgetter(0))
@@ -766,6 +981,7 @@ class PlotStats:
                             y_range=[min_m, max_m * 1.05],
                             show_legend=True,
                             lw=3,
+                            linestyles=linestyles,
                             color_map=color_map,
                             save=self.save,
                             filename=dir + "/" + output_file_str + ".png")
@@ -787,7 +1003,7 @@ class PlotStats:
         print "setting up robot"
         print robot_files[0]
         self.robot = Robot(robot_files[0])
-        print "set upt robot" 
+        print "set up robot" 
         return True
         
     def clear_stats(self):

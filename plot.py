@@ -19,29 +19,39 @@ def plot_2d_n_sets(sets,
                    show_legend=True,
                    idx=None, 
                    lw=5,
+                   linestyles=[],
                    color_map=[],
                    save=False,
                    path="",
                    filename="emd.png"):
+    print sets
     ps = []    
     if len(labels) != len(sets):         
         labels=['default' for i in xrange(len(sets))]
     if len(color_map) == 0:
         color_map = ['#000000' for i in xrange(len(sets))]
+    if len(linestyles) == 0:
+        linestyles = ['solid' for i in xrange(len(sets))]
     fig = plt.figure()
     ax = plt.subplot(111)
     if plot_type == 'lines':
-        for i in xrange(len(sets)):
-            '''if i == idx:                
-                p, = plt.plot(sets[i][:,0], sets[i][:,1], color_map[i], label=labels[i], linewidth=lw)
-            else:                
-                p, = plt.plot(sets[i][:,0], sets[i][:,1], color_map[i], label=labels[i], linewidth=lw)'''
-            #p, = plt.plot(sets[i][:,0], sets[i][:,1], color_map[i], label=labels[i], linewidth=lw)
-            ax.plot(sets[i][:,0], sets[i][:,1], color_map[i], label=labels[i], linewidth=lw)
-            
-            #ps.append(p)
-        '''if show_legend:
-            plt.legend(ps)'''
+        for i in xrange(len(sets)):            
+            try:            
+                ax.errorbar(sets[i][:,0], 
+                            sets[i][:,1], 
+                            yerr=sets[i][:,2], 
+                            color=color_map[i], 
+                            label=labels[i], 
+                            linewidth=lw,
+                            linestyle=linestyles[i])
+            except Exception as e:
+                print e   
+                ax.errorbar(sets[i][:,0], 
+                            sets[i][:,1],                            
+                            color=color_map[i], 
+                            label=labels[i], 
+                            linewidth=lw,
+                            linestyle=linestyles[i])     
     else:        
         ax = fig.add_subplot(111)
         for i in xrange(len(sets)):
@@ -71,83 +81,28 @@ def plot_2d_n_sets(sets,
     plt.show()
     plt.clf()
     
-'''def plot_2d_n_sets(sets,
-                   colors=[], 
-                   labels=[], 
-                   xlabel='x', 
-                   ylabel='y', 
-                   axis='xy', 
-                   x_range=[0.0, 1.0], 
-                   y_range=[0.0, 1.0], 
-                   plot_type='lines', 
-                   show_legend=True,
-                   idx=None, 
-                   lw=5,
-                   save=False,
-                   path="",
-                   filename="emd.png"):
-    ps = []  
-    lgd = None  
-    if len(labels) != len(sets):                   
-        labels=['default' for i in xrange(len(sets))]
-    if len(colors) != len(sets):
-        colors = [None for i in xrange(len(sets))]   
-    if plot_type == 'lines':        
-        for i in xrange(len(sets)):
-            if i == idx:
-                if colors[i] == None:
-                    p, = plt.plot(sets[i][:,0], sets[i][:,1], label=labels[i], linewidth=lw)
-                else:
-                    p, = plt.plot(sets[i][:,0], sets[i][:,1], label=labels[i], c=colors[i], linewidth=lw)
-            else:
-                if colors[i] == None:
-                    print sets[i][0]
-                    p, = plt.plot(sets[i][:,0], sets[i][:,1], label=labels[i])
-                else:                    
-                    p, = plt.plot(sets[i][:,0], sets[i][:,1], c=colors[i], label=labels[i])
-            ps.append(p)
-        if show_legend:
-            lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    else:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        for i in xrange(len(sets)):
-            ax.scatter(sets[i][:,0], sets[i][:,1], c=np.random.rand(3,1), label=labels[i], s=13)
-        if show_legend:
-            lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.xlim([x_range[0], x_range[1]])
-    plt.ylim([y_range[0], y_range[1]])   
-    
-    if save:
-        for file in glob.glob(os.path.join(path, filename)):            
-            os.remove(file)
-        if "png" in filename:
-            if not lgd == None:
-                plt.savefig(os.path.join(path, filename), bbox_extra_artists=(lgd,), bbox_inches='tight') 
-            else:
-                plt.savefig(os.path.join(path, filename)) 
-            plt.clf()
-            plt.close('all')            
-        elif "pdf" in filename:            
-            pp = PdfPages(os.path.join(path, filename))
-            if not lgd == None:        
-                pp.savefig(plt.gcf(), bbox_extra_artists=(lgd,), bbox_inches='tight')
-            else:
-                pp.savefig(plt.gcf())
-            plt.close('all')
-            pp.close()
-        return
-    plt.show()
-    plt.close('all')'''
-    
-def plot_histogram_from_data(data, save=False):
+def plot_histogram_from_data(data, 
+                             save=False, 
+                             bin_width=5.0, 
+                             title="", 
+                             absmin=None, 
+                             absmax=None):
     print "min " + str(min(data))
     print "max " + str(max(data))
-    print "range " + str(max(data) - min(data))    
-    plt.hist(data, bins=int(max(data) - min(data)) / 5)
-    plt.title("Gaussian Histogram")
+    print data
+    #data.append(0)
+    data_range = 0.0
+    if not absmin == None:
+        data_range = int(absmax - absmin)
+    else:
+        data_range = int(max(data) - min(data))
+    print "data range " + str(data_range) 
+    print "bins " + str(data_range / bin_width) 
+    weights = np.ones_like(data) / float(len(data))  
+    plt.hist(data, bins=int(data_range / bin_width), weights=weights)
+    #plt.hist(data, bins=1)
+    plt.xlim(absmin, absmax + absmax*0.05)
+    plt.title(title)
     plt.xlabel("Value")
     plt.ylabel("Frequency")
     plt.show()
@@ -167,15 +122,7 @@ def plot_histogram(H, xedges, yedges, save=False, barlabel="Probability", path="
         fig2.savefig(os.path.join(path, filename))
     else:
         plt.show()
-    plt.close('all')
-    
-    #fig = plt.figure(figsize=(15, 15))
-    #ax = fig.add_subplot(132)
-    #ax.set_title('pcolormesh: exact bin edges')
-    #X, Y = np.meshgrid(xedges, yedges)
-    #ax.pcolormesh(X, Y, H)
-    #ax.set_aspect('equal')
-    #plt.show()
+    plt.close('all')    
 
 def plot_2d_two_sets(sets, labels, axis='xy', xrange=[0.0, 1.0], yrange=[0.0, 1.0]):
     if axis == 'xy':
