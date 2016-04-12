@@ -363,19 +363,9 @@ Robot::Robot(std::string robot_file):
 			           active_upper_joint_limits_,
 			           active_joint_velocity_limits_,
 					   enforce_constraints_);
-	kinematics_->setJointOrigins(joint_origins_);
-	cout << "joint origins size: " << joint_origins_.size() << endl;
-	//kinematics_->setJointAxis(joint_axes_);
+	kinematics_->setJointOrigins(joint_origins_);	
 	kinematics_->setLinkDimensions(active_link_dimensions_);
-	cout << "active_link_dimensions_" << active_link_dimensions_.size() << endl;
-	
-	//rbdl_interface_->load_model(robot_file);
-    //propagator_->getIntegrator()->setRBDLInterface(rbdl_interface_);
-	//rbdl_interface_->setViscous(joint_dampings_);
-	//rbdl_interface_->setPositionConstraints(lower_joint_limits_, upper_joint_limits_);
 	propagator_->getIntegrator()->setJointDamping(joint_dampings_);
-	//initCollisionObjects();
-	
 }
 
 void Robot::quatFromRPY(double &roll, double &pitch, double &yaw, std::vector<double> &quat) {
@@ -571,25 +561,6 @@ void Robot::setupViewer(std::string model_file, std::string environment_file) {
 	viewer_->setupViewer(model_file, environment_file);	
 }
 
-void Robot::addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles) {
-	for (size_t i = 0; i < obstacles.size(); i++) {
-		std::vector<double> dims;		
-		std::shared_ptr<shared::Obstacle> o = std::static_pointer_cast<shared::Obstacle>(obstacles[i]);
-		std::shared_ptr<shared::BoxObstacle> o_box = std::static_pointer_cast<shared::BoxObstacle>(o);
-		dims.push_back(o_box->pos_x_);
-		dims.push_back(o_box->pos_y_);
-		dims.push_back(o_box->pos_z_);
-		dims.push_back(o_box->size_x_);
-		dims.push_back(o_box->size_y_);
-		dims.push_back(o_box->size_z_);
-		
-		std::string name = o_box->getName();
-		viewer_->addObstacle(name,
-				             dims);
-	}
-	
-}
-
 void Robot::addPermanentViewerParticles(const std::vector<std::vector<double>> &particle_joint_values,
 							            const std::vector<std::vector<double>> &particle_colors) {
 	assert(particle_joint_values.size() == particle_colors.size() &&  
@@ -632,16 +603,6 @@ void Robot::setViewerCameraTransform(std::vector<double> &rot, std::vector<doubl
 	viewer_->setCameraTransform(rot, trans);
 }
 
-void Robot::addSensor(std::string sensor_file) {
-	viewer_->addSensor(sensor_file);
-}
-
-void Robot::setSensorTransform(std::vector<double> &joint_angles) {
-	bool b = true;
-	Eigen::MatrixXd end_effector_pose = kinematics_->getEndEffectorPose(joint_angles, b);
-	viewer_->setSensorTransform(end_effector_pose);
-}
-
 void Robot::setObstacleColor(std::string obstacle_name, 
  		                     std::vector<double> &diffuse_color, 
                              std::vector<double> &ambient_color) {
@@ -649,6 +610,52 @@ void Robot::setObstacleColor(std::string obstacle_name,
 }
 
 #endif
+
+void Robot::addBoxObstacles(std::vector<std::shared_ptr<shared::Obstacle>> &obstacles) {
+#ifdef USE_URDF
+	for (size_t i = 0; i < obstacles.size(); i++) {
+		std::vector<double> dims;		
+		std::shared_ptr<shared::Obstacle> o = obstacles[i];
+		std::shared_ptr<shared::BoxObstacle> o_box = std::static_pointer_cast<shared::BoxObstacle>(o);
+		dims.push_back(o_box->pos_x_);
+		dims.push_back(o_box->pos_y_);
+		dims.push_back(o_box->pos_z_);
+		dims.push_back(o_box->size_x_);
+		dims.push_back(o_box->size_y_);
+		dims.push_back(o_box->size_z_);
+			
+		std::string name = o_box->getName();
+		viewer_->addObstacle(name,
+					         dims);
+	}
+#endif
+}
+
+void Robot::addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles) {
+#ifdef USE_URDF
+	for (size_t i = 0; i < obstacles.size(); i++) {
+		std::vector<double> dims;		
+		std::shared_ptr<shared::Obstacle> o = std::static_pointer_cast<shared::Obstacle>(obstacles[i]);
+		std::shared_ptr<shared::BoxObstacle> o_box = std::static_pointer_cast<shared::BoxObstacle>(o);
+		dims.push_back(o_box->pos_x_);
+		dims.push_back(o_box->pos_y_);
+		dims.push_back(o_box->pos_z_);
+		dims.push_back(o_box->size_x_);
+		dims.push_back(o_box->size_y_);
+		dims.push_back(o_box->size_z_);
+		
+		std::string name = o_box->getName();
+		viewer_->addObstacle(name,
+				             dims);
+	}
+#endif
+}
+
+void Robot::removeObstacles() {
+#ifdef USE_URDF
+	viewer_->removeObstacles();
+#endif
+}
 
 bool Robot::propagate_linear(std::vector<double> &current_state,
     	    		         std::vector<double> &control_input,
@@ -873,13 +880,6 @@ void Robot::getActiveLinkDimensions(std::vector<std::vector<double>> &dimensions
 	for (auto &k: active_link_dimensions_) {
 		dimensions.push_back(k);
 	}
-	/**for (size_t i = 0; i < link_names_.size(); i++) {
-		for (size_t j = 0; j < active_link_names_.size(); j ++) {
-			if (link_names_[i] == active_link_names_[j]) {
-				dimensions.push_back(link_dimensions_[i]);
-			}
-		}
-	}*/	
 }
 
 void Robot::getLinkDimension(std::vector<std::string> &link, std::vector<std::vector<double>> &dimension) {	
@@ -1011,32 +1011,57 @@ std::vector<double> Robot::getProcessMatrices(std::vector<double> &x,
 BOOST_PYTHON_MODULE(librobot) {
     using namespace boost::python;
     
-    class_<std::vector<double> > ("v_double")
-             .def(vector_indexing_suite<std::vector<double> >());
+    boost::python::type_info info= boost::python::type_id<std::vector<double>>();
+    const boost::python::converter::registration* reg_double = boost::python::converter::registry::query(info);
+    if (reg_double == NULL || (*reg_double).m_to_python == NULL)  {
+    	class_<std::vector<double> > ("v_double")
+    	    .def(vector_indexing_suite<std::vector<double> >());
+    }
     
-    class_<std::vector<int> > ("v_int")
-             .def(vector_indexing_suite<std::vector<int> >());
+    info = boost::python::type_id<std::vector<int>>();
+    const boost::python::converter::registration* reg_int = boost::python::converter::registry::query(info);
+    if (reg_int == NULL || (*reg_int).m_to_python == NULL)  {    
+    	class_<std::vector<int> > ("v_int")
+    	    .def(vector_indexing_suite<std::vector<int> >());
+    }
     
-    class_<std::vector<std::vector<double> > > ("v2_double")
-             .def(vector_indexing_suite<std::vector<std::vector<double> > >());
+    info = boost::python::type_id<std::vector<std::vector<double>>>();
+    const boost::python::converter::registration* reg_v2double = boost::python::converter::registry::query(info);
+    if (reg_v2double == NULL || (*reg_v2double).m_to_python == NULL)  {  
+    	class_<std::vector<std::vector<double> > > ("v2_double")
+    	    .def(vector_indexing_suite<std::vector<std::vector<double> > >());
+    }
     
-    class_<std::vector<std::vector<int> > > ("v2_int")
-             .def(vector_indexing_suite<std::vector<std::vector<int> > >());
+    info = boost::python::type_id<std::vector<std::vector<int>>>();
+    const boost::python::converter::registration* reg_v2int = boost::python::converter::registry::query(info);
+    if (reg_v2int == NULL || (*reg_v2int).m_to_python == NULL)  {    
+    	class_<std::vector<std::vector<int> > > ("v2_int")
+    	    .def(vector_indexing_suite<std::vector<std::vector<int> > >());
+    }
     
-    class_<std::vector<std::string> > ("v_string")
-                 .def(vector_indexing_suite<std::vector<std::string> >());  
+    info = boost::python::type_id<std::vector<std::string>>();
+    const boost::python::converter::registration* reg_vstring = boost::python::converter::registry::query(info);
+    if (reg_vstring == NULL || (*reg_vstring).m_to_python == NULL)  {    	
+    	class_<std::vector<std::string> > ("v_string")
+    	    .def(vector_indexing_suite<std::vector<std::string> >());
+    }
     
-    class_<std::vector<std::shared_ptr<shared::ObstacleWrapper>> > ("v_obstacle")
-                 .def(vector_indexing_suite<std::vector<std::shared_ptr<shared::ObstacleWrapper>> >()); 
-    
-    
+    info = boost::python::type_id<std::vector<std::shared_ptr<shared::ObstacleWrapper>>>();
+    const boost::python::converter::registration* reg_vobst = boost::python::converter::registry::query(info);
+    if (reg_vobst == NULL || (*reg_vobst).m_to_python == NULL)  { 
+    	class_<std::vector<std::shared_ptr<shared::ObstacleWrapper>> > ("v_obstacle")
+    	    .def(vector_indexing_suite<std::vector<std::shared_ptr<shared::ObstacleWrapper>> >());
+    	to_python_converter<std::vector<std::shared_ptr<shared::ObstacleWrapper>, std::allocator<std::shared_ptr<shared::ObstacleWrapper>> >, 
+    	    VecToList<std::shared_ptr<shared::ObstacleWrapper>> >();
+    	register_ptr_to_python<std::shared_ptr<shared::ObstacleWrapper>>();
+    }
+    	
     class_<fcl::OBB>("OBB");
     class_<fcl::CollisionObject>("CollisionObject", init<const boost::shared_ptr<fcl::CollisionGeometry>, const fcl::Transform3f>());
     to_python_converter<std::vector<fcl::OBB, std::allocator<fcl::OBB> >, VecToList<fcl::OBB> >();
     to_python_converter<std::vector<fcl::CollisionObject, std::allocator<fcl::CollisionObject> >, VecToList<fcl::CollisionObject> >();
     to_python_converter<std::vector<std::shared_ptr<fcl::CollisionObject>, std::allocator<std::shared_ptr<fcl::CollisionObject>> >, 
-	                    VecToList<std::shared_ptr<fcl::CollisionObject>> >();
-    
+        VecToList<std::shared_ptr<fcl::CollisionObject>> >();
     register_ptr_to_python<std::shared_ptr<fcl::CollisionObject>>();
     
     class_<Robot, boost::shared_ptr<Robot>>("Robot", init<std::string>())
@@ -1074,17 +1099,16 @@ BOOST_PYTHON_MODULE(librobot) {
 						.def("getEndEffectorVelocity", &Robot::getEndEffectorVelocity)
 						.def("getProcessMatrices", &Robot::getProcessMatrices)						
 						.def("getEndEffectorJacobian", &Robot::getEndEffectorJacobian)
-#ifdef USE_URDF
-						.def("setupViewer", &Robot::setupViewer)
 						.def("addObstacles", &Robot::addObstacles)
+						.def("removeObstacles", &Robot::removeObstacles)
+#ifdef USE_URDF
+						.def("setupViewer", &Robot::setupViewer)						
 						.def("updateViewerValues", &Robot::updateViewerValues)
 						.def("setViewerSize", &Robot::setViewerSize)
 						.def("setViewerBackgroundColor", &Robot::setViewerBackgroundColor)
 					    .def("setViewerCameraTransform", &Robot::setViewerCameraTransform)
 					    .def("addPermanentViewerParticles", &Robot::addPermanentViewerParticles)
-					    .def("removePermanentViewerParticles", &Robot::removePermanentViewerParticles)
-					    .def("addSensor", &Robot::addSensor)
-						.def("setSensorTransform", &Robot::setSensorTransform)
+					    .def("removePermanentViewerParticles", &Robot::removePermanentViewerParticles)					    
 						.def("setObstacleColor", &Robot::setObstacleColor)
 #endif
                         //.def("setup", &Integrate::setup)                        

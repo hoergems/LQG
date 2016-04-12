@@ -10,8 +10,7 @@ from plan_adjuster import PlanAdjuster
 from serializer import Serializer
 from libutil import *
 import logging
-from librobot import v_string, Robot, v_obstacle
-from librobot import v_string, Robot
+from librobot import v_string, Robot, v_obstacle, v_double, v2_double
 from util_py import check_positive_definite, get_goal_states, copyToTmp
 from simulator import Simulator
 from path_evaluator import PathEvaluator
@@ -207,8 +206,8 @@ class HRF:
                 print "HRF: Run " + str(k + 1)                                
                 self.serializer.write_line("log.log", tmp_dir, "RUN #" + str(k + 1) + " \n")
                 current_step = 0
-                x_true = [self.start_state[m] for m in xrange(len(self.start_state))]
-                x_estimated = [self.start_state[m] for m in xrange(len(self.start_state))]
+                x_true = np.array([self.start_state[m] for m in xrange(len(self.start_state))])
+                x_estimated = np.array([self.start_state[m] for m in xrange(len(self.start_state))])
                 #x_estimated[0] += 0.2                
                 #x_estimated[0] = 0.4             
                 #x_predicted = self.start_state                               
@@ -389,10 +388,15 @@ class HRF:
                     Adjust plan
                     """ 
                     t0 = time.time()                   
-                    (xs_adj, us_adj, zs_adj, control_durations_adj) = plan_adjuster.adjust_plan(self.robot,
-                                                                                                (xs, us, zs, control_durations),                                                                                                
-                                                                                                x_estimated,
-                                                                                                P_t)
+                    (xs_adj, us_adj, zs_adj, control_durations_adj, adjusted) = plan_adjuster.adjust_plan(self.robot,
+                                                                                                         (xs, us, zs, control_durations),                                                                                                
+                                                                                                         x_estimated,
+                                                                                                         P_t)
+                    if not adjusted:
+                        final_states.append(history_entries[-1].x_true)
+                        print "current step " + str(current_step)
+                        raise ValueError("Raised")
+                        break
                     if self.show_viewer_simulation:
                         sim.update_viewer(x_true, x_estimated, z, control_duration=0.03, colliding_obstacle=sim.colliding_obstacle)
                     

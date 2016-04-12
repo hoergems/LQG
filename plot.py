@@ -24,7 +24,6 @@ def plot_2d_n_sets(sets,
                    save=False,
                    path="",
                    filename="emd.png"):
-    print sets
     ps = []    
     if len(labels) != len(sets):         
         labels=['default' for i in xrange(len(sets))]

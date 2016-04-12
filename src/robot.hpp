@@ -243,16 +243,16 @@ struct Joint {
     	        	    
     	    void setupViewer(std::string model_file, std::string environment_file);
     	    
-    	    void addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles);
-    	    
-    	    void addSensor(std::string sensor_file);
-    	    
-    	    void setSensorTransform(std::vector<double> &joint_angles);
-    	    
     	    void setObstacleColor(std::string obstacle_name, 
     	     		                     std::vector<double> &diffuse_color, 
     	                                 std::vector<double> &ambient_color);
 #endif
+    	    void addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles);
+    	    
+    	    void addBoxObstacles(std::vector<std::shared_ptr<shared::Obstacle>> &obstacles);
+    	    
+    	    void removeObstacles();
+    	    
         private:
     	    std::vector<shared::Link> links_;
     	    

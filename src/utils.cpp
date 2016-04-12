@@ -85,6 +85,85 @@ std::vector<std::vector<double>> Utils::loadGoalStates() {
 
 }
 
+bool Utils::checkProblemFeasibility(std::vector<std::shared_ptr<shared::Obstacle>> &obstacles,
+       		                 boost::shared_ptr<shared::Robot> &robot,
+       		                 std::vector<double> &start_state,
+       		                 std::vector<std::vector<double>> &goal_states,
+       		                 std::vector<double> &ee_goal_position,
+       		                 double &ee_goal_threshold,
+       		                 double &simulation_step_size,
+       		                 double &control_duration,       		                 
+       		                 double &planning_velocity) {
+	std::string planner = "RRT";
+	std::shared_ptr<shared::DynamicPathPlanner> path_planner = 
+			std::make_shared<shared::DynamicPathPlanner>(robot, 
+			                                             false);	
+	path_planner->setupMotionValidator(true);
+	path_planner->setup(simulation_step_size, control_duration, planner);
+	std::string control_sampler = "discrete";
+	path_planner->setControlSampler(control_sampler);
+	std::vector<int> num_control_samples({1});
+	path_planner->setNumControlSamples(num_control_samples);
+	path_planner->setRRTGoalBias(0.05);
+	std::vector<int> min_max_control_duration({1, 4});
+	path_planner->setMinMaxControlDuration(min_max_control_duration);
+	path_planner->addIntermediateStates(true);
+	path_planner->setObstacles(obstacles);
+	path_planner->setGoalStates(goal_states, ee_goal_position, ee_goal_threshold);
+	cout << "plan path" << endl;
+	std::vector<std::vector<double>> path = path_planner->solve(start_state, 5.0);
+	if (path.size() > 0) {
+		std::shared_ptr<shared::PathPlanner> path_planner_kin = 
+				std::make_shared<shared::PathPlanner>(robot,
+						                              control_duration,
+						                              true,
+						                              planning_velocity,
+						                              1.0,
+						                              false,
+						                              false,
+						                              "RRTConnect");
+		path_planner_kin->setGoalStates(goal_states, ee_goal_position, ee_goal_threshold);
+		path_planner_kin->setup();
+		path_planner_kin->setObstacles(obstacles);
+		std::vector<std::vector<double> > solution_path;
+		solution_path = path_planner_kin->solve(start_state, 0.1);
+		if (solution_path.size() > 0) {
+			return true;
+		}
+		else {
+			cout << "No deterministic linear solution" << endl;
+		}
+	}
+	cout << "return false" << endl;
+	return false;
+}
+
+std::shared_ptr<shared::Obstacle> Utils::generateBoxObstacle(std::string name,
+                                                             double x_pos,
+                                                             double y_pos,
+		                                                     double z_pos,
+		                                                     double x_size,
+		                                                     double y_size,
+		                                                     double z_size) {
+	shared::Terrain terrain(name + "_terrain",
+			                0.0,
+			                0.0,
+			                false);
+	std::shared_ptr<shared::Obstacle> obst = std::make_shared<shared::BoxObstacle>(name,
+			                                                                       x_pos,
+			                                                                       y_pos,
+			                                                                       z_pos,
+			                                                                       x_size,
+			                                                                       y_size,
+			                                                                       z_size,
+			                                                                       terrain);
+	std::vector<double> d_color({0.5, 0.0, 0.3, 1.0});
+    std::vector<double> a_color({0.25, 0.0, 0.15, 1.0});
+    obst->setStandardColor(d_color, a_color);
+    return obst;
+	
+}
+
 std::vector<std::shared_ptr<shared::ObstacleWrapper>> Utils::generateObstacle(std::string name,
 		                                                                      double x_pos,
 			                                                                  double y_pos,
@@ -111,19 +190,11 @@ std::vector<std::shared_ptr<shared::ObstacleWrapper>> Utils::generateObstacle(st
 	std::vector<double> d_color({0.5, 0.0, 0.3, 1.0});
 	std::vector<double> a_color({0.25, 0.0, 0.15, 1.0});
 	obst[obst.size() - 1]->setStandardColor(d_color, a_color);
-	/**obstacles.push_back(std::static_pointer_cast<shared::ObstacleWrapper>(std::make_shared<shared::BoxObstacle>(name,
-            x_pos,
-            y_pos,
-            z_pos,
-            x_size,
-            y_size,
-            z_size,
-            terrain)));*/
 	
 	for (size_t i = 0; i < obst.size(); i++) {
 		obstacles.push_back(std::static_pointer_cast<shared::ObstacleWrapper>(obst[i]));
 	}
-	cout << "obstacles.size() " << obstacles.size() << endl;
+	
 	return obstacles;
 }
 
@@ -142,8 +213,17 @@ std::vector<std::shared_ptr<shared::ObstacleWrapper>> Utils::loadObstaclesXMLPy(
 	
 }
 
+bool Utils::file_exists(std::string &filename) {
+	return boost::filesystem::exists(filename);
+}
+
 void Utils::loadObstaclesXML(std::string &obstacles_file,
 		                     std::vector<std::shared_ptr<shared::Obstacle> > &obst) {
+	if (!file_exists(obstacles_file)) {
+		cout << "Utils: ERROR: Environment file '" << obstacles_file << "' doesn't exist" << endl;		
+		assert(false);		
+	}
+	
 	std::vector<ObstacleStruct> obstacles;	
 	TiXmlDocument xml_doc;	
     xml_doc.LoadFile(obstacles_file);    
@@ -259,7 +339,7 @@ void Utils::loadObstaclesXML(std::string &obstacles_file,
 			}
 		}
 	}
-	cout << "obstacles size " << obstacles.size() << endl;
+	
 	for (size_t i = 0; i < obstacles.size(); i++) {
 	    shared::Terrain terrain(obstacles[i].terrain.name,
 	                            obstacles[i].terrain.traversalCost,
@@ -285,11 +365,11 @@ void Utils::loadObstaclesXML(std::string &obstacles_file,
 					                                                terrain));
 	    }
 	    else {
-	    	assert(false && "Obstacle has an unknown type!");
+	    	assert(false && "Utils: ERROR: Obstacle has an unknown type!");
 	    }
 	    
 	    obst[obst.size() - 1]->setStandardColor(obstacles[i].d_color, obstacles[i].a_color);
-	}	
+	}
 }
 
 void Utils::loadGoalAreaPy(std::string env_file, std::vector<double> &goal_area) {
@@ -297,6 +377,10 @@ void Utils::loadGoalAreaPy(std::string env_file, std::vector<double> &goal_area)
 }
 
 void Utils::loadGoalArea(std::string &env_file, std::vector<double> &goal_area) {
+	if (!file_exists(env_file)) {
+		cout << "Utils: ERROR: Environment file '" << env_file << "' doesn't exist" << endl;		
+		assert(false);		
+	}
 	TiXmlDocument xml_doc;	
 	xml_doc.LoadFile(env_file);    
     TiXmlElement *env_xml = xml_doc.FirstChildElement("Environment");
@@ -411,31 +495,48 @@ BOOST_PYTHON_MODULE(libutil) {
     
     typedef std::vector<std::vector<double> > vec_vec;
     
-    class_<std::vector<std::vector<double> > > ("v2_double")
-         .def(vector_indexing_suite<std::vector<std::vector<double> > >());
+    boost::python::type_info info= boost::python::type_id<std::vector<double>>();
+    const boost::python::converter::registration* reg_double = boost::python::converter::registry::query(info);
+    if (reg_double == NULL || (*reg_double).m_to_python == NULL)  {
+        class_<std::vector<double> > ("v_double")
+        	.def(vector_indexing_suite<std::vector<double> >());
+    }
+        
+    info = boost::python::type_id<std::vector<int>>();
+    const boost::python::converter::registration* reg_int = boost::python::converter::registry::query(info);
+    if (reg_int == NULL || (*reg_int).m_to_python == NULL)  {    
+        class_<std::vector<int> > ("v_int")
+        	.def(vector_indexing_suite<std::vector<int> >());
+    }
+        
+    info = boost::python::type_id<std::vector<std::vector<double>>>();
+    const boost::python::converter::registration* reg_v2double = boost::python::converter::registry::query(info);
+    if (reg_v2double == NULL || (*reg_v2double).m_to_python == NULL)  {  
+        class_<std::vector<std::vector<double> > > ("v2_double")
+        	.def(vector_indexing_suite<std::vector<std::vector<double> > >());
+    }
+        
+    info = boost::python::type_id<std::vector<std::vector<int>>>();
+    const boost::python::converter::registration* reg_v2int = boost::python::converter::registry::query(info);
+    if (reg_v2int == NULL || (*reg_v2int).m_to_python == NULL)  {    
+        class_<std::vector<std::vector<int> > > ("v2_int")
+        	.def(vector_indexing_suite<std::vector<std::vector<int> > >());
+    }
     
-    class_<std::vector<std::vector<int> > > ("v2_int")
-         .def(vector_indexing_suite<std::vector<std::vector<int> > >());
-         
-    class_<std::vector<double> > ("v_double")
-         .def(vector_indexing_suite<std::vector<double> >());
-         
-    class_<std::vector<int> > ("v_int")
-         .def(vector_indexing_suite<std::vector<int> >());
-    
-    to_python_converter<std::vector<shared::BoxObstacle,
-	                                class std::allocator<shared::BoxObstacle> >, VecToList<shared::BoxObstacle> >();
-    
-    to_python_converter<std::vector<std::shared_ptr<shared::ObstacleWrapper>,
-    	                            class std::allocator<std::shared_ptr<shared::ObstacleWrapper>> >, 
-									VecToList<std::shared_ptr<shared::ObstacleWrapper>> >();
+    info = boost::python::type_id<std::vector<std::shared_ptr<shared::ObstacleWrapper>>>();
+    const boost::python::converter::registration* reg_vobst = boost::python::converter::registry::query(info);
+    if (reg_vobst == NULL || (*reg_vobst).m_to_python == NULL)  { 
+        class_<std::vector<std::shared_ptr<shared::ObstacleWrapper>> > ("v_obstacle")
+            .def(vector_indexing_suite<std::vector<std::shared_ptr<shared::ObstacleWrapper>> >());
+        to_python_converter<std::vector<std::shared_ptr<shared::ObstacleWrapper>, std::allocator<std::shared_ptr<shared::ObstacleWrapper>> >, 
+            VecToList<std::shared_ptr<shared::ObstacleWrapper>> >();
+        register_ptr_to_python<std::shared_ptr<shared::ObstacleWrapper>>();
+    }
     
     class_<Utils>("Utils", init<>())
     		.def("loadObstaclesXML", &Utils::loadObstaclesXMLPy)
 			.def("loadGoalArea", &Utils::loadGoalAreaPy)
 			.def("generateObstacle", &Utils::generateObstacle)
-         
-         
     ;
 }
 

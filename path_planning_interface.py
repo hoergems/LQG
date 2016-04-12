@@ -2,7 +2,7 @@ from path_evaluator import *
 from multiprocessing import Process, cpu_count, Lock, Queue, Pool
 import multiprocessing.queues
 from Queue import Empty, Full
-from librobot import v_string, v_double, v2_double
+from librobot import v_string, v_double, v2_double, v_int
 import libpath_planner
 import libdynamic_path_planner
 import time
@@ -334,12 +334,12 @@ class PathPlanningInterface:
                                 self.delta_t,
                                 planner_str)
             path_planner2.setControlSampler(self.control_sampler)            
-            num_control_samples = libdynamic_path_planner.v_int()
+            num_control_samples = v_int()
             num_control_samples[:] = [self.num_control_samples]
             path_planner2.setNumControlSamples(num_control_samples)
             path_planner2.setRRTGoalBias(self.rrt_goal_bias)            
             
-            min_max_control_duration = libdynamic_path_planner.v_int()
+            min_max_control_duration = v_int()
             min_max_control_duration[:] = [self.min_control_duration,
                                            self.max_control_duration]
             path_planner2.setMinMaxControlDuration(min_max_control_duration)

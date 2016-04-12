@@ -141,6 +141,7 @@ void PathPlanner::setup() {
 }
 
 void PathPlanner::setObstacles(std::vector<std::shared_ptr<Obstacle> > obstacles) {
+	obstacles_.clear();
     for (size_t i = 0; i < obstacles.size(); i++) {        
         obstacles_.push_back(obstacles[i]);
     }
@@ -277,8 +278,7 @@ std::vector<std::vector<double> > PathPlanner::solve(const std::vector<double> &
     }
     
     std::vector<std::vector<double> > solution_vector;
-    boost::shared_ptr<MotionValidator> mv = boost::static_pointer_cast<MotionValidator>(si_->getMotionValidator());    
-       
+    boost::shared_ptr<MotionValidator> mv = boost::static_pointer_cast<MotionValidator>(si_->getMotionValidator());
     /** Add the start state to the problem definition */
     if (verbose_) {
         cout << "Adding start state: ";

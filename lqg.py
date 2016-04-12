@@ -5,21 +5,26 @@ import numpy as np
 import os
 import glob
 import scipy
+import kalman as kalman
 from serializer import Serializer
 from libutil import *
 import logging
-from librobot import v_string, Robot
+from librobot import v_string, Robot, v_obstacle
 from util_py import check_positive_definite, get_goal_states, copyToTmp
 from simulator import Simulator
 from path_evaluator import PathEvaluator
 from path_planning_interface import PathPlanningInterface
 from libobstacle import Obstacle, Terrain
 import warnings
+import subprocess
 
 
 class LQG:
     def __init__(self, show_scene, deserialize, append_paths):
         self.abs_path = os.path.dirname(os.path.abspath(__file__))
+        cmd = "rm -rf " + self.abs_path + "/tmp"
+        popen = subprocess.Popen(cmd, cwd=self.abs_path, shell=True)
+        popen.wait()
         """ Reading the config """
         warnings.filterwarnings("ignore")
         self.init_serializer()
@@ -209,7 +214,8 @@ class LQG:
                                   self.max_velocity,                                  
                                   self.show_viewer_simulation,
                                   self.robot_file,
-                                  self.environment_file)
+                                  self.environment_file,
+                                  self.collision_aware)
                 if self.dynamic_problem:
                     sim.setup_dynamic_problem(self.simulation_step_size)                
                 successes = 0
@@ -221,7 +227,7 @@ class LQG:
                 print "LQG: Running " + str(self.num_simulation_runs) + " simulations..."              
                 for k in xrange(self.num_simulation_runs):
                     self.serializer.write_line("log.log", tmp_dir, "RUN #" + str(k + 1) + " \n")
-                    print "simulation run: " + str(k)
+                    print "simulation run: " + str(k)                    
                     (x_true, 
                      x_tilde,
                      x_tilde_linear, 
@@ -236,16 +242,15 @@ class LQG:
                      history_entries) = sim.simulate_n_steps(xs, us, zs,                                                             
                                                              control_durations,
                                                              xs[0],
-                                                             np.array([0.0 for i in xrange(2 * self.robot_dof)]),
-                                                             np.array([0.0 for i in xrange(2 * self.robot_dof)]),
                                                              xs[0],
                                                              np.array([[0.0 for k in xrange(2 * self.robot_dof)] for l in xrange(2 * self.robot_dof)]),
-                                                             0.0,                                                           
+                                                             0.0,
                                                              0,
                                                              len(xs) - 1,
                                                              deviation_covariances,
                                                              estimated_deviation_covariances)
                     if terminal:
+                        print "TERMINAL"
                         successes += 1
                     rewards_cov.append(total_reward)
                     #n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(rewards_cov))                    
@@ -665,8 +670,8 @@ class LQG:
     def setup_scene(self,                    
                     environment_file,
                     robot):
-        """ Load the obstacles """         
-        self.obstacles = self.utils.loadObstaclesXML(self.abs_path + "/" + environment_file)      
+        """ Load the obstacles """               
+        self.obstacles = self.utils.loadObstaclesXML(self.abs_path + "/" + environment_file)             
         
         """ Load the goal area """
         goal_area = v_double()
@@ -776,6 +781,7 @@ class LQG:
         self.seed = config['seed']
         self.num_cores = config['num_cores']
         self.acceleration_limit = config['acceleration_limit']
+        self.collision_aware = config['knows_collision']
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='LQG-MP.')
