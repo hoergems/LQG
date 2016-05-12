@@ -17,7 +17,12 @@ from emd import emd
 from tabulate import tabulate
 
 class PlotStats:
-    def __init__(self, dir, save_plots, show_particles, plot_emds):        
+    def __init__(self, 
+                 dir, 
+                 save_plots, 
+                 show_particles, 
+                 plot_emds,
+                 finish_when_collided):                
         if not os.path.isdir(dir):
             print "Error: Directory doesn't exist"
             return
@@ -37,14 +42,10 @@ class PlotStats:
         
         if self.setup_robot(dir) and plot_emds:            
             self.plot_emds(show_particles, dir=dir)
-        '''self.plot_estimate_error(dir=dir)
-        self.plot_linearisation_error(dir=dir)
-        return'''
-               
         
         self.plot_num_succesful_runs("succ_stats", 
                                      dir=dir, 
-                                     finish_when_collided=True)
+                                     finish_when_collided=finish_when_collided)
         self.plot_stat_from_txt_file("succ_stats", 
                                      "num_succ", 
                                      dir=dir, 
@@ -53,7 +54,7 @@ class PlotStats:
         reward_model["step_penalty"] = -1.0
         reward_model["collision_penalty"] = -500.0
         reward_model["exit_reward"] = 1000.0
-        self.plot_reward(reward_model, "reward_stats", dir=dir, finish_when_collided=True)        
+        self.plot_reward(reward_model, "reward_stats", dir=dir, finish_when_collided=finish_when_collided)        
         self.plot_stat_from_txt_file("reward_stats", 
                                      "mean_rewards", 
                                      dir=dir, 
@@ -701,7 +702,7 @@ class PlotStats:
                     elif "collided: true" in line or "Collision detected: True" in line:
                         if not block:                      
                             vals[-1] = reward_model['collision_penalty']
-                        if finish_when_collided:
+                        if finish_when_collided:                            
                             block = True
                     elif "Terminal: true" in line:
                         if not block:
@@ -882,7 +883,17 @@ class PlotStats:
         x_range=[min(m_covs), max(m_covs) + 0.5]
         y_range=[min_m, max_m + max_m * 0.1] 
         if stat_str == "succ_stats":
-            y_range = [0, max_m + max_m * 0.1]                  
+            y_range = [0, max_m + max_m * 0.1]
+        xlabels = []
+        for i in xrange(len(stats_sets[0])):
+            xlabels.append(str(m_covs[i]))        
+        Plot.plot_bar_graphs(stats_sets,
+                             colormap=color_map,
+                             x_labels=xlabels,
+                             y_label=y_label,
+                             bar_labels=['HFR', "ABT"],
+                             save=self.save,
+                             filename=dir + "/" + output_file_str + "_bar.png")                  
         
         Plot.plot_2d_n_sets(stats_sets,
                             labels=labels,
@@ -1482,17 +1493,9 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--emd", 
                         help="Plot emds", 
                         action="store_true")
+    parser.add_argument("-c", "--coll",
+                        help="Collision counts as unsuccessful run",
+                        action="store_true")
     args = parser.parse_args() 
-    PlotStats(args.directory, args.save, args.particles, args.emd)
-    '''return
-    if len(sys.argv) > 2:
-        algorithm = sys.argv[1]
-        if "save" in sys.argv[2]:
-            PlotStats(True, algorithm)
-            sys.exit()       
-        PlotStats(False)
-        sys.exit() 
-    else:
-        logging.error("Wrong number of arguments. Should be 'python plot_stats.py ALGORITHM SAVE'")
-        sys.exit()   
-    PlotStats(False)'''
+    PlotStats(args.directory, args.save, args.particles, args.emd, args.coll)
+    

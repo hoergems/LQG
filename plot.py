@@ -7,6 +7,48 @@ from scipy import stats
 import glob
 import os
 
+def plot_bar_graphs(sets,
+                    colormap=[],
+                    x_labels=[],
+                    y_label="",
+                    bar_labels=[],
+                    save=False,
+                    path="",
+                    filename="bar.png"):
+    if len(colormap) == 0:
+        colormap = ['#000000' for i in xrange(len(sets))]
+    num_sets = len(sets)
+    fig, ax = plt.subplots()
+    N = len(sets[0])
+    ind = np.arange(N)
+    width = 0.35
+    n = 0
+    r = []
+    for set in sets:        
+        means = [set[i][1] for i in xrange(len(set))]
+        err = [set[i][2] for i in xrange(len(set))]
+        rects1 = ax.bar(ind, means, width, color=colormap[n], yerr=err) 
+        r.append(rects1[0])              
+        ind = ind + width 
+        n += 1
+    if len(bar_labels) == len(sets):
+        ax.legend(r, bar_labels)
+    ax.set_xticks(np.arange(N) + len(sets) * width / 2.0)
+    
+    if len(x_labels) == len(sets[0]):
+        ax.set_xticklabels(x_labels)    
+    else:
+        ax.set_xticklabels(('G1', 'G2', 'G3', 'G4', 'G5'))    
+    ax.set_ylabel(y_label)
+    if save:
+        for file in glob.glob(os.path.join(path, filename)):
+            os.remove(file)
+        plt.savefig(os.path.join(path, filename))
+        plt.clf()
+        return   
+    plt.show()
+    plt.clf()
+
 def plot_2d_n_sets(sets,
                    circles=[], 
                    labels=[], 
