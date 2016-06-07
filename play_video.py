@@ -3,6 +3,7 @@ import glob
 import argparse
 import numpy as np
 import time
+import sys
 from librobot import Robot, v_double, v2_double
 from libutil import *
 from libobstacle import *
@@ -342,8 +343,14 @@ if __name__ == "__main__":
                         action="store_true")
     parser.add_argument("-cs", "--colliding_states",
                         help="Show the colliding states",
-                        action="store_true")
+                        action="store_true")    
     args = parser.parse_args()
+    if args.algorithm == None:
+        print "Error: No algorithm provided. Run 'python play_video.py --help' for command line options"
+        sys.exit()
+    if args.directory == None:
+        print "Error: No directory for the logs provided. Run 'python play_video.py --help' for command line options" 
+        sys.exit()
     Play(args.algorithm, 
          args.directory, 
          args.numb, 
