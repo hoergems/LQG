@@ -12,25 +12,54 @@ class Play:
     def __init__(self, 
                  algorithm, 
                  dir, 
-                 numb, 
-                 play_failed, 
+                 numb,
+                 particles,                 
+                 play_failed,
+                 play_success, 
                  user_input, 
                  nominal_trajectory,
                  colliding_states,
-                 covariance):        
+                 covariance,
+                 robot_file=None,
+                 environment_file=None):        
         robot_files = glob.glob(os.path.join(os.path.join(dir + "/model/", "*.urdf")))
         environment_files = glob.glob(os.path.join(os.path.join(dir + "/environment/", "*.xml")))
         
         self.utils = Utils()
         
         if len(robot_files) > 1:
-            print "Error: Multiple robot files found"
-            return False
+            if robot_file == None:
+                print "Error: Multiple robot files found and no robot file provided"
+                return
         if len(environment_files) > 1:
-            print "Error: Multiple environment files found" 
-            return False
-        self.robot_file = robot_files[0]
-        self.environment_file = environment_files[0]
+            if environment_file == None:
+                print "Error: Multiple environment files found and no environment file provided" 
+                return
+        self.robot_file = None
+        if len(robot_files) == 1:
+            self.robot_file = robot_files[0]
+        else:
+            for i in xrange(len(robot_files)):
+                if robot_file in robot_files[i]:
+                    self.robot_file = robot_files[i]
+        if self.robot_file == None:
+            print "Error loading robot file"
+            return
+        
+        self.environment_file = None
+        if len(environment_files) == 1:
+            self.environment_file = environment_files[0]
+        else:
+            for i in xrange(len(environment_files)):
+                if environment_file in environment_files[i]:
+                    self.environment_file = environment_files[i]
+        if self.environment_file == None:
+            print "Error loading environment file"
+            return
+        
+        if play_failed == True and play_success == True:
+            print "Error: Can't play only successful and only failed runs at the same time"
+            return
         
         self.viewer_initialized = False
         if algorithm == None:
@@ -52,8 +81,10 @@ class Play:
         
         self.user_input = user_input
         self.play_runs(dir, 
-                       algorithm, 
+                       algorithm,
+                       particles, 
                        numb, 
+                       play_success,
                        play_failed, 
                        nominal_trajectory,
                        colliding_states,
@@ -72,8 +103,10 @@ class Play:
         
     def play_runs(self, 
                   dir, 
-                  algorithm, 
-                  numb, 
+                  algorithm,
+                  play_particles, 
+                  numb,
+                  play_success, 
                   play_failed, 
                   nominal_trajectory,
                   colliding_states,
@@ -126,12 +159,12 @@ class Play:
                                 col.append(False)
                 elif "colliding obstacle:" in line:
                     col_obstacles.append(line.split(":")[1].strip())  
-                elif "colliding state:" in line:
+                elif "colliding state:" in line or "Colliding state:" in line:                                        
                     coll_state_str = line.split(":")[1].strip()
                     coll_state = None
                     if not coll_state_str == "None" and colliding_states:
                         coll_state = np.array([float(k) for k in coll_state_str.split(" ")])                    
-                    coll_states[-1] = coll_state                
+                    coll_states[-1] = coll_state                                   
                 elif "PARTICLES BEGIN" in line:
                     particles = []
                 elif "PARTICLES END" in line:
@@ -159,16 +192,26 @@ class Play:
                     all_particles.append([particle])
                 elif ("RUN #" in line or 
                       "Run #" in line or
-                      "#####" in line) and len(states) != 0:
-                    
-                    if play_failed:
+                      "#####" in line) and len(states) != 0:                    
+                    if play_failed:                        
                         if terminal == False:
                             self.show_nominal_path(nominal_states)                            
                             self.play_states(states, 
                                              col,
                                              col_obstacles,
                                              coll_states,
-                                             all_particles, 
+                                             all_particles,
+                                             play_particles, 
+                                             first_particle)
+                    elif play_success:
+                        if terminal == True:
+                            self.show_nominal_path(nominal_states)                            
+                            self.play_states(states, 
+                                             col,
+                                             col_obstacles,
+                                             coll_states,
+                                             all_particles,
+                                             play_particles, 
                                              first_particle)
                     else:
                         
@@ -177,9 +220,11 @@ class Play:
                                          col, 
                                          col_obstacles,
                                          coll_states, 
-                                         all_particles, 
+                                         all_particles,
+                                         play_particles, 
                                          first_particle)
                     states = []
+                    coll_states = []
                     nominal_states = []
                     col = []
                     all_particles = []
@@ -210,7 +255,8 @@ class Play:
                     col, 
                     col_obstacles,
                     coll_states, 
-                    particles, 
+                    particles,
+                    play_particles, 
                     first_particle):        
         if not self.viewer_initialized:
             self.robot.setupViewer(self.robot_file, self.environment_file)
@@ -224,20 +270,20 @@ class Play:
             cjvels[:] = cjvels_arr            
             particle_joint_values = v2_double()
             particle_joint_colors = v2_double()            
-            if i > 1 and len(particles) > 0:                
+            if i > 1 and len(particles) > 0 and play_particles == True:                
                 for p in particles[i - first_particle]:
                     particle = v_double()
                     particle_color = v_double()
                     particle_vec = [p[k] for k in xrange(len(p) / 2)]                    
                     particle[:] = particle_vec
-                    particle_color[:] = [0.2, 0.8, 0.5, 0.0]
+                    particle_color[:] = [0.2, 0.8, 0.5, 0.9]
                     particle_joint_values.append(particle)
                     particle_joint_colors.append(particle_color)
-            if not i == len(coll_states) and coll_states[i] != None:
+            if not i == len(coll_states) and coll_states[i] != None:                
                 part = v_double()
                 part[:] = [coll_states[i][k] for k in xrange(len(coll_states[i]))]
                 particle_color = v_double()
-                particle_color[:] = [0.0, 0.0, 0.0, 0.0]
+                particle_color[:] = [0.0, 0.0, 1.0, 0.0]
                 particle_joint_values.append(part)
                 particle_joint_colors.append(particle_color)
             self.robot.updateViewerValues(cjvals, 
@@ -258,7 +304,7 @@ class Play:
                         self.robot.setObstacleColor(o.getName(), 
                                                     diffuse_col, 
                                                     ambient_col)'''
-                if col_obstacles[i] != None:
+                if col_obstacles[i] != None:                    
                     diffuse_col = v_double()
                     ambient_col = v_double()
                     diffuse_col[:] = [0.5, 0.0, 0.0, 0.0]
@@ -338,12 +384,22 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--play_failed", 
                         help="Play only the failed runs", 
                         action="store_true")
+    parser.add_argument("-s", "--play_success",
+                        help="Play only the successful runs",
+                        action="store_true")
+    parser.add_argument("-p", "--particles",
+                        help="Show particles",
+                        action="store_true")
     parser.add_argument("-u", "--user_input",
                         help="Wait for user input",
                         action="store_true")
     parser.add_argument("-cs", "--colliding_states",
                         help="Show the colliding states",
-                        action="store_true")    
+                        action="store_true") 
+    parser.add_argument("-r", "--robot_file",
+                        help="The robot file to use")
+    parser.add_argument("-e", "--environment_file",
+                        help="The environment file to use")   
     args = parser.parse_args()
     if args.algorithm == None:
         print "Error: No algorithm provided. Run 'python play_video.py --help' for command line options"
@@ -353,9 +409,13 @@ if __name__ == "__main__":
         sys.exit()
     Play(args.algorithm, 
          args.directory, 
-         args.numb, 
-         args.play_failed, 
+         args.numb,
+         args.particles, 
+         args.play_failed,
+         args.play_success, 
          args.user_input,  
          args.nominal_trajectory, 
          args.colliding_states,
-         args.covariance)
+         args.covariance,
+         args.robot_file,
+         args.environment_file)
