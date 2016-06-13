@@ -246,6 +246,10 @@ struct Joint {
     	    void setObstacleColor(std::string obstacle_name, 
     	     		                     std::vector<double> &diffuse_color, 
     	                                 std::vector<double> &ambient_color);
+    	    
+    	    void drawBox(std::string name, std::vector<double> &dimensions);
+    	    
+    	    void removeBox(std::string name);
 #endif
     	    void addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles);
     	    

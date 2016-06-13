@@ -4,7 +4,7 @@ import argparse
 import numpy as np
 import time
 import sys
-from librobot import Robot, v_double, v2_double
+from librobot import Robot, v_double, v2_double, v_string
 from libutil import *
 from libobstacle import *
 
@@ -20,6 +20,8 @@ class Play:
                  nominal_trajectory,
                  colliding_states,
                  covariance,
+                 particle_limit,
+                 draw_base_link,
                  robot_file=None,
                  environment_file=None):        
         robot_files = glob.glob(os.path.join(os.path.join(dir + "/model/", "*.urdf")))
@@ -62,6 +64,7 @@ class Play:
             return
         
         self.viewer_initialized = False
+        self.draw_base_link = draw_base_link
         if algorithm == None:
             print "No algorithm provided. Use the -a flag"
             return
@@ -82,7 +85,8 @@ class Play:
         self.user_input = user_input
         self.play_runs(dir, 
                        algorithm,
-                       particles, 
+                       particles,
+                       particle_limit,                       
                        numb, 
                        play_success,
                        play_failed, 
@@ -104,7 +108,8 @@ class Play:
     def play_runs(self, 
                   dir, 
                   algorithm,
-                  play_particles, 
+                  play_particles,
+                  particle_limit,                  
                   numb,
                   play_success, 
                   play_failed, 
@@ -201,7 +206,8 @@ class Play:
                                              col_obstacles,
                                              coll_states,
                                              all_particles,
-                                             play_particles, 
+                                             play_particles,
+                                             particle_limit,                                             
                                              first_particle)
                     elif play_success:
                         if terminal == True:
@@ -211,7 +217,8 @@ class Play:
                                              col_obstacles,
                                              coll_states,
                                              all_particles,
-                                             play_particles, 
+                                             play_particles,
+                                             particle_limit,                                             
                                              first_particle)
                     else:
                         
@@ -221,7 +228,8 @@ class Play:
                                          col_obstacles,
                                          coll_states, 
                                          all_particles,
-                                         play_particles, 
+                                         play_particles,
+                                         particle_limit,                                          
                                          first_particle)
                     states = []
                     coll_states = []
@@ -229,11 +237,30 @@ class Play:
                     col = []
                     all_particles = []
                     
+    def drawBaseLink(self):                       
+        joint_names = v_string()
+        self.robot.getJointNames(joint_names)                
+        first_joint_name = v_string()
+        first_joint_name.append(joint_names[0])
+        joint_pose = v2_double()
+        self.robot.getJointOrigin(first_joint_name, joint_pose)        
+        box_dims = v_double()
+        box_name = "base_"
+        """
+        xy-coordinates
+        """
+        box_dims.extend([joint_pose[0][i] for i in xrange(2)])
+        box_dims.append(0.0)        
+        box_dims.extend([0.1, 0.1, joint_pose[0][2]])
+        self.robot.drawBox(box_name, box_dims)        
+                    
     def show_nominal_path(self, path):
         """ Shows the nominal path in the viewer """
         if not self.viewer_initialized:
             self.robot.setupViewer(self.robot_file, self.environment_file)
             self.viewer_initialized = True
+            if self.draw_base_link:                
+                self.drawBaseLink()
         self.robot.removePermanentViewerParticles()
         particle_joint_values = v2_double()
         particle_joint_colors = v2_double()
@@ -256,11 +283,17 @@ class Play:
                     col_obstacles,
                     coll_states, 
                     particles,
-                    play_particles, 
-                    first_particle):        
+                    play_particles,
+                    particle_limit,                    
+                    first_particle):
         if not self.viewer_initialized:
+            print "WHAT"
+            sleep
             self.robot.setupViewer(self.robot_file, self.environment_file)
             self.viewer_initialized = True
+            if self.draw_base_link:
+                self.drawBaseLink()
+        self.robot.setParticlePlotLimit(particle_limit + 1)        
         for i in xrange(len(states)):
             cjvals = v_double()
             cjvels = v_double()
@@ -270,11 +303,12 @@ class Play:
             cjvels[:] = cjvels_arr            
             particle_joint_values = v2_double()
             particle_joint_colors = v2_double()            
-            if i > 1 and len(particles) > 0 and play_particles == True:                
-                for p in particles[i - first_particle]:
+            if i > 1 and len(particles) > 0 and play_particles == True:
+                for k in xrange(particle_limit):
                     particle = v_double()
-                    particle_color = v_double()
-                    particle_vec = [p[k] for k in xrange(len(p) / 2)]                    
+                    particle_color = v_double()                    
+                    particle_vec = [particles[i - first_particle][k][t] for t in xrange(len(particles[i - first_particle][k]) / 2)]
+                    
                     particle[:] = particle_vec
                     particle_color[:] = [0.2, 0.8, 0.5, 0.9]
                     particle_joint_values.append(particle)
@@ -294,16 +328,7 @@ class Play:
                 self.robot.setObstacleColor(o.getName(), 
                                             o.getStandardDiffuseColor(),
                                             o.getStandardAmbientColor())            
-            try:
-                '''if col[i] == True:                    
-                    diffuse_col = v_double()
-                    ambient_col = v_double()
-                    diffuse_col[:] = [0.5, 0.0, 0.0, 0.0]
-                    ambient_col[:] = [0.8, 0.0, 0.0, 0.0]
-                    for o in self.obstacles:
-                        self.robot.setObstacleColor(o.getName(), 
-                                                    diffuse_col, 
-                                                    ambient_col)'''
+            try:                
                 if col_obstacles[i] != None:                    
                     diffuse_col = v_double()
                     ambient_col = v_double()
@@ -399,7 +424,16 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--robot_file",
                         help="The robot file to use")
     parser.add_argument("-e", "--environment_file",
-                        help="The environment file to use")   
+                        help="The environment file to use") 
+    parser.add_argument("-pl", "--particle_limit",
+                        nargs="?",
+                        help="The number of particles to plot",
+                        type=int,
+                        const=0,
+                        default=50)
+    parser.add_argument("-b", "--draw_base",
+                        help="Draw base link",
+                        action="store_true")  
     args = parser.parse_args()
     if args.algorithm == None:
         print "Error: No algorithm provided. Run 'python play_video.py --help' for command line options"
@@ -407,6 +441,7 @@ if __name__ == "__main__":
     if args.directory == None:
         print "Error: No directory for the logs provided. Run 'python play_video.py --help' for command line options" 
         sys.exit()
+    
     Play(args.algorithm, 
          args.directory, 
          args.numb,
@@ -417,5 +452,7 @@ if __name__ == "__main__":
          args.nominal_trajectory, 
          args.colliding_states,
          args.covariance,
+         args.particle_limit,
+         args.draw_base,
          args.robot_file,
          args.environment_file)
