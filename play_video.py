@@ -136,6 +136,7 @@ class Play:
             col_obstacles = []
             coll_states = []
             terminal = False
+            collided = False
             for line in f:                
                 if "S: " in line:
                     line_arr = line.rstrip("\n ").split(" ")
@@ -155,11 +156,13 @@ class Play:
                         if "collided: " in line:
                             if line.rstrip("\n ").split(": ")[1] == "true":
                                 col.append(True)
+                                collided = True
                             else:
                                 col.append(False)
                         elif "Collision detected" in line:
                             if line.rstrip("\n").split(": ")[2] == "True":                                
                                 col.append(True)
+                                collided = True
                             else:
                                 col.append(False)
                 elif "colliding obstacle:" in line:
@@ -210,7 +213,7 @@ class Play:
                                              particle_limit,                                             
                                              first_particle)
                     elif play_success:
-                        if terminal == True:
+                        if terminal == True and collided == False:
                             self.show_nominal_path(nominal_states)                            
                             self.play_states(states, 
                                              col,
@@ -236,6 +239,7 @@ class Play:
                     nominal_states = []
                     col = []
                     all_particles = []
+                    collided = False
                     
     def drawBaseLink(self):                       
         joint_names = v_string()
