@@ -337,14 +337,11 @@ class Play:
             particle_joint_values = v2_double()
             particle_joint_colors = v2_double()            
             if i >= 1 and len(particles) > 0 and play_particles == True:
-                for k in xrange(particle_limit):
-                    if k < len(particles[i]):
+                for k in xrange(len(particles[i - first_particle])):
+                    if k < particle_limit:
                         particle = v_double()
                         particle_color = v_double()
-                        
-                        print particles[i - first_particle][k]                    
-                        particle_vec = [particles[i - first_particle][k][t] for t in xrange(len(particles[i - first_particle][k]) / 2)]
-                        
+                        particle_vec = [particles[i - first_particle][k][t] for t in xrange(len(particles[i - first_particle][k]) / 2)]                        
                         particle[:] = particle_vec
                         particle_color[:] = [0.2, 0.8, 0.5, 0.2]
                         particle_joint_values.append(particle)
