@@ -9,7 +9,7 @@ import kalman as kalman
 from serializer import Serializer
 from libutil import *
 import logging
-from librobot import v_string, Robot, v_obstacle
+from librobot import v_string, Robot, v_obstacle, v_double, v2_double
 from util_py import check_positive_definite, get_goal_states, copyToTmp
 from simulator import Simulator
 from path_evaluator import PathEvaluator
@@ -50,6 +50,7 @@ class LQG:
             return               
         if not self.setup_scene(self.environment_file, self.robot):
             return
+        self.test_self_collision(self.robot_file, self.environment_file)
         #self.show_state_distribution(urdf_model_file, environment_file)
         #self.check_continuous_collide(self.robot_file, self.environment_file)
         if show_scene:            
@@ -471,6 +472,44 @@ class LQG:
                        y_scale = [y_min, y_max], 
                        z_scale=  [z_min, z_max])
         sleep
+        
+    def test_self_collision(self, model_file, env_file):
+        self.robot.setNewtonModel()
+        self.robot.setViewerBackgroundColor(0.6, 0.8, 0.6)
+        self.robot.setViewerSize(1280, 768)
+        self.robot.setupViewer(model_file, env_file)
+        x1 = [0.0,
+              0.5,
+              0.0,
+              2.0,
+              1.8,
+              0.3,
+              0.7,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0]
+        cjvals = v_double()
+        cjvels = v_double()
+        cjvals_arr = [x1[i] for i in xrange(len(x1) / 2)]
+        cjvels_arr = [x1[i] for i in xrange(len(x1) / 2, len(x1))]
+        cjvals[:] = cjvals_arr
+        cjvels[:] = cjvels_arr
+        particle_joint_values = v2_double()
+        self.robot.updateViewerValues(cjvals, 
+                                      cjvels,
+                                      particle_joint_values,
+                                      particle_joint_values)
+        collision_objects = self.robot.createRobotCollisionObjects(cjvals)
+        collides = self.robot.checkSelfCollision(collision_objects)
+        print "collides " + str(collides)
+        time.sleep(10)
+        
         
     def check_continuous_collide(self, model_file, env_file):
         self.robot.setViewerBackgroundColor(0.6, 0.8, 0.6)

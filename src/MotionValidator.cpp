@@ -114,9 +114,10 @@ bool MotionValidator::collidesDiscrete(const std::vector<double> &state) const{
 	        	return true;
 	        }
 	    }
-	}    
-	return false; 
+	}
 	
+	//return inSelfCollision(collision_objects);
+	return false;
 }
 
 bool MotionValidator::collidesContinuous(const std::vector<double> &state1,
@@ -135,7 +136,16 @@ bool MotionValidator::collidesContinuous(const std::vector<double> &state1,
 	    }
 	}
 	
+	//return inSelfCollision(collision_objects_goal);
 	return false;
+}
+
+bool MotionValidator::inSelfCollision(const std::vector<double> &state) const{
+	return robot_->checkSelfCollision(state);
+}
+
+bool MotionValidator::inSelfCollision(std::vector<std::shared_ptr<fcl::CollisionObject>> &robot_collision_objects) const{
+	return robot_->checkSelfCollision(robot_collision_objects);
 }
 
 void MotionValidator::setObstacles(std::vector<std::shared_ptr<Obstacle> > &obstacles) {

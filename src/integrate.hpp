@@ -18,7 +18,7 @@
 #include <boost/numeric/odeint/stepper/bulirsch_stoer.hpp>
 #include <boost/numeric/odeint/integrate/integrate_const.hpp>
 #include <unsupported/Eigen/MatrixFunctions>
-
+#include <rbdl_interface/rbdl_interface.hpp>
 
 namespace pl = std::placeholders;
 
@@ -101,6 +101,10 @@ namespace shared {
     	
     	std::vector<double> getResult();
     	
+    	void setRBDLInterface(std::shared_ptr<shared::RBDLInterface> &rbdl_interface);
+    	    	
+    	std::shared_ptr<shared::RBDLInterface> getRBDLInterface();
+    	
     private:
 MatrixXd getEEJacobian(const state_type &x, const state_type &rho, const state_type &zeta) const; 
 MatrixXd getF0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
@@ -108,6 +112,7 @@ MatrixXd getM0(const state_type &x, const state_type &rho, const state_type &zet
 MatrixXd getV0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
 MatrixXd getB0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
 MatrixXd getA0(const state_type &x, const state_type &rho, const state_type &zeta) const; 
+
     	
     	// A fuction type of he form MatrixXd function(const state_type&) const
         typedef MatrixXd ABFuncType(const state_type&, const state_type&, const state_type&) const; 
@@ -182,7 +187,9 @@ MatrixXd getA0(const state_type &x, const state_type &rho, const state_type &zet
     	
     	mutable VectorXd rho_vec_;
     	
-    	mutable VectorXd vel_;    	
+    	mutable VectorXd vel_;  
+    	
+    	std::shared_ptr<shared::RBDLInterface> rbdl_interface_;
     	
     };
 

@@ -12,7 +12,7 @@
 #include "fcl/shape/geometric_shapes.h"
 #include "fcl/shape/geometric_shapes_utility.h"
 #include <tinyxml.h>
-
+#include <rbdl_interface/rbdl_interface.hpp>
 #include "propagator.hpp"
 #include "Kinematics.hpp"
 #include "Obstacle.hpp"
@@ -164,6 +164,12 @@ struct Joint {
     	    std::vector<std::shared_ptr<fcl::CollisionObject>> 
 			        createRobotCollisionObjectsPy(const std::vector<double> &joint_angles);
     	    
+    	    bool checkSelfCollision(std::vector<std::shared_ptr<fcl::CollisionObject>> &collision_objects);
+    	    
+    	    bool checkSelfCollision(const std::vector<double> &joint_angles);
+    	    
+    	    bool checkSelfCollisionPy(boost::python::list &ns);
+    	    
     	    //std::vector<fcl::AABB> createRobotCollisionStructuresPy(const std::vector<double> &joint_angles);
     	    
     	    void enforceConstraints(bool enforce);
@@ -203,6 +209,7 @@ struct Joint {
     	    std::vector<double> getProcessMatrices(std::vector<double> &x, 
                                                    std::vector<double> &rho, 
 				                                   double t_e);
+    	    void setNewtonModel();
 #ifdef USE_URDF	    
     	    /**
     	     * Set the size of the attached viewer
@@ -344,7 +351,7 @@ struct Joint {
     	     */
     	    std::vector<std::shared_ptr<fcl::CollisionObject>> collision_objects_;
     	    
-    	    
+    	    std::shared_ptr<shared::RBDLInterface> rbdl_interface_;
     };
     		
 }

@@ -54,6 +54,10 @@ namespace shared {
             bool collidesContinuous(const std::vector<double> &state1,
             		                const std::vector<double> &state2) const;
             
+            bool inSelfCollision(const std::vector<double> &state) const;
+            
+            bool inSelfCollision(std::vector<std::shared_ptr<fcl::CollisionObject>> &robot_collision_objects) const;
+            
         private:
             const ompl::base::SpaceInformationPtr si_;
             

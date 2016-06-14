@@ -130,6 +130,26 @@ if (USE_URDF)
 	endif()
 endif()
 
+############################# LOAD RBDL #############################
+if(PKG_CONFIG_FOUND)    
+    pkg_check_modules(RBDL rbdl)
+    if(NOT RBDL_FOUND)
+       message(FATAL_ERROR "RBDL could not be found")
+    endif()
+    include_directories(${RBDL_INCLUDE_DIRS}) 
+    message("RBDL include: ${RBDL_INCLUDE_DIRS}")   
+endif()
+
+############################# LOAD RBDL_INTERFACE #############################
+if(PKG_CONFIG_FOUND)    
+    pkg_check_modules(RBDL_INTERFACE rbdl_interface)
+    if(NOT RBDL_FOUND)
+       message(FATAL_ERROR "RBDL_INTERFACE could not be found")
+    endif()
+    include_directories(${RBDL_INTERFACE_INCLUDE_DIRS}) 
+    message("RBDL include: ${RBDL_INTERFACE_INCLUDE_DIRS}")   
+endif()
+
 #get_cmake_property(_variableNames VARIABLES)
 #foreach (_variableName ${_variableNames})
 #    message(STATUS "${_variableName}=${${_variableName}}")
@@ -140,7 +160,9 @@ link_directories(${TINYXML_LIBRARY_DIRS}
                  ${FCL_LIBRARY_DIRS}
                  ${Boost_LIBRARY_DIRS}
                  ${EIGEN_LIBRARY_DIRS}
-                 ${URDFDOM_LIBRARY_DIRS})
+                 ${URDFDOM_LIBRARY_DIRS}
+                 ${RBDL_LIBRARY_DIRS}
+                 ${RBDL_INTERFACE_LIBRARY_DIRS})
 
 add_library(robot SHARED 
             robot.cpp
@@ -232,7 +254,9 @@ target_link_libraries (robot
                        ${OPENRAVE_LIBRARIES}
                        ${FCL_LIBRARIES}
                        ${VIEWER_LIBRARIES}
-                       ${TINYXML_LIBRARIES})
+                       ${TINYXML_LIBRARIES}
+                       ${RBDL_LIBRARIES}
+                       ${RBDL_INTERFACE_LIBRARIES})
 
 target_link_libraries(path_planner
                       ${Boost_LIBRARIES}
@@ -242,7 +266,9 @@ target_link_libraries(path_planner
                       ${FCL_LIBRARIES}                      
                       ${URDF_LIBRARIES}
                       ${VIEWER_LIBRARIES}
-                      ${TINYXML_LIBRARIES})
+                      ${TINYXML_LIBRARIES}
+                      ${RBDL_LIBRARIES}
+                      ${RBDL_INTERFACE_LIBRARIES})
                       
 target_link_libraries (dynamic_path_planner                        
                        ${OPENRAVE_LIBRARIES}
@@ -252,7 +278,9 @@ target_link_libraries (dynamic_path_planner
                        ${FCL_LIBRARIES}
                        ${TINYXML_LIBRARIES}
                        ${URDFDOM_LIBRARIES}
-                       ${VIEWER_LIBRARIES})                       
+                       ${VIEWER_LIBRARIES}
+                       ${RBDL_LIBRARIES}
+                       ${RBDL_INTERFACE_LIBRARIES})                       
                       
 target_link_libraries(obstacle                      
                       ${Boost_LIBRARIES}
@@ -265,7 +293,9 @@ target_link_libraries (util
                        ${FCL_LIBRARIES}
                        ${TINYXML_LIBRARIES}
                        ${VIEWER_LIBRARIES}
-                       ${OMPL_LIBRARIES})
+                       ${OMPL_LIBRARIES}
+                       ${RBDL_LIBRARIES}
+                       ${RBDL_INTERFACE_LIBRARIES})
                        
 target_link_libraries(area
                       ${Boost_LIBRARIES}
