@@ -252,15 +252,21 @@ class Play:
         box_dims.extend([joint_pose[0][i] for i in xrange(2)])
         box_dims.append(0.0)        
         box_dims.extend([0.1, 0.1, joint_pose[0][2]])
-        self.robot.drawBox(box_name, box_dims)        
-                    
-    def show_nominal_path(self, path):
-        """ Shows the nominal path in the viewer """
+        self.robot.drawBox(box_name, box_dims)
+        
+    def init_viewer(self):
         if not self.viewer_initialized:
+            print "SET"            
+            self.robot.setViewerBackgroundColor(0.6, 0.8, 0.6)
+            self.robot.setViewerSize(1280, 768)
             self.robot.setupViewer(self.robot_file, self.environment_file)
             self.viewer_initialized = True
             if self.draw_base_link:                
-                self.drawBaseLink()
+                self.drawBaseLink()       
+                    
+    def show_nominal_path(self, path):
+        """ Shows the nominal path in the viewer """
+        self.init_viewer()
         self.robot.removePermanentViewerParticles()
         particle_joint_values = v2_double()
         particle_joint_colors = v2_double()
@@ -286,13 +292,7 @@ class Play:
                     play_particles,
                     particle_limit,                    
                     first_particle):
-        if not self.viewer_initialized:
-            print "WHAT"
-            sleep
-            self.robot.setupViewer(self.robot_file, self.environment_file)
-            self.viewer_initialized = True
-            if self.draw_base_link:
-                self.drawBaseLink()
+        self.init_viewer()
         self.robot.setParticlePlotLimit(particle_limit + 1)        
         for i in xrange(len(states)):
             cjvals = v_double()
