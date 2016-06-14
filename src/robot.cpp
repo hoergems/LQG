@@ -616,6 +616,14 @@ void Robot::setObstacleColor(std::string obstacle_name,
 	viewer_->setObstacleColor(obstacle_name, diffuse_color, ambient_color);
 }
 
+void Robot::drawBox(std::string name, std::vector<double> &dimensions) {
+	viewer_->addObstacle(name, dimensions);
+}
+
+void Robot::removeBox(std::string name) {
+	viewer_->removeObstacle(name);
+}
+
 #endif
 
 void Robot::addBoxObstacles(std::vector<std::shared_ptr<shared::Obstacle>> &obstacles) {
@@ -1109,6 +1117,9 @@ BOOST_PYTHON_MODULE(librobot) {
 					    .def("addPermanentViewerParticles", &Robot::addPermanentViewerParticles)
 					    .def("removePermanentViewerParticles", &Robot::removePermanentViewerParticles)					    
 						.def("setObstacleColor", &Robot::setObstacleColor)
+						.def("setParticlePlotLimit", &Robot::setParticlePlotLimit)
+						.def("drawBox", &Robot::drawBox)
+						.def("removeBox", &Robot::removeBox)
 #endif
                         //.def("setup", &Integrate::setup)                        
     ;
