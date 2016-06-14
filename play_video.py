@@ -21,6 +21,7 @@ class Play:
                  colliding_states,
                  covariance,
                  particle_limit,
+                 min_max,
                  draw_base_link,
                  robot_file=None,
                  environment_file=None):        
@@ -86,7 +87,8 @@ class Play:
         self.play_runs(dir, 
                        algorithm,
                        particles,
-                       particle_limit,                       
+                       particle_limit,
+                       min_max,                       
                        numb, 
                        play_success,
                        play_failed, 
@@ -109,7 +111,8 @@ class Play:
                   dir, 
                   algorithm,
                   play_particles,
-                  particle_limit,                  
+                  particle_limit, 
+                  min_max,                 
                   numb,
                   play_success, 
                   play_failed, 
@@ -210,7 +213,8 @@ class Play:
                                              coll_states,
                                              all_particles,
                                              play_particles,
-                                             particle_limit,                                             
+                                             particle_limit,
+                                             min_max,                                             
                                              first_particle)
                     elif play_success:
                         if terminal == True and collided == False:
@@ -221,7 +225,8 @@ class Play:
                                              coll_states,
                                              all_particles,
                                              play_particles,
-                                             particle_limit,                                             
+                                             particle_limit,
+                                             min_max,                                             
                                              first_particle)
                     else:
                         
@@ -232,7 +237,8 @@ class Play:
                                          coll_states, 
                                          all_particles,
                                          play_particles,
-                                         particle_limit,                                          
+                                         particle_limit,
+                                         min_max,                                          
                                          first_particle)
                     states = []
                     coll_states = []
@@ -286,6 +292,26 @@ class Play:
         particle_joint_values[:] = pjvs
         self.robot.addPermanentViewerParticles(particle_joint_values,
                                                particle_joint_colors)
+        
+    def getMinMaxParticles(self, particles):
+        dim = len(particles[0][0]) / 2
+        new_particles = []
+        for i in xrange(len(particles)):
+            mins = [particles[i][0][k] for k in xrange(dim)]
+            maxs = [particles[i][0][k] for k in xrange(dim)]
+            min_particles = [particles[i][0] for k in xrange(dim)]
+            max_particles = [particles[i][0] for k in xrange(dim)]
+            for j in xrange(len(particles[i])):
+                for k in xrange(dim):
+                    if particles[i][j][k] < mins[k]:
+                        mins[k] = particles[i][j][k]
+                        min_particles[k] = particles[i][j]
+                    if particles[i][j][k] > maxs[k]:
+                        maxs[k] = particles[i][j][k]
+                        max_particles[k] = particles[i][j]
+            min_particles.extend(max_particles)
+            new_particles.append(min_particles)
+        return new_particles
                     
     def play_states(self, 
                     states, 
@@ -294,9 +320,12 @@ class Play:
                     coll_states, 
                     particles,
                     play_particles,
-                    particle_limit,                    
+                    particle_limit,
+                    min_max,                    
                     first_particle):
         self.init_viewer()
+        if min_max == True:
+            particles = self.getMinMaxParticles(particles)
         self.robot.setParticlePlotLimit(particle_limit + 1)        
         for i in xrange(len(states)):
             cjvals = v_double()
@@ -307,16 +336,19 @@ class Play:
             cjvels[:] = cjvels_arr            
             particle_joint_values = v2_double()
             particle_joint_colors = v2_double()            
-            if i > 1 and len(particles) > 0 and play_particles == True:
+            if i >= 1 and len(particles) > 0 and play_particles == True:
                 for k in xrange(particle_limit):
-                    particle = v_double()
-                    particle_color = v_double()                    
-                    particle_vec = [particles[i - first_particle][k][t] for t in xrange(len(particles[i - first_particle][k]) / 2)]
-                    
-                    particle[:] = particle_vec
-                    particle_color[:] = [0.2, 0.8, 0.5, 0.9]
-                    particle_joint_values.append(particle)
-                    particle_joint_colors.append(particle_color)
+                    if k < len(particles[i]):
+                        particle = v_double()
+                        particle_color = v_double()
+                        
+                        print particles[i - first_particle][k]                    
+                        particle_vec = [particles[i - first_particle][k][t] for t in xrange(len(particles[i - first_particle][k]) / 2)]
+                        
+                        particle[:] = particle_vec
+                        particle_color[:] = [0.2, 0.8, 0.5, 0.2]
+                        particle_joint_values.append(particle)
+                        particle_joint_colors.append(particle_color)
             if not i == len(coll_states) and coll_states[i] != None:                
                 part = v_double()
                 part[:] = [coll_states[i][k] for k in xrange(len(coll_states[i]))]
@@ -437,7 +469,10 @@ if __name__ == "__main__":
                         default=50)
     parser.add_argument("-b", "--draw_base",
                         help="Draw base link",
-                        action="store_true")  
+                        action="store_true")
+    parser.add_argument("-mm", "--min_max",
+                        help="Show min/max particles",
+                        action="store_true") 
     args = parser.parse_args()
     if args.algorithm == None:
         print "Error: No algorithm provided. Run 'python play_video.py --help' for command line options"
@@ -457,6 +492,7 @@ if __name__ == "__main__":
          args.colliding_states,
          args.covariance,
          args.particle_limit,
+         args.min_max,
          args.draw_base,
          args.robot_file,
          args.environment_file)
