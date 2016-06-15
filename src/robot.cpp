@@ -624,6 +624,10 @@ void Robot::removeBox(std::string name) {
 	viewer_->removeObstacle(name);
 }
 
+void Robot::getCameraImage(std::vector<uint8_t> &image, int width, int height) {
+	viewer_->getCameraImage(image, width, height);
+}
+
 #endif
 
 void Robot::addBoxObstacles(std::vector<std::shared_ptr<shared::Obstacle>> &obstacles) {
@@ -1030,6 +1034,13 @@ BOOST_PYTHON_MODULE(librobot) {
     	    .def(vector_indexing_suite<std::vector<int> >());
     }
     
+    info = boost::python::type_id<std::vector<uint8_t>>();
+    const boost::python::converter::registration* reg_uint8_t = boost::python::converter::registry::query(info);
+    if (reg_uint8_t == NULL || (*reg_uint8_t).m_to_python == NULL)  { 
+    	class_<std::vector<uint8_t> > ("v_uint8_t")
+    	    .def(vector_indexing_suite<std::vector<uint8_t> >());
+    }
+    
     info = boost::python::type_id<std::vector<std::vector<double>>>();
     const boost::python::converter::registration* reg_v2double = boost::python::converter::registry::query(info);
     if (reg_v2double == NULL || (*reg_v2double).m_to_python == NULL)  {  
@@ -1120,6 +1131,7 @@ BOOST_PYTHON_MODULE(librobot) {
 						.def("setParticlePlotLimit", &Robot::setParticlePlotLimit)
 						.def("drawBox", &Robot::drawBox)
 						.def("removeBox", &Robot::removeBox)
+						.def("getCameraImage", &Robot::getCameraImage)
 #endif
                         //.def("setup", &Integrate::setup)                        
     ;

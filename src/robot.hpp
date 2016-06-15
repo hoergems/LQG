@@ -257,6 +257,8 @@ struct Joint {
     	    void drawBox(std::string name, std::vector<double> &dimensions);
     	    
     	    void removeBox(std::string name);
+    	    
+    	    void getCameraImage(std::vector<uint8_t> &image, int width, int height);
 #endif
     	    void addObstacles(std::vector<std::shared_ptr<shared::ObstacleWrapper>> &obstacles);
     	    
