@@ -17,7 +17,7 @@ from emd import emd
 from tabulate import tabulate
 
 class PlotStats:
-    def __init__(self, dir, save_plots, show_particles, plot_emds):        
+    def __init__(self, dir, save_plots, show_particles, plot_emds, collision_is_failed):        
         if not os.path.isdir(dir):
             print "Error: Directory doesn't exist"
             return
@@ -44,7 +44,7 @@ class PlotStats:
         
         self.plot_num_succesful_runs("succ_stats", 
                                      dir=dir, 
-                                     finish_when_collided=True)
+                                     finish_when_collided=collision_is_failed)
         self.plot_stat_from_txt_file("succ_stats", 
                                      "num_succ", 
                                      dir=dir, 
@@ -53,7 +53,7 @@ class PlotStats:
         reward_model["step_penalty"] = -1.0
         reward_model["collision_penalty"] = -500.0
         reward_model["exit_reward"] = 1000.0
-        self.plot_reward(reward_model, "reward_stats", dir=dir, finish_when_collided=True)        
+        self.plot_reward(reward_model, "reward_stats", dir=dir, finish_when_collided=collision_is_failed)        
         self.plot_stat_from_txt_file("reward_stats", 
                                      "mean_rewards", 
                                      dir=dir, 
@@ -1482,8 +1482,11 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--emd", 
                         help="Plot emds", 
                         action="store_true")
+    parser.add_argument("-cf", "--collision_is_failed",
+                        help="A run in which the robot collides, counts as an unsuccessful run",
+                        action="store_true")
     args = parser.parse_args() 
-    PlotStats(args.directory, args.save, args.particles, args.emd)
+    PlotStats(args.directory, args.save, args.particles, args.emd, args.collision_is_failed)
     '''return
     if len(sys.argv) > 2:
         algorithm = sys.argv[1]
