@@ -4,9 +4,10 @@ import argparse
 import numpy as np
 import time
 import sys
-from librobot import Robot, v_double, v2_double, v_string
+from librobot import Robot, v_double, v2_double, v_string, v_uint8_t
 from libutil import *
 from libobstacle import *
+from scipy import misc
 
 class Play:
     def __init__(self, 
@@ -23,11 +24,24 @@ class Play:
                  particle_limit,
                  min_max,
                  draw_base_link,
+                 video,
+                 width,
+                 height,
+                 run,
                  robot_file=None,
                  environment_file=None):        
         robot_files = glob.glob(os.path.join(os.path.join(dir + "/model/", "*.urdf")))
         environment_files = glob.glob(os.path.join(os.path.join(dir + "/environment/", "*.xml")))
-        
+        self.video = video
+        self.width = width
+        self.height = height
+        self.play_run_number = run
+        if self.video == True:
+            if not os.path.exists("vid"):
+                os.makedirs("vid")
+            else:
+                for file in glob.glob("vid/*.png"):
+                    os.remove(file)
         self.utils = Utils()
         
         if len(robot_files) > 1:
@@ -36,7 +50,7 @@ class Play:
                 return
         if len(environment_files) > 1:
             if environment_file == None:
-                print "Error: Multiple environment files found and no environment file provided" 
+                print "Error: Multiple environment files found reg_intand no environment file provided" 
                 return
         self.robot_file = None
         if len(robot_files) == 1:
@@ -140,6 +154,8 @@ class Play:
             coll_states = []
             terminal = False
             collided = False
+            current_run = 1
+            play_run = True
             for line in f:                
                 if "S: " in line:
                     line_arr = line.rstrip("\n ").split(" ")
@@ -204,48 +220,70 @@ class Play:
                 elif ("RUN #" in line or 
                       "Run #" in line or
                       "#####" in line) and len(states) != 0:                    
-                    if play_failed:                        
+                    if play_failed:                                     
                         if terminal == False:
-                            self.show_nominal_path(nominal_states)                            
-                            self.play_states(states, 
-                                             col,
-                                             col_obstacles,
-                                             coll_states,
-                                             all_particles,
-                                             play_particles,
-                                             particle_limit,
-                                             min_max,                                             
-                                             first_particle)
-                    elif play_success:
+                            if self.play_run_number != 0:
+                                if current_run != self.play_run_number:
+                                    play_run = False                                    
+                                else:
+                                    play_run = True
+                            current_run += 1                                    
+                            if play_run == True:
+                                self.show_nominal_path(nominal_states)                            
+                                self.play_states(states, 
+                                                 col,
+                                                 col_obstacles,
+                                                 coll_states,
+                                                 all_particles,
+                                                 play_particles,
+                                                 particle_limit,
+                                                 min_max,                                             
+                                                 first_particle)
+                            
+                    elif play_success:                        
                         if terminal == True and collided == False:
-                            self.show_nominal_path(nominal_states)                            
+                            if self.play_run_number != 0:
+                                if current_run != self.play_run_number:
+                                    play_run = False                                    
+                                else:
+                                    play_run = True
+                            current_run += 1 
+                            print current_run                                   
+                            if play_run == True:
+                                self.show_nominal_path(nominal_states)                            
+                                self.play_states(states, 
+                                                 col,
+                                                 col_obstacles,
+                                                 coll_states,
+                                                 all_particles,
+                                                 play_particles,
+                                                 particle_limit,
+                                                 min_max,                                             
+                                                 first_particle)
+                    else:
+                        if self.play_run_number != 0:
+                            if current_run != self.play_run_number:
+                                play_run = False                                    
+                            else:
+                                play_run = True
+                        current_run += 1                                    
+                        if play_run == True:
+                            self.show_nominal_path(nominal_states)                        
                             self.play_states(states, 
-                                             col,
+                                             col, 
                                              col_obstacles,
-                                             coll_states,
+                                             coll_states, 
                                              all_particles,
                                              play_particles,
                                              particle_limit,
-                                             min_max,                                             
+                                             min_max,                                          
                                              first_particle)
-                    else:
-                        
-                        self.show_nominal_path(nominal_states)                        
-                        self.play_states(states, 
-                                         col, 
-                                         col_obstacles,
-                                         coll_states, 
-                                         all_particles,
-                                         play_particles,
-                                         particle_limit,
-                                         min_max,                                          
-                                         first_particle)
                     states = []
                     coll_states = []
                     nominal_states = []
                     col = []
                     all_particles = []
-                    collided = False
+                    collided = False                    
                     
     def drawBaseLink(self):                       
         joint_names = v_string()
@@ -268,7 +306,7 @@ class Play:
         if not self.viewer_initialized:
             print "SET"            
             self.robot.setViewerBackgroundColor(0.6, 0.8, 0.6)
-            self.robot.setViewerSize(1280, 768)
+            self.robot.setViewerSize(self.width, self.height)
             self.robot.setupViewer(self.robot_file, self.environment_file)
             self.viewer_initialized = True
             if self.draw_base_link:                
@@ -322,8 +360,9 @@ class Play:
                     play_particles,
                     particle_limit,
                     min_max,                    
-                    first_particle):
+                    first_particle):        
         self.init_viewer()
+        raw_input("press enter to start")
         if min_max == True:
             particles = self.getMinMaxParticles(particles)
         self.robot.setParticlePlotLimit(particle_limit + 1)        
@@ -343,7 +382,7 @@ class Play:
                         particle_color = v_double()
                         particle_vec = [particles[i - first_particle][k][t] for t in xrange(len(particles[i - first_particle][k]) / 2)]                        
                         particle[:] = particle_vec
-                        particle_color[:] = [0.2, 0.8, 0.5, 0.2]
+                        particle_color[:] = [0.2, 0.8, 0.5, 0.6]
                         particle_joint_values.append(particle)
                         particle_joint_colors.append(particle_color)
             if not i == len(coll_states) and coll_states[i] != None:                
@@ -379,6 +418,24 @@ class Play:
             
             if self.user_input:
                 raw_input("Press Enter to continue...")
+            if self.video == True:
+                try:
+                    time.sleep(0.5)
+                    image = v_uint8_t()                    
+                    self.robot.getCameraImage(image, self.width, self.height)
+                    image_arr = []
+                    for m in xrange(len(image)):
+                        image_arr.append(image[m])
+                    image_arr = np.array(image_arr)
+                    image_arr = image_arr.reshape((self.height, self.width, 3))            
+                    misc.imsave("vid/img_" + str(i) + ".png", image_arr)
+                    if i == len(states) - 1:
+                        misc.imsave("vid/img_" + str(i + 1) + ".png", image_arr)
+                        misc.imsave("vid/img_" + str(i + 2) + ".png", image_arr)
+                        misc.imsave("vid/img_" + str(i + 3) + ".png", image_arr)
+                        raw_input("press enter to play next run")
+                except:
+                    pass
             else:
                 time.sleep(0.1)
             
@@ -470,6 +527,27 @@ if __name__ == "__main__":
     parser.add_argument("-mm", "--min_max",
                         help="Show min/max particles",
                         action="store_true") 
+    parser.add_argument("-v", "--video",
+                        help="save video images",
+                        action="store_true")
+    parser.add_argument("-width", "--width",
+                        nargs="?",
+                        help="The viewer width",
+                        type=int,
+                        const=0,
+                        default=640)
+    parser.add_argument("-height", "--height",
+                        nargs="?",
+                        help="The viewer height",
+                        type=int,
+                        const=0,
+                        default=468)
+    parser.add_argument("-run", "--run",
+                        nargs="?",
+                        help="Play run number #",
+                        type=int,
+                        const=0,
+                        default=0)
     args = parser.parse_args()
     if args.algorithm == None:
         print "Error: No algorithm provided. Run 'python play_video.py --help' for command line options"
@@ -491,5 +569,9 @@ if __name__ == "__main__":
          args.particle_limit,
          args.min_max,
          args.draw_base,
+         args.video,
+         args.width,
+         args.height,
+         args.run,
          args.robot_file,
          args.environment_file)
