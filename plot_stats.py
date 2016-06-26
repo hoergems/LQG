@@ -26,11 +26,11 @@ class PlotStats:
         self.color_dict = dict()
         self.color_dict["abt"] = "#ff0000"
         self.color_dict["lqg"] = "#00ff00"
-        self.color_dict["hrf"] = "#0000ff"  
+        self.color_dict["hfr"] = "#0000ff"  
         self.linestyles = dict()
         self.linestyles['abt'] = "solid"
         self.linestyles['lqg'] = "dashed"
-        self.linestyles['hrf'] = 'dashdot'      
+        self.linestyles['hfr'] = 'dashdot'      
               
         self.save = save_plots        
         serializer = Serializer()
@@ -705,7 +705,7 @@ class PlotStats:
                             vals[-1] = reward_model['collision_penalty']
                         if finish_when_collided:
                             block = True
-                    elif "Terminal: true" in line:
+                    elif "Terminal: true" in line or "Terminal: True" in line:
                         if not block:
                             vals[-1] = reward_model['exit_reward']
                     elif "R: " in line and "abt" in algorithm:
