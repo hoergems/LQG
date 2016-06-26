@@ -7,8 +7,8 @@ import os
 import logging
 from serializer import Serializer
 from scipy.stats import multivariate_normal
-from librobot import *
-from libutil import *
+#from librobot import *
+#from libutil import *
 from EMD import EMD
 import sets
 import random
@@ -22,7 +22,7 @@ class PlotStats:
             print "Error: Directory doesn't exist"
             return
         self.cleanup(dir=dir)
-        self.config_file = glob.glob(os.path.join(dir + "/config_*"))[0]
+        #self.config_file = glob.glob(os.path.join(dir + "/config_*"))[0]
         self.color_dict = dict()
         self.color_dict["abt"] = "#ff0000"
         self.color_dict["lqg"] = "#00ff00"
@@ -35,8 +35,8 @@ class PlotStats:
         self.save = save_plots        
         serializer = Serializer()
         
-        if self.setup_robot(dir) and plot_emds:            
-            self.plot_emds(show_particles, dir=dir)
+        '''if self.setup_robot(dir) and plot_emds:            
+            self.plot_emds(show_particles, dir=dir)'''
         '''self.plot_estimate_error(dir=dir)
         self.plot_linearisation_error(dir=dir)
         return'''
@@ -59,16 +59,18 @@ class PlotStats:
                                      dir=dir, 
                                      y_label="mean reward")
         #sleep    
-        
-        self.save_estimation_error("estimation_error_stats", dir=dir)
-        self.plot_number_of_steps_stats("num_step_stats", dir=dir)
-        self.plot_stat_from_txt_file("estimation_error_stats", 
-                                     "mean_estimation_error", 
-                                     dir=dir, 
-                                     y_label="mean estimation error")
+        try:
+            self.save_estimation_error("estimation_error_stats", dir=dir)
+            self.plot_number_of_steps_stats("num_step_stats", dir=dir)
+            self.plot_stat_from_txt_file("estimation_error_stats", 
+                                         "mean_estimation_error", 
+                                         dir=dir, 
+                                         y_label="mean estimation error")
+        except:
+            print "WARNING: Estimation error stats could not be plotted"
         
         print "saving collision information"
-        self.plot_bla(["collided", "Trans: Collision detected"], "collision_stats", dir=dir)
+        self.plot_bla(["collided", "Trans: Collision detected", "Collision"], "collision_stats", dir=dir)
         print "saving reward information"
         #self.plot_bla(["Reward:"], "reward_stats", dir=dir)
         
@@ -777,8 +779,8 @@ class PlotStats:
                     if cov_str in line:                                             
                         m_cov = float(line.split(" ")[2])
                     elif ("RUN #" in line or 
-                          "Run #" in line):
-                        num_runs += 1
+                          "Run #" in line):                        
+                        num_runs += 1                        
                         if len(vals) != 0:
                             vals_per_run.append(vals)
                             all_vals.extend(vals)
@@ -798,6 +800,7 @@ class PlotStats:
                                         if "true" in line or "True" in line:
                                             vals.append(1)
                                         else:
+                                            print "APPEND!!!!"
                                             vals.append(0)
                                     else: 
                                         try:                                       
@@ -805,7 +808,7 @@ class PlotStats:
                                         except:
                                             print line.rstrip("\n")
                                                                 
-            
+            print all_vals
             n, min_max, mean, var, skew, kurt = scipy.stats.describe(np.array(all_vals))
             arr = []            
             for i in xrange(int(num_runs)):                            
@@ -869,6 +872,7 @@ class PlotStats:
             labels.append(key)
             stats_sets.append(np.array(d[key]))            
             for i in xrange(len(d[key])):
+                print "d[key] " + str(d[key])
                 m_covs.append(d[key][i][0])
                 if d[key][i][1] > max_m:
                     max_m = d[key][i][1]
@@ -985,26 +989,6 @@ class PlotStats:
                             color_map=color_map,
                             save=self.save,
                             filename=dir + "/" + output_file_str + ".png")
-        
-    def setup_robot(self, dir='stats'):
-        robot_filename = "" 
-        with open(self.config_file, "r") as f:
-            for line in f.readlines():
-                if "robot_file:" in line:
-                    if "/" in line:
-                        robot_filename = line.split("/")[1].strip()
-                    else:
-                        robot_filename = line.split(":")[1].strip()
-               
-        robot_files = glob.glob(os.path.join(os.path.join(dir + "/model/", robot_filename)))
-        if len(robot_files) == 0:
-            logging.error("Robot couldn't be initialized")
-            return False
-        print "setting up robot"
-        print robot_files[0]
-        self.robot = Robot(robot_files[0])
-        print "set up robot" 
-        return True
         
     def clear_stats(self):
         for file in glob.glob("stats/*"):

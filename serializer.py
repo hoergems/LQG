@@ -4,9 +4,8 @@ import glob
 import os
 import numpy as np
 import logging
-from libobstacle import Obstacle
-from libarea import *
-from libutil import *
+#from libarea import *
+#from libutil import *
 from xml.dom import minidom
 
 class Serializer:
