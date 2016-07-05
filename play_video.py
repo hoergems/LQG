@@ -9,6 +9,19 @@ from libutil import *
 from libobstacle import *
 from scipy import misc
 
+class Obstacle:
+    def __init__(self):
+        self.name = ""
+        self.x = 0
+        self.y = 0
+        self.z = 0
+        self.dim_x = 0.0
+        self.dim_y = 0.0
+        self.dim_z = 0.0
+    
+    
+    
+
 class Play:
     def __init__(self, 
                  algorithm, 
@@ -52,18 +65,18 @@ class Play:
             if environment_file == None:
                 print "Error: Multiple environment files found reg_intand no environment file provided" 
                 return
-        self.robot_file = None
+        self.robot_file = robot_file
         if len(robot_files) == 1:
             self.robot_file = robot_files[0]
         else:
             for i in xrange(len(robot_files)):
                 if robot_file in robot_files[i]:
-                    self.robot_file = robot_files[i]
+                    self.robot_file = robot_files[i]        
         if self.robot_file == None:
             print "Error loading robot file"
             return
         
-        self.environment_file = None
+        self.environment_file = environment_file
         if len(environment_files) == 1:
             self.environment_file = environment_files[0]
         else:
@@ -147,6 +160,8 @@ class Play:
         with open(sorted(log_files)[numb]) as f:
             states = []
             all_particles = []
+            obstacles = []
+            all_obstacles = []
             particles = []
             nominal_states = []
             col = []
@@ -156,10 +171,11 @@ class Play:
             collided = False
             current_run = 1
             play_run = True
-            for line in f:                
-                if "S: " in line:
-                    line_arr = line.rstrip("\n ").split(" ")
+            for line in f:	        
+                if "S: " in line:		    
+                    line_arr = line.rstrip("\n ").split(" ")                                       
                     state = np.array([float(line_arr[i]) for i in xrange(1, len(line_arr))])
+                    print state
                     states.append(state)
                     coll_states.append(None)                    
                 elif "S_NOMINAL: " in line and nominal_trajectory:
@@ -178,8 +194,8 @@ class Play:
                                 collided = True
                             else:
                                 col.append(False)
-                        elif "Collision detected" in line:
-                            if line.rstrip("\n").split(": ")[2] == "True":                                
+                        elif "Collision detected" in line:			    
+                            if line.rstrip("\n").split(": ")[1] == "True":                                
                                 col.append(True)
                                 collided = True
                             else:
@@ -195,9 +211,24 @@ class Play:
                 elif "PARTICLES BEGIN" in line:
                     particles = []
                 elif "PARTICLES END" in line:
-                    all_particles.append(particles)
-                elif "p: " in line and not "step" in line:
-                    line_arr = line.rstrip("\n").split(": ")[1].split(" ")
+                    all_particles.append(particles)                
+		elif "obstacle_name" in line:
+		    obstacles.append(Obstacle())
+		    obstacles[-1].name = line.rstrip("\n").split(": ")[1]
+		elif "x: " in line and not "size" in line:		    
+		    obstacles[-1].x = float(line.rstrip("\n").split(": ")[1])
+		elif "y: " in line and not "size" in line:		    
+		    obstacles[-1].y = float(line.rstrip("\n").split(": ")[1])	    
+		elif "z: " in line and not "size" in line:		    
+		    obstacles[-1].z = float(line.rstrip("\n").split(": ")[1])
+		elif "size_x" in line:		    
+		    obstacles[-1].dim_x = float(line.rstrip("\n").split(": ")[1])
+		elif "size_y:" in line:		    
+		    obstacles[-1].dim_y = float(line.rstrip("\n").split(": ")[1])
+		elif "size_z:" in line:		    
+		    obstacles[-1].dim_z = float(line.rstrip("\n").split(": ")[1])		    
+                elif "p: " in line and not "step" in line:		    
+                    line_arr = line.rstrip("\n").split(": ")[1].rstrip(" ").split(" ")
                     try:
                         particle = np.array([float(line_arr[i]) for i in xrange(len(line_arr))])
                     except Exception as e:
@@ -238,7 +269,8 @@ class Play:
                                                  play_particles,
                                                  particle_limit,
                                                  min_max,                                             
-                                                 first_particle)
+                                                 first_particle,
+                                                 obstacles)
                             
                     elif play_success:                        
                         if terminal == True and collided == False:
@@ -259,7 +291,8 @@ class Play:
                                                  play_particles,
                                                  particle_limit,
                                                  min_max,                                             
-                                                 first_particle)
+                                                 first_particle,
+                                                 obstacles)
                     else:
                         if self.play_run_number != 0:
                             if current_run != self.play_run_number:
@@ -277,12 +310,14 @@ class Play:
                                              play_particles,
                                              particle_limit,
                                              min_max,                                          
-                                             first_particle)
+                                             first_particle,
+                                             obstacles)
                     states = []
                     coll_states = []
                     nominal_states = []
                     col = []
                     all_particles = []
+                    obstacles = []
                     collided = False                    
                     
     def drawBaseLink(self):                       
@@ -360,12 +395,19 @@ class Play:
                     play_particles,
                     particle_limit,
                     min_max,                    
-                    first_particle):        
+                    first_particle,
+                    obstacles):        
         self.init_viewer()
         raw_input("press enter to start")
         if min_max == True:
             particles = self.getMinMaxParticles(particles)
-        self.robot.setParticlePlotLimit(particle_limit + 1)        
+        self.robot.setParticlePlotLimit(particle_limit + 1)
+        for o in obstacles:
+	    dims = [o.x, o.y, o.z, o.dim_x, o.dim_y, o.dim_z]
+	    box_dims = v_double()
+	    box_dims.extend(dims)
+	    self.robot.drawBox(o.name, box_dims)
+	
         for i in xrange(len(states)):
             cjvals = v_double()
             cjvels = v_double()
@@ -471,6 +513,7 @@ class Play:
             return False, None  
         
     def init_robot(self):
+        print "load"
         self.robot = Robot(self.robot_file)
         self.robot_dof = self.robot.getDOF()        
         return True  

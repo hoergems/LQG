@@ -172,51 +172,8 @@ add_library(robot SHARED
             Obstacle.cpp
             BoxObstacle.cpp
             SphereObstacle.cpp
-            Terrain.cpp)
-            
-add_library(path_planner SHARED
-            path_planner.cpp
-            MotionValidator.cpp
-            ManipulatorGoalRegion.cpp
-            robot.cpp
-            Kinematics.cpp
-            propagator.cpp
-            integrate.cpp            
-            utils.cpp
-            dynamic_path_planner.cpp
-            EST_control.cpp
-            control_space.cpp
-            rrt_control.cpp
-            control_sampler.cpp
-            DirectedControlSampler.cpp
-            ManipulatorSpaceInformation.cpp
-            state_propagator.cpp
-            Terrain.cpp
-            Obstacle.cpp
-            BoxObstacle.cpp
-            SphereObstacle.cpp)
-            
-add_library(dynamic_path_planner SHARED 
-            dynamic_path_planner.cpp
-            ManipulatorSpaceInformation.cpp
-            DirectedControlSampler.cpp
-            rrt_control.cpp
-            EST_control.cpp 
-            MotionValidator.cpp
-            state_propagator.cpp
-            propagator.cpp
-            integrate.cpp            
-            ManipulatorGoalRegion.cpp            
-            Kinematics.cpp
-            utils.cpp
-            robot.cpp            
-            Obstacle.cpp
-            BoxObstacle.cpp
-            SphereObstacle.cpp
-            Terrain.cpp            
-            control_space.cpp
-            control_sampler.cpp
-            path_planner.cpp)
+            Terrain.cpp)          
+
             
 add_library(obstacle SHARED
             Obstacle.cpp
@@ -231,18 +188,7 @@ add_library(util SHARED
             robot.cpp
             Kinematics.cpp
             propagator.cpp
-            dynamic_path_planner.cpp
-            path_planner.cpp
-            MotionValidator.cpp
-            integrate.cpp
-            ManipulatorGoalRegion.cpp
-            EST_control.cpp
-            control_space.cpp
-            rrt_control.cpp
-            control_sampler.cpp
-            DirectedControlSampler.cpp
-            ManipulatorSpaceInformation.cpp
-            state_propagator.cpp)
+            integrate.cpp)
             
 add_library(area SHARED
             Area.cpp)
@@ -258,29 +204,8 @@ target_link_libraries (robot
                        ${RBDL_LIBRARIES}
                        ${RBDL_INTERFACE_LIBRARIES})
 
-target_link_libraries(path_planner
-                      ${Boost_LIBRARIES}
-                      ${PYTHON_LIBRARIES}
-                      ${OPENRAVE_LIBRARIES}                   
-                      ${OMPL_LIBRARIES}
-                      ${FCL_LIBRARIES}                      
-                      ${URDF_LIBRARIES}
-                      ${VIEWER_LIBRARIES}
-                      ${TINYXML_LIBRARIES}
-                      ${RBDL_LIBRARIES}
-                      ${RBDL_INTERFACE_LIBRARIES})
-                      
-target_link_libraries (dynamic_path_planner                        
-                       ${OPENRAVE_LIBRARIES}
-                       ${OMPL_LIBRARIES}
-                       ${Boost_LIBRARIES}
-                       ${PYTHON_LIBRARIES}                   
-                       ${FCL_LIBRARIES}
-                       ${TINYXML_LIBRARIES}
-                       ${URDFDOM_LIBRARIES}
-                       ${VIEWER_LIBRARIES}
-                       ${RBDL_LIBRARIES}
-                       ${RBDL_INTERFACE_LIBRARIES})                       
+
+                    
                       
 target_link_libraries(obstacle                      
                       ${Boost_LIBRARIES}
