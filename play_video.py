@@ -174,8 +174,7 @@ class Play:
             for line in f:	        
                 if "S: " in line:		    
                     line_arr = line.rstrip("\n ").split(" ")                                       
-                    state = np.array([float(line_arr[i]) for i in xrange(1, len(line_arr))])
-                    print state
+                    state = np.array([float(line_arr[i]) for i in xrange(1, len(line_arr))])                    
                     states.append(state)
                     coll_states.append(None)                    
                 elif "S_NOMINAL: " in line and nominal_trajectory:
@@ -183,9 +182,10 @@ class Play:
                     state = np.array([float(line_arr[i]) for i in xrange(1, len(line_arr))])
                     nominal_states.append(state)
                 elif "Terminal:" in line:
-                    term_line = line.rstrip("\n ").split(": ")[1]
-                    if term_line == 'true':
-                        terminal = True
+		    pass
+                    #term_line = line.rstrip("\n ").split(": ")[1]
+                    #if term_line == 'true':
+                    #    terminal = True
                 elif "collided: " in line or "Collision detected" in line:                    
                     if not "estimate" in line:
                         if "collided: " in line:
@@ -241,7 +241,11 @@ class Play:
                     line_arr = line.rstrip("\n ").split(": ")[1].split(" ")
                     state = np.array([float(line_arr[i]) for i in xrange(len(line_arr))])
                     states.append(state)
-                    terminal = self.is_terminal(state)
+                    #terminal = self.is_terminal(state)
+                elif "R:" in line:
+		    terminal = False
+		    if float(line.rstrip("\n").split(": ")[1]) == 1000:
+		        terminal = True
                 elif "S_ESTIMATED" in line:
                     first_particle = 0                                      
                     particles = []
@@ -251,7 +255,8 @@ class Play:
                 elif ("RUN #" in line or 
                       "Run #" in line or
                       "#####" in line) and len(states) != 0:                    
-                    if play_failed:                                     
+                    if play_failed:
+		        print terminal
                         if terminal == False:
                             if self.play_run_number != 0:
                                 if current_run != self.play_run_number:
@@ -408,7 +413,9 @@ class Play:
 	    box_dims.extend(dims)
 	    self.robot.drawBox(o.name, box_dims)
 	
-        for i in xrange(len(states)):
+	raw_input("bla")
+        for i in xrange(len(states)):	    
+	      
             cjvals = v_double()
             cjvels = v_double()
             cjvals_arr = [states[i][j] for j in xrange(len(states[i]) / 2)]
@@ -479,7 +486,7 @@ class Play:
                 except:
                     pass
             else:
-                time.sleep(0.1)
+                time.sleep(0.5)
             
     def is_in_collision(self, previous_state, state):
         """
